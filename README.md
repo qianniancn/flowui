@@ -111,6 +111,7 @@ text/editor internals.
 - `Button`
 - `Input`
 - `Checkbox`
+- `RadioGroup`
 - `ComboBox`
 - `DatePicker`
 
@@ -144,6 +145,7 @@ Examples live in `examples/`:
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `inputs`: input styles and events.
 - `checkboxes`: checkbox states and validation.
+- `radio_groups`: mutually exclusive option selection.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.
 - `form`: composing controls into a form.

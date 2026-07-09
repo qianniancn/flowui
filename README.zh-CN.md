@@ -107,6 +107,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Button`
 - `Input`
 - `Checkbox`
+- `RadioGroup`
 - `ComboBox`
 - `DatePicker`
 
@@ -140,6 +141,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `inputs`：输入框样式和事件。
 - `checkboxes`：复选框状态和校验。
+- `radio_groups`：互斥单选选项。
 - `comboboxes`：选项选择和过滤。
 - `datepickers`：日期选择和范围限制。
 - `form`：表单组合。

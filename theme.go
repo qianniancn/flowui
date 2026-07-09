@@ -75,6 +75,7 @@ type ComponentsTheme struct {
 	Button     ButtonTheme
 	Input      InputTheme
 	Checkbox   CheckboxTheme
+	RadioGroup RadioGroupTheme
 	ComboBox   ComboBoxTheme
 	DatePicker DatePickerTheme
 }
@@ -100,6 +101,21 @@ type CheckboxTheme struct {
 	BorderWidth unit.Dp
 	CheckStroke unit.Dp
 	LabelGap    unit.Dp
+}
+
+type RadioGroupTheme struct {
+	Size            unit.Dp
+	FocusSpace      unit.Dp
+	BorderWidth     unit.Dp
+	ContentGap      unit.Dp
+	VerticalGap     unit.Dp
+	HorizontalGap   unit.Dp
+	DescriptionGap  unit.Dp
+	TextSize        unit.Sp
+	DescriptionSize unit.Sp
+	DotScale        float32
+	DotPressedScale float32
+	PressedScale    float32
 }
 
 type ComboBoxTheme struct {
@@ -220,6 +236,20 @@ func DefaultTheme() Theme {
 				BorderWidth: 1,
 				CheckStroke: 1.5,
 				LabelGap:    10,
+			},
+			RadioGroup: RadioGroupTheme{
+				Size:            16,
+				FocusSpace:      2,
+				BorderWidth:     1,
+				ContentGap:      12,
+				VerticalGap:     16,
+				HorizontalGap:   16,
+				DescriptionGap:  2,
+				TextSize:        14,
+				DescriptionSize: 12,
+				DotScale:        0.38,
+				DotPressedScale: 0.5,
+				PressedScale:    0.95,
 			},
 			ComboBox: ComboBoxTheme{
 				Height:              40,

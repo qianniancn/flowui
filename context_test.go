@@ -58,6 +58,16 @@ func TestDuplicateKeysIncludeDatePickers(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludeRadioGroups(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.radioGroupState("plan")
+
+	mustPanic(t, func() {
+		ctx.clickable("plan")
+	})
+}
+
 func TestDuplicateKeysIncludeLists(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -100,6 +110,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	datePicker := ctx.datePickerState("date")
 	checkboxKey, checkbox := ctx.boolStateWithKey("done")
 	checkboxAnim := ctx.checkboxState(checkboxKey)
+	radio := ctx.radioGroupState("plan")
 	list := ctx.listState("todos")
 	scroll := ctx.scrollState("body")
 
@@ -132,6 +143,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.checkboxes["done"] != checkboxAnim {
 		t.Fatal("checkbox animation state was not kept")
 	}
+	if ctx.radioGroups["plan"] != radio {
+		t.Fatal("radio group state was not kept")
+	}
 	if ctx.lists["todos"] != list {
 		t.Fatal("list state was not kept")
 	}
@@ -152,6 +166,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	ctx.datePickerState("date")
 	checkboxKey, _ := ctx.boolStateWithKey("done")
 	ctx.checkboxState(checkboxKey)
+	ctx.radioGroupState("plan")
 	ctx.listState("todos")
 	ctx.scrollState("body")
 	ctx.endFrame()
@@ -182,6 +197,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.checkboxes) != 0 {
 		t.Fatalf("checkbox animation states = %d, want 0", len(ctx.checkboxes))
+	}
+	if len(ctx.radioGroups) != 0 {
+		t.Fatalf("radio groups = %d, want 0", len(ctx.radioGroups))
 	}
 	if len(ctx.lists) != 0 {
 		t.Fatalf("lists = %d, want 0", len(ctx.lists))
@@ -267,6 +285,24 @@ func TestEndFrameRemovesOldDatePickerStateWhenKeyChangesKind(t *testing.T) {
 		t.Fatal("old date picker state was not removed")
 	}
 	if ctx.lists["date"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldRadioGroupStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.radioGroupState("plan")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("plan")
+	ctx.endFrame()
+
+	if ctx.radioGroups["plan"] != nil {
+		t.Fatal("old radio group state was not removed")
+	}
+	if ctx.lists["plan"] == nil {
 		t.Fatal("list state was not kept")
 	}
 }

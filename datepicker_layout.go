@@ -105,13 +105,22 @@ func (d DatePickerWidget) layoutPopover(ctx *Context, gtx layout.Context, state 
 		Min: image.Pt(panelWidth, 0),
 		Max: image.Pt(panelWidth, min(maxY, gtx.Dp(theme.PopoverMaxHeight))),
 	}
+	overlayBounds := gtx.Constraints.Max
 
 	ctx.deferOverlay(gtx, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints = panelConstraints
-		offset := image.Pt(0, inputDims.Size.Y+gap)
-		origin := f32.Pt(float32(inputDims.Size.X)/2, 0)
+		placement := overlayPlacement{side: overlaySideBottom, align: overlayAlignStart}
+		result := overlayResolvePosition(overlayPositionConfig{
+			Trigger:       inputDims.Size,
+			Panel:         panelConstraints.Max,
+			Bounds:        overlayBounds,
+			Offset:        gap,
+			Placement:     placement,
+			AvoidOverflow: true,
+		})
+		origin := overlayPanelTransformOrigin(inputDims.Size, result.Position, panelConstraints.Max, result.Placement)
 		scale := 0.95 + 0.05*progress
-		stack := op.Offset(offset).Push(gtx.Ops)
+		stack := op.Offset(result.Position).Push(gtx.Ops)
 		opacity := paint.PushOpacity(gtx.Ops, progress)
 		transform := op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale))).Push(gtx.Ops)
 		dims := d.layoutCalendarPanel(ctx, gtx, state, now)

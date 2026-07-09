@@ -376,10 +376,7 @@ func (d DatePickerWidget) layoutYears(ctx *Context, gtx layout.Context, state *d
 	state.yearList.Axis = layout.Vertical
 	state.yearList.Gap = gtx.Dp(theme.YearGridGap)
 	if state.yearScrollReady {
-		target := state.yearScrollYear
-		if target < minYear {
-			target = minYear
-		}
+		target := max(state.yearScrollYear, minYear)
 		if target > maxYear {
 			target = maxYear
 		}

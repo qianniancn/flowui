@@ -8,15 +8,16 @@ import (
 type Kind string
 
 const (
-	KindClickable  Kind = "clickable"
-	KindEditor     Kind = "editor"
-	KindInput      Kind = "input"
-	KindComboBox   Kind = "combobox"
-	KindDatePicker Kind = "datepicker"
-	KindCheckbox   Kind = "checkbox"
-	KindRadioGroup Kind = "radio-group"
-	KindList       Kind = "list"
-	KindScroll     Kind = "scroll"
+	KindClickable   Kind = "clickable"
+	KindEditor      Kind = "editor"
+	KindInput       Kind = "input"
+	KindComboBox    Kind = "combobox"
+	KindDatePicker  Kind = "datepicker"
+	KindCheckbox    Kind = "checkbox"
+	KindRadioGroup  Kind = "radio-group"
+	KindProgressBar Kind = "progress-bar"
+	KindList        Kind = "list"
+	KindScroll      Kind = "scroll"
 )
 
 type Keys struct {

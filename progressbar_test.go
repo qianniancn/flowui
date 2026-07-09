@@ -1,0 +1,189 @@
+package flowui
+
+import (
+	"image"
+	"image/color"
+	"math"
+	"testing"
+	"time"
+
+	"gioui.org/layout"
+	"gioui.org/op"
+)
+
+func TestProgressBarOptions(t *testing.T) {
+	bar := ProgressBar("upload", 40).
+		Label("Uploading").
+		ShowValue().
+		ValueText("40 files").
+		Range(0, 80).
+		Indeterminate().
+		Color(ProgressBarSuccess).
+		Size(ProgressBarLarge).
+		Disabled(true)
+
+	if bar.key != "upload" || bar.value != 40 || bar.label != "Uploading" {
+		t.Fatal("progress bar constructor/options did not set fields")
+	}
+	if !bar.showValue || !bar.hasValueText || bar.valueText != "40 files" {
+		t.Fatal("progress bar value text options were not set")
+	}
+	if bar.minValue != 0 || bar.maxValue != 80 {
+		t.Fatal("progress bar range option was not set")
+	}
+	if !bar.indeterminate || bar.color != ProgressBarSuccess || bar.size != ProgressBarLarge || !bar.disabled {
+		t.Fatal("progress bar visual options were not set")
+	}
+}
+
+func TestProgressBarRatio(t *testing.T) {
+	if got := ProgressBar("upload", 50).ratio(); got != 0.5 {
+		t.Fatalf("ratio = %v, want 0.5", got)
+	}
+	if got := ProgressBar("upload", -10).ratio(); got != 0 {
+		t.Fatalf("low ratio = %v, want 0", got)
+	}
+	if got := ProgressBar("upload", 140).ratio(); got != 1 {
+		t.Fatalf("high ratio = %v, want 1", got)
+	}
+	if got := ProgressBar("upload", 75).Range(50, 100).ratio(); got != 0.5 {
+		t.Fatalf("range ratio = %v, want 0.5", got)
+	}
+	if got := ProgressBar("upload", 75).Range(10, 10).ratio(); got != 0 {
+		t.Fatalf("invalid range ratio = %v, want 0", got)
+	}
+	if got := ProgressBar("upload", math.NaN()).ratio(); got != 0 {
+		t.Fatalf("nan ratio = %v, want 0", got)
+	}
+	if got := ProgressBar("upload", math.Inf(1)).ratio(); got != 0 {
+		t.Fatalf("inf ratio = %v, want 0", got)
+	}
+}
+
+func TestProgressBarOutputText(t *testing.T) {
+	if got := ProgressBar("upload", 42).outputText(); got != "" {
+		t.Fatalf("default output = %q, want empty", got)
+	}
+	if got := ProgressBar("upload", 42).ShowValue().outputText(); got != "42%" {
+		t.Fatalf("percent output = %q, want 42%%", got)
+	}
+	if got := ProgressBar("upload", 42).ValueText("42 files").outputText(); got != "42 files" {
+		t.Fatalf("custom output = %q, want 42 files", got)
+	}
+	if got := ProgressBar("upload", 42).ShowValue().Indeterminate().outputText(); got != "" {
+		t.Fatalf("indeterminate output = %q, want empty", got)
+	}
+}
+
+func TestProgressBarSemanticDescription(t *testing.T) {
+	if got := ProgressBar("upload", 42).Label("Upload").semanticDescription(); got != "Upload 42%" {
+		t.Fatalf("semantic description = %q, want Upload 42%%", got)
+	}
+	if got := ProgressBar("upload", 42).ValueText("42 files").semanticDescription(); got != "Progress 42 files" {
+		t.Fatalf("custom semantic description = %q, want Progress 42 files", got)
+	}
+	if got := ProgressBar("upload", 0).Label("Sync").Indeterminate().semanticDescription(); got != "Sync in progress" {
+		t.Fatalf("indeterminate semantic description = %q, want Sync in progress", got)
+	}
+}
+
+func TestProgressBarStyleUsesThemePalette(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Palette.Success = color.NRGBA{R: 1, G: 2, B: 3, A: 255}
+
+	style := progressBarStyleFor(&theme, ProgressBarSuccess, false)
+
+	if style.fill != theme.Palette.Success {
+		t.Fatalf("success fill = %#v, want %#v", style.fill, theme.Palette.Success)
+	}
+}
+
+func TestProgressBarDisabledStyleUsesDisabledOpacity(t *testing.T) {
+	theme := DefaultTheme()
+	theme.DisabledOpacity = 0.25
+
+	style := progressBarStyleFor(&theme, ProgressBarDanger, true)
+
+	if style.fill.A != byte(float32(theme.Palette.Danger.A)*0.25) {
+		t.Fatalf("disabled fill alpha = %d, want %d", style.fill.A, byte(float32(theme.Palette.Danger.A)*0.25))
+	}
+}
+
+func TestProgressBarSizeStyle(t *testing.T) {
+	theme := DefaultTheme()
+	if got := progressBarSizeStyleFor(&theme, ProgressBarSmall).height; got != theme.Components.ProgressBar.SmallHeight {
+		t.Fatalf("small height = %v, want %v", got, theme.Components.ProgressBar.SmallHeight)
+	}
+	if got := progressBarSizeStyleFor(&theme, ProgressBarLarge).height; got != theme.Components.ProgressBar.LargeHeight {
+		t.Fatalf("large height = %v, want %v", got, theme.Components.ProgressBar.LargeHeight)
+	}
+}
+
+func TestProgressBarAnimation(t *testing.T) {
+	state := new(progressBarState)
+	start := time.Unix(1, 0)
+	gtx := testLayoutContext()
+	gtx.Now = start
+
+	if got := state.progress(gtx, 0, false); got != 0 {
+		t.Fatalf("initial progress = %v, want 0", got)
+	}
+	if got := state.progress(gtx, 1, false); got != 0 {
+		t.Fatalf("animation start = %v, want 0", got)
+	}
+
+	gtx.Now = start.Add(progressBarValueDuration / 2)
+	mid := state.progress(gtx, 1, false)
+	if mid <= 0 || mid >= 1 {
+		t.Fatalf("animation midpoint = %v, want between 0 and 1", mid)
+	}
+
+	gtx.Now = start.Add(progressBarValueDuration)
+	if got := state.progress(gtx, 1, false); got != 1 {
+		t.Fatalf("animation end = %v, want 1", got)
+	}
+}
+
+func TestProgressBarIndeterminateOffset(t *testing.T) {
+	width := 40
+	start := time.Unix(1, 0)
+	if got := progressBarIndeterminateOffset(time.Time{}, width); got != -width {
+		t.Fatalf("zero time offset = %d, want %d", got, -width)
+	}
+	first := progressBarIndeterminateOffset(start, width)
+	mid := progressBarIndeterminateOffset(start.Add(progressBarIndeterminatePeriod/2), width)
+	if first == mid {
+		t.Fatal("indeterminate offset did not advance")
+	}
+	if got := progressBarIndeterminatePosition(start, width, false); got != 0 {
+		t.Fatalf("static indeterminate offset = %d, want 0", got)
+	}
+}
+
+func TestProgressBarLayoutTrackOnly(t *testing.T) {
+	dims := ProgressBar("upload", 50).Layout(newContext(nil), progressBarTestContext())
+	if dims.Size != image.Pt(300, 8) {
+		t.Fatalf("track-only size = %v, want (300,8)", dims.Size)
+	}
+}
+
+func TestProgressBarLayoutWithHeader(t *testing.T) {
+	dims := ProgressBar("upload", 50).
+		Label("Upload").
+		ShowValue().
+		Layout(newContext(nil), progressBarTestContext())
+	if dims.Size.X != 300 {
+		t.Fatalf("header width = %d, want 300", dims.Size.X)
+	}
+	if dims.Size.Y <= 8 {
+		t.Fatalf("header height = %d, want greater than track height", dims.Size.Y)
+	}
+}
+
+func progressBarTestContext() layout.Context {
+	var ops op.Ops
+	return layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 120)},
+		Ops:         &ops,
+	}
+}

@@ -16,20 +16,21 @@ type Context struct {
 	Theme            *Theme
 	DatePickerLocale DatePickerLocale
 
-	window      *app.Window
-	clickables  map[string]*widget.Clickable
-	buttons     map[string]*buttonState
-	editors     map[string]*widget.Editor
-	inputs      map[string]*inputState
-	combos      map[string]*comboBoxState
-	datePickers map[string]*datePickerState
-	bools       map[string]*widget.Bool
-	checkboxes  map[string]*checkboxState
-	radioGroups map[string]*radioGroupState
-	lists       map[string]*layout.List
-	scrolls     map[string]*layout.List
-	keys        flowstate.Keys
-	focus       flowstate.Focus
+	window       *app.Window
+	clickables   map[string]*widget.Clickable
+	buttons      map[string]*buttonState
+	editors      map[string]*widget.Editor
+	inputs       map[string]*inputState
+	combos       map[string]*comboBoxState
+	datePickers  map[string]*datePickerState
+	bools        map[string]*widget.Bool
+	checkboxes   map[string]*checkboxState
+	radioGroups  map[string]*radioGroupState
+	progressBars map[string]*progressBarState
+	lists        map[string]*layout.List
+	scrolls      map[string]*layout.List
+	keys         flowstate.Keys
+	focus        flowstate.Focus
 }
 
 func newContext(w *app.Window) *Context {
@@ -94,6 +95,7 @@ func (ctx *Context) endFrame() {
 	flowstate.Sweep(ctx.bools, frameKeys, flowstate.KindCheckbox)
 	flowstate.Sweep(ctx.checkboxes, frameKeys, flowstate.KindCheckbox)
 	flowstate.Sweep(ctx.radioGroups, frameKeys, flowstate.KindRadioGroup)
+	flowstate.Sweep(ctx.progressBars, frameKeys, flowstate.KindProgressBar)
 	flowstate.Sweep(ctx.lists, frameKeys, flowstate.KindList)
 	flowstate.Sweep(ctx.scrolls, frameKeys, flowstate.KindScroll)
 }
@@ -241,6 +243,19 @@ func (ctx *Context) radioGroupState(key string) *radioGroupState {
 	}
 	state := new(radioGroupState)
 	ctx.radioGroups[key] = state
+	return state
+}
+
+func (ctx *Context) progressBarState(key string) *progressBarState {
+	key = ctx.claimKey(flowstate.KindProgressBar, key)
+	if ctx.progressBars == nil {
+		ctx.progressBars = make(map[string]*progressBarState)
+	}
+	if state := ctx.progressBars[key]; state != nil {
+		return state
+	}
+	state := new(progressBarState)
+	ctx.progressBars[key] = state
 	return state
 }
 

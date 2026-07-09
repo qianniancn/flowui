@@ -68,6 +68,16 @@ func TestDuplicateKeysIncludeRadioGroups(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludeProgressBars(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.progressBarState("upload")
+
+	mustPanic(t, func() {
+		ctx.clickable("upload")
+	})
+}
+
 func TestDuplicateKeysIncludeLists(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -111,6 +121,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	checkboxKey, checkbox := ctx.boolStateWithKey("done")
 	checkboxAnim := ctx.checkboxState(checkboxKey)
 	radio := ctx.radioGroupState("plan")
+	progress := ctx.progressBarState("upload")
 	list := ctx.listState("todos")
 	scroll := ctx.scrollState("body")
 
@@ -146,6 +157,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.radioGroups["plan"] != radio {
 		t.Fatal("radio group state was not kept")
 	}
+	if ctx.progressBars["upload"] != progress {
+		t.Fatal("progress bar state was not kept")
+	}
 	if ctx.lists["todos"] != list {
 		t.Fatal("list state was not kept")
 	}
@@ -167,6 +181,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	checkboxKey, _ := ctx.boolStateWithKey("done")
 	ctx.checkboxState(checkboxKey)
 	ctx.radioGroupState("plan")
+	ctx.progressBarState("upload")
 	ctx.listState("todos")
 	ctx.scrollState("body")
 	ctx.endFrame()
@@ -200,6 +215,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.radioGroups) != 0 {
 		t.Fatalf("radio groups = %d, want 0", len(ctx.radioGroups))
+	}
+	if len(ctx.progressBars) != 0 {
+		t.Fatalf("progress bars = %d, want 0", len(ctx.progressBars))
 	}
 	if len(ctx.lists) != 0 {
 		t.Fatalf("lists = %d, want 0", len(ctx.lists))
@@ -303,6 +321,24 @@ func TestEndFrameRemovesOldRadioGroupStateWhenKeyChangesKind(t *testing.T) {
 		t.Fatal("old radio group state was not removed")
 	}
 	if ctx.lists["plan"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldProgressBarStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.progressBarState("upload")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("upload")
+	ctx.endFrame()
+
+	if ctx.progressBars["upload"] != nil {
+		t.Fatal("old progress bar state was not removed")
+	}
+	if ctx.lists["upload"] == nil {
 		t.Fatal("list state was not kept")
 	}
 }

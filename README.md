@@ -112,6 +112,7 @@ text/editor internals.
 - `Input`
 - `Checkbox`
 - `RadioGroup`
+- `ProgressBar`
 - `ComboBox`
 - `DatePicker`
 
@@ -146,6 +147,7 @@ Examples live in `examples/`:
 - `inputs`: input styles and events.
 - `checkboxes`: checkbox states and validation.
 - `radio_groups`: mutually exclusive option selection.
+- `progress_bars`: determinate and indeterminate progress indicators.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.
 - `form`: composing controls into a form.

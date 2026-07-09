@@ -34,6 +34,8 @@ type Palette struct {
 	AccentSoft           color.NRGBA
 	AccentSoftHover      color.NRGBA
 	AccentSoftForeground color.NRGBA
+	Success              color.NRGBA
+	Warning              color.NRGBA
 	Danger               color.NRGBA
 	DangerHover          color.NRGBA
 	DangerForeground     color.NRGBA
@@ -72,12 +74,13 @@ type Spacing struct {
 }
 
 type ComponentsTheme struct {
-	Button     ButtonTheme
-	Input      InputTheme
-	Checkbox   CheckboxTheme
-	RadioGroup RadioGroupTheme
-	ComboBox   ComboBoxTheme
-	DatePicker DatePickerTheme
+	Button      ButtonTheme
+	Input       InputTheme
+	Checkbox    CheckboxTheme
+	RadioGroup  RadioGroupTheme
+	ProgressBar ProgressBarTheme
+	ComboBox    ComboBoxTheme
+	DatePicker  DatePickerTheme
 }
 
 type ButtonTheme struct {
@@ -116,6 +119,17 @@ type RadioGroupTheme struct {
 	DotScale        float32
 	DotPressedScale float32
 	PressedScale    float32
+}
+
+type ProgressBarTheme struct {
+	SmallHeight  unit.Dp
+	MediumHeight unit.Dp
+	LargeHeight  unit.Dp
+	SmallRadius  unit.Dp
+	MediumRadius unit.Dp
+	LargeRadius  unit.Dp
+	HeaderGap    unit.Dp
+	TextSize     unit.Sp
 }
 
 type ComboBoxTheme struct {
@@ -182,6 +196,8 @@ func DefaultTheme() Theme {
 			AccentSoft:           color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x22},
 			AccentSoftHover:      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
 			AccentSoftForeground: color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
+			Success:              color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0xff},
+			Warning:              color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0xff},
 			Danger:               color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
 			DangerHover:          color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
 			DangerForeground:     color.NRGBA{R: 0xff, G: 0xf7, B: 0xfb, A: 0xff},
@@ -250,6 +266,16 @@ func DefaultTheme() Theme {
 				DotScale:        0.38,
 				DotPressedScale: 0.5,
 				PressedScale:    0.95,
+			},
+			ProgressBar: ProgressBarTheme{
+				SmallHeight:  4,
+				MediumHeight: 8,
+				LargeHeight:  12,
+				SmallRadius:  2,
+				MediumRadius: 3,
+				LargeRadius:  6,
+				HeaderGap:    4,
+				TextSize:     14,
 			},
 			ComboBox: ComboBoxTheme{
 				Height:              40,

@@ -88,6 +88,19 @@ func TestThemeControlsCheckboxSize(t *testing.T) {
 	}
 }
 
+func TestThemeControlsSwitchSize(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.Switch.MediumTrackWidth = 52
+	theme.Components.Switch.MediumTrackHeight = 24
+	theme.Components.Switch.FocusSpace = 3
+	ctx := newContextWithTheme(nil, &theme)
+
+	dims := Switch("notifications", false, "").Layout(ctx, testLayoutContext())
+	if dims.Size != image.Pt(58, 30) {
+		t.Fatalf("switch size = %v, want (58,30)", dims.Size)
+	}
+}
+
 func TestThemeControlsComboBoxHeight(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.ComboBox.Height = 48

@@ -77,6 +77,8 @@ type ComponentsTheme struct {
 	Button      ButtonTheme
 	Input       InputTheme
 	Checkbox    CheckboxTheme
+	Switch      SwitchTheme
+	SwitchGroup SwitchGroupTheme
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
 	ListBox     ListBoxTheme
@@ -105,6 +107,32 @@ type CheckboxTheme struct {
 	BorderWidth unit.Dp
 	CheckStroke unit.Dp
 	LabelGap    unit.Dp
+}
+
+type SwitchTheme struct {
+	SmallTrackWidth   unit.Dp
+	SmallTrackHeight  unit.Dp
+	SmallThumbWidth   unit.Dp
+	SmallThumbHeight  unit.Dp
+	MediumTrackWidth  unit.Dp
+	MediumTrackHeight unit.Dp
+	MediumThumbWidth  unit.Dp
+	MediumThumbHeight unit.Dp
+	LargeTrackWidth   unit.Dp
+	LargeTrackHeight  unit.Dp
+	LargeThumbWidth   unit.Dp
+	LargeThumbHeight  unit.Dp
+	FocusSpace        unit.Dp
+	FocusRingWidth    unit.Dp
+	ContentGap        unit.Dp
+	DescriptionGap    unit.Dp
+	TextSize          unit.Sp
+	DescriptionSize   unit.Sp
+}
+
+type SwitchGroupTheme struct {
+	VerticalGap   unit.Dp
+	HorizontalGap unit.Dp
 }
 
 type RadioGroupTheme struct {
@@ -274,6 +302,30 @@ func DefaultTheme() Theme {
 				BorderWidth: 1,
 				CheckStroke: 1.5,
 				LabelGap:    10,
+			},
+			Switch: SwitchTheme{
+				SmallTrackWidth:   32,
+				SmallTrackHeight:  16,
+				SmallThumbWidth:   16.5,
+				SmallThumbHeight:  12,
+				MediumTrackWidth:  40,
+				MediumTrackHeight: 20,
+				MediumThumbWidth:  22,
+				MediumThumbHeight: 16,
+				LargeTrackWidth:   48,
+				LargeTrackHeight:  24,
+				LargeThumbWidth:   27.5,
+				LargeThumbHeight:  20,
+				FocusSpace:        2,
+				FocusRingWidth:    2,
+				ContentGap:        12,
+				DescriptionGap:    4,
+				TextSize:          14,
+				DescriptionSize:   12,
+			},
+			SwitchGroup: SwitchGroupTheme{
+				VerticalGap:   16,
+				HorizontalGap: 16,
 			},
 			RadioGroup: RadioGroupTheme{
 				Size:            16,

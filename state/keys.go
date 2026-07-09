@@ -14,6 +14,7 @@ const (
 	KindComboBox    Kind = "combobox"
 	KindDatePicker  Kind = "datepicker"
 	KindCheckbox    Kind = "checkbox"
+	KindSwitch      Kind = "switch"
 	KindRadioGroup  Kind = "radio-group"
 	KindProgressBar Kind = "progress-bar"
 	KindListBox     Kind = "listbox"

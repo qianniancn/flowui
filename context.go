@@ -25,6 +25,7 @@ type Context struct {
 	datePickers  map[string]*datePickerState
 	bools        map[string]*widget.Bool
 	checkboxes   map[string]*checkboxState
+	switches     map[string]*switchState
 	radioGroups  map[string]*radioGroupState
 	progressBars map[string]*progressBarState
 	listBoxes    map[string]*listBoxState
@@ -95,6 +96,7 @@ func (ctx *Context) endFrame() {
 	flowstate.Sweep(ctx.datePickers, frameKeys, flowstate.KindDatePicker)
 	flowstate.Sweep(ctx.bools, frameKeys, flowstate.KindCheckbox)
 	flowstate.Sweep(ctx.checkboxes, frameKeys, flowstate.KindCheckbox)
+	flowstate.Sweep(ctx.switches, frameKeys, flowstate.KindSwitch)
 	flowstate.Sweep(ctx.radioGroups, frameKeys, flowstate.KindRadioGroup)
 	flowstate.Sweep(ctx.progressBars, frameKeys, flowstate.KindProgressBar)
 	flowstate.Sweep(ctx.listBoxes, frameKeys, flowstate.KindListBox)
@@ -232,6 +234,19 @@ func (ctx *Context) checkboxState(key string) *checkboxState {
 	}
 	state := new(checkboxState)
 	ctx.checkboxes[key] = state
+	return state
+}
+
+func (ctx *Context) switchState(key string) *switchState {
+	key = ctx.claimKey(flowstate.KindSwitch, key)
+	if ctx.switches == nil {
+		ctx.switches = make(map[string]*switchState)
+	}
+	if state := ctx.switches[key]; state != nil {
+		return state
+	}
+	state := new(switchState)
+	ctx.switches[key] = state
 	return state
 }
 

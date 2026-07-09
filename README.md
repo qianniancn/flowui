@@ -111,6 +111,8 @@ text/editor internals.
 - `Button`
 - `Input`
 - `Checkbox`
+- `Switch`
+- `SwitchGroup`
 - `RadioGroup`
 - `ProgressBar`
 - `ListBox`
@@ -147,6 +149,7 @@ Examples live in `examples/`:
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `inputs`: input styles and events.
 - `checkboxes`: checkbox states and validation.
+- `switches`: switch states, sizes, descriptions, label position, thumb content, and switch groups.
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.

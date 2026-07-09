@@ -38,6 +38,16 @@ func TestDuplicateKeysIncludeBools(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludeSwitches(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.switchState("notifications")
+
+	mustPanic(t, func() {
+		ctx.clickable("notifications")
+	})
+}
+
 func TestDuplicateKeysIncludeComboBoxes(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -130,6 +140,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	datePicker := ctx.datePickerState("date")
 	checkboxKey, checkbox := ctx.boolStateWithKey("done")
 	checkboxAnim := ctx.checkboxState(checkboxKey)
+	switchState := ctx.switchState("notifications")
 	radio := ctx.radioGroupState("plan")
 	progress := ctx.progressBarState("upload")
 	listBox := ctx.listBoxState("files")
@@ -165,6 +176,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.checkboxes["done"] != checkboxAnim {
 		t.Fatal("checkbox animation state was not kept")
 	}
+	if ctx.switches["notifications"] != switchState {
+		t.Fatal("switch state was not kept")
+	}
 	if ctx.radioGroups["plan"] != radio {
 		t.Fatal("radio group state was not kept")
 	}
@@ -194,6 +208,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	ctx.datePickerState("date")
 	checkboxKey, _ := ctx.boolStateWithKey("done")
 	ctx.checkboxState(checkboxKey)
+	ctx.switchState("notifications")
 	ctx.radioGroupState("plan")
 	ctx.progressBarState("upload")
 	ctx.listBoxState("files")
@@ -227,6 +242,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.checkboxes) != 0 {
 		t.Fatalf("checkbox animation states = %d, want 0", len(ctx.checkboxes))
+	}
+	if len(ctx.switches) != 0 {
+		t.Fatalf("switches = %d, want 0", len(ctx.switches))
 	}
 	if len(ctx.radioGroups) != 0 {
 		t.Fatalf("radio groups = %d, want 0", len(ctx.radioGroups))
@@ -339,6 +357,24 @@ func TestEndFrameRemovesOldRadioGroupStateWhenKeyChangesKind(t *testing.T) {
 		t.Fatal("old radio group state was not removed")
 	}
 	if ctx.lists["plan"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldSwitchStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.switchState("notifications")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("notifications")
+	ctx.endFrame()
+
+	if ctx.switches["notifications"] != nil {
+		t.Fatal("old switch state was not removed")
+	}
+	if ctx.lists["notifications"] == nil {
 		t.Fatal("list state was not kept")
 	}
 }

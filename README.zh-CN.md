@@ -109,6 +109,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Checkbox`
 - `RadioGroup`
 - `ProgressBar`
+- `ListBox`
 - `ComboBox`
 - `DatePicker`
 
@@ -144,6 +145,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `checkboxes`：复选框状态和校验。
 - `radio_groups`：互斥单选选项。
 - `progress_bars`：确定态和不定态进度指示器。
+- `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `comboboxes`：选项选择和过滤。
 - `datepickers`：日期选择和范围限制。
 - `form`：表单组合。

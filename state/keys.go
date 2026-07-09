@@ -16,6 +16,7 @@ const (
 	KindCheckbox    Kind = "checkbox"
 	KindRadioGroup  Kind = "radio-group"
 	KindProgressBar Kind = "progress-bar"
+	KindListBox     Kind = "listbox"
 	KindList        Kind = "list"
 	KindScroll      Kind = "scroll"
 )

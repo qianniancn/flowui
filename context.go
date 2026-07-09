@@ -27,6 +27,7 @@ type Context struct {
 	checkboxes   map[string]*checkboxState
 	radioGroups  map[string]*radioGroupState
 	progressBars map[string]*progressBarState
+	listBoxes    map[string]*listBoxState
 	lists        map[string]*layout.List
 	scrolls      map[string]*layout.List
 	keys         flowstate.Keys
@@ -96,6 +97,7 @@ func (ctx *Context) endFrame() {
 	flowstate.Sweep(ctx.checkboxes, frameKeys, flowstate.KindCheckbox)
 	flowstate.Sweep(ctx.radioGroups, frameKeys, flowstate.KindRadioGroup)
 	flowstate.Sweep(ctx.progressBars, frameKeys, flowstate.KindProgressBar)
+	flowstate.Sweep(ctx.listBoxes, frameKeys, flowstate.KindListBox)
 	flowstate.Sweep(ctx.lists, frameKeys, flowstate.KindList)
 	flowstate.Sweep(ctx.scrolls, frameKeys, flowstate.KindScroll)
 }
@@ -256,6 +258,19 @@ func (ctx *Context) progressBarState(key string) *progressBarState {
 	}
 	state := new(progressBarState)
 	ctx.progressBars[key] = state
+	return state
+}
+
+func (ctx *Context) listBoxState(key string) *listBoxState {
+	key = ctx.claimKey(flowstate.KindListBox, key)
+	if ctx.listBoxes == nil {
+		ctx.listBoxes = make(map[string]*listBoxState)
+	}
+	if state := ctx.listBoxes[key]; state != nil {
+		return state
+	}
+	state := new(listBoxState)
+	ctx.listBoxes[key] = state
 	return state
 }
 

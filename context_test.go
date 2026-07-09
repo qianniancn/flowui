@@ -78,6 +78,16 @@ func TestDuplicateKeysIncludeProgressBars(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludeListBoxes(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.listBoxState("files")
+
+	mustPanic(t, func() {
+		ctx.clickable("files")
+	})
+}
+
 func TestDuplicateKeysIncludeLists(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -122,6 +132,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	checkboxAnim := ctx.checkboxState(checkboxKey)
 	radio := ctx.radioGroupState("plan")
 	progress := ctx.progressBarState("upload")
+	listBox := ctx.listBoxState("files")
 	list := ctx.listState("todos")
 	scroll := ctx.scrollState("body")
 
@@ -160,6 +171,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.progressBars["upload"] != progress {
 		t.Fatal("progress bar state was not kept")
 	}
+	if ctx.listBoxes["files"] != listBox {
+		t.Fatal("list box state was not kept")
+	}
 	if ctx.lists["todos"] != list {
 		t.Fatal("list state was not kept")
 	}
@@ -182,6 +196,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	ctx.checkboxState(checkboxKey)
 	ctx.radioGroupState("plan")
 	ctx.progressBarState("upload")
+	ctx.listBoxState("files")
 	ctx.listState("todos")
 	ctx.scrollState("body")
 	ctx.endFrame()
@@ -218,6 +233,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.progressBars) != 0 {
 		t.Fatalf("progress bars = %d, want 0", len(ctx.progressBars))
+	}
+	if len(ctx.listBoxes) != 0 {
+		t.Fatalf("list boxes = %d, want 0", len(ctx.listBoxes))
 	}
 	if len(ctx.lists) != 0 {
 		t.Fatalf("lists = %d, want 0", len(ctx.lists))
@@ -339,6 +357,24 @@ func TestEndFrameRemovesOldProgressBarStateWhenKeyChangesKind(t *testing.T) {
 		t.Fatal("old progress bar state was not removed")
 	}
 	if ctx.lists["upload"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldListBoxStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.listBoxState("files")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("files")
+	ctx.endFrame()
+
+	if ctx.listBoxes["files"] != nil {
+		t.Fatal("old list box state was not removed")
+	}
+	if ctx.lists["files"] == nil {
 		t.Fatal("list state was not kept")
 	}
 }

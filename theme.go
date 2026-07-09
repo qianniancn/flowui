@@ -79,6 +79,7 @@ type ComponentsTheme struct {
 	Checkbox    CheckboxTheme
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
+	ListBox     ListBoxTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
 }
@@ -130,6 +131,27 @@ type ProgressBarTheme struct {
 	LargeRadius  unit.Dp
 	HeaderGap    unit.Dp
 	TextSize     unit.Sp
+}
+
+type ListBoxTheme struct {
+	Padding               unit.Dp
+	Gap                   unit.Dp
+	MaxHeight             unit.Dp
+	SectionHeaderTextSize unit.Sp
+	SectionHeaderPaddingX unit.Dp
+	SectionHeaderPaddingY unit.Dp
+	ItemMinHeight         unit.Dp
+	ItemRadius            unit.Dp
+	ItemPaddingX          unit.Dp
+	ItemPaddingY          unit.Dp
+	ItemContentGap        unit.Dp
+	ItemTextSize          unit.Sp
+	ItemDescriptionSize   unit.Sp
+	ItemIndicatorSize     unit.Dp
+	ItemIndicatorInset    unit.Dp
+	ItemIndicatorStroke   unit.Dp
+	FocusRingWidth        unit.Dp
+	PressedScale          float32
 }
 
 type ComboBoxTheme struct {
@@ -276,6 +298,26 @@ func DefaultTheme() Theme {
 				LargeRadius:  6,
 				HeaderGap:    4,
 				TextSize:     14,
+			},
+			ListBox: ListBoxTheme{
+				Padding:               4,
+				Gap:                   4,
+				MaxHeight:             280,
+				SectionHeaderTextSize: 12,
+				SectionHeaderPaddingX: 10,
+				SectionHeaderPaddingY: 4,
+				ItemMinHeight:         36,
+				ItemRadius:            16,
+				ItemPaddingX:          10,
+				ItemPaddingY:          6,
+				ItemContentGap:        12,
+				ItemTextSize:          14,
+				ItemDescriptionSize:   12,
+				ItemIndicatorSize:     18,
+				ItemIndicatorInset:    4,
+				ItemIndicatorStroke:   1.7,
+				FocusRingWidth:        2,
+				PressedScale:          0.98,
 			},
 			ComboBox: ComboBoxTheme{
 				Height:              40,

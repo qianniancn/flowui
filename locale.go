@@ -6,11 +6,15 @@ import (
 	"github.com/qianniancn/FlowUI/platform"
 )
 
+// Language identifies the language used by localized FlowUI widgets.
 type Language string
 
 const (
-	LanguageAuto    Language = ""
+	// LanguageAuto detects the language from the host system.
+	LanguageAuto Language = ""
+	// LanguageEnglish selects English UI strings.
 	LanguageEnglish Language = "en"
+	// LanguageChinese selects Chinese UI strings.
 	LanguageChinese Language = "zh"
 )
 
@@ -60,4 +64,13 @@ func datePickerLocaleForLanguage(language Language) DatePickerLocale {
 		return DatePickerChinese()
 	}
 	return DatePickerEnglish()
+}
+
+func languageForDatePickerLocale(locale DatePickerLocale) Language {
+	locale = normalizeDatePickerLocale(locale)
+	chinese := DatePickerChinese()
+	if locale.Hint == chinese.Hint && locale.Weekdays == chinese.Weekdays {
+		return LanguageChinese
+	}
+	return LanguageEnglish
 }

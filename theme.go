@@ -82,6 +82,8 @@ type ComponentsTheme struct {
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
 	ListBox     ListBoxTheme
+	Popover     PopoverTheme
+	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
 }
@@ -180,6 +182,45 @@ type ListBoxTheme struct {
 	ItemIndicatorStroke   unit.Dp
 	FocusRingWidth        unit.Dp
 	PressedScale          float32
+}
+
+type PopoverTheme struct {
+	Offset         unit.Dp
+	Padding        unit.Dp
+	Radius         unit.Dp
+	MaxWidth       unit.Dp
+	ArrowWidth     unit.Dp
+	ArrowHeight    unit.Dp
+	HeadingSize    unit.Sp
+	BodyTextSize   unit.Sp
+	SectionGap     unit.Dp
+	AnimationScale float32
+}
+
+type ModalTheme struct {
+	XSmallWidth          unit.Dp
+	SmallWidth           unit.Dp
+	MediumWidth          unit.Dp
+	LargeWidth           unit.Dp
+	Margin               unit.Dp
+	DesktopMargin        unit.Dp
+	DesktopBreakpoint    unit.Dp
+	Radius               unit.Dp
+	Padding              unit.Dp
+	HeaderGap            unit.Dp
+	BodyGap              unit.Dp
+	FooterGap            unit.Dp
+	SectionGap           unit.Dp
+	IconSize             unit.Dp
+	CloseSize            unit.Dp
+	CloseInset           unit.Dp
+	TitleSize            unit.Sp
+	BodyTextSize         unit.Sp
+	Backdrop             color.NRGBA
+	BlurBackdrop         color.NRGBA
+	AnimationScale       float32
+	AnimationDistance    unit.Dp
+	AnimationBounceScale float32
 }
 
 type ComboBoxTheme struct {
@@ -370,6 +411,43 @@ func DefaultTheme() Theme {
 				ItemIndicatorStroke:   1.7,
 				FocusRingWidth:        2,
 				PressedScale:          0.98,
+			},
+			Popover: PopoverTheme{
+				Offset:         8,
+				Padding:        16,
+				Radius:         24,
+				MaxWidth:       320,
+				ArrowWidth:     12,
+				ArrowHeight:    7,
+				HeadingSize:    14,
+				BodyTextSize:   14,
+				SectionGap:     8,
+				AnimationScale: 0.90,
+			},
+			Modal: ModalTheme{
+				XSmallWidth:          320,
+				SmallWidth:           384,
+				MediumWidth:          448,
+				LargeWidth:           512,
+				Margin:               16,
+				DesktopMargin:        40,
+				DesktopBreakpoint:    640,
+				Radius:               28,
+				Padding:              24,
+				HeaderGap:            12,
+				BodyGap:              8,
+				FooterGap:            8,
+				SectionGap:           20,
+				IconSize:             40,
+				CloseSize:            32,
+				CloseInset:           12,
+				TitleSize:            16,
+				BodyTextSize:         14,
+				Backdrop:             color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x66},
+				BlurBackdrop:         color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x7a},
+				AnimationScale:       0.95,
+				AnimationDistance:    24,
+				AnimationBounceScale: 1.035,
 			},
 			ComboBox: ComboBoxTheme{
 				Height:              40,

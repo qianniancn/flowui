@@ -118,6 +118,8 @@ text/editor internals.
 - `ListBox`
 - `ComboBox`
 - `DatePicker`
+- `Popover`
+- `Modal`
 
 ### Layout
 
@@ -153,6 +155,8 @@ Examples live in `examples/`:
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
+- `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
+- `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.
 - `form`: composing controls into a form.

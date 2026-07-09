@@ -98,6 +98,26 @@ func TestDuplicateKeysIncludeListBoxes(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludePopovers(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.popoverState("help")
+
+	mustPanic(t, func() {
+		ctx.clickable("help")
+	})
+}
+
+func TestDuplicateKeysIncludeModals(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.modalState("settings")
+
+	mustPanic(t, func() {
+		ctx.clickable("settings")
+	})
+}
+
 func TestDuplicateKeysIncludeLists(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -144,6 +164,8 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	radio := ctx.radioGroupState("plan")
 	progress := ctx.progressBarState("upload")
 	listBox := ctx.listBoxState("files")
+	popover := ctx.popoverState("help")
+	modal := ctx.modalState("settings")
 	list := ctx.listState("todos")
 	scroll := ctx.scrollState("body")
 
@@ -188,6 +210,12 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.listBoxes["files"] != listBox {
 		t.Fatal("list box state was not kept")
 	}
+	if ctx.popovers["help"] != popover {
+		t.Fatal("popover state was not kept")
+	}
+	if ctx.modals["settings"] != modal {
+		t.Fatal("modal state was not kept")
+	}
 	if ctx.lists["todos"] != list {
 		t.Fatal("list state was not kept")
 	}
@@ -212,6 +240,8 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	ctx.radioGroupState("plan")
 	ctx.progressBarState("upload")
 	ctx.listBoxState("files")
+	ctx.popoverState("help")
+	ctx.modalState("settings")
 	ctx.listState("todos")
 	ctx.scrollState("body")
 	ctx.endFrame()
@@ -254,6 +284,12 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.listBoxes) != 0 {
 		t.Fatalf("list boxes = %d, want 0", len(ctx.listBoxes))
+	}
+	if len(ctx.popovers) != 0 {
+		t.Fatalf("popovers = %d, want 0", len(ctx.popovers))
+	}
+	if len(ctx.modals) != 0 {
+		t.Fatalf("modals = %d, want 0", len(ctx.modals))
 	}
 	if len(ctx.lists) != 0 {
 		t.Fatalf("lists = %d, want 0", len(ctx.lists))
@@ -411,6 +447,42 @@ func TestEndFrameRemovesOldListBoxStateWhenKeyChangesKind(t *testing.T) {
 		t.Fatal("old list box state was not removed")
 	}
 	if ctx.lists["files"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldModalStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.modalState("settings")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("settings")
+	ctx.endFrame()
+
+	if ctx.modals["settings"] != nil {
+		t.Fatal("old modal state was not removed")
+	}
+	if ctx.lists["settings"] == nil {
+		t.Fatal("list state was not kept")
+	}
+}
+
+func TestEndFrameRemovesOldPopoverStateWhenKeyChangesKind(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.popoverState("help")
+	ctx.endFrame()
+
+	ctx.beginFrame()
+	ctx.listState("help")
+	ctx.endFrame()
+
+	if ctx.popovers["help"] != nil {
+		t.Fatal("old popover state was not removed")
+	}
+	if ctx.lists["help"] == nil {
 		t.Fatal("list state was not kept")
 	}
 }

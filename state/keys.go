@@ -18,6 +18,8 @@ const (
 	KindRadioGroup  Kind = "radio-group"
 	KindProgressBar Kind = "progress-bar"
 	KindListBox     Kind = "listbox"
+	KindPopover     Kind = "popover"
+	KindModal       Kind = "modal"
 	KindList        Kind = "list"
 	KindScroll      Kind = "scroll"
 )

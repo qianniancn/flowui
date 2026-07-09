@@ -13,7 +13,11 @@ import (
 // Application state belongs in the user's Model. Context only keeps Gio widget
 // state that must survive from frame to frame.
 type Context struct {
-	Theme            *Theme
+	// Theme contains the active visual tokens used by widgets.
+	Theme *Theme
+	// Language contains the resolved language used by localized widgets.
+	Language Language
+	// DatePickerLocale contains the date formatting strings used by DatePicker.
 	DatePickerLocale DatePickerLocale
 
 	window       *app.Window
@@ -29,6 +33,8 @@ type Context struct {
 	radioGroups  map[string]*radioGroupState
 	progressBars map[string]*progressBarState
 	listBoxes    map[string]*listBoxState
+	popovers     map[string]*popoverState
+	modals       map[string]*modalState
 	lists        map[string]*layout.List
 	scrolls      map[string]*layout.List
 	keys         flowstate.Keys
@@ -40,10 +46,19 @@ func newContext(w *app.Window) *Context {
 }
 
 func newContextWithTheme(w *app.Window, theme *Theme) *Context {
-	return newContextWithThemeAndLocale(w, theme, datePickerLocaleForLanguage(LanguageAuto))
+	return newContextWithThemeAndLanguage(w, theme, LanguageAuto)
+}
+
+func newContextWithThemeAndLanguage(w *app.Window, theme *Theme, language Language) *Context {
+	language = resolvedLanguage(language)
+	return newContextWithThemeLocaleAndLanguage(w, theme, datePickerLocaleForLanguage(language), language)
 }
 
 func newContextWithThemeAndLocale(w *app.Window, theme *Theme, datePickerLocale DatePickerLocale) *Context {
+	return newContextWithThemeLocaleAndLanguage(w, theme, datePickerLocale, languageForDatePickerLocale(datePickerLocale))
+}
+
+func newContextWithThemeLocaleAndLanguage(w *app.Window, theme *Theme, datePickerLocale DatePickerLocale, language Language) *Context {
 	if theme == nil {
 		defaultTheme := DefaultTheme()
 		theme = &defaultTheme
@@ -53,6 +68,7 @@ func newContextWithThemeAndLocale(w *app.Window, theme *Theme, datePickerLocale 
 	}
 	return &Context{
 		Theme:            theme,
+		Language:         language,
 		DatePickerLocale: normalizeDatePickerLocale(datePickerLocale),
 		window:           w,
 	}
@@ -100,6 +116,8 @@ func (ctx *Context) endFrame() {
 	flowstate.Sweep(ctx.radioGroups, frameKeys, flowstate.KindRadioGroup)
 	flowstate.Sweep(ctx.progressBars, frameKeys, flowstate.KindProgressBar)
 	flowstate.Sweep(ctx.listBoxes, frameKeys, flowstate.KindListBox)
+	flowstate.Sweep(ctx.popovers, frameKeys, flowstate.KindPopover)
+	flowstate.Sweep(ctx.modals, frameKeys, flowstate.KindModal)
 	flowstate.Sweep(ctx.lists, frameKeys, flowstate.KindList)
 	flowstate.Sweep(ctx.scrolls, frameKeys, flowstate.KindScroll)
 }
@@ -287,6 +305,48 @@ func (ctx *Context) listBoxState(key string) *listBoxState {
 	state := new(listBoxState)
 	ctx.listBoxes[key] = state
 	return state
+}
+
+func (ctx *Context) modalState(key string) *modalState {
+	key = ctx.claimKey(flowstate.KindModal, key)
+	if ctx.modals == nil {
+		ctx.modals = make(map[string]*modalState)
+	}
+	if state := ctx.modals[key]; state != nil {
+		return state
+	}
+	state := new(modalState)
+	ctx.modals[key] = state
+	return state
+}
+
+func (ctx *Context) popoverState(key string) *popoverState {
+	key = ctx.claimKey(flowstate.KindPopover, key)
+	if ctx.popovers == nil {
+		ctx.popovers = make(map[string]*popoverState)
+	}
+	if state := ctx.popovers[key]; state != nil {
+		return state
+	}
+	state := new(popoverState)
+	ctx.popovers[key] = state
+	return state
+}
+
+func (ctx *Context) hasVisiblePopover(key string) bool {
+	if ctx.popovers == nil {
+		return false
+	}
+	state := ctx.popovers[key]
+	return state != nil && state.visible()
+}
+
+func (ctx *Context) hasVisibleModal(key string) bool {
+	if ctx.modals == nil {
+		return false
+	}
+	state := ctx.modals[key]
+	return state != nil && state.visible()
 }
 
 func (ctx *Context) listState(key string) *layout.List {

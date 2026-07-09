@@ -24,7 +24,7 @@ func RunCmd[M any, Msg any](initial M, update UpdateCmd[M, Msg], view View[M, Ms
 	w.Option(cfg.window...)
 
 	go func() {
-		err := runWindowCmd(w, cfg.newTheme(), cfg.datePickerLocale(), initial, update, view)
+		err := runWindowCmd(w, cfg.newTheme(), cfg.language, initial, update, view)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -34,8 +34,8 @@ func RunCmd[M any, Msg any](initial M, update UpdateCmd[M, Msg], view View[M, Ms
 	app.Main()
 }
 
-func runWindowCmd[M any, Msg any](w *app.Window, theme *Theme, datePickerLocale DatePickerLocale, initial M, update UpdateCmd[M, Msg], view View[M, Msg]) error {
-	ctx := newContextWithThemeAndLocale(w, theme, datePickerLocale)
+func runWindowCmd[M any, Msg any](w *app.Window, theme *Theme, language Language, initial M, update UpdateCmd[M, Msg], view View[M, Msg]) error {
+	ctx := newContextWithThemeAndLanguage(w, theme, language)
 	return flowruntime.Loop(w, initial, func(model *M, msg Msg) func(func(Msg)) {
 		cmd := update(model, msg)
 		if cmd == nil {

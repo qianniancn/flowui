@@ -31,11 +31,17 @@ func (s SelectWidget) layout(ctx *Context, gtx layout.Context, state *selectStat
 		triggerDims = s.layoutTrigger(ctx, gtx, state, open)
 		return triggerDims
 	}))
-	if message, messageColor := s.supportMessage(style); message != "" {
+	if message, isError := s.supportMessage(); message != "" {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if !isError {
+				return Description(message).
+					For(s.key).
+					Disabled(s.disabled).
+					Layout(ctx, gtx)
+			}
 			return Text(message).
-				Size(float32(ctx.Theme.Components.Select.DescriptionSize)).
-				Color(messageColor).
+				Size(float32(ctx.Theme.Components.Description.TextSize)).
+				Color(style.error).
 				Layout(ctx, gtx)
 		}))
 	}
@@ -63,14 +69,14 @@ func (s SelectWidget) layoutLabel(ctx *Context, gtx layout.Context) layout.Dimen
 		Layout(ctx, gtx)
 }
 
-func (s SelectWidget) supportMessage(style selectStyle) (string, color.NRGBA) {
+func (s SelectWidget) supportMessage() (string, bool) {
 	if s.invalid {
 		if s.errorMessage == "" {
-			return "", style.error
+			return "", false
 		}
-		return s.errorMessage, style.error
+		return s.errorMessage, true
 	}
-	return s.description, style.description
+	return s.description, false
 }
 
 func (s SelectWidget) layoutTrigger(ctx *Context, gtx layout.Context, state *selectState, open bool) layout.Dimensions {
@@ -95,11 +101,14 @@ func (s SelectWidget) layoutTrigger(ctx *Context, gtx layout.Context, state *sel
 			label = ctx.fieldLabel(state.key)
 		}
 		semantic.LabelOp(selectSemanticLabel(label, value)).Add(gtx.Ops)
-		if s.description != "" || (s.invalid && s.errorMessage != "") {
-			description := s.description
-			if s.invalid && s.errorMessage != "" {
-				description = s.errorMessage
-			}
+		description := s.description
+		if description == "" {
+			description = ctx.fieldDescription(state.key)
+		}
+		if s.invalid {
+			description = s.errorMessage
+		}
+		if description != "" {
 			semantic.DescriptionOp(description).Add(gtx.Ops)
 		}
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)

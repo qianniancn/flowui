@@ -85,6 +85,7 @@ type Spacing struct {
 
 type ComponentsTheme struct {
 	Button      ButtonTheme
+	Description DescriptionTheme
 	Label       LabelTheme
 	Input       InputTheme
 	Checkbox    CheckboxTheme
@@ -98,6 +99,10 @@ type ComponentsTheme struct {
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
+}
+
+type DescriptionTheme struct {
+	TextSize unit.Sp
 }
 
 type LabelTheme struct {
@@ -146,7 +151,6 @@ type SwitchTheme struct {
 	ContentGap        unit.Dp
 	DescriptionGap    unit.Dp
 	TextSize          unit.Sp
-	DescriptionSize   unit.Sp
 }
 
 type SwitchGroupTheme struct {
@@ -205,7 +209,6 @@ type SelectTheme struct {
 	Height            unit.Dp
 	Radius            unit.Dp
 	TextSize          unit.Sp
-	DescriptionSize   unit.Sp
 	ContentGap        unit.Dp
 	TriggerPaddingX   unit.Dp
 	TriggerPaddingY   unit.Dp
@@ -378,6 +381,9 @@ func DefaultTheme() Theme {
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,
 			},
+			Description: DescriptionTheme{
+				TextSize: 12,
+			},
 			Label: LabelTheme{
 				TextSize:           14,
 				RequiredMarkOffset: 2,
@@ -411,7 +417,6 @@ func DefaultTheme() Theme {
 				ContentGap:        12,
 				DescriptionGap:    4,
 				TextSize:          14,
-				DescriptionSize:   12,
 			},
 			SwitchGroup: SwitchGroupTheme{
 				VerticalGap:   16,
@@ -465,7 +470,6 @@ func DefaultTheme() Theme {
 				Height:            36,
 				Radius:            12,
 				TextSize:          14,
-				DescriptionSize:   12,
 				ContentGap:        4,
 				TriggerPaddingX:   12,
 				TriggerPaddingY:   8,

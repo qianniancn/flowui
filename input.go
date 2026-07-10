@@ -109,5 +109,5 @@ func (i InputWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions 
 	editorStyle.HintColor = style.placeholder
 	editorStyle.SelectionColor = style.selection
 
-	return i.layoutFrame(ctx, gtx, state, style, ctx.withFieldLabel(key, editorStyle.Layout))
+	return i.layoutFrame(ctx, gtx, state, style, ctx.withFieldSemantics(key, editorStyle.Layout))
 }

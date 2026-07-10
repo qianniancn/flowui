@@ -678,13 +678,12 @@ func TestSelectMultipleValueWrapsAndGrowsTrigger(t *testing.T) {
 }
 
 func TestSelectSupportMessageMatchesInvalidState(t *testing.T) {
-	style := selectStyleFor(newContext(nil).Theme, SelectPrimary, false, false, false, true)
 	widget := Select("language", "", nil).Description("Pick one").Invalid(true)
-	if message, _ := widget.supportMessage(style); message != "" {
+	if message, _ := widget.supportMessage(); message != "" {
 		t.Fatalf("invalid description = %q, want hidden", message)
 	}
-	if message, color := widget.ErrorMessage("Required").supportMessage(style); message != "Required" || color != style.error {
-		t.Fatalf("invalid error = %q %#v", message, color)
+	if message, isError := widget.ErrorMessage("Required").supportMessage(); message != "Required" || !isError {
+		t.Fatalf("invalid error = %q, %v", message, isError)
 	}
 }
 

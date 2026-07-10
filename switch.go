@@ -78,6 +78,7 @@ func (s SwitchWidget) Thumb(content func(checked bool) Widget) SwitchWidget {
 
 func (s SwitchWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	state := ctx.switchState(s.key)
+	key := ctx.fullKey(s.key)
 	state.value.Value = s.checked
 	animGtx := gtx
 	disabled := s.disabled || !gtx.Enabled()
@@ -91,8 +92,12 @@ func (s SwitchWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions
 		if s.label != "" {
 			semantic.LabelOp(s.label).Add(gtx.Ops)
 		}
-		if s.description != "" {
-			semantic.DescriptionOp(s.description).Add(gtx.Ops)
+		description := s.description
+		if description == "" {
+			description = ctx.fieldDescription(key)
+		}
+		if description != "" {
+			semantic.DescriptionOp(description).Add(gtx.Ops)
 		}
 
 		focusVisible := state.focusVisible(gtx.Focused(&state.value), state.value.History())

@@ -21,7 +21,7 @@ func (s SwitchWidget) layoutContent(ctx *Context, gtx layout.Context, style swit
 	}.Layout(gtx,
 		layout.Rigid(row),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return s.layoutDescription(ctx, gtx, style, size)
+			return s.layoutDescription(ctx, gtx, size)
 		}),
 	)
 }
@@ -94,16 +94,16 @@ func (s SwitchWidget) layoutLabel(ctx *Context, gtx layout.Context, style switch
 		Layout(ctx, gtx)
 }
 
-func (s SwitchWidget) layoutDescription(ctx *Context, gtx layout.Context, style switchStyle, size switchSizeStyle) layout.Dimensions {
+func (s SwitchWidget) layoutDescription(ctx *Context, gtx layout.Context, size switchSizeStyle) layout.Dimensions {
 	left := unit.Dp(0)
 	if s.label != "" && !s.labelBefore {
 		theme := ctx.Theme.Components.Switch
 		left = size.trackWidth + theme.FocusSpace*2 + theme.ContentGap
 	}
 	return layout.Inset{Left: left}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return Text(s.description).
-			Size(float32(ctx.Theme.Components.Switch.DescriptionSize)).
-			Color(style.description).
+		return Description(s.description).
+			For(s.key).
+			Disabled(s.disabled).
 			Layout(ctx, gtx)
 	})
 }

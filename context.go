@@ -24,33 +24,35 @@ type Context struct {
 	// DatePickerLocale contains the date formatting strings used by DatePicker.
 	DatePickerLocale DatePickerLocale
 
-	window          *app.Window
-	clickables      map[string]*widget.Clickable
-	buttons         map[string]*buttonState
-	editors         map[string]*widget.Editor
-	inputs          map[string]*inputState
-	combos          map[string]*comboBoxState
-	selects         map[string]*selectState
-	datePickers     map[string]*datePickerState
-	bools           map[string]*widget.Bool
-	checkboxes      map[string]*checkboxState
-	switches        map[string]*switchState
-	radioGroups     map[string]*radioGroupState
-	progressBars    map[string]*progressBarState
-	listBoxes       map[string]*listBoxState
-	popovers        map[string]*popoverState
-	modals          map[string]*modalState
-	lists           map[string]*layout.List
-	scrolls         map[string]*layout.List
-	keys            flowstate.Keys
-	focus           flowstate.Focus
-	fieldFocus      map[string]fieldFocusTarget
-	fieldLabels     map[string]string
-	frameLabels     map[string]struct{}
-	activeSelectKey string
-	viewport        image.Point
-	foreground      color.NRGBA
-	hasForeground   bool
+	window            *app.Window
+	clickables        map[string]*widget.Clickable
+	buttons           map[string]*buttonState
+	editors           map[string]*widget.Editor
+	inputs            map[string]*inputState
+	combos            map[string]*comboBoxState
+	selects           map[string]*selectState
+	datePickers       map[string]*datePickerState
+	bools             map[string]*widget.Bool
+	checkboxes        map[string]*checkboxState
+	switches          map[string]*switchState
+	radioGroups       map[string]*radioGroupState
+	progressBars      map[string]*progressBarState
+	listBoxes         map[string]*listBoxState
+	popovers          map[string]*popoverState
+	modals            map[string]*modalState
+	lists             map[string]*layout.List
+	scrolls           map[string]*layout.List
+	keys              flowstate.Keys
+	focus             flowstate.Focus
+	fieldFocus        map[string]fieldFocusTarget
+	fieldLabels       map[string]string
+	frameLabels       map[string]struct{}
+	fieldDescriptions map[string]string
+	frameDescriptions map[string]struct{}
+	activeSelectKey   string
+	viewport          image.Point
+	foreground        color.NRGBA
+	hasForeground     bool
 }
 
 func newContext(w *app.Window) *Context {
@@ -104,6 +106,11 @@ func (ctx *Context) beginFrame() {
 	} else {
 		clear(ctx.frameLabels)
 	}
+	if ctx.frameDescriptions == nil {
+		ctx.frameDescriptions = make(map[string]struct{})
+	} else {
+		clear(ctx.frameDescriptions)
+	}
 }
 
 func (ctx *Context) beginFrameWithViewport(viewport image.Point) {
@@ -156,21 +163,50 @@ func (ctx *Context) registerFieldLabel(key, label string) {
 	if ctx.frameLabels == nil {
 		ctx.frameLabels = make(map[string]struct{})
 	}
+	previous, existed := ctx.fieldLabels[key]
 	ctx.fieldLabels[key] = label
 	ctx.frameLabels[key] = struct{}{}
+	if !existed || previous != label {
+		ctx.Invalidate()
+	}
 }
 
 func (ctx *Context) fieldLabel(key string) string {
 	return ctx.fieldLabels[key]
 }
 
-func (ctx *Context) withFieldLabel(key string, child layout.Widget) layout.Widget {
+func (ctx *Context) registerFieldDescription(key, description string) {
+	if ctx.fieldDescriptions == nil {
+		ctx.fieldDescriptions = make(map[string]string)
+	}
+	if ctx.frameDescriptions == nil {
+		ctx.frameDescriptions = make(map[string]struct{})
+	}
+	previous, existed := ctx.fieldDescriptions[key]
+	ctx.fieldDescriptions[key] = description
+	ctx.frameDescriptions[key] = struct{}{}
+	if !existed || previous != description {
+		ctx.Invalidate()
+	}
+}
+
+func (ctx *Context) fieldDescription(key string) string {
+	return ctx.fieldDescriptions[key]
+}
+
+func (ctx *Context) withFieldSemantics(key string, child layout.Widget) layout.Widget {
 	label := ctx.fieldLabel(key)
-	if label == "" {
+	description := ctx.fieldDescription(key)
+	if label == "" && description == "" {
 		return child
 	}
 	return func(gtx layout.Context) layout.Dimensions {
-		semantic.LabelOp(label).Add(gtx.Ops)
+		if label != "" {
+			semantic.LabelOp(label).Add(gtx.Ops)
+		}
+		if description != "" {
+			semantic.DescriptionOp(description).Add(gtx.Ops)
+		}
 		return child(gtx)
 	}
 }
@@ -200,6 +236,7 @@ func activePresses(history []widget.Press) int {
 
 func (ctx *Context) endFrame() {
 	frameKeys := ctx.keys.Frame()
+	semanticsChanged := false
 	for key := range ctx.fieldFocus {
 		kind := frameKeys[key]
 		if kind != flowstate.KindInput && kind != flowstate.KindComboBox && kind != flowstate.KindSelect {
@@ -209,7 +246,17 @@ func (ctx *Context) endFrame() {
 	for key := range ctx.fieldLabels {
 		if _, ok := ctx.frameLabels[key]; !ok {
 			delete(ctx.fieldLabels, key)
+			semanticsChanged = true
 		}
+	}
+	for key := range ctx.fieldDescriptions {
+		if _, ok := ctx.frameDescriptions[key]; !ok {
+			delete(ctx.fieldDescriptions, key)
+			semanticsChanged = true
+		}
+	}
+	if semanticsChanged {
+		ctx.Invalidate()
 	}
 	flowstate.Sweep(ctx.clickables, frameKeys, flowstate.KindClickable)
 	flowstate.Sweep(ctx.buttons, frameKeys, flowstate.KindClickable)

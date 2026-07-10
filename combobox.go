@@ -140,7 +140,7 @@ func (c ComboBoxWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensio
 	editorStyle.HintColor = style.placeholder
 	editorStyle.SelectionColor = style.selection
 
-	dims := c.layoutInput(ctx, gtx, state, editor, style, ctx.withFieldLabel(key, editorStyle.Layout))
+	dims := c.layoutInput(ctx, gtx, state, editor, style, ctx.withFieldSemantics(key, editorStyle.Layout))
 	progress := state.popoverProgress(gtx, state.open && !c.disabled)
 	if progress == 0 {
 		state.endFrame()

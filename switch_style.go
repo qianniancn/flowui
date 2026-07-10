@@ -7,17 +7,16 @@ import (
 )
 
 type switchStyle struct {
-	trackOff    color.NRGBA
-	trackOn     color.NRGBA
-	thumb       color.NRGBA
-	thumbOn     color.NRGBA
-	thumbFgOff  color.NRGBA
-	thumbFg     color.NRGBA
-	label       color.NRGBA
-	description color.NRGBA
-	focusColor  color.NRGBA
-	selected    float32
-	focus       float32
+	trackOff   color.NRGBA
+	trackOn    color.NRGBA
+	thumb      color.NRGBA
+	thumbOn    color.NRGBA
+	thumbFgOff color.NRGBA
+	thumbFg    color.NRGBA
+	label      color.NRGBA
+	focusColor color.NRGBA
+	selected   float32
+	focus      float32
 }
 
 type switchSizeStyle struct {
@@ -29,15 +28,14 @@ type switchSizeStyle struct {
 
 func switchStyleFor(theme *Theme, hovered, pressed, disabled, invalid bool) switchStyle {
 	style := switchStyle{
-		trackOff:    theme.Palette.SurfaceRaised,
-		trackOn:     theme.Palette.Accent,
-		thumb:       theme.Palette.Surface,
-		thumbOn:     theme.Palette.AccentForeground,
-		thumbFgOff:  theme.Palette.MutedForeground,
-		thumbFg:     theme.Palette.Accent,
-		label:       theme.Palette.Foreground,
-		description: theme.Palette.MutedForeground,
-		focusColor:  theme.Palette.Focus,
+		trackOff:   theme.Palette.SurfaceRaised,
+		trackOn:    theme.Palette.Accent,
+		thumb:      theme.Palette.Surface,
+		thumbOn:    theme.Palette.AccentForeground,
+		thumbFgOff: theme.Palette.MutedForeground,
+		thumbFg:    theme.Palette.Accent,
+		label:      theme.Palette.Foreground,
+		focusColor: theme.Palette.Focus,
 	}
 	if hovered {
 		style.trackOff = theme.Palette.SurfacePressed
@@ -64,7 +62,6 @@ func switchStyleFor(theme *Theme, hovered, pressed, disabled, invalid bool) swit
 		style.thumbFgOff = theme.DisabledColor(style.thumbFgOff)
 		style.thumbFg = theme.DisabledColor(style.thumbFg)
 		style.label = theme.DisabledColor(style.label)
-		style.description = theme.DisabledColor(style.description)
 		style.focusColor = color.NRGBA{}
 	}
 	return style

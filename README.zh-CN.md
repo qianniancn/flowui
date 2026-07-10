@@ -105,6 +105,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 - `Text`
 - `Label`
+- `Description`
 - `Button`
 - `Input`
 - `Checkbox`
@@ -151,6 +152,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `inputs`：输入框样式和事件。
 - `labels`：表单标签状态，以及与输入框、组合框和选择器的字段关联。
+- `descriptions`：辅助文本状态、字段关联、自动换行和组件兼容性。
 - `checkboxes`：复选框状态和校验。
 - `switches`：开关状态、尺寸、描述、label 位置、thumb 内容和开关组。
 - `radio_groups`：互斥单选选项。

@@ -61,6 +61,9 @@ func (c CheckboxWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensio
 	presses := activePresses(state.History())
 	dims := state.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.CheckBox.Add(gtx.Ops)
+		if description := ctx.fieldDescription(key); description != "" {
+			semantic.DescriptionOp(description).Add(gtx.Ops)
+		}
 		focusVisible := anim.focusVisible(gtx.Focused(state), state.History())
 		style := checkboxStyleFor(ctx.Theme, state.Hovered(), c.disabled, c.invalid)
 		style.selected = anim.selection(animGtx, state.Value)

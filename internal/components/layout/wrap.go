@@ -59,7 +59,9 @@ func (w WrapWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	var row wrapRow
 	for _, child := range w.children {
 		macro := op.Record(gtx.Ops)
-		dims := child.Layout(ctx, childGtx)
+		dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return child.Layout(ctx, childGtx)
+		})
 		call := macro.Stop()
 
 		if x > 0 && x+gap+dims.Size.X > maxWidth {
@@ -74,8 +76,9 @@ func (w WrapWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 			x += gap
 		}
 		row.children = append(row.children, wrapChild{
-			call: call,
-			pos:  image.Pt(x, y),
+			call:      call,
+			pos:       image.Pt(x, y),
+			placement: placement,
 		})
 		x += dims.Size.X
 		width = max(width, x)
@@ -90,7 +93,9 @@ func (w WrapWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	for _, row := range rows {
 		offset := alignmentOffset(w.align, size.X-row.width)
 		for _, child := range row.children {
-			trans := op.Offset(child.pos.Add(image.Pt(offset, 0))).Push(gtx.Ops)
+			pos := child.pos.Add(image.Pt(offset, 0))
+			child.placement.PlaceOffset(pos)
+			trans := op.Offset(pos).Push(gtx.Ops)
 			child.call.Add(gtx.Ops)
 			trans.Pop()
 		}
@@ -118,6 +123,7 @@ type wrapRow struct {
 }
 
 type wrapChild struct {
-	call op.CallOp
-	pos  image.Point
+	call      op.CallOp
+	pos       image.Point
+	placement frame.OverlayPlacement
 }

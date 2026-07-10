@@ -316,7 +316,7 @@ func TestRadioGroupHorizontalLayoutWraps(t *testing.T) {
 		fixedRadioChild(70, 10),
 	}
 
-	dims := layoutui.LayoutItems(gtx, true, 10, 5, children)
+	dims := layoutui.LayoutItems(newContext(nil), gtx, true, 10, 5, children)
 
 	if dims.Size != image.Pt(70, 25) {
 		t.Fatalf("wrapped size = %v, want (70,25)", dims.Size)

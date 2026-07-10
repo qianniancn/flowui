@@ -14,6 +14,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -29,6 +30,7 @@ type comboBoxState struct {
 	editor             widget.Editor
 	input              field.State
 	trigger            widget.Clickable
+	dialog             overlay.ClickArea
 	list               layout.List
 	open               bool
 	wasFocused         bool

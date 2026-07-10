@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -152,6 +153,78 @@ func TestModalOpenWithoutCloseButtonFocusesTrap(t *testing.T) {
 	}
 }
 
+func TestModalNaturallyDisabledDefersInitialFocusUntilEnabled(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	modal := Modal("settings", true, "Settings", text.New("Body"))
+
+	layoutModalFrameEnabled(ctx, router, modal, false)
+	state := testComponentState[modalState](ctx, "settings", stateSlotModal)
+	if router.Source().Focused(&state.focusTarget) {
+		t.Fatal("naturally disabled modal took focus")
+	}
+
+	layoutModalFrameEnabled(ctx, router, modal, true)
+	if !router.Source().Focused(&state.focusTarget) {
+		t.Fatal("enabled modal did not consume its deferred focus request")
+	}
+}
+
+func TestStackedModalRestoresUnderlyingFocusScopeAfterExit(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	start := time.Unix(1, 0)
+	outer := Modal("outer", true, "Outer", text.New("Outer body"))
+	innerOpen := true
+	inner := func() ModalWidget {
+		return Modal("inner", innerOpen, "Inner", text.New("Inner body"))
+	}
+
+	layoutModalPairFrameAt(ctx, router, outer, inner(), start)
+	layoutModalPairFrameAt(ctx, router, outer, inner(), start.Add(modalEnterDuration))
+	outerState := testComponentState[modalState](ctx, "outer", stateSlotModal)
+	innerState := testComponentState[modalState](ctx, "inner", stateSlotModal)
+	if !router.Source().Focused(&innerState.focusTarget) {
+		t.Fatal("top stacked modal did not own focus")
+	}
+
+	innerOpen = false
+	closingAt := start.Add(modalEnterDuration + time.Millisecond)
+	layoutModalPairFrameAt(ctx, router, outer, inner(), closingAt)
+	if !router.Source().Focused(&innerState.focusTarget) {
+		t.Fatal("exiting modal released focus before its animation completed")
+	}
+
+	layoutModalPairFrameAt(ctx, router, outer, inner(), closingAt.Add(modalEnterDuration))
+	if !router.Source().Focused(&outerState.focusTarget) {
+		t.Fatal("underlying modal did not regain focus after the top modal exited")
+	}
+}
+
+func TestModalExitMovesInternalFocusToTrap(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	start := time.Unix(1, 0)
+	open := true
+	build := func() ModalWidget {
+		return Modal("settings", open, "Settings", text.New("Body"))
+	}
+
+	layoutModalFrameAt(ctx, router, build(), start)
+	layoutModalFrameAt(ctx, router, build(), start.Add(modalEnterDuration))
+	state := testComponentState[modalState](ctx, "settings", stateSlotModal)
+	router.Source().Execute(key.FocusCmd{Tag: &state.close})
+	if !router.Source().Focused(&state.close) {
+		t.Fatal("modal close button did not receive setup focus")
+	}
+
+	open = false
+	layoutModalFrameAt(ctx, router, build(), start.Add(modalEnterDuration+time.Millisecond))
+	if !router.Source().Focused(&state.focusTarget) {
+		t.Fatal("modal exit did not move disabled content focus back into the trap")
+	}
+}
+
 func TestModalTabFromTrapReachesFooterButton(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
@@ -199,6 +272,33 @@ func TestModalFocusWrapsAtBoundaries(t *testing.T) {
 			router.Source().Focused(&state.focusEnd),
 			router.Source().Focused(&state.close),
 		)
+	}
+}
+
+func TestModalNestedOverlayFocusCannotEscapeToBackground(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	background := new(widget.Clickable)
+	nested := new(nestedFocusableOverlay)
+	modal := Modal("settings", true, "Settings", nested).CloseButton(false)
+
+	layoutModalWithBackgroundFrame(ctx, router, modal, background)
+	state := testComponentState[modalState](ctx, "settings", stateSlotModal)
+	if !router.Source().Focused(&state.focusTarget) {
+		t.Fatal("modal with an initially open nested overlay did not take focus")
+	}
+	router.Source().Execute(key.FocusCmd{Tag: &nested.button})
+	if !router.Source().Focused(&nested.button) {
+		t.Fatal("nested overlay button did not receive focus")
+	}
+
+	router.MoveFocus(key.FocusForward)
+	layoutModalWithBackgroundFrame(ctx, router, modal, background)
+	if router.Source().Focused(background) {
+		t.Fatal("Tab from nested overlay escaped to the background")
+	}
+	if !router.Source().Focused(&state.focusTarget) {
+		t.Fatal("Tab from nested overlay did not wrap to the modal focus trap")
 	}
 }
 
@@ -317,16 +417,50 @@ func TestModalDialogBlocksBackgroundClicks(t *testing.T) {
 	}
 }
 
+func TestModalExitDialogStillBlocksBackgroundClicks(t *testing.T) {
+	ctx, state := modalTestContextWithState("settings")
+	state.ready = true
+	state.value = 1
+	state.from = 1
+	state.to = 1
+	router := new(input.Router)
+	background := new(widget.Clickable)
+	backgroundClicked := false
+	modal := Modal("settings", false, "Settings", text.New("Body"))
+	position := f32.Pt(150, 100)
+
+	layoutModalOverClickableFrame(ctx, router, modal, background, &backgroundClicked)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutModalOverClickableFrame(ctx, router, modal, background, &backgroundClicked)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutModalOverClickableFrame(ctx, router, modal, background, &backgroundClicked)
+
+	if backgroundClicked {
+		t.Fatal("exiting modal dialog allowed a click to reach the background")
+	}
+}
+
 func TestModalCloseButtonRequestsClose(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	state.close.Click()
 
 	closed := false
-	Modal("settings", true, "Settings", text.New("Body")).
+	modal := Modal("settings", true, "Settings", text.New("Body")).
 		OnOpenChange(func(open bool) {
 			closed = !open
-		}).
-		Layout(ctx, testLayoutContext())
+		})
+	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if !closed {
 		t.Fatal("close button did not request close")
@@ -338,11 +472,11 @@ func TestModalDismissAreaRequestsClose(t *testing.T) {
 	state.dismiss[0].Click()
 
 	closed := false
-	Modal("settings", true, "Settings", text.New("Body")).
+	modal := Modal("settings", true, "Settings", text.New("Body")).
 		OnOpenChange(func(open bool) {
 			closed = !open
-		}).
-		Layout(ctx, testLayoutContext())
+		})
+	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if !closed {
 		t.Fatal("dismiss area did not request close")
@@ -354,12 +488,12 @@ func TestModalDismissableFalseIgnoresDismissArea(t *testing.T) {
 	state.dismiss[0].Click()
 
 	closed := false
-	Modal("settings", true, "Settings", text.New("Body")).
+	modal := Modal("settings", true, "Settings", text.New("Body")).
 		Dismissable(false).
 		OnOpenChange(func(open bool) {
 			closed = !open
-		}).
-		Layout(ctx, testLayoutContext())
+		})
+	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if closed {
 		t.Fatal("non-dismissable modal closed from dismiss area")
@@ -628,7 +762,7 @@ func TestModalMotionBoundsUsesAnimatedRect(t *testing.T) {
 		Animation(ModalAnimationSlideDown).
 		dialogMotion(ctx, gtx, rect, 0, true)
 
-	got := modalMotionBounds(rect, motion.transform)
+	got := overlay.AffineRectBounds(rect, motion.transform)
 	want := rect.Add(image.Pt(0, -gtx.Dp(frame.ActiveTheme(ctx).Components.Modal.AnimationDistance)))
 	if got != want {
 		t.Fatalf("motion bounds = %v, want %v", got, want)
@@ -757,6 +891,24 @@ type fixedModalWidget struct {
 	size image.Point
 }
 
+type nestedFocusableOverlay struct {
+	button widget.Clickable
+}
+
+func (w *nestedFocusableOverlay) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:   "nested-focusable",
+		Layer: frame.OverlayLayerPopup,
+		Layout: func(gtx layout.Context, _ image.Rectangle, _ bool) layout.Dimensions {
+			gtx.Constraints = layout.Exact(image.Pt(40, 24))
+			return w.button.Layout(gtx, func(layout.Context) layout.Dimensions {
+				return layout.Dimensions{Size: image.Pt(40, 24)}
+			})
+		},
+	})
+	return layout.Dimensions{Size: image.Pt(80, 24)}
+}
+
 func (w fixedModalWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
 }
@@ -774,6 +926,26 @@ func (w *constraintProbeWidget) Layout(_ *frame.Context, gtx layout.Context) lay
 }
 
 func layoutModalFrame(ctx *frame.Context, router *input.Router, modal ModalWidget) {
+	layoutModalFrameAt(ctx, router, modal, time.Time{})
+}
+
+func layoutModalFrameAt(ctx *frame.Context, router *input.Router, modal ModalWidget, now time.Time) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	frame.BeginFrame(ctx)
+	modal.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutModalFrameEnabled(ctx *frame.Context, router *input.Router, modal ModalWidget, enabled bool) {
 	var ops op.Ops
 	gtx := layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
@@ -781,7 +953,29 @@ func layoutModalFrame(ctx *frame.Context, router *input.Router, modal ModalWidge
 		Ops:         &ops,
 	}
 	frame.BeginFrame(ctx)
-	modal.Layout(ctx, gtx)
+	modalGtx := gtx
+	if !enabled {
+		modalGtx = modalGtx.Disabled()
+	}
+	modal.Layout(ctx, modalGtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutModalPairFrameAt(ctx *frame.Context, router *input.Router, first, second ModalWidget, now time.Time) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	frame.BeginFrame(ctx)
+	first.Layout(ctx, gtx)
+	second.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
@@ -797,6 +991,7 @@ func layoutModalOverButtonFrame(ctx *frame.Context, router *input.Router, modal 
 	frame.BeginFrame(ctx)
 	Button("behind", text.New("Behind")).OnClick(onClick).Layout(ctx, gtx)
 	modal.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
@@ -817,6 +1012,25 @@ func layoutModalOverClickableFrame(ctx *frame.Context, router *input.Router, mod
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	})
 	modal.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutModalWithBackgroundFrame(ctx *frame.Context, router *input.Router, modal ModalWidget, background *widget.Clickable) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	frame.BeginFrame(ctx)
+	background.Layout(gtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	})
+	modal.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)

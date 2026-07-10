@@ -1,10 +1,12 @@
 package modal
 
 import (
+	"image"
 	"time"
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/state"
 )
 
 // ModalWidget renders an overlay dialog controlled by application state.
@@ -200,44 +202,100 @@ func (m ModalWidget) CloseButton(show bool) ModalWidget {
 // Layout renders the modal overlay when it is open or exiting.
 func (m ModalWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	fullKey := frame.FullKey(ctx, m.key)
+	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	if !m.open && !hasVisibleModal(ctx, fullKey) {
 		return layout.Dimensions{}
 	}
 	state := modalStateFor(ctx, m.key)
 	progress := state.progress(gtx, m.open)
-	state.syncFocus(ctx, m.open)
+	if m.open && naturallyDisabled {
+		state.focusPending = true
+	}
 	if !m.open && progress <= 0 {
 		deleteModalState(ctx, fullKey)
 		return layout.Dimensions{}
 	}
-	if m.open {
-		m.handleCloseEvents(ctx, gtx, state)
+	var tail func(layout.Context)
+	if !naturallyDisabled {
+		tail = func(gtx layout.Context) {
+			m.layoutFocusEnd(gtx, state)
+		}
 	}
-
-	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
-		return m.layoutOverlay(ctx, gtx, state, progress)
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:      fullKey,
+		Layer:    frame.OverlayLayerModal,
+		Disabled: naturallyDisabled,
+		Layout: func(gtx layout.Context, _ image.Rectangle, interactive bool) layout.Dimensions {
+			if interactive && gtx.Enabled() {
+				if m.open {
+					m.handleCloseEvents(ctx, gtx, state)
+				} else {
+					m.handleExitSurfaceEvents(ctx, gtx, state)
+				}
+			}
+			return m.layoutOverlay(ctx, gtx, state, progress, m.open && gtx.Enabled())
+		},
+		Tail: tail,
 	})
+	if m.open && !naturallyDisabled {
+		frame.AfterOverlays(ctx, func() {
+			becameTopmost := frame.OverlayFocusScopeBecameTopmost(ctx, frame.OverlayLayerModal, fullKey)
+			if frame.OverlayFocusScopeTopmost(ctx, frame.OverlayLayerModal, fullKey) && (state.focusPending || becameTopmost) {
+				frame.RequestFocus(ctx, state.initialFocusTag())
+				state.focusPending = false
+			}
+		})
+	} else if !naturallyDisabled {
+		frame.AfterOverlays(ctx, func() {
+			if frame.OverlayFocusScopeTopmost(ctx, frame.OverlayLayerModal, fullKey) {
+				frame.RequestFocus(ctx, state.initialFocusTag())
+			}
+		})
+	}
 
 	return layout.Dimensions{}
 }
 
-func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, state *modalState) {
+func (m ModalWidget) handleExitSurfaceEvents(ctx *frame.Context, gtx layout.Context, state *modalState) {
 	for state.dialog.Clicked(gtx) {
 	}
-	if !m.keyboardDismissDisabled && state.escapePressed(gtx) {
+	pressed := state.dialog.TakePressed()
+	for i := range state.dismiss {
+		for state.dismiss[i].Clicked(gtx) {
+		}
+		pressed = state.dismiss[i].TakePressed() || pressed
+	}
+	if pressed {
+		frame.RequestFocus(ctx, state.endFocusTag())
+	}
+}
+
+func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, modalStateValue *modalState) {
+	for modalStateValue.dialog.Clicked(gtx) {
+		frame.RequestFocus(ctx, modalStateValue.endFocusTag())
+	}
+	if modalStateValue.dialog.TakePressed() {
+		frame.RequestFocus(ctx, modalStateValue.endFocusTag())
+	}
+	if !m.keyboardDismissDisabled && modalStateValue.escapePressed(gtx) {
 		m.requestClose()
 	}
 	if m.showCloseButton() {
-		for state.close.Clicked(gtx) {
+		presses := state.ActivePresses(modalStateValue.close.History())
+		for modalStateValue.close.Clicked(gtx) {
 			m.requestClose()
-			frame.RequestFocus(ctx, &state.close)
+			frame.RequestFocus(ctx, &modalStateValue.close)
 		}
+		frame.FocusOnPress(ctx, &modalStateValue.close, modalStateValue.close.History(), presses)
 	}
-	if m.isDismissable() {
-		for i := range state.dismiss {
-			for state.dismiss[i].Clicked(gtx) {
+	for i := range modalStateValue.dismiss {
+		for modalStateValue.dismiss[i].Clicked(gtx) {
+			if m.isDismissable() {
 				m.requestClose()
 			}
+		}
+		if modalStateValue.dismiss[i].TakePressed() {
+			frame.RequestFocus(ctx, modalStateValue.endFocusTag())
 		}
 	}
 }

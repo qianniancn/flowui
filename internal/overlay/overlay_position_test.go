@@ -53,3 +53,25 @@ func TestAvoidOverflowPreservesNegativeLocalPlacement(t *testing.T) {
 		t.Fatalf("AvoidOverflow() = %v, want local top-left position %v", got, position)
 	}
 }
+
+func TestResolvePositionConstrainsViewportRelativePlacement(t *testing.T) {
+	result := ResolvePosition(PositionConfig{
+		Trigger:          image.Pt(20, 20),
+		TriggerOrigin:    image.Pt(5, 4),
+		HasTriggerOrigin: true,
+		Panel:            image.Pt(80, 60),
+		Bounds:           image.Pt(100, 80),
+		Placement:        Placement{Side: SideTop, Align: AlignEnd},
+		AvoidOverflow:    true,
+	})
+	if result.Position != (image.Point{}) {
+		t.Fatalf("viewport position = %v, want origin", result.Position)
+	}
+}
+
+func TestAvoidViewportOverflowPinsOversizedPanelToOrigin(t *testing.T) {
+	got := AvoidViewportOverflow(image.Pt(10, 10), image.Pt(140, 90), image.Pt(100, 80))
+	if got != (image.Point{}) {
+		t.Fatalf("oversized panel position = %v, want origin", got)
+	}
+}

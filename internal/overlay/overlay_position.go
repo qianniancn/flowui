@@ -137,7 +137,11 @@ func ResolvePosition(cfg PositionConfig) PositionResult {
 		pos = RawPositionAt(cfg.TriggerOrigin, cfg.Trigger, cfg.Panel, cfg.Offset, placement)
 	}
 	if cfg.AvoidOverflow {
-		pos = AvoidOverflow(pos, cfg.Panel, cfg.Bounds)
+		if cfg.HasTriggerOrigin {
+			pos = AvoidViewportOverflow(pos, cfg.Panel, cfg.Bounds)
+		} else {
+			pos = AvoidOverflow(pos, cfg.Panel, cfg.Bounds)
+		}
 	}
 	return PositionResult{
 		Placement: placement,
@@ -228,6 +232,19 @@ func AvoidOverflow(pos, panel, bounds image.Point) image.Point {
 	}
 	if bounds.Y > 0 && pos.Y+panel.Y > bounds.Y {
 		pos.Y = bounds.Y - panel.Y
+	}
+	return pos
+}
+
+// AvoidViewportOverflow constrains a viewport-relative panel to all four
+// viewport edges. Oversized panels are pinned to the viewport origin.
+func AvoidViewportOverflow(pos, panel, bounds image.Point) image.Point {
+	pos = AvoidOverflow(pos, panel, bounds)
+	if pos.X < 0 {
+		pos.X = 0
+	}
+	if pos.Y < 0 {
+		pos.Y = 0
 	}
 	return pos
 }

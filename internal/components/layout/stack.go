@@ -84,6 +84,7 @@ func (s StackWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 			align = s.align
 		}
 		pos := align.Position(layer.dims.Size, size)
+		layer.placement.PlaceOffset(pos)
 		trans := op.Offset(pos).Push(gtx.Ops)
 		layer.call.Add(gtx.Ops)
 		trans.Pop()
@@ -99,15 +100,19 @@ func (s StackWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 
 func layoutStackLayer(ctx *frame.Context, gtx layout.Context, layer StackLayer) stackLayerLayout {
 	macro := op.Record(gtx.Ops)
-	dims := layer.child.Layout(ctx, gtx)
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return layer.child.Layout(ctx, gtx)
+	})
 	call := macro.Stop()
 	return stackLayerLayout{
-		call: call,
-		dims: dims,
+		call:      call,
+		dims:      dims,
+		placement: placement,
 	}
 }
 
 type stackLayerLayout struct {
-	call op.CallOp
-	dims layout.Dimensions
+	call      op.CallOp
+	dims      layout.Dimensions
+	placement frame.OverlayPlacement
 }

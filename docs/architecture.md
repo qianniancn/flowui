@@ -66,10 +66,67 @@ composite Widget that directly lays out children after the control uses an
 invalidated follow-up frame as a compatibility fallback; laying associations
 before the control gives same-frame semantics.
 
-Deferred overlays currently position panels in the trigger's local coordinate
-space. Negative coordinates are therefore valid for top and left placements.
-Fully viewport-aware flipping for arbitrarily nested or custom layouts requires
-a future root overlay host with absolute anchor coordinates.
+## Overlay Host
+
+Popup and modal components register work with the per-window root Overlay Host.
+The frame order is:
+
+```text
+BeginFrame
+    -> layout the main widget tree and register overlays
+    -> layout root overlays in viewport coordinates
+    -> apply focus commands
+EndFrame
+```
+
+The host keeps root popup branches below modal branches, preserves an overlay's
+opening order across frames, and processes overlays registered by another
+overlay in the same frame. Within a modal branch, a descendant popup is painted
+above the modal that registered it but below any pending nested modal. Panel
+content is still laid out before `EndFrame`, so keyed state, focus requests,
+animations, and MVU callbacks retain normal same-frame semantics.
+
+Input ownership is intentionally one frame behind painting. `BeginFrame`
+freezes the preceding frame's top overlay as the only overlay allowed to
+process overlay-level queued events such as dismiss, Escape, and selection.
+Geometric routing can still use deliberate pass-through behavior. After
+dynamic overlay layout completes, the host
+records the new visual top and the nearest modal focus scope. Focus work runs
+against that completed state, while pointer and key ownership transfers on the
+next frame. This prevents one event from being consumed by two overlays when a
+popup opens, closes, or changes its nesting in the same frame.
+
+Overlay blockers use pointer-only click regions. They keep panel padding,
+arrows, backdrops, and exit animations from passing clicks to the main tree,
+but never enter Gio's keyboard focus order. A top modal contributes a tail
+focus boundary after all of its dynamic descendants, so focus cannot escape
+through a nested Select or Popover. Only the nearest focus-scope ancestor of
+the visual top contributes that boundary.
+
+Gio does not expose the transform at a widget's current layout position.
+FlowUI's layout containers therefore attach a transform node while measuring a
+child and fill in that node after the child's final position is known. An
+overlay anchor follows this transform chain to the viewport, including nested
+Box, Flex, Grid, Stack, Wrap, List, Scroll, and Tabs layouts. Position flipping
+and overflow avoidance then use the real viewport-relative anchor.
+
+The same chain carries local clipping and animated opacity. Scroll/List clips
+decide whether an anchor is still visible without replacing the full anchor
+used for placement. A child overlay inherits the opacity of every animated
+overlay surface that owns it, so nested content exits with its parent instead
+of remaining fully opaque. Transform nodes live in a frame-local index arena;
+layout containers can track every measured child without one heap allocation
+per node. Containers that accept repeated items must use their tracked item
+layout path so each item's final offset and clip are recorded.
+
+A custom Widget that places a FlowUI child with raw Gio layout, transform,
+clip, or `paint.PushOpacity` operations is outside this tracking contract. Use
+FlowUI layout containers and component animation paths for subtrees that can
+open overlays; otherwise the custom widget must keep those overlay-opening
+children at its local origin and full opacity. This limitation follows from
+Gio's public API and must not be worked around with pointer coordinates or
+private operation decoding, because those approaches fail for keyboard and
+programmatic opening.
 
 ## Command Concurrency
 

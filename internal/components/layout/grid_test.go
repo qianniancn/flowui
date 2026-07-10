@@ -45,6 +45,30 @@ func TestAutoGridComputesColumnsFromMinimumWidth(t *testing.T) {
 	}
 }
 
+func TestGridPropagatesCellPosition(t *testing.T) {
+	probe := &overlayProbeWidget{
+		key:    "grid",
+		size:   image.Pt(10, 10),
+		anchor: image.Rect(0, 0, 10, 10),
+	}
+	var got image.Rectangle
+	probe.got = &got
+	ctx := newContext(nil)
+	frame.BeginFrameWithViewport(ctx, image.Pt(100, 100))
+	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(100, 100)}, Ops: new(op.Ops)}
+	Grid(2,
+		Spacer(10, 10),
+		Spacer(10, 20),
+		probe,
+	).ColumnGap(10).RowGap(5).Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+
+	want := image.Rect(0, 25, 10, 35)
+	if got != want {
+		t.Fatalf("grid anchor = %v, want %v", got, want)
+	}
+}
+
 type cellWidget struct {
 	constraints layout.Constraints
 	height      int

@@ -73,13 +73,16 @@ func (g GridWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 		rowHeight := 0
 		for i := rowStart; i < rowEnd; i++ {
 			macro := op.Record(gtx.Ops)
-			dims := g.children[i].Layout(ctx, childGtx)
+			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+				return g.children[i].Layout(ctx, childGtx)
+			})
 			call := macro.Stop()
 			rowHeight = max(rowHeight, dims.Size.Y)
 			col := i - rowStart
 			children = append(children, gridChild{
-				call: call,
-				pos:  image.Pt(col*(cellWidth+columnGap), y),
+				call:      call,
+				pos:       image.Pt(col*(cellWidth+columnGap), y),
+				placement: placement,
 			})
 		}
 		y += rowHeight
@@ -90,6 +93,7 @@ func (g GridWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, y))
 	for _, child := range children {
+		child.placement.PlaceOffset(child.pos)
 		trans := op.Offset(child.pos).Push(gtx.Ops)
 		child.call.Add(gtx.Ops)
 		trans.Pop()
@@ -115,6 +119,7 @@ func gridCellWidth(width, columns, gap int) int {
 }
 
 type gridChild struct {
-	call op.CallOp
-	pos  image.Point
+	call      op.CallOp
+	pos       image.Point
+	placement frame.OverlayPlacement
 }

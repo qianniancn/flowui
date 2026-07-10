@@ -74,7 +74,7 @@ func (s ScrollWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	if s.disabled {
 		gtx = gtx.Disabled()
 	}
-	return state.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutTrackedList(ctx, gtx, state, 1, func(gtx layout.Context, _ int) layout.Dimensions {
 		return s.child.Layout(ctx, gtx)
 	})
 }

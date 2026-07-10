@@ -15,21 +15,28 @@ import (
 )
 
 func (t TabsWidget) layout(ctx *frame.Context, gtx layout.Context, state *tabsState, selectedKey string, disabled bool) layout.Dimensions {
+	var listDims layout.Dimensions
 	list := func(gtx layout.Context) layout.Dimensions {
-		return t.layoutList(ctx, gtx, state, selectedKey, disabled)
+		listDims = t.layoutList(ctx, gtx, state, selectedKey, disabled)
+		return listDims
 	}
 	item, hasPanel := t.selectedItem(selectedKey)
 	hasPanel = hasPanel && item.Panel != nil
 	if !hasPanel {
 		return list(gtx)
 	}
+	var panelPlacement frame.OverlayPlacement
 	panel := func(gtx layout.Context) layout.Dimensions {
-		return t.layoutPanel(ctx, gtx, item.Panel)
+		dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return t.layoutPanel(ctx, gtx, item.Panel)
+		})
+		panelPlacement = placement
+		return dims
 	}
 	theme := frame.ActiveTheme(ctx).Components.Tabs
-	gap := gtx.Dp(theme.RootGap + theme.PanelGap)
+	gap := max(gtx.Dp(theme.RootGap+theme.PanelGap), 0)
 	if t.orientation == TabsVertical {
-		return layout.Flex{
+		dims := layout.Flex{
 			Axis:      layout.Horizontal,
 			Alignment: layout.Start,
 			Gap:       gap,
@@ -37,14 +44,18 @@ func (t TabsWidget) layout(ctx *frame.Context, gtx layout.Context, state *tabsSt
 			layout.Rigid(list),
 			layout.Flexed(1, panel),
 		)
+		panelPlacement.PlaceOffset(image.Pt(listDims.Size.X+gap, 0))
+		return dims
 	}
-	return layout.Flex{
+	dims := layout.Flex{
 		Axis: layout.Vertical,
 		Gap:  gap,
 	}.Layout(gtx,
 		layout.Rigid(list),
 		layout.Rigid(panel),
 	)
+	panelPlacement.PlaceOffset(image.Pt(0, listDims.Size.Y+gap))
+	return dims
 }
 
 func (t TabsWidget) layoutList(ctx *frame.Context, gtx layout.Context, state *tabsState, selectedKey string, disabled bool) layout.Dimensions {
@@ -267,9 +278,24 @@ func (t TabsWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, panel fr
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	}
 	padding := frame.ActiveTheme(ctx).Components.Tabs.PanelPadding
-	return layout.UniformInset(padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return panel.Layout(ctx, gtx)
+	var placement frame.OverlayPlacement
+	dims := layout.UniformInset(padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		var dims layout.Dimensions
+		dims, placement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return panel.Layout(ctx, gtx)
+		})
+		return dims
 	})
+	offset := gtx.Dp(padding)
+	position := image.Pt(offset, offset)
+	if gtx.Constraints.Max.X-offset*2 < 0 {
+		position.X = 0
+	}
+	if gtx.Constraints.Max.Y-offset*2 < 0 {
+		position.Y = 0
+	}
+	placement.PlaceOffset(position)
+	return dims
 }
 
 func (t TabsWidget) layoutScrollButtons(ctx *frame.Context, gtx layout.Context, state *tabsState, size image.Point, disabled bool) {

@@ -1,6 +1,8 @@
 package layoutui
 
 import (
+	"image"
+
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -164,7 +166,7 @@ func (b BoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensi
 		return b.layoutContent(ctx, gtx)
 	}
 	if b.hasMargin() {
-		return b.marginInset().Layout(gtx, layoutBox)
+		return layoutTrackedInset(ctx, gtx, b.marginInset(), layoutBox)
 	}
 	return layoutBox(gtx)
 }
@@ -177,27 +179,31 @@ func (b BoxWidget) layoutContent(ctx *frame.Context, gtx layout.Context) layout.
 	}
 	if b.hasAlign {
 		layoutChild = func(gtx layout.Context) layout.Dimensions {
-			return b.align.Direction().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layoutTrackedDirection(ctx, gtx, b.align.Direction(), func(gtx layout.Context) layout.Dimensions {
 				return b.child.Layout(ctx, gtx)
 			})
 		}
 	}
 	if b.paddingTop == 0 && b.paddingRight == 0 && b.paddingBottom == 0 && b.paddingLeft == 0 {
-		return b.layoutOverflow(gtx, layoutChild)
+		return b.layoutOverflow(ctx, gtx, layoutChild)
 	}
-	return b.layoutOverflow(gtx, func(gtx layout.Context) layout.Dimensions {
-		return b.paddingInset().Layout(gtx, layoutChild)
+	return b.layoutOverflow(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
+		return layoutTrackedInset(ctx, gtx, b.paddingInset(), layoutChild)
 	})
 }
 
-func (b BoxWidget) layoutOverflow(gtx layout.Context, child layout.Widget) layout.Dimensions {
+func (b BoxWidget) layoutOverflow(ctx *frame.Context, gtx layout.Context, child layout.Widget) layout.Dimensions {
 	if b.overflow != OverflowHidden {
 		return child(gtx)
 	}
 	macro := op.Record(gtx.Ops)
-	dims := child(gtx)
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return child(gtx)
+	})
 	call := macro.Stop()
 	dims.Size = gtx.Constraints.Constrain(dims.Size)
+	placement.PlaceOffset(image.Point{})
+	placement.ClipTo(image.Rectangle{Max: dims.Size})
 	defer clip.Rect{Max: dims.Size}.Push(gtx.Ops).Pop()
 	call.Add(gtx.Ops)
 	return dims

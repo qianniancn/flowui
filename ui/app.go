@@ -52,6 +52,7 @@ func runWindowCmd[M any, Msg any](w *app.Window, theme *Theme, language Language
 		if root := view(ctx, model, Send[Msg](send)); root != nil {
 			root.Layout(ctx, gtx)
 		}
+		frame.LayoutOverlays(ctx, gtx)
 		frame.ApplyFrameCommands(ctx, gtx)
 		frame.EndFrame(ctx)
 	})

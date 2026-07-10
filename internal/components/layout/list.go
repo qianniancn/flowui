@@ -70,7 +70,7 @@ func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if l.disabled {
 		gtx = gtx.Disabled()
 	}
-	return state.Layout(gtx, l.count, func(gtx layout.Context, index int) layout.Dimensions {
+	return layoutTrackedList(ctx, gtx, state, l.count, func(gtx layout.Context, index int) layout.Dimensions {
 		item := l.item(index)
 		prepareFieldAssociations(ctx, item)
 		return item.Layout(ctx, gtx)

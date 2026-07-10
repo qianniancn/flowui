@@ -1,6 +1,7 @@
 package popover
 
 import (
+	"image"
 	"time"
 
 	"gioui.org/layout"
@@ -94,24 +95,32 @@ func (p PopoverWidget) KeyboardDismissDisabled(disabled bool) PopoverWidget {
 }
 
 func (p PopoverWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	triggerDims := p.layoutTrigger(ctx, gtx)
 	fullKey := frame.FullKey(ctx, p.key)
+	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
+	triggerDims := p.layoutTrigger(ctx, gtx)
 	if !p.open && !hasVisiblePopover(ctx, fullKey) {
 		return triggerDims
 	}
 
 	state := popoverStateFor(ctx, p.key)
 	progress := state.progress(gtx, p.open)
-	if p.open {
-		p.handleCloseEvents(gtx, state)
-	}
 	if !p.open && progress <= 0 {
 		deletePopoverState(ctx, fullKey)
 		return triggerDims
 	}
 
-	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
-		return p.layoutOverlay(ctx, gtx, state, triggerDims.Size, progress)
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       fullKey,
+		Layer:     frame.OverlayLayerPopup,
+		Anchor:    image.Rectangle{Max: triggerDims.Size},
+		HasAnchor: true,
+		Disabled:  naturallyDisabled,
+		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
+			if p.open && interactive && gtx.Enabled() {
+				p.handleCloseEvents(ctx, gtx, state)
+			}
+			return p.layoutOverlay(ctx, gtx, state, anchor, progress, p.open && gtx.Enabled())
+		},
 	})
 
 	return triggerDims
@@ -124,17 +133,28 @@ func (p PopoverWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context) lay
 	return p.trigger.Layout(ctx, gtx)
 }
 
-func (p PopoverWidget) handleCloseEvents(gtx layout.Context, state *popoverState) {
-	for state.dialog.Clicked(gtx) {
+func (p PopoverWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, popoverStateValue *popoverState) {
+	for popoverStateValue.dialog.Clicked(gtx) {
 	}
-	if !p.keyboardDismissDisabled && state.escapePressed(gtx) {
+	if popoverStateValue.dialog.TakePressed() {
+		frame.PreserveFocus(ctx)
+	}
+	for popoverStateValue.arrow.Clicked(gtx) {
+	}
+	if popoverStateValue.arrow.TakePressed() {
+		frame.PreserveFocus(ctx)
+	}
+	if !p.keyboardDismissDisabled && popoverStateValue.escapePressed(gtx) {
 		p.requestClose()
 	}
-	if p.isDismissable() {
-		for i := range state.dismiss {
-			for state.dismiss[i].Clicked(gtx) {
+	for i := range popoverStateValue.dismiss {
+		for popoverStateValue.dismiss[i].Clicked(gtx) {
+			if p.isDismissable() {
 				p.requestClose()
 			}
+		}
+		if popoverStateValue.dismiss[i].TakePressed() {
+			frame.PreserveFocus(ctx)
 		}
 	}
 }

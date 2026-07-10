@@ -198,6 +198,134 @@ func TestRowColumnAlignment(t *testing.T) {
 	}
 }
 
+func TestCenterPropagatesOverlayPosition(t *testing.T) {
+	got := resolveOverlayAnchor(t, layout.Exact(image.Pt(100, 80)), Center(&overlayProbeWidget{
+		key:    "center",
+		size:   image.Pt(20, 10),
+		anchor: image.Rect(0, 0, 20, 10),
+	}))
+	want := image.Rect(40, 35, 60, 45)
+	if got != want {
+		t.Fatalf("center anchor = %v, want %v", got, want)
+	}
+}
+
+func TestFlexPropagatesOverlayPositions(t *testing.T) {
+	t.Run("row alignment", func(t *testing.T) {
+		got := resolveOverlayAnchor(t, layout.Exact(image.Pt(100, 40)), Row(
+			Spacer(10, 10),
+			&overlayProbeWidget{key: "row", size: image.Pt(20, 10), anchor: image.Rect(0, 0, 20, 10)},
+		).Gap(5).AlignEnd())
+		want := image.Rect(15, 30, 35, 40)
+		if got != want {
+			t.Fatalf("row anchor = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("column flexible child", func(t *testing.T) {
+		got := resolveOverlayAnchor(t, layout.Exact(image.Pt(60, 80)), Column(
+			Spacer(10, 10),
+			Flexible(1, &overlayProbeWidget{key: "column", size: image.Pt(20, 10), anchor: image.Rect(0, 0, 10, 10)}),
+		).Gap(5).AlignMiddle())
+		want := image.Rect(20, 15, 30, 25)
+		if got != want {
+			t.Fatalf("column anchor = %v, want %v", got, want)
+		}
+	})
+}
+
+func TestFlexOverlayPositionMatchesIgnoredNegativeGap(t *testing.T) {
+	got := resolveOverlayAnchor(t, layout.Exact(image.Pt(100, 30)), Row(
+		Spacer(10, 10),
+		&overlayProbeWidget{key: "negative-gap", size: image.Pt(20, 10), anchor: image.Rect(0, 0, 20, 10)},
+	).Gap(-5))
+	want := image.Rect(10, 0, 30, 10)
+	if got != want {
+		t.Fatalf("negative-gap anchor = %v, want %v", got, want)
+	}
+}
+
+func TestLayoutItemsPropagatesOverlayPositions(t *testing.T) {
+	tests := []struct {
+		name        string
+		horizontal  bool
+		constraints layout.Constraints
+		want        image.Rectangle
+	}{
+		{
+			name:        "vertical second item",
+			constraints: layout.Constraints{Max: image.Pt(100, 100)},
+			want:        image.Rect(0, 15, 20, 25),
+		},
+		{
+			name:        "horizontal wrapped item",
+			horizontal:  true,
+			constraints: layout.Constraints{Max: image.Pt(70, 100)},
+			want:        image.Rect(0, 15, 20, 25),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			frame.BeginFrameWithViewport(ctx, image.Pt(100, 100))
+			gtx := layout.Context{Constraints: test.constraints, Ops: new(op.Ops)}
+			probe := &overlayProbeWidget{key: "items", size: image.Pt(20, 10), anchor: image.Rect(0, 0, 20, 10)}
+			var got image.Rectangle
+			probe.got = &got
+			children := []layout.Widget{
+				func(layout.Context) layout.Dimensions { return layout.Dimensions{Size: image.Pt(60, 10)} },
+				func(gtx layout.Context) layout.Dimensions { return probe.Layout(ctx, gtx) },
+			}
+			LayoutItems(ctx, gtx, test.horizontal, 10, 5, children)
+			frame.LayoutOverlays(ctx, gtx)
+			frame.EndFrame(ctx)
+			if got != test.want {
+				t.Fatalf("item anchor = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestBoxPropagatesMarginPaddingAndAlignment(t *testing.T) {
+	got := resolveOverlayAnchor(t, layout.Constraints{Max: image.Pt(120, 100)}, Box(&overlayProbeWidget{
+		key:    "box",
+		size:   image.Pt(20, 10),
+		anchor: image.Rect(0, 0, 20, 10),
+	}).
+		Width(80).
+		Height(60).
+		MarginLeft(7).
+		MarginTop(9).
+		Padding(5).
+		Align(AlignBottomEnd))
+	want := image.Rect(62, 54, 82, 64)
+	if got != want {
+		t.Fatalf("box anchor = %v, want %v", got, want)
+	}
+}
+
+func TestBoxClipHidesOverlayAnchorOutsideBox(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(200, 120)
+	gtx := layout.Context{Constraints: layout.Constraints{Max: viewport}, Ops: new(op.Ops)}
+	called := false
+	probe := &overlayProbeWidget{
+		key:    "clipped-box",
+		size:   image.Pt(100, 100),
+		anchor: image.Rect(80, 80, 90, 90),
+		capture: func(image.Rectangle) {
+			called = true
+		},
+	}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Box(probe).Width(50).Height(50).Clip().Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+	if called {
+		t.Fatal("anchor outside a clipped Box produced an overlay")
+	}
+}
+
 func TestExpandedUsesRemainingRowSpace(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
@@ -268,6 +396,18 @@ func TestWrapAlignmentOffset(t *testing.T) {
 	}
 }
 
+func TestWrapPropagatesWrappedAndAlignedPosition(t *testing.T) {
+	got := resolveOverlayAnchor(t, layout.Constraints{Max: image.Pt(130, 100)}, Wrap(
+		Spacer(60, 10),
+		Spacer(60, 20),
+		&overlayProbeWidget{key: "wrap", size: image.Pt(30, 10), anchor: image.Rect(0, 0, 30, 10)},
+	).Gap(10).AlignEnd())
+	want := image.Rect(100, 30, 130, 40)
+	if got != want {
+		t.Fatalf("wrap anchor = %v, want %v", got, want)
+	}
+}
+
 func TestAdaptiveReceivesAvailableSize(t *testing.T) {
 	var got ViewSize
 	var ops op.Ops
@@ -308,4 +448,77 @@ type overflowWidget struct{}
 
 func (overflowWidget) Layout(_ *frame.Context, _ layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: image.Pt(500, 500)}
+}
+
+type overlayProbeWidget struct {
+	key     string
+	size    image.Point
+	anchor  image.Rectangle
+	got     *image.Rectangle
+	capture func(image.Rectangle)
+}
+
+func (w *overlayProbeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       w.key,
+		Anchor:    w.anchor,
+		HasAnchor: true,
+		Layout: func(_ layout.Context, anchor image.Rectangle, _ bool) layout.Dimensions {
+			if w.got != nil {
+				*w.got = anchor
+			}
+			if w.capture != nil {
+				w.capture(anchor)
+			}
+			return layout.Dimensions{}
+		},
+	})
+	return layout.Dimensions{Size: w.size}
+}
+
+func resolveOverlayAnchor(t *testing.T, constraints layout.Constraints, widget frame.Widget) image.Rectangle {
+	t.Helper()
+	ctx := newContext(nil)
+	frame.BeginFrameWithViewport(ctx, constraints.Max)
+	gtx := layout.Context{Constraints: constraints, Ops: new(op.Ops)}
+	var got image.Rectangle
+	probe, ok := findOverlayProbe(widget)
+	if !ok {
+		t.Fatal("test widget does not contain an overlay probe")
+	}
+	probe.got = &got
+	widget.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+	return got
+}
+
+func findOverlayProbe(widget frame.Widget) (*overlayProbeWidget, bool) {
+	switch widget := widget.(type) {
+	case *overlayProbeWidget:
+		return widget, true
+	case CenterWidget:
+		return findOverlayProbe(widget.child)
+	case BoxWidget:
+		return findOverlayProbe(widget.child)
+	case RowWidget:
+		return findOverlayProbeIn(widget.children)
+	case ColumnWidget:
+		return findOverlayProbeIn(widget.children)
+	case WrapWidget:
+		return findOverlayProbeIn(widget.children)
+	case FlexWidget:
+		return findOverlayProbe(widget.child)
+	default:
+		return nil, false
+	}
+}
+
+func findOverlayProbeIn(widgets []frame.Widget) (*overlayProbeWidget, bool) {
+	for _, widget := range widgets {
+		if probe, ok := findOverlayProbe(widget); ok {
+			return probe, true
+		}
+	}
+	return nil, false
 }

@@ -13,6 +13,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/listbox"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -483,6 +484,28 @@ func TestSelectProgrammaticCloseRestoresTriggerFocus(t *testing.T) {
 	}
 }
 
+func TestNaturallyDisabledSelectCloseDoesNotRestoreTriggerFocus(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	background := new(widget.Clickable)
+	start := time.Unix(1, 0)
+
+	layoutSelectWithBackgroundFrame(ctx, router, Select("language", "go", selectTestItems()).Open(true), background, false, start)
+	state := testComponentState[selectState](ctx, "language", stateSlotSelect)
+	router.Source().Execute(key.FocusCmd{Tag: background})
+	if !router.Source().Focused(background) {
+		t.Fatal("background did not receive setup focus")
+	}
+
+	layoutSelectWithBackgroundFrame(ctx, router, Select("language", "go", selectTestItems()).Open(false), background, true, start.Add(time.Millisecond))
+	if !router.Source().Focused(background) {
+		t.Fatal("naturally disabled select close displaced existing focus")
+	}
+	if router.Source().Focused(&state.trigger) {
+		t.Fatal("naturally disabled select restored trigger focus")
+	}
+}
+
 func TestSelectDismissClosesWithoutForcingTriggerFocus(t *testing.T) {
 	state := &selectState{open: true}
 	state.dismiss[0].Click()
@@ -576,6 +599,87 @@ func TestSelectPointerClickInsideDoesNotDismiss(t *testing.T) {
 	}
 	if backgroundClicked {
 		t.Fatal("select popover allowed an inside click to reach the background")
+	}
+}
+
+func TestSelectPanelPaddingPressPreservesOptionFocus(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	selectWidget := Select("language", "go", selectTestItems()).DefaultOpen(true)
+	start := time.Unix(1, 0)
+	var background widget.Clickable
+	backgroundClicked := false
+
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start)
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start.Add(selectEnterDuration))
+	item, _, ok := listbox.DerivedItem(ctx, "language", "options", "go")
+	if !ok || !router.Source().Focused(item) {
+		t.Fatal("open select did not focus its selected option")
+	}
+
+	position := f32.Pt(22, 44)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start.Add(selectEnterDuration+time.Millisecond))
+	if !router.Source().Focused(item) {
+		t.Fatal("panel padding press cleared option focus")
+	}
+	if !testComponentState[selectState](ctx, "language", stateSlotSelect).open {
+		t.Fatal("panel padding press closed the select")
+	}
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start.Add(selectEnterDuration+2*time.Millisecond))
+	if backgroundClicked {
+		t.Fatal("panel padding click reached the background")
+	}
+}
+
+func TestSelectAnimatedPanelEdgeHasNoPointerHole(t *testing.T) {
+	customTheme := DefaultTheme()
+	customTheme.Components.Select.AnimationScale = .5
+	ctx := frame.New(nil, &customTheme, locale.LanguageAuto)
+	router := new(input.Router)
+	selectWidget := Select("language", "go", selectTestItems()).DefaultOpen(true)
+	start := time.Unix(1, 0)
+	var background widget.Clickable
+	backgroundClicked := false
+
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start)
+	midpoint := start.Add(selectEnterDuration / 2)
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, midpoint)
+	position := f32.Pt(20.5, 60)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, midpoint.Add(time.Millisecond))
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, midpoint.Add(2*time.Millisecond))
+
+	if testComponentState[selectState](ctx, "language", stateSlotSelect).open {
+		t.Fatal("click beside the animated panel did not dismiss the select")
+	}
+	if !backgroundClicked {
+		t.Fatal("animated panel edge left a pointer hole instead of a pass-through dismiss area")
 	}
 }
 
@@ -761,7 +865,7 @@ func TestSelectPanelUsesTriggerWidth(t *testing.T) {
 	gtx.Constraints = layout.Constraints{Max: image.Pt(300, 200)}
 	widget := Select("language", "go", selectTestItems())
 
-	dims := widget.layoutOverlay(ctx, gtx, state, image.Rect(0, 0, 180, 36), image.Pt(300, 200), true, 1)
+	dims := widget.layoutOverlay(ctx, gtx, state, image.Rect(0, 0, 180, 36), true, 1, true)
 
 	if dims.Size != image.Pt(300, 200) {
 		t.Fatalf("overlay dimensions = %v, want bounds", dims.Size)
@@ -833,6 +937,7 @@ func layoutSelectTestFrame(ctx *frame.Context, router *input.Router, widget Sele
 	}
 	frame.BeginFrame(ctx)
 	widget.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
@@ -854,6 +959,7 @@ func layoutSelectPairTestFrame(ctx *frame.Context, router *input.Router, first, 
 		first.Layout(ctx, gtx)
 		second.Layout(ctx, gtx)
 	}
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
@@ -878,10 +984,34 @@ func layoutNestedSelectTestFrame(ctx *frame.Context, router *input.Router, selec
 		return layout.Dimensions{Size: viewport}
 	})
 	childGtx := gtx
-	childGtx.Constraints = layout.Constraints{Max: image.Pt(100, viewport.Y)}
-	offset := op.Offset(image.Pt(20, 0)).Push(gtx.Ops)
-	selectWidget.Layout(ctx, childGtx)
-	offset.Pop()
+	childGtx.Constraints = layout.Constraints{Max: image.Pt(120, viewport.Y)}
+	layoutui.Box(selectWidget).PaddingLeft(20).Layout(ctx, childGtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutSelectWithBackgroundFrame(ctx *frame.Context, router *input.Router, selectWidget SelectWidget, background *widget.Clickable, naturallyDisabled bool, now time.Time) {
+	var ops op.Ops
+	viewport := image.Pt(300, 240)
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: viewport},
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	background.Layout(gtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: viewport}
+	})
+	selectGtx := gtx
+	selectGtx.Constraints = layout.Constraints{Max: image.Pt(120, viewport.Y)}
+	if naturallyDisabled {
+		selectGtx = selectGtx.Disabled()
+	}
+	selectWidget.Layout(ctx, selectGtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)

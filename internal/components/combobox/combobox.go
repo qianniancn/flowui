@@ -103,24 +103,27 @@ func (c ComboBoxWidget) AllowCustomValue() ComboBoxWidget {
 func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := comboBoxStateFor(ctx, c.key)
 	key := frame.FullKey(ctx, c.key)
+	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
+	eventGtx := gtx
 	editor := &state.editor
-	frame.RegisterFieldFocus(ctx, key, editor, gtx.Enabled() && !c.disabled)
+	frame.RegisterFieldFocus(ctx, key, editor, eventGtx.Enabled() && !c.disabled)
 	editor.SingleLine = true
 	editor.Submit = true
 	state.beginFrame()
 	state.checkItems(c.items)
 	state.syncEditor(editor, c)
-	state.input.Update(ctx, gtx, c.disabled, editor)
+	state.input.Update(ctx, eventGtx, c.disabled, editor)
 
 	if c.disabled {
-		gtx = gtx.Disabled()
+		eventGtx = eventGtx.Disabled()
 	}
 
 	query := editor.Text()
 	selectedLabel, _ := c.selectedLabel()
 	visible := comboBoxVisibleItems(c.items, query, selectedLabel)
+	processMainEvents := !state.open
 	state.updateFocus(gtx.Focused(editor), c.disabled)
-	if !c.disabled {
+	if !c.disabled && processMainEvents {
 		state.clampHighlight(c.items, visible)
 		if index, ok := state.updateKeys(gtx, editor, c.items, visible); ok {
 			c.selectItem(editor, state, c.items[visible[index]])
@@ -142,12 +145,12 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	editorStyle.HintColor = style.Placeholder
 	editorStyle.SelectionColor = style.Selection
 
-	dims := c.layoutInput(ctx, gtx, state, editor, style, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
+	dims := c.layoutInput(ctx, eventGtx, state, editor, style, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
 	progress := state.popoverProgress(gtx, state.open && !c.disabled)
 	if progress == 0 {
 		state.endFrame()
 		return dims
 	}
 
-	return c.layoutOpen(ctx, gtx, state, editor, dims, visible, progress)
+	return c.layoutOpen(ctx, eventGtx, state, editor, dims, visible, progress, naturallyDisabled)
 }

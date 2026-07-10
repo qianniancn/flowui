@@ -143,5 +143,5 @@ func (g SwitchGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 			return child.Layout(ctx, gtx)
 		})
 	}
-	return layoutui.LayoutItems(gtx, g.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	return layoutui.LayoutItems(ctx, gtx, g.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
 }

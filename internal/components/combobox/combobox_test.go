@@ -3,14 +3,19 @@ package combobox
 import (
 	"image"
 	"testing"
+	"time"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/state"
 )
 
 func newContext(_ any) *frame.Context {
@@ -215,6 +220,164 @@ func TestComboBoxClickSelectsItem(t *testing.T) {
 	}
 }
 
+func TestComboBoxIgnoresEscapeWhileAnotherOverlayIsTopmost(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	combo := ComboBox("animal", "", comboBoxTestItems())
+	layoutComboBoxFrame(ctx, router, combo)
+	state := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
+	router.Source().Execute(key.FocusCmd{Tag: &state.editor})
+	state.popover = 1
+	state.popoverFrom = 1
+	state.popoverTo = 1
+	state.popoverReady = true
+	layoutComboBoxBelowOverlayFrame(ctx, router, combo)
+	layoutComboBoxBelowOverlayFrame(ctx, router, combo)
+	if !state.open {
+		t.Fatal("combobox closed after another overlay became topmost")
+	}
+	if !router.Source().Focused(&state.editor) {
+		t.Fatal("combobox editor lost focus after another overlay became topmost")
+	}
+
+	router.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+	layoutComboBoxBelowOverlayFrame(ctx, router, combo)
+	if !state.open {
+		t.Fatal("background combobox consumed Escape while another overlay was topmost")
+	}
+	if !router.Source().Focused(&state.editor) {
+		t.Fatal("background combobox lost editor focus while another overlay was topmost")
+	}
+}
+
+func TestComboBoxPanelPaddingPressKeepsFocusAndBlocksBackground(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	combo := ComboBox("animal", "", comboBoxTestItems()).FullWidth()
+	var background widget.Clickable
+	backgroundClicked := false
+	start := time.Unix(1, 0)
+
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start)
+	comboState := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
+	router.Source().Execute(key.FocusCmd{Tag: &comboState.editor})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(time.Millisecond))
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(time.Millisecond+comboBoxAnimationDuration))
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(2*time.Millisecond+comboBoxAnimationDuration))
+
+	position := f32.Pt(200, 49)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(3*time.Millisecond+comboBoxAnimationDuration))
+
+	if !comboState.open {
+		t.Fatal("panel padding press closed the combobox")
+	}
+	if !router.Source().Focused(&comboState.editor) {
+		t.Fatal("panel padding press cleared editor focus")
+	}
+	if state.ActivePresses(background.History()) != 0 || backgroundClicked {
+		t.Fatal("panel padding press reached the background control")
+	}
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(4*time.Millisecond+comboBoxAnimationDuration))
+
+	if !comboState.open {
+		t.Fatal("panel padding release closed the combobox")
+	}
+	if !router.Source().Focused(&comboState.editor) {
+		t.Fatal("panel padding release cleared editor focus")
+	}
+	if backgroundClicked {
+		t.Fatal("panel padding click reached the background control")
+	}
+}
+
+func TestComboBoxExitingPanelPaddingBlocksBackground(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	selected := ""
+	combo := ComboBox("animal", "", comboBoxTestItems()).
+		FullWidth().
+		OnChange(func(key string) {
+			selected = key
+		})
+	var background widget.Clickable
+	backgroundClicked := false
+	start := time.Unix(1, 0)
+
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start)
+	comboState := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
+	router.Source().Execute(key.FocusCmd{Tag: &comboState.editor})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(time.Millisecond))
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(time.Millisecond+comboBoxAnimationDuration))
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, start.Add(2*time.Millisecond+comboBoxAnimationDuration))
+
+	comboState.open = false
+	closeStart := start.Add(3*time.Millisecond + comboBoxAnimationDuration)
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, closeStart)
+	midExit := closeStart.Add(comboBoxAnimationDuration / 2)
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, midExit)
+	if comboState.popover <= 0 || comboState.popover >= 1 {
+		t.Fatalf("exit progress = %v, want between 0 and 1", comboState.popover)
+	}
+
+	position := f32.Pt(200, 49)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, midExit.Add(time.Millisecond))
+
+	if comboState.open {
+		t.Fatal("exiting panel padding press reopened the combobox")
+	}
+	if comboState.popover <= 0 {
+		t.Fatal("panel finished exiting before the padding press was processed")
+	}
+	if state.ActivePresses(background.History()) != 0 || backgroundClicked {
+		t.Fatal("exiting panel padding press reached the background control")
+	}
+	if selected != "" {
+		t.Fatalf("exiting panel content selected %q", selected)
+	}
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, midExit.Add(2*time.Millisecond))
+
+	if comboState.open {
+		t.Fatal("exiting panel padding release reopened the combobox")
+	}
+	if comboState.popover <= 0 {
+		t.Fatal("panel finished exiting before the padding release was processed")
+	}
+	if backgroundClicked {
+		t.Fatal("exiting panel padding click reached the background control")
+	}
+	if selected != "" {
+		t.Fatalf("exiting panel content selected %q", selected)
+	}
+}
+
 func TestComboBoxSelectionDoesNotDispatchInputChange(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
@@ -282,6 +445,7 @@ func TestComboBoxOpenLayoutDoesNotTakeSpace(t *testing.T) {
 		inputDims,
 		[]int{0, 1, 2},
 		1,
+		false,
 	)
 
 	if dims.Size != inputDims.Size {
@@ -363,6 +527,55 @@ func layoutComboBoxFrame(ctx *frame.Context, router *input.Router, combo ComboBo
 	}
 	frame.BeginFrame(ctx)
 	combo.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutComboBoxBelowOverlayFrame(ctx *frame.Context, router *input.Router, combo ComboBoxWidget) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 260)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	frame.BeginFrame(ctx)
+	combo.Layout(ctx, gtx)
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key: "test-top-overlay",
+		Layout: func(layout.Context, image.Rectangle, bool) layout.Dimensions {
+			return layout.Dimensions{}
+		},
+	})
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutComboBoxOverBackgroundFrame(ctx *frame.Context, router *input.Router, combo ComboBoxWidget, background *widget.Clickable, backgroundClicked *bool, now time.Time) {
+	var ops op.Ops
+	viewport := image.Pt(400, 300)
+	gtx := layout.Context{
+		Constraints: layout.Exact(viewport),
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	presses := state.ActivePresses(background.History())
+	for background.Clicked(gtx) {
+		*backgroundClicked = true
+	}
+	frame.FocusOnPress(ctx, background, background.History(), presses)
+	background.Layout(gtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: viewport}
+	})
+	comboGtx := gtx
+	comboGtx.Constraints = layout.Constraints{Max: viewport}
+	combo.Layout(ctx, comboGtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)

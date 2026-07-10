@@ -213,6 +213,8 @@ func (s SelectWidget) FullWidth() SelectWidget {
 
 func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := selectStateFor(ctx, s.key)
+	interactive := frame.OverlayInteractive(ctx, frame.OverlayLayerPopup, state.key)
+	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	if s.label != "" {
 		frame.PrepareFieldLabel(ctx, state.key, s.label)
 	}
@@ -226,24 +228,34 @@ func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 		state.open = false
 		open = false
 	}
-	open = state.handleTrigger(ctx, gtx, s, open)
-	open = state.handleOverlayEvents(ctx, gtx, s, open)
+	if !open || interactive {
+		open = state.handleTrigger(ctx, gtx, s, open)
+	}
 	if open && !state.wasOpen {
 		activateSelect(ctx, state)
 	} else if !open {
 		releaseSelect(ctx, state)
 	}
-	state.observeOpen(ctx, open, !s.disabled)
+	restoreFocus := !open && state.wasOpen && !s.disabled && !naturallyDisabled && !state.skipRestore
+	state.observeOpen(ctx, open, false)
+	if restoreFocus {
+		frame.AfterOverlays(ctx, func() {
+			if frame.OverlayTopmost(ctx, frame.OverlayLayerPopup, state.key) || !frame.HasTopOverlay(ctx) {
+				frame.RequestFocus(ctx, &state.trigger)
+			}
+		})
+	}
+	eventGtx := gtx
 	if s.disabled {
-		gtx = gtx.Disabled()
+		eventGtx = eventGtx.Disabled()
 	}
 
 	progress := state.progress(gtx, open && !s.disabled)
-	dims := s.layout(ctx, gtx, state, open)
+	dims := s.layout(ctx, eventGtx, state, open)
 	if progress == 0 {
 		return dims
 	}
-	s.layoutPopover(ctx, gtx, state, state.triggerRect, open, progress)
+	s.layoutPopover(ctx, state, state.triggerRect, open, progress, naturallyDisabled)
 	return dims
 }
 

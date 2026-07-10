@@ -16,6 +16,7 @@ import (
 type Focus struct {
 	catcher      focusCatcher
 	pointerPress bool
+	preserve     bool
 	target       event.Tag
 }
 
@@ -23,6 +24,7 @@ type focusCatcher struct{}
 
 func (f *Focus) BeginFrame() {
 	f.pointerPress = false
+	f.preserve = false
 	f.target = nil
 }
 
@@ -36,11 +38,15 @@ func (f *Focus) OnPress(tag event.Tag, history []widget.Press, before int) {
 	}
 }
 
+func (f *Focus) Preserve() {
+	f.preserve = true
+}
+
 func (f *Focus) ApplyFrameCommands(gtx layout.Context) {
 	f.updatePointerPress(gtx)
 	if f.target != nil {
 		gtx.Execute(key.FocusCmd{Tag: f.target})
-	} else if f.pointerPress {
+	} else if f.pointerPress && !f.preserve {
 		gtx.Execute(key.FocusCmd{})
 	}
 	f.addCatcher(gtx)

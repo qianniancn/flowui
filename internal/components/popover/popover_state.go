@@ -6,8 +6,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -29,8 +29,9 @@ func deletePopoverState(ctx *frame.Context, key string) {
 }
 
 type popoverState struct {
-	dismiss [4]widget.Clickable
-	dialog  widget.Clickable
+	dismiss [16]overlay.ClickArea
+	dialog  overlay.ClickArea
+	arrow   overlay.ClickArea
 	value   float32
 	from    float32
 	to      float32

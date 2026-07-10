@@ -5,15 +5,38 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
-func LayoutItems(gtx layout.Context, horizontal bool, columnGap, rowGap int, children []layout.Widget) layout.Dimensions {
+func LayoutItems(ctx *frame.Context, gtx layout.Context, horizontal bool, columnGap, rowGap int, children []layout.Widget) layout.Dimensions {
 	if !horizontal {
-		flexChildren := make([]layout.FlexChild, 0, len(children))
-		for _, child := range children {
-			flexChildren = append(flexChildren, layout.Rigid(child))
+		type trackedChild struct {
+			dims      layout.Dimensions
+			placement frame.OverlayPlacement
 		}
-		return layout.Flex{Axis: layout.Vertical, Gap: rowGap}.Layout(gtx, flexChildren...)
+		tracked := make([]trackedChild, len(children))
+		flexChildren := make([]layout.FlexChild, 0, len(children))
+		for index, child := range children {
+			index, child := index, child
+			flexChildren = append(flexChildren, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+					return child(gtx)
+				})
+				tracked[index] = trackedChild{dims: dims, placement: placement}
+				return dims
+			}))
+		}
+		gap := max(rowGap, 0)
+		dims := layout.Flex{Axis: layout.Vertical, Gap: gap}.Layout(gtx, flexChildren...)
+		y := 0
+		for index, child := range tracked {
+			child.placement.PlaceOffset(image.Pt(0, y))
+			y += child.dims.Size.Y
+			if index < len(tracked)-1 {
+				y += gap
+			}
+		}
+		return dims
 	}
 
 	rows := make([]itemRow, 0)
@@ -25,7 +48,9 @@ func LayoutItems(gtx layout.Context, horizontal bool, columnGap, rowGap int, chi
 	var row itemRow
 	for _, child := range children {
 		macro := op.Record(gtx.Ops)
-		dims := child(childGtx)
+		dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return child(childGtx)
+		})
 		call := macro.Stop()
 
 		if x > 0 && x+columnGap+dims.Size.X > maxWidth {
@@ -38,7 +63,7 @@ func LayoutItems(gtx layout.Context, horizontal bool, columnGap, rowGap int, chi
 		if x > 0 {
 			x += columnGap
 		}
-		row.children = append(row.children, itemChild{call: call, pos: image.Pt(x, y)})
+		row.children = append(row.children, itemChild{call: call, pos: image.Pt(x, y), placement: placement})
 		x += dims.Size.X
 		width = max(width, x)
 		rowHeight = max(rowHeight, dims.Size.Y)
@@ -50,6 +75,7 @@ func LayoutItems(gtx layout.Context, horizontal bool, columnGap, rowGap int, chi
 	size := gtx.Constraints.Constrain(image.Pt(width, y+rowHeight))
 	for _, row := range rows {
 		for _, child := range row.children {
+			child.placement.PlaceOffset(child.pos)
 			trans := op.Offset(child.pos).Push(gtx.Ops)
 			child.call.Add(gtx.Ops)
 			trans.Pop()
@@ -63,6 +89,7 @@ type itemRow struct {
 }
 
 type itemChild struct {
-	call op.CallOp
-	pos  image.Point
+	call      op.CallOp
+	pos       image.Point
+	placement frame.OverlayPlacement
 }

@@ -3,14 +3,13 @@ package modal
 import (
 	"time"
 
-	"gioui.org/gesture"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -32,22 +31,26 @@ func deleteModalState(ctx *frame.Context, key string) {
 }
 
 type modalState struct {
-	dismiss     [4]modalClickArea
-	dialog      modalClickArea
-	close       widget.Clickable
-	closeFocus  state.FocusAnimation
-	bodyList    layout.List
-	outsideList layout.List
-	focusStart  widget.Clickable
-	focusTarget widget.Clickable
-	focusEnd    widget.Clickable
-	wasOpen     bool
-	value       float32
-	from        float32
-	to          float32
-	at          time.Time
-	ready       bool
+	dismiss      [4]overlay.ClickArea
+	dialog       overlay.ClickArea
+	close        widget.Clickable
+	closeFocus   state.FocusAnimation
+	bodyList     layout.List
+	outsideList  layout.List
+	focusStart   modalFocusTag
+	focusTarget  modalFocusTag
+	focusEnd     modalFocusTag
+	value        float32
+	from         float32
+	to           float32
+	at           time.Time
+	ready        bool
+	focusPending bool
 }
+
+// Keep the tag non-zero-sized so distinct focus boundaries have distinct
+// addresses when used as Gio event tags.
+type modalFocusTag struct{ _ byte }
 
 func (s *modalState) progress(gtx layout.Context, open bool) float32 {
 	target := float32(0)
@@ -65,6 +68,7 @@ func (s *modalState) progress(gtx layout.Context, open bool) float32 {
 		s.from = s.value
 		s.to = target
 		s.at = gtx.Now
+		s.focusPending = open
 	}
 	if s.from == s.to {
 		s.value = s.to
@@ -101,13 +105,6 @@ func (s *modalState) endFocusTag() event.Tag {
 	return &s.focusTarget
 }
 
-func (s *modalState) syncFocus(ctx *frame.Context, open bool) {
-	if open && !s.wasOpen {
-		frame.RequestFocus(ctx, s.initialFocusTag())
-	}
-	s.wasOpen = open
-}
-
 func (s *modalState) escapePressed(gtx layout.Context) bool {
 	for {
 		e, ok := gtx.Event(key.Filter{Name: key.NameEscape})
@@ -119,46 +116,4 @@ func (s *modalState) escapePressed(gtx layout.Context) bool {
 			return true
 		}
 	}
-}
-
-type modalClickArea struct {
-	click         gesture.Click
-	requestClicks int
-}
-
-func (a *modalClickArea) Click() {
-	a.requestClicks++
-}
-
-func (a *modalClickArea) Clicked(gtx layout.Context) bool {
-	if a.requestClicks > 0 {
-		a.requestClicks--
-		return true
-	}
-	for {
-		event, ok := a.click.Update(gtx.Source)
-		if !ok {
-			return false
-		}
-		if event.Kind == gesture.KindClick {
-			return true
-		}
-	}
-}
-
-func (a *modalClickArea) Layout(gtx layout.Context, w layout.Widget) layout.Dimensions {
-	for {
-		_, ok := a.click.Update(gtx.Source)
-		if !ok {
-			break
-		}
-	}
-	macro := op.Record(gtx.Ops)
-	dims := w(gtx)
-	call := macro.Stop()
-	clipStack := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-	a.click.Add(gtx.Ops)
-	call.Add(gtx.Ops)
-	clipStack.Pop()
-	return dims
 }

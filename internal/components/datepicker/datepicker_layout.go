@@ -99,43 +99,92 @@ func datePickerSegment(ctx *frame.Context, value string, col color.NRGBA, weight
 	}
 }
 
-func (d DatePickerWidget) layoutPopover(ctx *frame.Context, gtx layout.Context, state *datePickerState, inputDims layout.Dimensions, progress float32, now time.Time) {
+func (d DatePickerWidget) layoutPopover(ctx *frame.Context, gtx layout.Context, state *datePickerState, inputDims layout.Dimensions, progress float32, now time.Time, naturallyDisabled bool) {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       frame.FullKey(ctx, d.key),
+		Layer:     frame.OverlayLayerPopup,
+		Anchor:    image.Rectangle{Max: inputDims.Size},
+		HasAnchor: true,
+		Disabled:  naturallyDisabled,
+		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
+			contentInteractive := interactive && state.open && gtx.Enabled()
+			if contentInteractive {
+				state.updateKeys(gtx, &state.trigger)
+			}
+			panelGtx := gtx
+			if !contentInteractive {
+				panelGtx = panelGtx.Disabled()
+			}
+			return d.layoutCalendarOverlay(ctx, gtx, panelGtx, state, anchor, progress, now, contentInteractive)
+		},
+	})
+}
+
+func (d DatePickerWidget) layoutCalendarOverlay(ctx *frame.Context, gtx, panelGtx layout.Context, pickerState *datePickerState, anchor image.Rectangle, progress float32, now time.Time, interactive bool) layout.Dimensions {
+	if interactive {
+		for pickerState.dialog.Clicked(gtx) {
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		if pickerState.dialog.TakePressed() {
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+	}
 	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	viewport := gtx.Constraints.Max
 	gap := gtx.Dp(theme.PopoverGap)
-	maxY := gtx.Constraints.Max.Y - inputDims.Size.Y - gap
-	if maxY <= 0 {
+	panelWidth := min(gtx.Dp(theme.CalendarWidth)+gtx.Dp(theme.PopoverPadding)*2, max(viewport.X, 0))
+	panelMaxY := min(gtx.Dp(theme.PopoverMaxHeight), max(viewport.Y-gap, 0))
+	if panelWidth <= 0 || panelMaxY <= 0 {
+		return layout.Dimensions{}
+	}
+	panelGtx.Constraints = layout.Constraints{
+		Min: image.Pt(panelWidth, 0),
+		Max: image.Pt(panelWidth, panelMaxY),
+	}
+
+	macro := op.Record(gtx.Ops)
+	dims, tracked := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return d.layoutCalendarPanel(ctx, panelGtx, pickerState, now)
+	})
+	call := macro.Stop()
+	placement := overlay.Placement{Side: overlay.SideBottom, Align: overlay.AlignStart}
+	result := overlay.ResolvePosition(overlay.PositionConfig{
+		Trigger:          anchor.Size(),
+		TriggerOrigin:    anchor.Min,
+		HasTriggerOrigin: true,
+		Panel:            dims.Size,
+		Bounds:           viewport,
+		Offset:           gap,
+		Placement:        placement,
+		Flip:             true,
+		AvoidOverflow:    true,
+	})
+	origin := overlay.PanelTransformOriginAt(anchor, result.Position, dims.Size, result.Placement)
+	scale := 0.95 + 0.05*progress
+	scaleTransform := f32.AffineId().Scale(origin, f32.Pt(scale, scale))
+	tracked.PlaceTransform(f32.AffineId().Offset(f32.Pt(float32(result.Position.X), float32(result.Position.Y))).Mul(scaleTransform))
+	tracked.SetOpacity(progress)
+
+	stack := op.Offset(result.Position).Push(gtx.Ops)
+	opacity := paint.PushOpacity(gtx.Ops, progress)
+	transform := op.Affine(scaleTransform).Push(gtx.Ops)
+	layoutDatePickerPanelBlocker(gtx, pickerState, dims.Size)
+	call.Add(gtx.Ops)
+	transform.Pop()
+	opacity.Pop()
+	stack.Pop()
+	return dims
+}
+
+func layoutDatePickerPanelBlocker(gtx layout.Context, state *datePickerState, size image.Point) {
+	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
-	panelWidth := gtx.Dp(theme.CalendarWidth) + gtx.Dp(theme.PopoverPadding)*2
-	panelConstraints := layout.Constraints{
-		Min: image.Pt(panelWidth, 0),
-		Max: image.Pt(panelWidth, min(maxY, gtx.Dp(theme.PopoverMaxHeight))),
-	}
-	overlayBounds := gtx.Constraints.Max
-
-	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
-		gtx.Constraints = panelConstraints
-		placement := overlay.Placement{Side: overlay.SideBottom, Align: overlay.AlignStart}
-		result := overlay.ResolvePosition(overlay.PositionConfig{
-			Trigger:       inputDims.Size,
-			Panel:         panelConstraints.Max,
-			Bounds:        overlayBounds,
-			Offset:        gap,
-			Placement:     placement,
-			AvoidOverflow: true,
-		})
-		origin := overlay.PanelTransformOrigin(inputDims.Size, result.Position, panelConstraints.Max, result.Placement)
-		scale := 0.95 + 0.05*progress
-		stack := op.Offset(result.Position).Push(gtx.Ops)
-		opacity := paint.PushOpacity(gtx.Ops, progress)
-		transform := op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale))).Push(gtx.Ops)
-		dims := d.layoutCalendarPanel(ctx, gtx, state, now)
-		transform.Pop()
-		opacity.Pop()
-		stack.Pop()
-		return dims
+	blockerGtx := gtx
+	blockerGtx.Constraints = layout.Exact(size)
+	state.dialog.Layout(blockerGtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: size}
 	})
-
 }
 
 func (d DatePickerWidget) layoutCalendarPanel(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
@@ -176,7 +225,7 @@ func (d DatePickerWidget) layoutCalendar(ctx *frame.Context, gtx layout.Context,
 	)
 }
 
-func (d DatePickerWidget) layoutCalendarHeader(ctx *frame.Context, gtx layout.Context, state *datePickerState) layout.Dimensions {
+func (d DatePickerWidget) layoutCalendarHeader(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState) layout.Dimensions {
 	return layout.Inset{
 		Left:   2,
 		Right:  2,
@@ -187,22 +236,24 @@ func (d DatePickerWidget) layoutCalendarHeader(ctx *frame.Context, gtx layout.Co
 			Alignment: layout.Middle,
 		}.Layout(gtx,
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				for state.header.Clicked(gtx) {
-					state.toggleYearPicker(state.viewMonth.Year())
-					frame.RequestFocus(ctx, &state.trigger)
+				presses := state.ActivePresses(pickerState.header.History())
+				for pickerState.header.Clicked(gtx) {
+					pickerState.toggleYearPicker(pickerState.viewMonth.Year())
+					frame.RequestFocus(ctx, &pickerState.trigger)
 				}
-				return state.header.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				frame.FocusOnPress(ctx, &pickerState.trigger, pickerState.header.History(), presses)
+				return pickerState.header.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return d.layoutHeaderTrigger(ctx, gtx, state)
+						return d.layoutHeaderTrigger(ctx, gtx, pickerState)
 					})
 				})
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return d.layoutNavButton(ctx, gtx, state, -1)
+				return d.layoutNavButton(ctx, gtx, pickerState, -1)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return d.layoutNavButton(ctx, gtx, state, 1)
+				return d.layoutNavButton(ctx, gtx, pickerState, 1)
 			}),
 		)
 	})

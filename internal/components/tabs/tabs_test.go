@@ -131,6 +131,25 @@ func TestSmallFitTabsUseNaturalWidth(t *testing.T) {
 	}
 }
 
+func TestTabsPropagatesPanelPositionToOverlayHost(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(300, 200)
+	gtx := layout.Context{Constraints: layout.Constraints{Max: viewport}, Ops: new(op.Ops)}
+	var got image.Rectangle
+	panel := &tabsOverlayProbe{got: &got}
+	items := []TabItem{{Key: "account", Label: "Account", Panel: panel}}
+
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Tabs("settings", "account", items).Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	want := image.Rect(8, 72, 18, 82)
+	if got != want {
+		t.Fatalf("panel anchor = %v, want %v", got, want)
+	}
+}
+
 func TestTabsEffectiveSelection(t *testing.T) {
 	items := tabsTestItems()
 	if got := Tabs("tabs", "missing", items).effectiveSelectedKey(); got != "account" {
@@ -587,6 +606,23 @@ func layoutTabsFrame(ctx *frame.Context, router *input.Router, tabs TabsWidget, 
 
 type tabsPanelProbe struct {
 	layouts *int
+}
+
+type tabsOverlayProbe struct {
+	got *image.Rectangle
+}
+
+func (p *tabsOverlayProbe) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       "tabs-panel-probe",
+		Anchor:    image.Rect(0, 0, 10, 10),
+		HasAnchor: true,
+		Layout: func(_ layout.Context, anchor image.Rectangle, _ bool) layout.Dimensions {
+			*p.got = anchor
+			return layout.Dimensions{}
+		},
+	})
+	return layout.Dimensions{Size: image.Pt(40, 20)}
 }
 
 func (p *tabsPanelProbe) Layout(_ *frame.Context, _ layout.Context) layout.Dimensions {

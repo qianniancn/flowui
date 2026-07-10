@@ -97,5 +97,5 @@ func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	}
 
 	theme := frame.ActiveTheme(ctx).Components.RadioGroup
-	return layoutui.LayoutItems(gtx, r.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	return layoutui.LayoutItems(ctx, gtx, r.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
 }

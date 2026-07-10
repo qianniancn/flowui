@@ -40,6 +40,7 @@ type Context struct {
 	hasForeground                bool
 	background                   color.NRGBA
 	hasBackground                bool
+	overlays                     overlayHost
 }
 
 // New creates a per-window frame context. Application state remains in the
@@ -101,6 +102,7 @@ func (ctx *Context) Invalidate() {
 }
 
 func BeginFrame(ctx *Context) {
+	ctx.overlays.beginFrame()
 	ctx.states.BeginFrame()
 	ctx.keys.BeginFrame()
 	ctx.exclusive.BeginFrame()
@@ -249,6 +251,12 @@ func FocusOnPress(ctx *Context, tag event.Tag, history []widget.Press, before in
 	ctx.focus.OnPress(tag, history, before)
 }
 
+// PreserveFocus prevents the frame's global pointer catcher from clearing the
+// current focus after a pointer-only overlay surface consumed a press.
+func PreserveFocus(ctx *Context) {
+	ctx.focus.Preserve()
+}
+
 func PushColors(ctx *Context, foreground, background color.NRGBA) func() {
 	previousForeground, hadForeground := ctx.foreground, ctx.hasForeground
 	previousBackground, hadBackground := ctx.background, ctx.hasBackground
@@ -275,6 +283,7 @@ func (ctx *Context) BackgroundColor() color.NRGBA {
 }
 
 func EndFrame(ctx *Context) {
+	ctx.overlays.runAfterLayout()
 	frameKeys := ctx.keys.Frame()
 	for key := range ctx.fieldFocus {
 		kind := frameKeys[key]

@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -41,8 +42,8 @@ func releaseSelect(ctx *frame.Context, value *selectState) {
 type selectState struct {
 	key                string
 	trigger            widget.Clickable
-	dismiss            [4]widget.Clickable
-	dialog             widget.Clickable
+	dismiss            [16]overlay.ClickArea
+	dialog             overlay.ClickArea
 	field              field.State
 	focus              state.FocusAnimation
 	open               bool
@@ -222,6 +223,9 @@ func (s *selectState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context
 	peerClosePending := s.peerClosePending
 	s.peerClosePending = false
 	for s.dialog.Clicked(gtx) {
+	}
+	if s.dialog.TakePressed() {
+		frame.PreserveFocus(ctx)
 	}
 	dismissed := false
 	for i := range s.dismiss {

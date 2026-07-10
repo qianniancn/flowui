@@ -79,44 +79,100 @@ func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, co
 	stack.Pop()
 }
 
-func (c ComboBoxWidget) layoutOpen(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, inputDims layout.Dimensions, visible []int, progress float32) layout.Dimensions {
-	theme := frame.ActiveTheme(ctx).Components.ComboBox
-	gap := gtx.Dp(theme.PanelGap)
-	panelMaxY := gtx.Constraints.Max.Y - inputDims.Size.Y - gap
-	if panelMaxY <= 0 {
-		state.endFrame()
-		return inputDims
-	}
-	panelMaxY = min(panelMaxY, gtx.Dp(theme.PanelMaxHeight))
-	panelConstraints := layout.Constraints{
-		Min: image.Pt(inputDims.Size.X, 0),
-		Max: image.Pt(inputDims.Size.X, panelMaxY),
-	}
-	overlayBounds := gtx.Constraints.Max
-
-	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
-		gtx.Constraints = panelConstraints
-		placement := overlay.Placement{Side: overlay.SideBottom, Align: overlay.AlignStart}
-		result := overlay.ResolvePosition(overlay.PositionConfig{
-			Trigger:       inputDims.Size,
-			Panel:         panelConstraints.Max,
-			Bounds:        overlayBounds,
-			Offset:        gap,
-			Placement:     placement,
-			AvoidOverflow: true,
-		})
-		origin := overlay.PanelTransformOrigin(inputDims.Size, result.Position, panelConstraints.Max, result.Placement)
-		scale := 0.95 + 0.05*progress
-		stack := op.Offset(result.Position).Push(gtx.Ops)
-		transform := op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale))).Push(gtx.Ops)
-		dims := c.layoutPanel(ctx, gtx, state, editor, visible)
-		transform.Pop()
-		stack.Pop()
-		return dims
+func (c ComboBoxWidget) layoutOpen(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, inputDims layout.Dimensions, visible []int, progress float32, naturallyDisabled bool) layout.Dimensions {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       frame.FullKey(ctx, c.key),
+		Layer:     frame.OverlayLayerPopup,
+		Anchor:    image.Rectangle{Max: inputDims.Size},
+		HasAnchor: true,
+		Disabled:  naturallyDisabled,
+		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
+			panelVisible := visible
+			contentInteractive := interactive && state.open && gtx.Enabled()
+			if contentInteractive {
+				state.clampHighlight(c.items, panelVisible)
+				if index, ok := state.updateKeys(gtx, editor, c.items, panelVisible); ok {
+					c.selectItem(editor, state, c.items[panelVisible[index]])
+				}
+				c.updateEditor(editor, state, gtx)
+				query := editor.Text()
+				selectedLabel, _ := c.selectedLabel()
+				panelVisible = comboBoxVisibleItems(c.items, query, selectedLabel)
+				state.clampHighlight(c.items, panelVisible)
+			}
+			panelGtx := gtx
+			if !contentInteractive {
+				panelGtx = panelGtx.Disabled()
+			}
+			return c.layoutPanelOverlay(ctx, gtx, panelGtx, state, editor, panelVisible, anchor, progress, contentInteractive)
+		},
 	})
-
-	state.endFrame()
+	frame.AfterOverlays(ctx, state.endFrame)
 	return inputDims
+}
+
+func (c ComboBoxWidget) layoutPanelOverlay(ctx *frame.Context, gtx, panelGtx layout.Context, comboState *comboBoxState, editor *widget.Editor, visible []int, anchor image.Rectangle, progress float32, interactive bool) layout.Dimensions {
+	if interactive {
+		for comboState.dialog.Clicked(gtx) {
+			frame.RequestFocus(ctx, editor)
+		}
+		if comboState.dialog.TakePressed() {
+			frame.RequestFocus(ctx, editor)
+		}
+	}
+	theme := frame.ActiveTheme(ctx).Components.ComboBox
+	viewport := gtx.Constraints.Max
+	gap := gtx.Dp(theme.PanelGap)
+	panelWidth := min(max(anchor.Dx(), 0), max(viewport.X, 0))
+	panelMaxY := min(gtx.Dp(theme.PanelMaxHeight), max(viewport.Y-gap, 0))
+	if panelWidth <= 0 || panelMaxY <= 0 {
+		return layout.Dimensions{}
+	}
+	panelGtx.Constraints = layout.Constraints{
+		Min: image.Pt(panelWidth, 0),
+		Max: image.Pt(panelWidth, panelMaxY),
+	}
+
+	macro := op.Record(gtx.Ops)
+	dims, tracked := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return c.layoutPanel(ctx, panelGtx, comboState, editor, visible)
+	})
+	call := macro.Stop()
+	placement := overlay.Placement{Side: overlay.SideBottom, Align: overlay.AlignStart}
+	result := overlay.ResolvePosition(overlay.PositionConfig{
+		Trigger:          anchor.Size(),
+		TriggerOrigin:    anchor.Min,
+		HasTriggerOrigin: true,
+		Panel:            dims.Size,
+		Bounds:           viewport,
+		Offset:           gap,
+		Placement:        placement,
+		Flip:             true,
+		AvoidOverflow:    true,
+	})
+	origin := overlay.PanelTransformOriginAt(anchor, result.Position, dims.Size, result.Placement)
+	scale := 0.95 + 0.05*progress
+	scaleTransform := f32.AffineId().Scale(origin, f32.Pt(scale, scale))
+	tracked.PlaceTransform(f32.AffineId().Offset(f32.Pt(float32(result.Position.X), float32(result.Position.Y))).Mul(scaleTransform))
+
+	stack := op.Offset(result.Position).Push(gtx.Ops)
+	transform := op.Affine(scaleTransform).Push(gtx.Ops)
+	layoutComboBoxPanelBlocker(gtx, comboState, dims.Size)
+	call.Add(gtx.Ops)
+	transform.Pop()
+	stack.Pop()
+	return dims
+}
+
+func layoutComboBoxPanelBlocker(gtx layout.Context, state *comboBoxState, size image.Point) {
+	if size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	blockerGtx := gtx
+	blockerGtx.Constraints = layout.Exact(size)
+	state.dialog.Layout(blockerGtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: size}
+	})
 }
 
 func (c ComboBoxWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, visible []int) layout.Dimensions {

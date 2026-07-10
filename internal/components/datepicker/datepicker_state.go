@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -25,6 +26,7 @@ func datePickerStateFor(ctx *frame.Context, key string) *datePickerState {
 type datePickerState struct {
 	input           field.State
 	trigger         widget.Clickable
+	dialog          overlay.ClickArea
 	header          widget.Clickable
 	prev            widget.Clickable
 	next            widget.Clickable

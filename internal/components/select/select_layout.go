@@ -190,20 +190,37 @@ func selectSemanticLabel(label, value string) string {
 	return strings.Join(parts, ", ")
 }
 
-func (s SelectWidget) layoutPopover(ctx *frame.Context, gtx layout.Context, state *selectState, triggerRect image.Rectangle, open bool, progress float32) {
-	trigger := triggerRect.Size()
-	bounds := gtx.Constraints.Max
-	if trigger.X <= 0 || trigger.Y <= 0 || bounds.X <= 0 || bounds.Y <= 0 {
+func (s SelectWidget) layoutPopover(ctx *frame.Context, state *selectState, triggerRect image.Rectangle, open bool, progress float32, disabled bool) {
+	if triggerRect.Empty() {
 		return
 	}
-	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
-		return s.layoutOverlay(ctx, gtx, state, triggerRect, bounds, open, progress)
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       s.resolvedKey(ctx, state),
+		Layer:     frame.OverlayLayerPopup,
+		Anchor:    triggerRect,
+		HasAnchor: true,
+		Disabled:  disabled,
+		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
+			overlayOpen := open
+			if interactive && gtx.Enabled() {
+				overlayOpen = state.handleOverlayEvents(ctx, gtx, s, overlayOpen)
+			}
+			dims := s.layoutOverlay(ctx, gtx, state, anchor, overlayOpen, progress, interactive && gtx.Enabled())
+			if overlayOpen && interactive && gtx.Enabled() {
+				frame.AfterOverlays(ctx, func() {
+					if frame.OverlayTopmost(ctx, frame.OverlayLayerPopup, state.key) {
+						s.focusPendingOption(ctx, state)
+					}
+				})
+			}
+			return dims
+		},
 	})
-
 }
 
-func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *selectState, triggerRect image.Rectangle, bounds image.Point, open bool, progress float32) layout.Dimensions {
+func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *selectState, triggerRect image.Rectangle, open bool, progress float32, interactive bool) layout.Dimensions {
 	theme := frame.ActiveTheme(ctx).Components.Select
+	bounds := gtx.Constraints.Max
 	trigger := triggerRect.Size()
 	width := min(trigger.X, bounds.X)
 	maxHeight := min(gtx.Dp(theme.PanelMaxHeight), bounds.Y)
@@ -213,7 +230,9 @@ func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, stat
 	panelGtx := gtx
 	panelGtx.Constraints = layout.Constraints{Min: image.Pt(width, 0), Max: image.Pt(width, maxHeight)}
 	macro := op.Record(gtx.Ops)
-	panelDims := s.layoutPanel(ctx, panelGtx, state, open)
+	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return s.layoutPanel(ctx, panelGtx, state, open, interactive)
+	})
 	panelCall := macro.Stop()
 
 	gap := gtx.Dp(theme.PanelGap)
@@ -228,13 +247,18 @@ func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, stat
 		Flip:             s.flipEnabled(),
 		AvoidOverflow:    s.overflowAvoidanceEnabled(),
 	})
-	s.layoutDismissAreas(ctx, gtx, state, triggerRect.Union(result.Rect))
-
 	origin := overlay.PanelTransformOriginAt(triggerRect, result.Position, panelDims.Size, result.Placement)
 	scale := theme.AnimationScale + (1-theme.AnimationScale)*progress
 	slide := overlay.SlideOffset(gtx.Dp(theme.AnimationDistance), progress, result.Placement)
-	offset := op.Offset(result.Position.Add(slide)).Push(gtx.Ops)
-	transform := op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale))).Push(gtx.Ops)
+	panelOffset := result.Position.Add(slide)
+	panelScale := f32.AffineId().Scale(origin, f32.Pt(scale, scale))
+	panelTransform := f32.AffineId().Offset(f32.Pt(float32(panelOffset.X), float32(panelOffset.Y))).Mul(panelScale)
+	panelPlacement.PlaceTransform(panelTransform)
+	panelPlacement.SetOpacity(progress)
+	animatedPanel := overlay.AffineRectBounds(image.Rectangle{Max: panelDims.Size}, panelTransform)
+	s.layoutDismissAreas(gtx, state, bounds, triggerRect, animatedPanel)
+	offset := op.Offset(panelOffset).Push(gtx.Ops)
+	transform := op.Affine(panelScale).Push(gtx.Ops)
 	opacity := paint.PushOpacity(gtx.Ops, progress)
 	s.layoutDialogBlocker(gtx, state, panelDims.Size)
 	panelCall.Add(gtx.Ops)
@@ -244,13 +268,13 @@ func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, stat
 	return layout.Dimensions{Size: bounds}
 }
 
-func (s SelectWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, state *selectState, open bool) layout.Dimensions {
+func (s SelectWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, state *selectState, open, interactive bool) layout.Dimensions {
 	macro := op.Record(gtx.Ops)
 	var dims layout.Dimensions
 	func() {
 		restore := frame.PushColors(ctx, frame.ActiveTheme(ctx).Palette.OverlayForegroundColor(), frame.ActiveTheme(ctx).Palette.OverlayColor())
 		defer restore()
-		list := s.listBox(ctx, state, open)
+		list := s.listBox(ctx, state, open && interactive)
 		dims = list.Layout(ctx, gtx)
 	}()
 	call := macro.Stop()
@@ -261,9 +285,6 @@ func (s SelectWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, state 
 	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	clipStack.Pop()
-	if open {
-		s.focusPendingOption(ctx, state)
-	}
 	return dims
 }
 
@@ -340,14 +361,16 @@ func (s SelectWidget) focusOptionIndex(items []SelectItem, intent selectFocusInt
 	}
 }
 
-func (s SelectWidget) layoutDismissAreas(ctx *frame.Context, gtx layout.Context, state *selectState, excluded image.Rectangle) {
-	viewport := frame.OverlayViewport(ctx, gtx.Constraints.Max)
+func (s SelectWidget) layoutDismissAreas(gtx layout.Context, state *selectState, viewport image.Point, excluded ...image.Rectangle) {
 	if viewport.X <= 0 || viewport.Y <= 0 {
 		return
 	}
-	bounds := image.Rect(-viewport.X, -viewport.Y, viewport.X, viewport.Y)
-	areas := overlay.DismissRects(bounds, excluded)
+	bounds := image.Rectangle{Max: viewport}
+	areas := overlay.DismissRectsExcluding(bounds, excluded...)
 	for i, area := range areas {
+		if i >= len(state.dismiss) {
+			break
+		}
 		if area.Empty() {
 			continue
 		}

@@ -1,6 +1,8 @@
 package layoutui
 
 import (
+	"image"
+
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -16,7 +18,7 @@ func Center(child frame.Widget) CenterWidget {
 
 func (c CenterWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	prepareFieldAssociations(ctx, c.child)
-	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return layoutTrackedDirection(ctx, gtx, layout.Center, func(gtx layout.Context) layout.Dimensions {
 		return c.child.Layout(ctx, gtx)
 	})
 }
@@ -116,21 +118,71 @@ func (f FlexWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 }
 
 func flexLayout(ctx *frame.Context, gtx layout.Context, axis layout.Axis, gap unit.Dp, align layout.Alignment, widgets []frame.Widget) layout.Dimensions {
+	type childPlacement struct {
+		dims      layout.Dimensions
+		placement frame.OverlayPlacement
+	}
+	placements := make([]childPlacement, len(widgets))
 	children := make([]layout.FlexChild, 0, len(widgets))
-	for _, child := range widgets {
+	for index, child := range widgets {
+		index := index
 		if flex, ok := child.(FlexWidget); ok {
 			children = append(children, layout.Flexed(flex.weight, func(gtx layout.Context) layout.Dimensions {
-				return flex.child.Layout(ctx, gtx)
+				dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+					return flex.child.Layout(ctx, gtx)
+				})
+				placements[index] = childPlacement{dims: dims, placement: placement}
+				return dims
 			}))
 			continue
 		}
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return child.Layout(ctx, gtx)
+			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+				return child.Layout(ctx, gtx)
+			})
+			placements[index] = childPlacement{dims: dims, placement: placement}
+			return dims
 		}))
 	}
-	return layout.Flex{
+	gapPx := max(gtx.Dp(gap), 0)
+	dims := layout.Flex{
 		Axis:      axis,
-		Gap:       gtx.Dp(gap),
+		Gap:       gapPx,
 		Alignment: align,
 	}.Layout(gtx, children...)
+
+	maxCross := axisCrossMinimum(gtx.Constraints, axis)
+	maxBaseline := 0
+	for _, child := range placements {
+		maxCross = max(maxCross, axis.Convert(child.dims.Size).Y)
+		maxBaseline = max(maxBaseline, child.dims.Size.Y-child.dims.Baseline)
+	}
+	main := 0
+	for index, child := range placements {
+		size := axis.Convert(child.dims.Size)
+		cross := 0
+		switch align {
+		case layout.End:
+			cross = maxCross - size.Y
+		case layout.Middle:
+			cross = (maxCross - size.Y) / 2
+		case layout.Baseline:
+			if axis == layout.Horizontal {
+				cross = maxBaseline - (child.dims.Size.Y - child.dims.Baseline)
+			}
+		}
+		child.placement.PlaceOffset(axis.Convert(image.Pt(main, cross)))
+		main += size.X
+		if index < len(placements)-1 {
+			main += gapPx
+		}
+	}
+	return dims
+}
+
+func axisCrossMinimum(constraints layout.Constraints, axis layout.Axis) int {
+	if axis == layout.Horizontal {
+		return constraints.Min.Y
+	}
+	return constraints.Min.X
 }

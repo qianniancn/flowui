@@ -2,7 +2,6 @@ package modal
 
 import (
 	"image"
-	"math"
 
 	"gioui.org/f32"
 	"gioui.org/font"
@@ -13,16 +12,14 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/state"
 )
 
-func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *modalState, progress float32) layout.Dimensions {
+func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *modalState, progress float32, contentEnabled bool) layout.Dimensions {
 	size := modalOverlaySize(gtx)
 	if size.X <= 0 || size.Y <= 0 {
 		return layout.Dimensions{}
@@ -31,12 +28,18 @@ func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state
 
 	style := modalStyleFor(frame.ActiveTheme(ctx), m.backdrop, m.size)
 	drawModalBackdrop(gtx, size, style, progress)
-	m.layoutFocusTrap(ctx, gtx, state)
+	contentGtx := gtx
+	if !contentEnabled {
+		contentGtx = contentGtx.Disabled()
+	}
+	m.layoutFocusTrap(ctx, gtx, state, contentEnabled)
 
-	dialogGtx := gtx
+	dialogGtx := contentGtx
 	dialogGtx.Constraints = m.dialogConstraints(ctx, gtx, size)
 	macro := op.Record(gtx.Ops)
-	dialogDims := m.layoutDialogFrame(ctx, dialogGtx, state)
+	dialogDims, dialogPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return m.layoutDialogFrame(ctx, dialogGtx, state)
+	})
 	dialogCall := macro.Stop()
 
 	dialogPos := m.dialogPosition(ctx, gtx, size, dialogDims.Size)
@@ -45,7 +48,9 @@ func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state
 		Max: dialogPos.Add(dialogDims.Size),
 	}
 	motion := m.dialogMotion(ctx, gtx, dialogRect, progress, state.opening())
-	m.layoutDismissAreas(gtx, state, size, modalMotionBounds(dialogRect, motion.transform))
+	dialogPlacement.PlaceTransform(motion.transform.Mul(f32.AffineId().Offset(f32.Pt(float32(dialogPos.X), float32(dialogPos.Y)))))
+	dialogPlacement.SetOpacity(motion.opacity)
+	m.layoutDismissAreas(gtx, state, size, overlay.AffineRectBounds(dialogRect, motion.transform))
 	transform := op.Affine(motion.transform).Push(gtx.Ops)
 	opacity := paint.PushOpacity(gtx.Ops, motion.opacity)
 	offset := op.Offset(dialogPos).Push(gtx.Ops)
@@ -54,13 +59,11 @@ func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state
 	offset.Pop()
 	opacity.Pop()
 	transform.Pop()
-	m.layoutFocusEnd(gtx, state)
-
 	return layout.Dimensions{Size: size}
 }
 
-func (m ModalWidget) layoutFocusTrap(ctx *frame.Context, gtx layout.Context, state *modalState) {
-	m.redirectFocusedBoundary(ctx, gtx, &state.focusStart, state.tabFocusTag(m.showCloseButton()))
+func (m ModalWidget) layoutFocusTrap(ctx *frame.Context, gtx layout.Context, state *modalState, contentEnabled bool) {
+	m.redirectFocusedBoundary(ctx, gtx, &state.focusStart, state.tabFocusTag(m.showCloseButton() && contentEnabled))
 	m.redirectFocusedBoundary(ctx, gtx, &state.focusEnd, state.endFocusTag())
 	for {
 		_, ok := gtx.Event(key.FocusFilter{Target: &state.focusTarget})
@@ -89,11 +92,9 @@ func (m ModalWidget) layoutFocusEnd(gtx layout.Context, state *modalState) {
 	m.layoutFocusTag(gtx, &state.focusEnd)
 }
 
-func (m ModalWidget) layoutFocusTag(gtx layout.Context, target *widget.Clickable) {
+func (m ModalWidget) layoutFocusTag(gtx layout.Context, target event.Tag) {
 	stack := clip.Rect{Max: image.Pt(1, 1)}.Push(gtx.Ops)
-	target.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Dimensions{Size: image.Pt(1, 1)}
-	})
+	event.Op(gtx.Ops, target)
 	stack.Pop()
 }
 
@@ -235,40 +236,6 @@ func (m ModalWidget) dialogMotion(ctx *frame.Context, gtx layout.Context, rect i
 	}
 }
 
-func modalMotionBounds(rect image.Rectangle, transform f32.Affine2D) image.Rectangle {
-	if rect.Empty() {
-		return image.Rectangle{}
-	}
-	points := [4]f32.Point{
-		transform.Transform(f32.Pt(float32(rect.Min.X), float32(rect.Min.Y))),
-		transform.Transform(f32.Pt(float32(rect.Max.X), float32(rect.Min.Y))),
-		transform.Transform(f32.Pt(float32(rect.Max.X), float32(rect.Max.Y))),
-		transform.Transform(f32.Pt(float32(rect.Min.X), float32(rect.Max.Y))),
-	}
-	minX, maxX := points[0].X, points[0].X
-	minY, maxY := points[0].Y, points[0].Y
-	for _, point := range points[1:] {
-		if point.X < minX {
-			minX = point.X
-		}
-		if point.X > maxX {
-			maxX = point.X
-		}
-		if point.Y < minY {
-			minY = point.Y
-		}
-		if point.Y > maxY {
-			maxY = point.Y
-		}
-	}
-	return image.Rect(
-		int(math.Floor(float64(minX))),
-		int(math.Floor(float64(minY))),
-		int(math.Ceil(float64(maxX))),
-		int(math.Ceil(float64(maxY))),
-	)
-}
-
 func modalDialogScale(startScale, progress float32) float32 {
 	if startScale <= 0 || startScale > 1 {
 		startScale = 0.95
@@ -370,10 +337,13 @@ func (m ModalWidget) layoutDialogSurface(ctx *frame.Context, gtx layout.Context,
 
 	macro := op.Record(gtx.Ops)
 	var contentDims layout.Dimensions
+	var contentPlacement frame.OverlayPlacement
 	func() {
 		restore := frame.PushColors(ctx, frame.ActiveTheme(ctx).Palette.OverlayForegroundColor(), frame.ActiveTheme(ctx).Palette.OverlayColor())
 		defer restore()
-		contentDims = m.layoutDialogContent(ctx, contentGtx, state)
+		contentDims, contentPlacement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return m.layoutDialogContent(ctx, contentGtx, state)
+		})
 	}()
 	contentCall := macro.Stop()
 
@@ -385,6 +355,7 @@ func (m ModalWidget) layoutDialogSurface(ctx *frame.Context, gtx layout.Context,
 
 	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
 	contentOffset := op.Offset(image.Pt(padding, padding)).Push(gtx.Ops)
+	contentPlacement.PlaceOffset(image.Pt(padding, padding))
 	contentCall.Add(gtx.Ops)
 	contentOffset.Pop()
 	clipStack.Pop()
@@ -399,7 +370,7 @@ func (m ModalWidget) layoutDialogContent(ctx *frame.Context, gtx layout.Context,
 	if m.scroll == ModalScrollOutside {
 		state.outsideList.Axis = layout.Vertical
 		state.outsideList.ScrollAnyAxis = false
-		return state.outsideList.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+		return layoutModalTrackedList(ctx, &state.outsideList, gtx, func(gtx layout.Context) layout.Dimensions {
 			return m.layoutDialogSections(ctx, gtx, state)
 		})
 	}
@@ -410,14 +381,14 @@ func (m ModalWidget) layoutDialogSections(ctx *frame.Context, gtx layout.Context
 	sectionGtx := gtx
 	sectionGtx.Constraints.Min = image.Point{}
 
-	headerCall, headerDims := m.recordHeader(ctx, sectionGtx)
-	footerCall, footerDims := m.recordFooter(ctx, sectionGtx)
+	headerCall, headerDims, headerPlacement := m.recordHeader(ctx, sectionGtx)
+	footerCall, footerDims, footerPlacement := m.recordFooter(ctx, sectionGtx)
 	bodyGap, footerGap := m.dialogGaps(ctx, sectionGtx, headerDims.Size.Y > 0, footerDims.Size.Y > 0)
 
 	bodyGtx := sectionGtx
 	maxBodyY := max(gtx.Constraints.Max.Y-headerDims.Size.Y-footerDims.Size.Y-bodyGap-footerGap, 0)
 	bodyGtx.Constraints.Max.Y = maxBodyY
-	bodyCall, bodyDims := m.recordBody(ctx, bodyGtx, state)
+	bodyCall, bodyDims, bodyPlacement := m.recordBody(ctx, bodyGtx, state)
 
 	width := max(headerDims.Size.X, max(bodyDims.Size.X, footerDims.Size.X))
 	height := headerDims.Size.Y + bodyDims.Size.Y + footerDims.Size.Y + bodyGap + footerGap
@@ -425,11 +396,13 @@ func (m ModalWidget) layoutDialogSections(ctx *frame.Context, gtx layout.Context
 
 	y := 0
 	if headerDims.Size.Y > 0 {
+		headerPlacement.PlaceOffset(image.Point{})
 		headerCall.Add(gtx.Ops)
 		y += headerDims.Size.Y
 	}
 	if bodyDims.Size.Y > 0 {
 		y += bodyGap
+		bodyPlacement.PlaceOffset(image.Pt(0, y))
 		stack := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
 		bodyCall.Add(gtx.Ops)
 		stack.Pop()
@@ -438,9 +411,19 @@ func (m ModalWidget) layoutDialogSections(ctx *frame.Context, gtx layout.Context
 	if footerDims.Size.Y > 0 {
 		y += footerGap
 		pos := m.dialogFooterPosition(size, footerDims.Size, y)
+		footerPlacement.PlaceOffset(pos)
 		stack := op.Offset(pos).Push(gtx.Ops)
 		footerCall.Add(gtx.Ops)
 		stack.Pop()
+	}
+	if headerDims.Size.Y == 0 {
+		headerPlacement.PlaceOffset(image.Point{})
+	}
+	if bodyDims.Size.Y == 0 {
+		bodyPlacement.PlaceOffset(image.Pt(0, y))
+	}
+	if footerDims.Size.Y == 0 {
+		footerPlacement.PlaceOffset(image.Pt(0, y))
 	}
 	return layout.Dimensions{Size: size}
 }
@@ -467,10 +450,12 @@ func (m ModalWidget) dialogGaps(ctx *frame.Context, gtx layout.Context, hasHeade
 	return bodyGap, footerGap
 }
 
-func (m ModalWidget) recordHeader(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions) {
+func (m ModalWidget) recordHeader(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
 	macro := op.Record(gtx.Ops)
-	dims := m.layoutHeader(ctx, gtx)
-	return macro.Stop(), dims
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return m.layoutHeader(ctx, gtx)
+	})
+	return macro.Stop(), dims, placement
 }
 
 func (m ModalWidget) layoutHeader(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -510,10 +495,12 @@ func (m ModalWidget) layoutIcon(ctx *frame.Context, gtx layout.Context) layout.D
 	})
 }
 
-func (m ModalWidget) recordBody(ctx *frame.Context, gtx layout.Context, state *modalState) (op.CallOp, layout.Dimensions) {
+func (m ModalWidget) recordBody(ctx *frame.Context, gtx layout.Context, state *modalState) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
 	macro := op.Record(gtx.Ops)
-	dims := m.layoutBody(ctx, gtx, state)
-	return macro.Stop(), dims
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return m.layoutBody(ctx, gtx, state)
+	})
+	return macro.Stop(), dims, placement
 }
 
 func (m ModalWidget) layoutBody(ctx *frame.Context, gtx layout.Context, state *modalState) layout.Dimensions {
@@ -526,7 +513,7 @@ func (m ModalWidget) layoutBody(ctx *frame.Context, gtx layout.Context, state *m
 	}
 	state.bodyList.Axis = layout.Vertical
 	state.bodyList.ScrollAnyAxis = false
-	return state.bodyList.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutModalTrackedList(ctx, &state.bodyList, gtx, func(gtx layout.Context) layout.Dimensions {
 		return body.Layout(ctx, gtx)
 	})
 }
@@ -541,10 +528,30 @@ func (m ModalWidget) styleBody(ctx *frame.Context, body frame.Widget) frame.Widg
 	return text
 }
 
-func (m ModalWidget) recordFooter(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions) {
+func (m ModalWidget) recordFooter(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
 	macro := op.Record(gtx.Ops)
-	dims := m.layoutFooter(ctx, gtx)
-	return macro.Stop(), dims
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return m.layoutFooter(ctx, gtx)
+	})
+	return macro.Stop(), dims, placement
+}
+
+func layoutModalTrackedList(ctx *frame.Context, list *layout.List, gtx layout.Context, child layout.Widget) layout.Dimensions {
+	var childDims layout.Dimensions
+	var placement frame.OverlayPlacement
+	dims := list.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+		childDims, placement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return child(gtx)
+		})
+		return childDims
+	})
+	mainOffset := -list.Position.Offset
+	if list.Position.First > 0 {
+		mainOffset -= childDims.Size.Y + list.Gap
+	}
+	placement.PlaceOffset(image.Pt(0, mainOffset))
+	placement.ClipTo(image.Rectangle{Max: dims.Size})
+	return dims
 }
 
 func (m ModalWidget) layoutFooter(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -560,8 +567,6 @@ func (m ModalWidget) layoutCloseButton(ctx *frame.Context, gtx layout.Context, m
 	inset := gtx.Dp(theme.CloseInset)
 	pos := image.Pt(max(dialogSize.X-inset-size.X, 0), min(inset, max(dialogSize.Y-size.Y, 0)))
 
-	presses := state.ActivePresses(modalStateValue.close.History())
-	frame.FocusOnPress(ctx, &modalStateValue.close, modalStateValue.close.History(), presses)
 	buttonGtx := gtx
 	buttonGtx.Constraints = layout.Exact(size)
 	stack := op.Offset(pos).Push(gtx.Ops)

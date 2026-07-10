@@ -77,3 +77,44 @@ func TestListScrollOptions(t *testing.T) {
 		t.Fatal("scroll-any-axis was not enabled")
 	}
 }
+
+func TestListPropagatesScrollAndCrossAxisAlignment(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(100, 100)
+	listSize := image.Pt(100, 25)
+	frame.BeginFrameWithViewport(ctx, viewport)
+	state := ctx.ListState("items")
+	frame.EndFrame(ctx)
+	state.Position = layout.Position{First: 1, Offset: 5, BeforeEnd: true}
+	got := make(map[int]image.Rectangle)
+	gtx := layout.Context{Constraints: layout.Constraints{Max: listSize}, Ops: new(op.Ops)}
+	frame.BeginFrameWithViewport(ctx, viewport)
+
+	List("items", 5, func(index int) frame.Widget {
+		width := 20
+		if index == 2 {
+			width = 10
+		}
+		return &overlayProbeWidget{
+			key:    "list-" + string(rune('0'+index)),
+			size:   image.Pt(width, 10),
+			anchor: image.Rect(0, 0, width, 10),
+			capture: func(anchor image.Rectangle) {
+				got[index] = anchor
+			},
+		}
+	}).Gap(2).AlignEnd().Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	want := image.Rect(10, 7, 20, 17)
+	if got[2] != want {
+		t.Fatalf("list item anchor = %v, want %v", got[2], want)
+	}
+	if _, visible := got[0]; visible {
+		t.Fatal("offscreen leading list item produced an overlay")
+	}
+	if _, visible := got[4]; visible {
+		t.Fatal("offscreen trailing list item produced an overlay")
+	}
+}

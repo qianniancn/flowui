@@ -5,13 +5,17 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -256,6 +260,173 @@ func TestDatePickerHeaderAndYearClickFlow(t *testing.T) {
 	}
 	if state.viewMonth.Year() != 2026 {
 		t.Fatalf("view year = %d, want 2026", state.viewMonth.Year())
+	}
+}
+
+func TestDatePickerPanelPressKeepsFocusAndBlocksBackground(t *testing.T) {
+	tests := []struct {
+		name     string
+		position f32.Point
+		wantMode datePickerViewMode
+	}{
+		{name: "padding", position: f32.Pt(200, 47), wantMode: datePickerViewDays},
+		{name: "header", position: f32.Pt(50, 62), wantMode: datePickerViewYears},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			router := new(input.Router)
+			picker := DatePicker("date", testDate(2026, 7, 1)).FullWidth()
+			var background widget.Clickable
+			backgroundClicked := false
+			start := time.Unix(1, 0)
+
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start)
+			pickerState := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+			router.Source().Execute(key.FocusCmd{Tag: &pickerState.trigger})
+			pickerState.openCalendar()
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(time.Millisecond))
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(time.Millisecond+datePickerPopoverInDuration))
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(2*time.Millisecond+datePickerPopoverInDuration))
+
+			router.Queue(pointer.Event{
+				Kind:      pointer.Press,
+				Source:    pointer.Mouse,
+				PointerID: 1,
+				Buttons:   pointer.ButtonPrimary,
+				Position:  test.position,
+			})
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(3*time.Millisecond+datePickerPopoverInDuration))
+
+			if !pickerState.open {
+				t.Fatalf("%s press closed the date picker", test.name)
+			}
+			if !router.Source().Focused(&pickerState.trigger) {
+				t.Fatalf("%s press cleared trigger focus", test.name)
+			}
+			if pickerState.viewMode != datePickerViewDays {
+				t.Fatalf("view mode changed on %s press: got %v, want days", test.name, pickerState.viewMode)
+			}
+			if state.ActivePresses(background.History()) != 0 || backgroundClicked {
+				t.Fatalf("%s press reached the background control", test.name)
+			}
+
+			router.Queue(pointer.Event{
+				Kind:      pointer.Release,
+				Source:    pointer.Mouse,
+				PointerID: 1,
+				Position:  test.position,
+			})
+			layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(4*time.Millisecond+datePickerPopoverInDuration))
+
+			if !pickerState.open {
+				t.Fatalf("%s release closed the date picker", test.name)
+			}
+			if !router.Source().Focused(&pickerState.trigger) {
+				t.Fatalf("%s release cleared trigger focus", test.name)
+			}
+			if pickerState.viewMode != test.wantMode {
+				t.Fatalf("view mode after %s release = %v, want %v", test.name, pickerState.viewMode, test.wantMode)
+			}
+			if backgroundClicked {
+				t.Fatalf("%s click reached the background control", test.name)
+			}
+		})
+	}
+}
+
+func TestDatePickerExitingPanelPaddingBlocksBackground(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	changed := false
+	picker := DatePicker("date", testDate(2026, 7, 1)).
+		FullWidth().
+		OnChange(func(time.Time) {
+			changed = true
+		})
+	var background widget.Clickable
+	backgroundClicked := false
+	start := time.Unix(1, 0)
+
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start)
+	pickerState := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+	router.Source().Execute(key.FocusCmd{Tag: &pickerState.trigger})
+	pickerState.openCalendar()
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(time.Millisecond))
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(time.Millisecond+datePickerPopoverInDuration))
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, start.Add(2*time.Millisecond+datePickerPopoverInDuration))
+
+	pickerState.open = false
+	closeStart := start.Add(3*time.Millisecond + datePickerPopoverInDuration)
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, closeStart)
+	midExit := closeStart.Add(datePickerPopoverOutDuration / 2)
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, midExit)
+	if pickerState.popover <= 0 || pickerState.popover >= 1 {
+		t.Fatalf("exit progress = %v, want between 0 and 1", pickerState.popover)
+	}
+
+	position := f32.Pt(200, 47)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, midExit.Add(time.Millisecond))
+
+	if pickerState.open {
+		t.Fatal("exiting panel padding press reopened the date picker")
+	}
+	if pickerState.popover <= 0 {
+		t.Fatal("panel finished exiting before the padding press was processed")
+	}
+	if pickerState.viewMode != datePickerViewDays || changed {
+		t.Fatal("exiting panel content handled the padding press")
+	}
+	if state.ActivePresses(background.History()) != 0 || backgroundClicked {
+		t.Fatal("exiting panel padding press reached the background control")
+	}
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, midExit.Add(2*time.Millisecond))
+
+	if pickerState.open {
+		t.Fatal("exiting panel padding release reopened the date picker")
+	}
+	if pickerState.popover <= 0 {
+		t.Fatal("panel finished exiting before the padding release was processed")
+	}
+	if pickerState.viewMode != datePickerViewDays || changed {
+		t.Fatal("exiting panel content handled the padding click")
+	}
+	if backgroundClicked {
+		t.Fatal("exiting panel padding click reached the background control")
+	}
+}
+
+func TestDatePickerIgnoresEscapeWhileAnotherOverlayIsTopmost(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	picker := DatePicker("date", testDate(2026, 7, 1))
+
+	layoutDatePickerFrame(ctx, router, picker)
+	state := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+	router.Source().Execute(key.FocusCmd{Tag: &state.trigger})
+	state.openCalendar()
+	layoutDatePickerBelowOverlayFrame(ctx, router, picker)
+	layoutDatePickerBelowOverlayFrame(ctx, router, picker)
+
+	router.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+	layoutDatePickerBelowOverlayFrame(ctx, router, picker)
+	if !state.open {
+		t.Fatal("background date picker consumed Escape while another overlay was topmost")
 	}
 }
 
@@ -529,10 +700,59 @@ func layoutDatePickerFrameAt(ctx *frame.Context, router *input.Router, picker Da
 	}
 	frame.BeginFrame(ctx)
 	dims := picker.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
 	return dims
+}
+
+func layoutDatePickerOverBackgroundFrame(ctx *frame.Context, router *input.Router, picker DatePickerWidget, background *widget.Clickable, backgroundClicked *bool, now time.Time) {
+	var ops op.Ops
+	viewport := image.Pt(400, 500)
+	gtx := layout.Context{
+		Constraints: layout.Exact(viewport),
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	presses := state.ActivePresses(background.History())
+	for background.Clicked(gtx) {
+		*backgroundClicked = true
+	}
+	frame.FocusOnPress(ctx, background, background.History(), presses)
+	background.Layout(gtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: viewport}
+	})
+	pickerGtx := gtx
+	pickerGtx.Constraints = layout.Constraints{Max: viewport}
+	picker.Layout(ctx, pickerGtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+}
+
+func layoutDatePickerBelowOverlayFrame(ctx *frame.Context, router *input.Router, picker DatePickerWidget) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 260)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	frame.BeginFrame(ctx)
+	picker.Layout(ctx, gtx)
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key: "test-top-overlay",
+		Layout: func(layout.Context, image.Rectangle, bool) layout.Dimensions {
+			return layout.Dimensions{}
+		},
+	})
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
 }
 
 func testDate(year int, month time.Month, day int) time.Time {

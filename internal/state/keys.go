@@ -31,6 +31,21 @@ type Keys struct {
 	path  []string
 }
 
+// Scope returns a copy of the current key path. It is used by deferred frame
+// work that must keep the identity scope from its registration site.
+func (k *Keys) Scope() []string {
+	return append([]string(nil), k.path...)
+}
+
+// UseScope temporarily replaces the current key path.
+func (k *Keys) UseScope(path []string) func() {
+	previous := k.path
+	k.path = append(k.path[:0:0], path...)
+	return func() {
+		k.path = previous
+	}
+}
+
 const (
 	encodedRootPrefix = "~r"
 	derivedKeyPrefix  = byte(0)

@@ -111,31 +111,33 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	d = d.resolveLocale(ctx)
 	now := datePickerFrameNow(gtx.Now)
 	state := datePickerStateFor(ctx, d.key)
+	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
+	eventGtx := gtx
 	state.beginFrame()
 	state.sync(d.value, d.initialMonth(now))
 	if d.disabled {
 		state.open = false
-		gtx = gtx.Disabled()
+		eventGtx = eventGtx.Disabled()
 	}
 
 	focused := gtx.Focused(&state.trigger)
 	state.updateFocus(focused, d.disabled)
-	if !d.disabled {
+	if !d.disabled && !state.open {
 		state.updateKeys(gtx, &state.trigger)
 	}
 
 	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, state.trigger.Hovered(), focused || state.open, d.disabled, d.invalid)
 	style.Background = state.input.Background(gtx, style.Background)
 	style.Border = state.input.BorderColor(gtx, style.Border)
-	dims := d.layoutInput(ctx, gtx, state, style)
+	dims := d.layoutInput(ctx, eventGtx, state, style)
 
 	progress := state.popoverProgress(gtx, state.open && !d.disabled)
 	if progress == 0 && (!state.open || d.disabled) {
 		state.endFrame()
 		return dims
 	}
-	d.layoutPopover(ctx, gtx, state, dims, progress, now)
-	state.endFrame()
+	d.layoutPopover(ctx, eventGtx, state, dims, progress, now, naturallyDisabled)
+	frame.AfterOverlays(ctx, state.endFrame)
 	return dims
 }
 

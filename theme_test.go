@@ -112,6 +112,18 @@ func TestThemeControlsComboBoxHeight(t *testing.T) {
 	}
 }
 
+func TestThemeControlsSelectHeight(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.Select.Height = 44
+	ctx := newContextWithTheme(nil, &theme)
+
+	dims := Select("language", "", selectTestItems()).Layout(ctx, testLayoutContext())
+
+	if dims.Size.Y != 44 {
+		t.Fatalf("select height = %d, want 44", dims.Size.Y)
+	}
+}
+
 func TestThemeControlsDatePickerHeight(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.DatePicker.Height = 44

@@ -23,9 +23,9 @@ func drawModalBackdrop(gtx layout.Context, size image.Point, style modalStyle, p
 func drawModalSurface(gtx layout.Context, theme *Theme, rect image.Rectangle, radius int, size ModalSize) {
 	if size != ModalFull {
 		shadowRadius := theme.Components.Modal.Radius
-		DrawShadow(gtx, rect, RoundedShadowCorners(shadowRadius, shadowRadius, shadowRadius, shadowRadius), PopupShadow(theme.Palette.Shadow))
+		DrawShadow(gtx, rect, RoundedShadowCorners(shadowRadius, shadowRadius, shadowRadius, shadowRadius), PopupShadow(theme.Palette.overlayShadowColor()))
 	}
-	paint.FillShape(gtx.Ops, theme.Palette.Surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, theme.Palette.overlayColor(), clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }
 
 func modalDialogRadius(gtx layout.Context, theme *Theme, size ModalSize, dialogSize image.Point) int {

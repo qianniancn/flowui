@@ -502,17 +502,6 @@ func TestModalPlacement(t *testing.T) {
 	}
 }
 
-func TestModalDismissRectsExcludeDialog(t *testing.T) {
-	rects := modalDismissRects(image.Pt(100, 80), image.Rect(20, 10, 80, 60))
-
-	if rects[0] != image.Rect(0, 0, 100, 10) {
-		t.Fatalf("top dismiss rect = %v", rects[0])
-	}
-	if rects[2].Intersect(image.Rect(20, 10, 80, 60)) != (image.Rectangle{}) {
-		t.Fatal("dismiss rect overlaps dialog")
-	}
-}
-
 func TestModalProgressAnimation(t *testing.T) {
 	state := new(modalState)
 	start := time.Unix(1, 0)

@@ -116,6 +116,7 @@ text/editor internals.
 - `RadioGroup`
 - `ProgressBar`
 - `ListBox`
+- `Select`
 - `ComboBox`
 - `DatePicker`
 - `Popover`
@@ -123,6 +124,7 @@ text/editor internals.
 
 ### Layout
 
+- `Surface`
 - `Box`, `Spacer`
 - `Center`
 - `Row`, `Column`
@@ -138,6 +140,7 @@ text/editor internals.
 ### Drawing
 
 - `DrawShadow`
+- `SurfaceShadow`
 - `PopupShadow`
 - `RoundedShadowCorners`
 - `EllipseShadow`
@@ -157,6 +160,8 @@ Examples live in `examples/`:
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
+- `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.
+- `selects`: single and multiple selection, sections, disabled options, validation, controlled open state, and Surface styling.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.
 - `form`: composing controls into a form.

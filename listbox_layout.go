@@ -42,7 +42,11 @@ func (l ListBoxWidget) applyConstraints(ctx *Context, gtx *layout.Context) {
 
 func (l ListBoxWidget) layoutContent(ctx *Context, gtx layout.Context, state *listBoxState, entries []listBoxEntry, hasItems bool) layout.Dimensions {
 	theme := ctx.Theme.Components.ListBox
-	return layout.UniformInset(theme.Padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	padding := theme.Padding
+	if l.hasPadding {
+		padding = l.padding
+	}
+	return layout.UniformInset(padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		if !hasItems {
 			return l.layoutEmpty(ctx, gtx)
 		}
@@ -120,8 +124,7 @@ func (l ListBoxWidget) layoutItem(ctx *Context, gtx layout.Context, state *listB
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
 
 		theme := ctx.Theme.Components.ListBox
-		height := min(gtx.Dp(theme.ItemMinHeight), gtx.Constraints.Max.Y)
-		gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
+		minHeight := min(gtx.Dp(theme.ItemMinHeight), gtx.Constraints.Max.Y)
 
 		focusVisible := itemState.focusVisible(gtx.Focused(&itemState.clickable), itemState.clickable.History())
 		style := listBoxItemStyleFor(ctx.Theme, item.Variant, itemState.clickable.Hovered(), itemState.clickable.Pressed(), disabled)
@@ -131,16 +134,29 @@ func (l ListBoxWidget) layoutItem(ctx *Context, gtx layout.Context, state *listB
 		scale := listBoxItemScale(animGtx, itemState.clickable.History(), ctx.Theme, disabled)
 
 		macro := op.Record(gtx.Ops)
-		dims := l.layoutItemContent(ctx, gtx, item, style, selected)
+		contentGtx := gtx
+		contentGtx.Constraints.Min.Y = 0
+		contentDims := l.layoutItemContent(ctx, contentGtx, item, style, selected)
 		call := macro.Stop()
-		dims.Size = gtx.Constraints.Constrain(dims.Size)
+		size, contentOffset := listBoxItemFrame(gtx.Constraints, minHeight, contentDims.Size)
+		dims := contentDims
+		dims.Size = size
+		dims.Baseline += max(size.Y-contentOffset.Y-contentDims.Size.Y, 0)
 
 		stack := listBoxItemTransform(dims.Size, scale).Push(gtx.Ops)
 		drawListBoxItem(gtx, ctx.Theme, dims.Size, style)
+		offset := op.Offset(contentOffset).Push(gtx.Ops)
 		call.Add(gtx.Ops)
+		offset.Pop()
 		stack.Pop()
 		return dims
 	})
+}
+
+func listBoxItemFrame(constraints layout.Constraints, minHeight int, content image.Point) (size, offset image.Point) {
+	size = constraints.Constrain(image.Pt(content.X, max(minHeight, content.Y)))
+	offset.Y = max((size.Y-content.Y)/2, 0)
+	return size, offset
 }
 
 func (l ListBoxWidget) layoutItemContent(ctx *Context, gtx layout.Context, item ListBoxItem, style listBoxItemStyle, selected bool) layout.Dimensions {

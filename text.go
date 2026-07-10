@@ -45,6 +45,8 @@ func (t TextWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	label := material.Label(ctx.Theme.Material, size, t.text)
 	if t.hasColor {
 		label.Color = t.color
+	} else {
+		label.Color = ctx.foregroundColor()
 	}
 	if t.weight != 0 {
 		label.Font.Weight = t.weight

@@ -5,6 +5,8 @@ import (
 	"image/color"
 	"testing"
 	"time"
+
+	"gioui.org/layout"
 )
 
 func TestListBoxOptions(t *testing.T) {
@@ -379,6 +381,39 @@ func TestListBoxFirstLastEnabled(t *testing.T) {
 	}
 }
 
+func TestListBoxTypeaheadSkipsDisabledAndWraps(t *testing.T) {
+	items := []ListBoxItem{
+		{Key: "alpha", Label: "Alpha"},
+		{Key: "beta", Label: "Beta", Disabled: true},
+		{Key: "bravo", Label: "Bravo"},
+		{Key: "charlie", Label: "Charlie"},
+	}
+
+	if index, ok := listBoxTypeaheadIndex(items, nil, 0, "b"); !ok || index != 2 {
+		t.Fatalf("typeahead b = %d %v, want enabled Bravo", index, ok)
+	}
+	if index, ok := listBoxTypeaheadIndex(items, nil, 3, "a"); !ok || index != 0 {
+		t.Fatalf("wrapped typeahead a = %d %v, want Alpha", index, ok)
+	}
+	if index, ok := listBoxTypeaheadIndex(items, []string{"bravo"}, 0, "b"); ok || index != 0 {
+		t.Fatalf("disabled typeahead b = %d %v, want no match", index, ok)
+	}
+}
+
+func TestListBoxTypeaheadBufferExpires(t *testing.T) {
+	state := new(listBoxState)
+	start := time.Unix(1, 0)
+	if got := state.appendTypeahead(start, "n"); got != "n" {
+		t.Fatalf("first typeahead = %q, want n", got)
+	}
+	if got := state.appendTypeahead(start.Add(100*time.Millisecond), "e"); got != "ne" {
+		t.Fatalf("continued typeahead = %q, want ne", got)
+	}
+	if got := state.appendTypeahead(start.Add(100*time.Millisecond+listBoxTypeaheadTimeout+time.Millisecond), "g"); got != "g" {
+		t.Fatalf("expired typeahead = %q, want g", got)
+	}
+}
+
 func TestListBoxStyleUsesDangerPalette(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Palette.Danger = color.NRGBA{R: 7, G: 8, B: 9, A: 255}
@@ -453,6 +488,21 @@ func TestListBoxThemeControlsItemHeight(t *testing.T) {
 
 	if dims.Size.Y < 72 {
 		t.Fatalf("height = %d, want at least 72", dims.Size.Y)
+	}
+}
+
+func TestListBoxItemFrameVerticallyCentersContent(t *testing.T) {
+	constraints := layout.Constraints{
+		Min: image.Pt(120, 0),
+		Max: image.Pt(120, 100),
+	}
+	size, offset := listBoxItemFrame(constraints, 72, image.Pt(120, 20))
+
+	if size != image.Pt(120, 72) {
+		t.Fatalf("item frame size = %v, want (120,72)", size)
+	}
+	if offset != image.Pt(0, 26) {
+		t.Fatalf("item content offset = %v, want (0,26)", offset)
 	}
 }
 

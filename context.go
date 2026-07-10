@@ -1,6 +1,9 @@
 package flowui
 
 import (
+	"image"
+	"image/color"
+
 	"gioui.org/app"
 	"gioui.org/io/event"
 	"gioui.org/layout"
@@ -20,25 +23,30 @@ type Context struct {
 	// DatePickerLocale contains the date formatting strings used by DatePicker.
 	DatePickerLocale DatePickerLocale
 
-	window       *app.Window
-	clickables   map[string]*widget.Clickable
-	buttons      map[string]*buttonState
-	editors      map[string]*widget.Editor
-	inputs       map[string]*inputState
-	combos       map[string]*comboBoxState
-	datePickers  map[string]*datePickerState
-	bools        map[string]*widget.Bool
-	checkboxes   map[string]*checkboxState
-	switches     map[string]*switchState
-	radioGroups  map[string]*radioGroupState
-	progressBars map[string]*progressBarState
-	listBoxes    map[string]*listBoxState
-	popovers     map[string]*popoverState
-	modals       map[string]*modalState
-	lists        map[string]*layout.List
-	scrolls      map[string]*layout.List
-	keys         flowstate.Keys
-	focus        flowstate.Focus
+	window          *app.Window
+	clickables      map[string]*widget.Clickable
+	buttons         map[string]*buttonState
+	editors         map[string]*widget.Editor
+	inputs          map[string]*inputState
+	combos          map[string]*comboBoxState
+	selects         map[string]*selectState
+	datePickers     map[string]*datePickerState
+	bools           map[string]*widget.Bool
+	checkboxes      map[string]*checkboxState
+	switches        map[string]*switchState
+	radioGroups     map[string]*radioGroupState
+	progressBars    map[string]*progressBarState
+	listBoxes       map[string]*listBoxState
+	popovers        map[string]*popoverState
+	modals          map[string]*modalState
+	lists           map[string]*layout.List
+	scrolls         map[string]*layout.List
+	keys            flowstate.Keys
+	focus           flowstate.Focus
+	activeSelectKey string
+	viewport        image.Point
+	foreground      color.NRGBA
+	hasForeground   bool
 }
 
 func newContext(w *app.Window) *Context {
@@ -82,8 +90,27 @@ func (ctx *Context) Invalidate() {
 }
 
 func (ctx *Context) beginFrame() {
+	for _, state := range ctx.selects {
+		state.peerClosePending = false
+	}
 	ctx.keys.BeginFrame()
 	ctx.focus.BeginFrame()
+}
+
+func (ctx *Context) beginFrameWithViewport(viewport image.Point) {
+	ctx.viewport = viewport
+	ctx.beginFrame()
+}
+
+func (ctx *Context) overlayViewport(fallback image.Point) image.Point {
+	viewport := ctx.viewport
+	if viewport.X <= 0 {
+		viewport.X = fallback.X
+	}
+	if viewport.Y <= 0 {
+		viewport.Y = fallback.Y
+	}
+	return viewport
 }
 
 func (ctx *Context) applyFrameCommands(gtx layout.Context) {
@@ -98,6 +125,21 @@ func (ctx *Context) focusOnPress(tag event.Tag, history []widget.Press, before i
 	ctx.focus.OnPress(tag, history, before)
 }
 
+func (ctx *Context) pushForeground(foreground color.NRGBA) func() {
+	previous, hadPrevious := ctx.foreground, ctx.hasForeground
+	ctx.foreground, ctx.hasForeground = foreground, true
+	return func() {
+		ctx.foreground, ctx.hasForeground = previous, hadPrevious
+	}
+}
+
+func (ctx *Context) foregroundColor() color.NRGBA {
+	if ctx.hasForeground {
+		return ctx.foreground
+	}
+	return ctx.Theme.Palette.Foreground
+}
+
 func activePresses(history []widget.Press) int {
 	return flowstate.ActivePresses(history)
 }
@@ -109,6 +151,10 @@ func (ctx *Context) endFrame() {
 	sweepEditorState(ctx.editors, frameKeys)
 	flowstate.Sweep(ctx.inputs, frameKeys, flowstate.KindInput)
 	flowstate.Sweep(ctx.combos, frameKeys, flowstate.KindComboBox)
+	flowstate.Sweep(ctx.selects, frameKeys, flowstate.KindSelect)
+	if ctx.activeSelectKey != "" && ctx.selects[ctx.activeSelectKey] == nil {
+		ctx.activeSelectKey = ""
+	}
 	flowstate.Sweep(ctx.datePickers, frameKeys, flowstate.KindDatePicker)
 	flowstate.Sweep(ctx.bools, frameKeys, flowstate.KindCheckbox)
 	flowstate.Sweep(ctx.checkboxes, frameKeys, flowstate.KindCheckbox)
@@ -210,6 +256,37 @@ func (ctx *Context) comboBoxState(key string) *comboBoxState {
 	state := new(comboBoxState)
 	ctx.combos[key] = state
 	return state
+}
+
+func (ctx *Context) selectState(key string) *selectState {
+	key = ctx.claimKey(flowstate.KindSelect, key)
+	if ctx.selects == nil {
+		ctx.selects = make(map[string]*selectState)
+	}
+	if state := ctx.selects[key]; state != nil {
+		return state
+	}
+	state := &selectState{key: key}
+	ctx.selects[key] = state
+	return state
+}
+
+func (ctx *Context) activateSelect(state *selectState) {
+	if state == nil || state.key == "" || ctx.activeSelectKey == state.key {
+		return
+	}
+	previousKey := ctx.activeSelectKey
+	ctx.activeSelectKey = ""
+	if previous := ctx.selects[previousKey]; previous != nil {
+		previous.closeForPeer()
+	}
+	ctx.activeSelectKey = state.key
+}
+
+func (ctx *Context) releaseSelect(state *selectState) {
+	if state != nil && ctx.activeSelectKey == state.key {
+		ctx.activeSelectKey = ""
+	}
 }
 
 func (ctx *Context) datePickerState(key string) *datePickerState {

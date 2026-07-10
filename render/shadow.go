@@ -170,6 +170,23 @@ func PopupShadow(col color.NRGBA) BoxShadow {
 	}
 }
 
+// SurfaceShadow returns the restrained elevation used by non-overlay surfaces.
+func SurfaceShadow(col color.NRGBA) BoxShadow {
+	key := col
+	key.A = scaleAlpha(col.A, .72)
+	ambient := col
+	ambient.A = scaleAlpha(col.A, .48)
+	return BoxShadow{
+		OffsetY: 2,
+		Blur:    4,
+		Color:   ambient,
+		Layers: []ShadowLayer{
+			{OffsetY: 1, Blur: 2, Color: key},
+			{OffsetY: 2, Blur: 4, Color: ambient},
+		},
+	}
+}
+
 // DrawShadow paints a cached soft shadow for bounds. The bounds rectangle may be
 // offset; the shadow is drawn around that rectangle in the current operation
 // coordinate space.

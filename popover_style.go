@@ -10,8 +10,8 @@ type popoverStyle struct {
 
 func popoverStyleFor(theme *Theme) popoverStyle {
 	return popoverStyle{
-		surface: theme.Palette.Surface,
-		text:    theme.Palette.Foreground,
+		surface: theme.Palette.overlayColor(),
+		text:    theme.Palette.overlayForegroundColor(),
 		muted:   theme.Palette.MutedForeground,
 	}
 }

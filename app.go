@@ -45,7 +45,7 @@ func runWindowCmd[M any, Msg any](w *app.Window, theme *Theme, language Language
 			cmd(Send[Msg](send))
 		}
 	}, func(gtx layout.Context, model M, send func(Msg)) {
-		ctx.beginFrame()
+		ctx.beginFrameWithViewport(gtx.Constraints.Max)
 		if root := view(ctx, model, Send[Msg](send)); root != nil {
 			root.Layout(ctx, gtx)
 		}

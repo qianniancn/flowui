@@ -10,7 +10,7 @@ import (
 )
 
 func drawPopoverSurface(gtx layout.Context, theme *Theme, rect image.Rectangle, radius int, style popoverStyle) {
-	DrawShadow(gtx, rect, RoundedShadowCorners(theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius), PopupShadow(theme.Palette.Shadow))
+	DrawShadow(gtx, rect, RoundedShadowCorners(theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius), PopupShadow(theme.Palette.overlayShadowColor()))
 	paint.FillShape(gtx.Ops, style.surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }
 

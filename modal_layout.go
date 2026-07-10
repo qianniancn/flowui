@@ -321,7 +321,7 @@ func clampProgress(progress float32) float32 {
 }
 
 func (m ModalWidget) layoutDismissAreas(gtx layout.Context, state *modalState, overlay image.Point, dialog image.Rectangle) {
-	areas := modalDismissRects(overlay, dialog)
+	areas := overlayDismissRects(image.Rectangle{Max: overlay}, dialog)
 	for i, area := range areas {
 		if area.Empty() {
 			continue
@@ -338,17 +338,6 @@ func (m ModalWidget) layoutDismissAreas(gtx layout.Context, state *modalState, o
 
 func (m ModalWidget) layoutDialogFrame(ctx *Context, gtx layout.Context, state *modalState) layout.Dimensions {
 	return m.layoutDialog(ctx, gtx, state)
-}
-
-func modalDismissRects(overlay image.Point, dialog image.Rectangle) [4]image.Rectangle {
-	bounds := image.Rectangle{Max: overlay}
-	dialog = dialog.Intersect(bounds)
-	return [4]image.Rectangle{
-		image.Rect(0, 0, overlay.X, dialog.Min.Y),
-		image.Rect(0, dialog.Max.Y, overlay.X, overlay.Y),
-		image.Rect(0, dialog.Min.Y, dialog.Min.X, dialog.Max.Y),
-		image.Rect(dialog.Max.X, dialog.Min.Y, overlay.X, dialog.Max.Y),
-	}
 }
 
 func (m ModalWidget) layoutDialog(ctx *Context, gtx layout.Context, state *modalState) layout.Dimensions {
@@ -374,7 +363,12 @@ func (m ModalWidget) layoutDialogSurface(ctx *Context, gtx layout.Context, state
 	contentGtx.Constraints.Max = shrinkPoint(contentGtx.Constraints.Max, padding*2)
 
 	macro := op.Record(gtx.Ops)
-	contentDims := m.layoutDialogContent(ctx, contentGtx, state)
+	var contentDims layout.Dimensions
+	func() {
+		restore := ctx.pushForeground(ctx.Theme.Palette.overlayForegroundColor())
+		defer restore()
+		contentDims = m.layoutDialogContent(ctx, contentGtx, state)
+	}()
 	contentCall := macro.Stop()
 
 	size := contentDims.Size.Add(image.Pt(padding*2, padding*2))
@@ -491,7 +485,7 @@ func (m ModalWidget) layoutHeader(ctx *Context, gtx layout.Context) layout.Dimen
 			return Text(m.title).
 				Size(float32(ctx.Theme.Components.Modal.TitleSize)).
 				Weight(font.Medium).
-				Color(ctx.Theme.Palette.Foreground).
+				Color(ctx.Theme.Palette.overlayForegroundColor()).
 				Layout(ctx, gtx)
 		}))
 	}

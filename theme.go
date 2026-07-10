@@ -20,31 +20,41 @@ type Theme struct {
 }
 
 type Palette struct {
-	Background           color.NRGBA
-	Surface              color.NRGBA
-	SurfaceHover         color.NRGBA
-	SurfacePressed       color.NRGBA
-	SurfaceRaised        color.NRGBA
-	Foreground           color.NRGBA
-	MutedForeground      color.NRGBA
-	Border               color.NRGBA
-	Accent               color.NRGBA
-	AccentHover          color.NRGBA
-	AccentForeground     color.NRGBA
-	AccentSoft           color.NRGBA
-	AccentSoftHover      color.NRGBA
-	AccentSoftForeground color.NRGBA
-	Success              color.NRGBA
-	Warning              color.NRGBA
-	Danger               color.NRGBA
-	DangerHover          color.NRGBA
-	DangerForeground     color.NRGBA
-	DangerSoft           color.NRGBA
-	DangerSoftHover      color.NRGBA
-	DangerSoftForeground color.NRGBA
-	Focus                color.NRGBA
-	Selection            color.NRGBA
-	Shadow               color.NRGBA
+	Background                 color.NRGBA
+	Surface                    color.NRGBA
+	SurfaceForeground          color.NRGBA
+	SurfaceSecondary           color.NRGBA
+	SurfaceSecondaryForeground color.NRGBA
+	SurfaceTertiary            color.NRGBA
+	SurfaceTertiaryForeground  color.NRGBA
+	SurfaceHover               color.NRGBA
+	SurfacePressed             color.NRGBA
+	SurfaceRaised              color.NRGBA
+	Overlay                    color.NRGBA
+	OverlayForeground          color.NRGBA
+	Foreground                 color.NRGBA
+	MutedForeground            color.NRGBA
+	Border                     color.NRGBA
+	Accent                     color.NRGBA
+	AccentHover                color.NRGBA
+	AccentForeground           color.NRGBA
+	AccentSoft                 color.NRGBA
+	AccentSoftHover            color.NRGBA
+	AccentSoftForeground       color.NRGBA
+	Success                    color.NRGBA
+	Warning                    color.NRGBA
+	Danger                     color.NRGBA
+	DangerHover                color.NRGBA
+	DangerForeground           color.NRGBA
+	DangerSoft                 color.NRGBA
+	DangerSoftHover            color.NRGBA
+	DangerSoftForeground       color.NRGBA
+	Focus                      color.NRGBA
+	Selection                  color.NRGBA
+	SurfaceShadow              color.NRGBA
+	OverlayShadow              color.NRGBA
+	// Shadow is retained for compatibility. New surfaces use SurfaceShadow or OverlayShadow.
+	Shadow color.NRGBA
 }
 
 type Typography struct {
@@ -82,6 +92,7 @@ type ComponentsTheme struct {
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
 	ListBox     ListBoxTheme
+	Select      SelectTheme
 	Popover     PopoverTheme
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
@@ -184,6 +195,27 @@ type ListBoxTheme struct {
 	PressedScale          float32
 }
 
+type SelectTheme struct {
+	Height             unit.Dp
+	Radius             unit.Dp
+	TextSize           unit.Sp
+	LabelTextSize      unit.Sp
+	DescriptionSize    unit.Sp
+	ContentGap         unit.Dp
+	TriggerPaddingX    unit.Dp
+	TriggerPaddingY    unit.Dp
+	IndicatorWidth     unit.Dp
+	IndicatorSize      unit.Dp
+	IndicatorStroke    unit.Dp
+	PanelGap           unit.Dp
+	PanelRadius        unit.Dp
+	PanelMaxHeight     unit.Dp
+	PanelPadding       unit.Dp
+	AnimationScale     float32
+	AnimationDistance  unit.Dp
+	RequiredMarkOffset unit.Dp
+}
+
 type PopoverTheme struct {
 	Offset         unit.Dp
 	Padding        unit.Dp
@@ -273,31 +305,40 @@ type DatePickerTheme struct {
 func DefaultTheme() Theme {
 	theme := Theme{
 		Palette: Palette{
-			Background:           color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-			Surface:              color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-			SurfaceHover:         color.NRGBA{R: 0xfa, G: 0xfa, B: 0xfa, A: 0xff},
-			SurfacePressed:       color.NRGBA{R: 0xec, G: 0xec, B: 0xee, A: 0xff},
-			SurfaceRaised:        color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
-			Foreground:           color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
-			MutedForeground:      color.NRGBA{R: 0x76, G: 0x76, B: 0x7a, A: 0xff},
-			Border:               color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
-			Accent:               color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
-			AccentHover:          color.NRGBA{R: 0x1a, G: 0x7f, B: 0xf0, A: 0xff},
-			AccentForeground:     color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
-			AccentSoft:           color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x22},
-			AccentSoftHover:      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
-			AccentSoftForeground: color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
-			Success:              color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0xff},
-			Warning:              color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0xff},
-			Danger:               color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
-			DangerHover:          color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
-			DangerForeground:     color.NRGBA{R: 0xff, G: 0xf7, B: 0xfb, A: 0xff},
-			DangerSoft:           color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x26},
-			DangerSoftHover:      color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x33},
-			DangerSoftForeground: color.NRGBA{R: 0xba, G: 0x0f, B: 0x49, A: 0xff},
-			Focus:                color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x99},
-			Selection:            color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x40},
-			Shadow:               color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
+			Background:                 color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+			Surface:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+			SurfaceForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			SurfaceSecondary:           color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
+			SurfaceSecondaryForeground: color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			SurfaceTertiary:            color.NRGBA{R: 0xec, G: 0xec, B: 0xee, A: 0xff},
+			SurfaceTertiaryForeground:  color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			SurfaceHover:               color.NRGBA{R: 0xfa, G: 0xfa, B: 0xfa, A: 0xff},
+			SurfacePressed:             color.NRGBA{R: 0xec, G: 0xec, B: 0xee, A: 0xff},
+			SurfaceRaised:              color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
+			Overlay:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+			OverlayForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			Foreground:                 color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			MutedForeground:            color.NRGBA{R: 0x76, G: 0x76, B: 0x7a, A: 0xff},
+			Border:                     color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+			Accent:                     color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
+			AccentHover:                color.NRGBA{R: 0x1a, G: 0x7f, B: 0xf0, A: 0xff},
+			AccentForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
+			AccentSoft:                 color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x22},
+			AccentSoftHover:            color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
+			AccentSoftForeground:       color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
+			Success:                    color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0xff},
+			Warning:                    color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0xff},
+			Danger:                     color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
+			DangerHover:                color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
+			DangerForeground:           color.NRGBA{R: 0xff, G: 0xf7, B: 0xfb, A: 0xff},
+			DangerSoft:                 color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x26},
+			DangerSoftHover:            color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x33},
+			DangerSoftForeground:       color.NRGBA{R: 0xba, G: 0x0f, B: 0x49, A: 0xff},
+			Focus:                      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x99},
+			Selection:                  color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x40},
+			SurfaceShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x34},
+			OverlayShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
+			Shadow:                     color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
 		},
 		Typography: Typography{
 			BodySize:    14,
@@ -412,6 +453,26 @@ func DefaultTheme() Theme {
 				FocusRingWidth:        2,
 				PressedScale:          0.98,
 			},
+			Select: SelectTheme{
+				Height:             36,
+				Radius:             12,
+				TextSize:           14,
+				LabelTextSize:      14,
+				DescriptionSize:    12,
+				ContentGap:         4,
+				TriggerPaddingX:    12,
+				TriggerPaddingY:    8,
+				IndicatorWidth:     28,
+				IndicatorSize:      16,
+				IndicatorStroke:    1.7,
+				PanelGap:           6,
+				PanelRadius:        24,
+				PanelMaxHeight:     280,
+				PanelPadding:       6,
+				AnimationScale:     0.95,
+				AnimationDistance:  4,
+				RequiredMarkOffset: 2,
+			},
 			Popover: PopoverTheme{
 				Offset:         8,
 				Padding:        16,
@@ -506,12 +567,21 @@ func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
+	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
+	theme.Palette.SurfaceSecondary = color.NRGBA{R: 0x25, G: 0x28, B: 0x2f, A: 0xff}
+	theme.Palette.SurfaceSecondaryForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
+	theme.Palette.SurfaceTertiary = color.NRGBA{R: 0x29, G: 0x2d, B: 0x34, A: 0xff}
+	theme.Palette.SurfaceTertiaryForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.SurfaceHover = color.NRGBA{R: 0x29, G: 0x2d, B: 0x34, A: 0xff}
 	theme.Palette.SurfacePressed = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
 	theme.Palette.SurfaceRaised = color.NRGBA{R: 0x25, G: 0x28, B: 0x2f, A: 0xff}
+	theme.Palette.Overlay = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
+	theme.Palette.OverlayForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.Foreground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.MutedForeground = color.NRGBA{R: 0xa1, G: 0xa1, B: 0xaa, A: 0xff}
 	theme.Palette.Border = color.NRGBA{R: 0x3f, G: 0x3f, B: 0x46, A: 0xff}
+	theme.Palette.SurfaceShadow = color.NRGBA{}
+	theme.Palette.OverlayShadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	theme.Palette.Shadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	syncMaterialTheme(&theme)
 	return theme

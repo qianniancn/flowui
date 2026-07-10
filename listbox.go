@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/unit"
 )
 
 type ListBoxItem struct {
@@ -54,6 +55,14 @@ type ListBoxWidget struct {
 	allowEmpty        bool
 	hideIndicator     bool
 	maxHeight         int
+	padding           unit.Dp
+	hasPadding        bool
+}
+
+func (l ListBoxWidget) withPadding(padding unit.Dp) ListBoxWidget {
+	l.padding = max(padding, 0)
+	l.hasPadding = true
+	return l
 }
 
 const (

@@ -4,6 +4,7 @@ import (
 	"image"
 	"testing"
 
+	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/input"
 	"gioui.org/layout"
@@ -25,6 +26,30 @@ func TestDeferOverlayRecordsInputOps(t *testing.T) {
 
 	var router input.Router
 	router.Frame(&ops)
+}
+
+func TestOverlayDismissRectsExcludeTarget(t *testing.T) {
+	bounds := image.Rect(-20, -10, 100, 80)
+	excluded := image.Rect(20, 10, 80, 60)
+	rects := overlayDismissRects(bounds, excluded)
+
+	if rects[0] != image.Rect(-20, -10, 100, 10) {
+		t.Fatalf("top dismiss rect = %v", rects[0])
+	}
+	for _, rect := range rects {
+		if !rect.Intersect(excluded).Empty() {
+			t.Fatalf("dismiss rect %v overlaps excluded target %v", rect, excluded)
+		}
+	}
+}
+
+func TestOverlayDismissRectsCoverBoundsWhenTargetIsOutside(t *testing.T) {
+	bounds := image.Rect(0, 0, 100, 80)
+	rects := overlayDismissRects(bounds, image.Rect(120, 90, 140, 110))
+
+	if rects[0] != bounds {
+		t.Fatalf("full dismiss rect = %v, want %v", rects[0], bounds)
+	}
 }
 
 func TestOverlayRawPositionAlignments(t *testing.T) {
@@ -98,5 +123,25 @@ func TestOverlayPanelTransformOriginUsesPanelLocalTriggerCenter(t *testing.T) {
 
 	if origin.X != 50.5 || origin.Y != 0 {
 		t.Fatalf("origin = %v, want (50.5,0)", origin)
+	}
+}
+
+func TestOverlayPositionSupportsOffsetTriggerRect(t *testing.T) {
+	result := overlayResolvePosition(overlayPositionConfig{
+		Trigger:          image.Pt(120, 36),
+		TriggerOrigin:    image.Pt(10, 24),
+		HasTriggerOrigin: true,
+		Panel:            image.Pt(120, 80),
+		Bounds:           image.Pt(300, 240),
+		Offset:           6,
+		Placement:        overlayPlacement{side: overlaySideBottom, align: overlayAlignStart},
+	})
+
+	if result.Position != image.Pt(10, 66) {
+		t.Fatalf("offset trigger position = %v, want (10,66)", result.Position)
+	}
+	origin := overlayPanelTransformOriginAt(image.Rect(10, 24, 130, 60), result.Position, result.Rect.Size(), result.Placement)
+	if origin != (f32.Point{X: 60, Y: 0}) {
+		t.Fatalf("offset trigger origin = %v, want (60,0)", origin)
 	}
 }

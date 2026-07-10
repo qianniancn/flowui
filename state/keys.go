@@ -12,6 +12,7 @@ const (
 	KindEditor      Kind = "editor"
 	KindInput       Kind = "input"
 	KindComboBox    Kind = "combobox"
+	KindSelect      Kind = "select"
 	KindDatePicker  Kind = "datepicker"
 	KindCheckbox    Kind = "checkbox"
 	KindSwitch      Kind = "switch"

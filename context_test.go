@@ -58,6 +58,16 @@ func TestDuplicateKeysIncludeComboBoxes(t *testing.T) {
 	})
 }
 
+func TestDuplicateKeysIncludeSelects(t *testing.T) {
+	ctx := newContext(nil)
+	ctx.beginFrame()
+	ctx.selectState("language")
+
+	mustPanic(t, func() {
+		ctx.clickable("language")
+	})
+}
+
 func TestDuplicateKeysIncludeDatePickers(t *testing.T) {
 	ctx := newContext(nil)
 	ctx.beginFrame()
@@ -157,6 +167,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	inputKey, inputEditor := ctx.inputEditor("search")
 	input := ctx.inputState(inputKey)
 	combo := ctx.comboBoxState("animal")
+	selectState := ctx.selectState("language")
 	datePicker := ctx.datePickerState("date")
 	checkboxKey, checkbox := ctx.boolStateWithKey("done")
 	checkboxAnim := ctx.checkboxState(checkboxKey)
@@ -188,6 +199,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	}
 	if ctx.combos["animal"] != combo {
 		t.Fatal("combobox state was not kept")
+	}
+	if ctx.selects["language"] != selectState {
+		t.Fatal("select state was not kept")
 	}
 	if ctx.datePickers["date"] != datePicker {
 		t.Fatal("date picker state was not kept")
@@ -233,6 +247,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	inputKey, _ := ctx.inputEditor("search")
 	ctx.inputState(inputKey)
 	ctx.comboBoxState("animal")
+	ctx.selectState("language")
 	ctx.datePickerState("date")
 	checkboxKey, _ := ctx.boolStateWithKey("done")
 	ctx.checkboxState(checkboxKey)
@@ -263,6 +278,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.combos) != 0 {
 		t.Fatalf("comboboxes = %d, want 0", len(ctx.combos))
+	}
+	if len(ctx.selects) != 0 {
+		t.Fatalf("selects = %d, want 0", len(ctx.selects))
 	}
 	if len(ctx.datePickers) != 0 {
 		t.Fatalf("date pickers = %d, want 0", len(ctx.datePickers))

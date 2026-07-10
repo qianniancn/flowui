@@ -35,10 +35,14 @@ func PopupShadow(col color.NRGBA) BoxShadow {
 	return render.PopupShadow(col)
 }
 
+func SurfaceShadow(col color.NRGBA) BoxShadow {
+	return render.SurfaceShadow(col)
+}
+
 func DrawShadow(gtx layout.Context, bounds image.Rectangle, shape ShadowShape, box BoxShadow) {
 	render.DrawShadow(gtx, bounds, shape, box)
 }
 
 func drawPopupSurface(gtx layout.Context, theme *Theme, rect image.Rectangle, radius int) {
-	render.DrawSurface(gtx, rect, radius, theme.Palette.Surface, render.PopupShadow(theme.Palette.Shadow))
+	render.DrawSurface(gtx, rect, radius, theme.Palette.overlayColor(), render.PopupShadow(theme.Palette.overlayShadowColor()))
 }

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"strings"
 	"time"
+	"unicode"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -22,7 +24,12 @@ type listBoxState struct {
 	keyFilters       []event.Filter
 	pressedKey       key.Name
 	pressedActionKey string
+	typeahead        string
+	typeaheadAt      time.Time
+	typeaheadReady   bool
 }
+
+const listBoxTypeaheadTimeout = 500 * time.Millisecond
 
 type listBoxKeyResult struct {
 	focusKey  string
@@ -92,6 +99,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			key.Filter{Focus: tag, Name: key.NameEnter},
 			key.Filter{Focus: tag, Name: key.NameReturn},
 			key.Filter{Focus: tag, Name: key.NameSpace},
+			key.Filter{Focus: tag},
 		)
 	}
 	if len(s.keyFilters) == 0 {
@@ -166,9 +174,62 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 					result.actionKey = actionKey
 				}
 			}
+		default:
+			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
+				continue
+			}
+			text := listBoxTypeaheadText(event.Name)
+			if text == "" {
+				continue
+			}
+			query := s.appendTypeahead(gtx.Now, text)
+			next, ok := listBoxTypeaheadIndex(items, disabledKeys, current, query)
+			if !ok && query != text {
+				s.typeahead = text
+				next, ok = listBoxTypeaheadIndex(items, disabledKeys, current, text)
+			}
+			if ok {
+				current = next
+				result.focusKey = items[next].Key
+			}
 		}
 	}
 	return result
+}
+
+func (s *listBoxState) appendTypeahead(now time.Time, text string) string {
+	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > listBoxTypeaheadTimeout {
+		s.typeahead = ""
+	}
+	s.typeahead += text
+	s.typeaheadAt = now
+	s.typeaheadReady = true
+	return s.typeahead
+}
+
+func listBoxTypeaheadText(name key.Name) string {
+	runes := []rune(string(name))
+	if len(runes) != 1 || unicode.IsControl(runes[0]) {
+		return ""
+	}
+	return strings.ToLower(string(runes[0]))
+}
+
+func listBoxTypeaheadIndex(items []ListBoxItem, disabledKeys []string, current int, query string) (int, bool) {
+	if len(items) == 0 || query == "" {
+		return -1, false
+	}
+	query = strings.ToLower(query)
+	for step := 1; step <= len(items); step++ {
+		index := (current + step + len(items)) % len(items)
+		if listBoxItemDisabled(items[index], disabledKeys) {
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(items[index].Label), query) {
+			return index, true
+		}
+	}
+	return current, false
 }
 
 func (s *listBoxState) focusedIndex(gtx layout.Context, items []ListBoxItem) int {
@@ -274,6 +335,11 @@ type listBoxItemState struct {
 	focusReady    bool
 	focused       bool
 	pointerFocus  bool
+}
+
+func (s *listBoxItemState) prepareFocus(visible bool) {
+	s.focused = true
+	s.pointerFocus = !visible
 }
 
 func (s *listBoxItemState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {

@@ -112,6 +112,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `RadioGroup`
 - `ProgressBar`
 - `ListBox`
+- `Select`
 - `ComboBox`
 - `DatePicker`
 - `Popover`
@@ -119,6 +120,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 ### 布局
 
+- `Surface`
 - `Box`、`Spacer`
 - `Center`
 - `Row`、`Column`
@@ -134,6 +136,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 ### 绘制能力
 
 - `DrawShadow`
+- `SurfaceShadow`
 - `PopupShadow`
 - `RoundedShadowCorners`
 - `EllipseShadow`
@@ -153,6 +156,8 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。
 - `popovers`：受控浮层，包含位置、箭头、关闭行为和交互内容。
+- `surfaces`：语义化 Surface 层级、前景色上下文、圆角和 Surface 阴影。
+- `selects`：单选、多选、分组、禁用选项、校验、受控打开状态和 Surface 样式。
 - `comboboxes`：选项选择和过滤。
 - `datepickers`：日期选择和范围限制。
 - `form`：表单组合。

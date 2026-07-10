@@ -82,7 +82,12 @@ func (p PopoverWidget) layoutPanel(ctx *Context, gtx layout.Context, placement P
 	contentGtx.Constraints.Max = shrinkPoint(contentGtx.Constraints.Max, padding*2)
 
 	macro := op.Record(gtx.Ops)
-	contentDims := p.layoutDialog(ctx, contentGtx, style)
+	var contentDims layout.Dimensions
+	func() {
+		restore := ctx.pushForeground(style.text)
+		defer restore()
+		contentDims = p.layoutDialog(ctx, contentGtx, style)
+	}()
 	contentCall := macro.Stop()
 
 	size := contentDims.Size.Add(image.Pt(padding*2, padding*2))
@@ -284,7 +289,7 @@ func popoverAvoidOverflow(pos, panel, overlay image.Point) image.Point {
 }
 
 func (p PopoverWidget) layoutDismissAreas(gtx layout.Context, state *popoverState, overlay image.Point, panel image.Rectangle) {
-	areas := popoverDismissRects(overlay, panel)
+	areas := overlayDismissRects(image.Rectangle{Max: overlay}, panel)
 	for i, area := range areas {
 		if area.Empty() {
 			continue
@@ -296,17 +301,6 @@ func (p PopoverWidget) layoutDismissAreas(gtx layout.Context, state *popoverStat
 			return layout.Dimensions{Size: area.Size()}
 		})
 		stack.Pop()
-	}
-}
-
-func popoverDismissRects(overlay image.Point, panel image.Rectangle) [4]image.Rectangle {
-	bounds := image.Rectangle{Max: overlay}
-	panel = panel.Intersect(bounds)
-	return [4]image.Rectangle{
-		image.Rect(0, 0, overlay.X, panel.Min.Y),
-		image.Rect(0, panel.Max.Y, overlay.X, overlay.Y),
-		image.Rect(0, panel.Min.Y, panel.Min.X, panel.Max.Y),
-		image.Rect(panel.Max.X, panel.Min.Y, overlay.X, panel.Max.Y),
 	}
 }
 

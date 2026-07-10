@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -80,11 +81,20 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 }
 
 func TestPublicFacadeImportContract(t *testing.T) {
+	_ = ui.RunWithSubscriptions[facadeModel, facadeMsg]
 	var _ ui.Widget = externalWidget{}
 	var _ ui.Update[facadeModel, facadeMsg] = facadeUpdate
 	var _ ui.View[facadeModel, facadeMsg] = facadeView
 	var _ ui.Cmd[facadeMsg] = ui.Do(func(ui.Send[facadeMsg]) {})
+	var _ ui.Cmd[facadeMsg] = ui.DoContext(func(context.Context, ui.Send[facadeMsg]) error { return nil })
+	var _ ui.Subscriptions[facadeModel, facadeMsg] = func(facadeModel) []ui.Subscription[facadeMsg] {
+		return []ui.Subscription[facadeMsg]{
+			ui.Subscribe("events", func(context.Context, ui.Send[facadeMsg]) error { return nil }),
+		}
+	}
 	var _ ui.Option = ui.Title("FlowUI")
+	var _ ui.Option = ui.OnError(func(error) {})
+	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
 

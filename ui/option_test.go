@@ -85,3 +85,11 @@ func TestWindowOptions(t *testing.T) {
 		t.Fatalf("window options = %d, want 2", len(cfg.window))
 	}
 }
+
+func TestOnErrorOption(t *testing.T) {
+	handler := func(error) {}
+	cfg := newRunOptions([]Option{OnError(handler)})
+	if cfg.errorHandler == nil {
+		t.Fatal("error handler was not configured")
+	}
+}

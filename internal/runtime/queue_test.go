@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -24,11 +25,13 @@ func TestQueueDrainsInOrder(t *testing.T) {
 
 func TestStartCmdSendsMessage(t *testing.T) {
 	done := make(chan int, 1)
-	StartCmd(func(send func(int)) {
+	var effects effectGroup
+	StartCmd(&effects, context.Background(), func(_ context.Context, send func(int)) error {
 		send(7)
+		return nil
 	}, func(msg int) {
 		done <- msg
-	})
+	}, nil)
 
 	select {
 	case got := <-done:

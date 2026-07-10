@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
@@ -27,9 +28,16 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 		}
 		m.Loading = true
 		m.Result = ""
-		return ui.Do(func(send ui.Send[Msg]) {
-			time.Sleep(time.Second)
-			send(Loaded{Text: "Loaded after one second."})
+		return ui.DoContext(func(ctx context.Context, send ui.Send[Msg]) error {
+			timer := time.NewTimer(time.Second)
+			defer timer.Stop()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-timer.C:
+				send(Loaded{Text: "Loaded after one second."})
+				return nil
+			}
 		})
 	case Loaded:
 		m.Loading = false

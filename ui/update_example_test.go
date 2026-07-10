@@ -1,6 +1,8 @@
 package ui_test
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/qianniancn/FlowUI/ui"
@@ -23,8 +25,48 @@ func ExampleDo() {
 
 	m.query = "changed after Update"
 	results := make(chan loaded, 1)
-	cmd(func(msg loaded) { results <- msg })
+	_ = cmd(context.Background(), func(msg loaded) { results <- msg })
 	fmt.Println((<-results).query)
 
 	// Output: FlowUI
+}
+
+func ExampleDoContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	cmd := ui.DoContext(func(ctx context.Context, _ ui.Send[string]) error {
+		<-ctx.Done()
+		return ctx.Err()
+	})
+
+	err := cmd(ctx, func(string) {})
+	fmt.Println(errors.Is(err, context.Canceled))
+
+	// Output: true
+}
+
+func ExampleSubscribe() {
+	type model struct {
+		listening bool
+	}
+	type message string
+
+	subscriptions := func(m model) []ui.Subscription[message] {
+		if !m.listening {
+			return nil
+		}
+		return []ui.Subscription[message]{
+			ui.Subscribe("events", func(ctx context.Context, _ ui.Send[message]) error {
+				<-ctx.Done()
+				return ctx.Err()
+			}),
+		}
+	}
+
+	fmt.Println(len(subscriptions(model{listening: true})))
+	fmt.Println(len(subscriptions(model{})))
+
+	// Output:
+	// 1
+	// 0
 }

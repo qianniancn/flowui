@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"slices"
 	"sort"
 	"sync"
@@ -14,17 +15,18 @@ func TestLoopCoreProcessesBatchBeforeView(t *testing.T) {
 	}
 
 	var updated []int
-	core := newLoopCore(model{}, func(m *model, msg int) func(func(int)) {
+	core := newLoopCore(model{}, func(m *model, msg int) Cmd[int] {
 		updated = append(updated, msg)
 		m.values = append(m.values, msg)
 		return nil
 	})
+	var effects effectGroup
 	core.send(1)
 	core.send(2)
 	core.send(3)
 
 	var viewed model
-	core.frame(core.send, func(m model) {
+	core.frame(&effects, context.Background(), core.send, nil, nil, func(m model) {
 		viewed.values = append([]int(nil), m.values...)
 	})
 
@@ -38,20 +40,22 @@ func TestLoopCoreProcessesBatchBeforeView(t *testing.T) {
 
 func TestLoopCoreFeedsCommandMessagesIntoNextFrame(t *testing.T) {
 	commandSent := make(chan struct{})
-	core := newLoopCore([]int(nil), func(model *[]int, msg int) func(func(int)) {
+	core := newLoopCore([]int(nil), func(model *[]int, msg int) Cmd[int] {
 		*model = append(*model, msg)
 		if msg != 1 {
 			return nil
 		}
-		return func(send func(int)) {
+		return func(_ context.Context, send func(int)) error {
 			send(2)
 			close(commandSent)
+			return nil
 		}
 	})
+	var effects effectGroup
 	core.send(1)
 
 	var firstFrame []int
-	core.frame(core.send, func(model []int) {
+	core.frame(&effects, context.Background(), core.send, nil, nil, func(model []int) {
 		firstFrame = append([]int(nil), model...)
 	})
 	if want := []int{1}; !slices.Equal(firstFrame, want) {
@@ -65,7 +69,7 @@ func TestLoopCoreFeedsCommandMessagesIntoNextFrame(t *testing.T) {
 	}
 
 	var secondFrame []int
-	core.frame(core.send, func(model []int) {
+	core.frame(&effects, context.Background(), core.send, nil, nil, func(model []int) {
 		secondFrame = append([]int(nil), model...)
 	})
 	if want := []int{1, 2}; !slices.Equal(secondFrame, want) {
@@ -88,24 +92,26 @@ func TestLoopCoreCollectsMessagesFromConcurrentCommands(t *testing.T) {
 	var commands sync.WaitGroup
 	ready.Add(commandCount)
 	commands.Add(commandCount)
-	core := newLoopCore(model{}, func(model *model, msg message) func(func(message)) {
+	core := newLoopCore(model{}, func(model *model, msg message) Cmd[message] {
 		if !msg.start {
 			model.received = append(model.received, msg.id)
 			return nil
 		}
-		return func(send func(message)) {
+		return func(_ context.Context, send func(message)) error {
 			ready.Done()
 			<-gate
 			send(message{id: msg.id})
 			commands.Done()
+			return nil
 		}
 	})
+	var effects effectGroup
 	for id := range commandCount {
 		core.send(message{start: true, id: id})
 	}
 
 	var firstFrame model
-	core.frame(core.send, func(model model) {
+	core.frame(&effects, context.Background(), core.send, nil, nil, func(model model) {
 		firstFrame.received = append([]int(nil), model.received...)
 	})
 	if len(firstFrame.received) != 0 {
@@ -137,7 +143,7 @@ func TestLoopCoreCollectsMessagesFromConcurrentCommands(t *testing.T) {
 	}
 
 	var secondFrame model
-	core.frame(core.send, func(model model) {
+	core.frame(&effects, context.Background(), core.send, nil, nil, func(model model) {
 		secondFrame.received = append([]int(nil), model.received...)
 	})
 	sort.Ints(secondFrame.received)
@@ -152,15 +158,16 @@ func TestLoopCoreCollectsMessagesFromConcurrentCommands(t *testing.T) {
 }
 
 func TestLoopCoreDefersMessagesSentByViewUntilNextFrame(t *testing.T) {
-	core := newLoopCore([]int(nil), func(model *[]int, msg int) func(func(int)) {
+	core := newLoopCore([]int(nil), func(model *[]int, msg int) Cmd[int] {
 		*model = append(*model, msg)
 		return nil
 	})
+	var effects effectGroup
 	core.send(1)
 	send := core.send
 
 	var firstFrame []int
-	core.frame(send, func(model []int) {
+	core.frame(&effects, context.Background(), send, nil, nil, func(model []int) {
 		firstFrame = append([]int(nil), model...)
 		send(2)
 	})
@@ -169,7 +176,7 @@ func TestLoopCoreDefersMessagesSentByViewUntilNextFrame(t *testing.T) {
 	}
 
 	var secondFrame []int
-	core.frame(send, func(model []int) {
+	core.frame(&effects, context.Background(), send, nil, nil, func(model []int) {
 		secondFrame = append([]int(nil), model...)
 	})
 	if want := []int{1, 2}; !slices.Equal(secondFrame, want) {

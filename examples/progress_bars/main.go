@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -36,20 +37,9 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 			return nil
 		}
 		m.RunID++
-		runID := m.RunID
 		m.Progress = 0
 		m.Running = true
 		m.Status = "Starting upload..."
-		return ui.Do(func(send ui.Send[Msg]) {
-			for step := 1; step <= 10; step++ {
-				time.Sleep(180 * time.Millisecond)
-				send(Tick{
-					RunID: runID,
-					Value: float64(step * 10),
-				})
-			}
-			send(Done{RunID: runID})
-		})
 	case Tick:
 		if msg.RunID != m.RunID || !m.Running {
 			return nil
@@ -70,6 +60,32 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 		m.Status = "Ready"
 	}
 	return nil
+}
+
+func Subscriptions(m Model) []ui.Subscription[Msg] {
+	if !m.Running {
+		return nil
+	}
+	runID := m.RunID
+	return []ui.Subscription[Msg]{
+		ui.Subscribe(fmt.Sprintf("upload:%d", runID), func(ctx context.Context, send ui.Send[Msg]) error {
+			ticker := time.NewTicker(180 * time.Millisecond)
+			defer ticker.Stop()
+			for step := 1; step <= 10; step++ {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					send(Tick{
+						RunID: runID,
+						Value: float64(step * 10),
+					})
+				}
+			}
+			send(Done{RunID: runID})
+			return nil
+		}),
+	}
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -187,7 +203,7 @@ func taskColor(progress float64, running bool) ui.ProgressBarColor {
 }
 
 func main() {
-	ui.RunCmd(Model{Status: "Ready"}, Update, View,
+	ui.RunWithSubscriptions(Model{Status: "Ready"}, Update, Subscriptions, View,
 		ui.Title("FlowUI ProgressBar"),
 		ui.Size(900, 720),
 	)

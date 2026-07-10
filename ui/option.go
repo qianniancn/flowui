@@ -6,7 +6,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-// Option configures Run and RunCmd.
+// Option configures Run, RunCmd, and RunWithSubscriptions.
 type Option interface {
 	apply(*runOptions)
 }
@@ -18,9 +18,10 @@ func (fn optionFunc) apply(cfg *runOptions) {
 }
 
 type runOptions struct {
-	window   []app.Option
-	themeOps []func(*Theme)
-	language Language
+	window       []app.Option
+	themeOps     []func(*Theme)
+	language     Language
+	errorHandler func(error)
 }
 
 func newRunOptions(opts []Option) runOptions {
@@ -98,5 +99,13 @@ func MaterialTheme(fn func(*material.Theme)) Option {
 func Locale(language Language) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.language = language
+	})
+}
+
+// OnError handles command and subscription errors on the application event
+// thread. Panics are recovered and reported as *EffectError values too.
+func OnError(handler func(error)) Option {
+	return optionFunc(func(cfg *runOptions) {
+		cfg.errorHandler = handler
 	})
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -35,9 +36,16 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 		m.Clicks++
 		m.Last = "Loading"
 		m.Loading = true
-		return ui.Do(func(send ui.Send[Msg]) {
-			time.Sleep(1200 * time.Millisecond)
-			send(FinishLoading{})
+		return ui.DoContext(func(ctx context.Context, send ui.Send[Msg]) error {
+			timer := time.NewTimer(1200 * time.Millisecond)
+			defer timer.Stop()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-timer.C:
+				send(FinishLoading{})
+				return nil
+			}
 		})
 	case FinishLoading:
 		m.Loading = false

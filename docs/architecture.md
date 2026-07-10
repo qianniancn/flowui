@@ -128,22 +128,52 @@ Gio's public API and must not be worked around with pointer coordinates or
 private operation decoding, because those approaches fail for keyboard and
 programmatic opening.
 
-## Command Concurrency
+## Effects
 
 `UpdateCmd` is serialized on the event loop and is the only place a command
 workflow may mutate the model. Each returned `Cmd` starts in its own goroutine
-after `UpdateCmd` returns, so it can overlap later updates and views.
+after `UpdateCmd` returns, so it can overlap later updates and views. Every
+command receives a root `context.Context` that is canceled when the window is
+destroyed. Blocking and fallible work should use `ui.DoContext`; `ui.Do` remains
+a convenience for short context-free work.
 
 A command must capture only immutable value snapshots prepared during
 `UpdateCmd`. It must not retain or access the model pointer or a `ui.Context`.
 Reference-backed values such as slices and maps need an explicit copy before
 capture. A command returns data to the application only by calling its `Send`
 argument; concurrent sends are queued safely and applied by `UpdateCmd` in a
-later frame.
+later frame. Sends made after cancellation are discarded.
 
-`View` follows the same ownership boundary: the model and any reference-backed
-fields it contains are read-only while building and laying out widgets. Event
-callbacks send messages instead of mutating captured model data.
+`Subscription` represents long-lived asynchronous input such as a timer,
+filesystem watcher, or server event stream. `RunWithSubscriptions` derives the
+desired subscription set from the updated model before each view. Keys are
+lifecycle identities: a stable key retains the running subscription, removal
+cancels it, and a changed key starts a replacement. Duplicate or empty keys are
+programming errors. A subscription should remain running until its context is
+canceled. After normal or failed completion, its key remains retained and is
+not restarted every frame; remove and re-add it or change the key to retry.
+When keys change, FlowUI cancels removed runners and waits asynchronously for
+them to stop before starting replacements. A 250ms grace bound prevents an
+uncooperative runner from blocking replacement indefinitely. Messages carry a
+subscription generation and are validated on the event thread, so messages
+queued by a stopped generation cannot reach `UpdateCmd`.
+
+Commands and subscriptions may return errors. The runtime recovers their
+panics, attaches a stack trace, and reports both failures as `EffectError`
+values to the `OnError` handler on the application event thread. Cancellation
+errors are ignored. Without an `OnError` option, FlowUI writes the error and any
+panic stack to standard error. The handler is for logging and unexpected
+infrastructure failures; expected domain failures should normally be converted
+into typed messages so `UpdateCmd` can represent them in the model.
+
+Window shutdown cancels every command and subscription and waits up to two
+seconds for their cleanup before returning. A timeout is reported as
+`ErrEffectShutdownTimeout`; the process is still allowed to exit after that
+bound, so effects must honor their context promptly.
+
+`View` and a `Subscriptions` function follow the same ownership boundary: the
+model and any reference-backed fields it contains are read-only. Event
+callbacks and effects send messages instead of mutating captured model data.
 
 ## Adding A Component
 

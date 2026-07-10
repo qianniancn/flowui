@@ -22,7 +22,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	ui "github.com/qianniancn/FlowUI"
+	"github.com/qianniancn/FlowUI/ui"
 )
 
 type shadowPreset struct {

@@ -4,6 +4,9 @@
 
 FlowUI 是一个基于 Gio 构建的小型 MVU UI 框架。
 
+应用统一导入 `github.com/qianniancn/FlowUI/ui`。包依赖方向和状态归属规则见
+[架构说明](docs/architecture.md)。
+
 它把应用状态放在 `Model` 中，由视图发送强类型消息，并让 `Update`
 成为唯一修改状态的地方。FlowUI 的 API 尽量保持 Go 风格：组件是普通值，
 配置通过链式方法完成，本地控件状态由 `Context` 和显式 key 管理。
@@ -29,7 +32,7 @@ FlowUI 是一个基于 Gio 构建的小型 MVU UI 框架。
 ```go
 package main
 
-import ui "github.com/qianniancn/FlowUI"
+import "github.com/qianniancn/FlowUI/ui"
 
 type Model struct {
 	Name string

@@ -1,0 +1,574 @@
+package datepicker
+
+import (
+	"fmt"
+	"image"
+	"image/color"
+	"time"
+
+	"gioui.org/f32"
+	"gioui.org/font"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
+	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/text"
+	"github.com/qianniancn/FlowUI/internal/field"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/FlowUI/internal/state"
+)
+
+func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Style) layout.Dimensions {
+	presses := state.ActivePresses(pickerState.trigger.History())
+	if !d.disabled {
+		for pickerState.trigger.Clicked(gtx) {
+			if pickerState.open {
+				pickerState.open = false
+			} else {
+				pickerState.openCalendar()
+			}
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		frame.FocusOnPress(ctx, &pickerState.trigger, pickerState.trigger.History(), presses)
+	}
+
+	frameConstraints := gtx.Constraints
+	if d.fullWidth {
+		frameConstraints.Min.X = frameConstraints.Max.X
+	}
+	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	height := min(gtx.Dp(theme.Height), frameConstraints.Max.Y)
+	frameConstraints.Min.Y = min(max(frameConstraints.Min.Y, height), frameConstraints.Max.Y)
+
+	left := gtx.Dp(frame.ActiveTheme(ctx).Components.Input.PaddingX)
+	right := gtx.Dp(theme.TriggerWidth)
+	horizontalPadding := left + right
+	maxX := max(frameConstraints.Max.X-horizontalPadding, 0)
+	minX := min(max(frameConstraints.Min.X-horizontalPadding, 0), maxX)
+
+	macro := op.Record(gtx.Ops)
+	childGtx := gtx
+	childGtx.Constraints = layout.Constraints{
+		Min: image.Pt(minX, 0),
+		Max: image.Pt(maxX, frameConstraints.Max.Y),
+	}
+	childDims := d.layoutSegments(ctx, childGtx, style)
+	call := macro.Stop()
+
+	size := image.Pt(childDims.Size.X+horizontalPadding, childDims.Size.Y)
+	size = frameConstraints.Constrain(size)
+	rect := image.Rectangle{Max: size}
+	radius := min(max(gtx.Dp(theme.Radius), 1), min(size.X, size.Y)/2)
+	field.DrawFrame(gtx, rect, radius, style)
+
+	stack := op.Offset(image.Pt(left, max((size.Y-childDims.Size.Y)/2, 0))).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	stack.Pop()
+
+	iconSize := image.Pt(gtx.Dp(theme.IconSize), gtx.Dp(theme.IconSize))
+	iconOffset := image.Pt(size.X-right+(right-iconSize.X)/2, (size.Y-iconSize.Y)/2)
+	stack = op.Offset(iconOffset).Push(gtx.Ops)
+	drawDatePickerCalendarIcon(gtx, frame.ActiveTheme(ctx), iconSize, style.Placeholder)
+	stack.Pop()
+
+	return pickerState.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: size}
+	})
+}
+
+func (d DatePickerWidget) layoutSegments(ctx *frame.Context, gtx layout.Context, style field.Style) layout.Dimensions {
+	if !d.value.IsZero() {
+		return datePickerSegment(ctx, d.locale.DateLabel(d.value), style.Foreground, font.Medium)(gtx)
+	}
+	return text.New(d.hint).
+		Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.TextSize)).
+		Color(style.Placeholder).
+		Layout(ctx, gtx)
+}
+
+func datePickerSegment(ctx *frame.Context, value string, col color.NRGBA, weight font.Weight) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		widget := text.New(value).Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.TextSize)).Color(col)
+		if weight != 0 {
+			widget = widget.Weight(weight)
+		}
+		return widget.Layout(ctx, gtx)
+	}
+}
+
+func (d DatePickerWidget) layoutPopover(ctx *frame.Context, gtx layout.Context, state *datePickerState, inputDims layout.Dimensions, progress float32, now time.Time) {
+	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	gap := gtx.Dp(theme.PopoverGap)
+	maxY := gtx.Constraints.Max.Y - inputDims.Size.Y - gap
+	if maxY <= 0 {
+		return
+	}
+	panelWidth := gtx.Dp(theme.CalendarWidth) + gtx.Dp(theme.PopoverPadding)*2
+	panelConstraints := layout.Constraints{
+		Min: image.Pt(panelWidth, 0),
+		Max: image.Pt(panelWidth, min(maxY, gtx.Dp(theme.PopoverMaxHeight))),
+	}
+	overlayBounds := gtx.Constraints.Max
+
+	frame.DeferOverlay(ctx, gtx, func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints = panelConstraints
+		placement := overlay.Placement{Side: overlay.SideBottom, Align: overlay.AlignStart}
+		result := overlay.ResolvePosition(overlay.PositionConfig{
+			Trigger:       inputDims.Size,
+			Panel:         panelConstraints.Max,
+			Bounds:        overlayBounds,
+			Offset:        gap,
+			Placement:     placement,
+			AvoidOverflow: true,
+		})
+		origin := overlay.PanelTransformOrigin(inputDims.Size, result.Position, panelConstraints.Max, result.Placement)
+		scale := 0.95 + 0.05*progress
+		stack := op.Offset(result.Position).Push(gtx.Ops)
+		opacity := paint.PushOpacity(gtx.Ops, progress)
+		transform := op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale))).Push(gtx.Ops)
+		dims := d.layoutCalendarPanel(ctx, gtx, state, now)
+		transform.Pop()
+		opacity.Pop()
+		stack.Pop()
+		return dims
+	})
+
+}
+
+func (d DatePickerWidget) layoutCalendarPanel(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	macro := op.Record(gtx.Ops)
+	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	dims := layout.UniformInset(theme.PopoverPadding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return d.layoutCalendar(ctx, gtx, state, now)
+	})
+	call := macro.Stop()
+
+	radius := min(max(gtx.Dp(theme.PopoverRadius), 1), min(dims.Size.X, dims.Size.Y)/2)
+	rect := image.Rectangle{Max: dims.Size}
+	drawDatePickerPopover(gtx, frame.ActiveTheme(ctx), rect, radius)
+	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	clipStack.Pop()
+	return dims
+}
+
+func (d DatePickerWidget) layoutCalendar(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	gtx.Constraints.Min.X = min(gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.CalendarWidth), gtx.Constraints.Max.X)
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return d.layoutCalendarHeader(ctx, gtx, state)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			switch state.viewMode {
+			case datePickerViewMonths:
+				return d.layoutMonths(ctx, gtx, state, now)
+			case datePickerViewYears:
+				return d.layoutYears(ctx, gtx, state, now)
+			default:
+				return d.layoutDayView(ctx, gtx, state, now)
+			}
+		}),
+	)
+}
+
+func (d DatePickerWidget) layoutCalendarHeader(ctx *frame.Context, gtx layout.Context, state *datePickerState) layout.Dimensions {
+	return layout.Inset{
+		Left:   2,
+		Right:  2,
+		Bottom: 16,
+	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Flex{
+			Axis:      layout.Horizontal,
+			Alignment: layout.Middle,
+		}.Layout(gtx,
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+				for state.header.Clicked(gtx) {
+					state.toggleYearPicker(state.viewMonth.Year())
+					frame.RequestFocus(ctx, &state.trigger)
+				}
+				return state.header.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+					return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return d.layoutHeaderTrigger(ctx, gtx, state)
+					})
+				})
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return d.layoutNavButton(ctx, gtx, state, -1)
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return d.layoutNavButton(ctx, gtx, state, 1)
+			}),
+		)
+	})
+}
+
+func (d DatePickerWidget) layoutHeaderTrigger(ctx *frame.Context, gtx layout.Context, state *datePickerState) layout.Dimensions {
+	label := d.headerLabel(state)
+	col := frame.ActiveTheme(ctx).Palette.Foreground
+	if state.viewMode == datePickerViewYears {
+		col = frame.ActiveTheme(ctx).Palette.AccentSoftForeground
+	}
+	gap := gtx.Dp(unit.Dp(4))
+	iconSize := gtx.Dp(unit.Dp(14))
+	return layout.Flex{
+		Axis:      layout.Horizontal,
+		Alignment: layout.Middle,
+		Gap:       gap,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return text.New(label).
+				Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.HeaderTextSize)).
+				Weight(font.Medium).
+				Color(col).
+				Layout(ctx, gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			size := image.Pt(iconSize, iconSize)
+			gtx.Constraints = layout.Exact(size)
+			drawDatePickerYearPickerIndicator(gtx, frame.ActiveTheme(ctx), size, state.viewMode == datePickerViewYears, col)
+			return layout.Dimensions{Size: size}
+		}),
+	)
+}
+
+func (d DatePickerWidget) headerLabel(state *datePickerState) string {
+	year, _, _ := state.viewMonth.Date()
+	switch state.viewMode {
+	case datePickerViewMonths:
+		return d.locale.YearLabel(year)
+	case datePickerViewYears:
+		return d.locale.MonthLabel(state.viewMonth)
+	default:
+		return d.locale.MonthLabel(state.viewMonth)
+	}
+}
+
+func (d DatePickerWidget) layoutNavButton(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, delta int) layout.Dimensions {
+	size := image.Pt(gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.NavButtonSize), gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.NavButtonSize))
+	if pickerState.viewMode == datePickerViewYears {
+		return layout.Dimensions{Size: size}
+	}
+
+	clickable := &pickerState.prev
+	if delta > 0 {
+		clickable = &pickerState.next
+	}
+	disabled := !d.canMove(pickerState, delta)
+	presses := state.ActivePresses(clickable.History())
+	if disabled {
+		gtx = gtx.Disabled()
+	} else {
+		for clickable.Clicked(gtx) {
+			pickerState.move(delta)
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		frame.FocusOnPress(ctx, &pickerState.trigger, clickable.History(), presses)
+	}
+	gtx.Constraints = layout.Exact(size)
+	return clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		style := datePickerNavStyle(frame.ActiveTheme(ctx), clickable.Hovered(), clickable.Pressed(), disabled)
+		style.bg = pickerState.navBackground(gtx, delta, style.bg)
+		scale := datePickerPressScale(gtx, clickable.History(), disabled)
+		stack := render.Scale(size, scale).Push(gtx.Ops)
+		drawDatePickerNavButton(gtx, size, delta, style)
+		stack.Pop()
+		return layout.Dimensions{Size: size}
+	})
+}
+
+func (d DatePickerWidget) layoutDayView(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return d.layoutWeekdays(ctx, gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return d.layoutDays(ctx, gtx, state, now)
+		}),
+	)
+}
+
+func (d DatePickerWidget) layoutWeekdays(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	cell := gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.CellSize)
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, datePickerWeekdayChildren(ctx, cell, orderedDatePickerWeekdays(d.locale))...)
+}
+
+func datePickerWeekdayChildren(ctx *frame.Context, cell int, weekdays [7]string) []layout.FlexChild {
+	children := make([]layout.FlexChild, 0, len(weekdays))
+	for _, weekday := range weekdays {
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints = layout.Exact(image.Pt(cell, cell))
+			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return text.New(weekday).
+					Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.WeekdayTextSize)).
+					Weight(font.Medium).
+					Color(frame.ActiveTheme(ctx).Palette.MutedForeground).
+					Layout(ctx, gtx)
+			})
+		}))
+	}
+	return children
+}
+
+func (d DatePickerWidget) layoutDays(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	days := datePickerMonthDays(state.viewMonth, d.locale.WeekStart)
+	cell := gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.CellSize)
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, datePickerWeekRows(ctx, d, state, days, cell, now)...)
+}
+
+func (d DatePickerWidget) layoutMonths(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	year, _, _ := state.viewMonth.Date()
+	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	cellWidth := gtx.Dp(theme.CalendarWidth) / 3
+	cellHeight := gtx.Dp(theme.MonthCellHeight)
+	children := make([]layout.FlexChild, 0, 4)
+	for row := range 4 {
+		monthStart := row*3 + 1
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+					return d.layoutMonth(ctx, gtx, state, year, time.Month(monthStart), now)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+					return d.layoutMonth(ctx, gtx, state, year, time.Month(monthStart+1), now)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+					return d.layoutMonth(ctx, gtx, state, year, time.Month(monthStart+2), now)
+				}),
+			)
+		}))
+	}
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
+}
+
+func (d DatePickerWidget) layoutMonth(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, year int, month time.Month, now time.Time) layout.Dimensions {
+	date := time.Date(year, month, 1, 0, 0, 0, 0, pickerState.viewMonth.Location())
+	key := fmt.Sprintf("%04d-%02d", year, int(month))
+	monthState := pickerState.month(key)
+	disabled := d.isMonthDisabled(date)
+	presses := state.ActivePresses(monthState.clickable.History())
+	if disabled {
+		gtx = gtx.Disabled()
+	} else {
+		for monthState.clickable.Clicked(gtx) {
+			pickerState.viewMonth = date
+			pickerState.viewMode = datePickerViewDays
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		frame.FocusOnPress(ctx, &pickerState.trigger, monthState.clickable.History(), presses)
+	}
+
+	valueYear, valueMonth, _ := d.value.Date()
+	selected := !d.value.IsZero() && valueYear == year && valueMonth == month
+	today := now.Year() == year && now.Month() == month
+	active := pickerState.viewMonth.Year() == year && pickerState.viewMonth.Month() == month
+	return d.layoutPickerCell(ctx, gtx, monthState, d.locale.Months[int(month)-1], selected, active, today, false, disabled)
+}
+
+func (d DatePickerWidget) layoutYears(ctx *frame.Context, gtx layout.Context, state *datePickerState, now time.Time) layout.Dimensions {
+	minYear, maxYear := d.yearPickerRange(state, now)
+	count := maxYear - minYear + 1
+	if count <= 0 {
+		return layout.Dimensions{}
+	}
+
+	theme := frame.ActiveTheme(ctx).Components.DatePicker
+	rows := (count + 2) / 3
+	cellWidth := gtx.Dp(theme.CalendarWidth) / 3
+	cellHeight := gtx.Dp(theme.YearCellHeight)
+	if cellHeight == 0 {
+		cellHeight = gtx.Dp(theme.MonthCellHeight)
+	}
+	state.yearList.Axis = layout.Vertical
+	state.yearList.Gap = gtx.Dp(theme.YearGridGap)
+	if state.yearScrollReady {
+		target := max(state.yearScrollYear, minYear)
+		if target > maxYear {
+			target = maxYear
+		}
+		state.yearList.ScrollTo((target - minYear) / 3)
+		state.yearScrollReady = false
+	}
+	return state.yearList.Layout(gtx, rows, func(gtx layout.Context, row int) layout.Dimensions {
+		yearStart := minYear + row*3
+		return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+				return d.layoutYearCell(ctx, gtx, state, yearStart, maxYear, now)
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+				return d.layoutYearCell(ctx, gtx, state, yearStart+1, maxYear, now)
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints = layout.Exact(image.Pt(cellWidth, cellHeight))
+				return d.layoutYearCell(ctx, gtx, state, yearStart+2, maxYear, now)
+			}),
+		)
+	})
+}
+
+func (d DatePickerWidget) layoutYearCell(ctx *frame.Context, gtx layout.Context, state *datePickerState, year, maxYear int, now time.Time) layout.Dimensions {
+	if year > maxYear {
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+	return d.layoutYear(ctx, gtx, state, year, now)
+}
+
+func (d DatePickerWidget) yearPickerRange(state *datePickerState, now time.Time) (int, int) {
+	hasMin := !d.minDate.IsZero()
+	hasMax := !d.maxDate.IsZero()
+	minYear := 1900
+	maxYear := 2099
+	if hasMin {
+		minYear = d.minDate.Year()
+	}
+	if hasMax {
+		maxYear = d.maxDate.Year()
+	}
+	for _, year := range []int{state.viewMonth.Year(), now.Year()} {
+		if !hasMin && year < minYear {
+			minYear = year
+		}
+		if !hasMax && year > maxYear {
+			maxYear = year
+		}
+	}
+	if !d.value.IsZero() {
+		year := d.value.Year()
+		if !hasMin && year < minYear {
+			minYear = year
+		}
+		if !hasMax && year > maxYear {
+			maxYear = year
+		}
+	}
+	if minYear > maxYear {
+		minYear, maxYear = maxYear, minYear
+	}
+	return minYear, maxYear
+}
+
+func (d DatePickerWidget) layoutYear(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, year int, now time.Time) layout.Dimensions {
+	yearState := pickerState.year(fmt.Sprintf("%04d", year))
+	disabled := d.isYearDisabled(year)
+	presses := state.ActivePresses(yearState.clickable.History())
+	if disabled {
+		gtx = gtx.Disabled()
+	} else {
+		for yearState.clickable.Clicked(gtx) {
+			_, month, _ := pickerState.viewMonth.Date()
+			pickerState.viewMonth = time.Date(year, month, 1, 0, 0, 0, 0, pickerState.viewMonth.Location())
+			pickerState.viewMode = datePickerViewDays
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		frame.FocusOnPress(ctx, &pickerState.trigger, yearState.clickable.History(), presses)
+	}
+
+	selected := !d.value.IsZero() && d.value.Year() == year
+	today := now.Year() == year
+	active := pickerState.viewMonth.Year() == year
+	return d.layoutPickerCell(ctx, gtx, yearState, d.locale.YearLabel(year), selected, active, today, false, disabled)
+}
+
+func (d DatePickerWidget) layoutPickerCell(ctx *frame.Context, gtx layout.Context, state *datePickerCellState, label string, selected, active, today, outside, disabled bool) layout.Dimensions {
+	return state.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		size := gtx.Constraints.Max
+		style := datePickerCellStyleFor(frame.ActiveTheme(ctx), state.clickable.Hovered(), state.clickable.Pressed(), selected, today, outside, disabled)
+		if active && !selected && !disabled {
+			style.bg = frame.ActiveTheme(ctx).Palette.SurfaceRaised
+			if !today {
+				style.fg = frame.ActiveTheme(ctx).Palette.AccentSoftForeground
+			}
+		}
+		style.bg = state.background(gtx, style.bg)
+		scale := datePickerPressScale(gtx, state.clickable.History(), disabled)
+		stack := render.Scale(size, scale).Push(gtx.Ops)
+		drawDatePickerCell(gtx, size, style)
+		layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return text.New(label).
+				Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.CellTextSize)).
+				Weight(font.Medium).
+				Color(style.fg).
+				Layout(ctx, gtx)
+		})
+		stack.Pop()
+		return layout.Dimensions{Size: size}
+	})
+}
+
+func datePickerWeekRows(ctx *frame.Context, picker DatePickerWidget, state *datePickerState, days []datePickerDay, cell int, now time.Time) []layout.FlexChild {
+	rows := make([]layout.FlexChild, 0, 6)
+	for week := range 6 {
+		weekDays := days[week*7 : week*7+7]
+		rows = append(rows, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, datePickerDayChildren(ctx, picker, state, weekDays, cell, now)...)
+		}))
+	}
+	return rows
+}
+
+func datePickerDayChildren(ctx *frame.Context, picker DatePickerWidget, state *datePickerState, days []datePickerDay, cell int, now time.Time) []layout.FlexChild {
+	children := make([]layout.FlexChild, 0, len(days))
+	for _, day := range days {
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints = layout.Exact(image.Pt(cell, cell))
+			return picker.layoutDay(ctx, gtx, state, day, now)
+		}))
+	}
+	return children
+}
+
+func (d DatePickerWidget) layoutDay(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, day datePickerDay, now time.Time) layout.Dimensions {
+	key := dateKey(day.date)
+	dayState := pickerState.day(key)
+	disabled := d.isDateDisabled(day.date)
+	presses := state.ActivePresses(dayState.clickable.History())
+	if disabled {
+		gtx = gtx.Disabled()
+	} else {
+		for dayState.clickable.Clicked(gtx) {
+			date := dateOnly(day.date)
+			pickerState.open = false
+			pickerState.sync(date, date)
+			if d.onChange != nil {
+				d.onChange(date)
+			}
+			frame.RequestFocus(ctx, &pickerState.trigger)
+		}
+		frame.FocusOnPress(ctx, &pickerState.trigger, dayState.clickable.History(), presses)
+	}
+
+	selected := sameDate(d.value, day.date)
+	today := sameDate(now, day.date)
+	return dayState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		size := gtx.Constraints.Max
+		style := datePickerCellStyleFor(frame.ActiveTheme(ctx), dayState.clickable.Hovered(), dayState.clickable.Pressed(), selected, today, day.outside, disabled)
+		style.bg = dayState.background(gtx, style.bg)
+		scale := datePickerPressScale(gtx, dayState.clickable.History(), disabled)
+		stack := render.Scale(size, scale).Push(gtx.Ops)
+		drawDatePickerCell(gtx, size, style)
+		layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return text.New(fmt.Sprintf("%d", day.date.Day())).
+				Size(float32(frame.ActiveTheme(ctx).Components.DatePicker.CellTextSize)).
+				Weight(font.Medium).
+				Color(style.fg).
+				Layout(ctx, gtx)
+		})
+		if disabled && !day.outside {
+			drawDatePickerStrike(gtx, frame.ActiveTheme(ctx), size, style.fg)
+		}
+		stack.Pop()
+		return layout.Dimensions{Size: size}
+	})
+}

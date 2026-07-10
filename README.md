@@ -4,6 +4,10 @@
 
 FlowUI is a small MVU UI framework built on top of Gio.
 
+Public applications import `github.com/qianniancn/FlowUI/ui`. See the
+[architecture guide](docs/architecture.md) for package and state ownership
+rules.
+
 It keeps application state in a `Model`, sends typed messages from the view, and
 makes `Update` the only place that mutates state. The API is intentionally
 Go-first: widgets are regular values, options are chainable methods, and local
@@ -32,7 +36,7 @@ widget state is managed by `Context` with explicit keys.
 ```go
 package main
 
-import ui "github.com/qianniancn/FlowUI"
+import "github.com/qianniancn/FlowUI/ui"
 
 type Model struct {
 	Name string

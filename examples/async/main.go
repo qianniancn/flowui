@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	ui "github.com/qianniancn/FlowUI"
+	"github.com/qianniancn/FlowUI/ui"
 )
 
 type Model struct {

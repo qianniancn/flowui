@@ -7,12 +7,13 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/layout"
 	"gioui.org/op"
-	ui "github.com/qianniancn/FlowUI"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/ui"
 )
 
 func TestExampleViewLayouts(t *testing.T) {
 	theme := ui.DefaultTheme()
-	ctx := &ui.Context{Theme: &theme}
+	ctx := frame.New(nil, &theme, ui.LanguageAuto)
 	var router input.Router
 	var ops op.Ops
 	gtx := layout.Context{

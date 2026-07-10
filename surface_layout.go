@@ -13,7 +13,11 @@ func (s SurfaceWidget) layout(ctx *Context, gtx layout.Context, style surfaceSty
 	macro := op.Record(gtx.Ops)
 	var dims layout.Dimensions
 	func() {
-		restore := ctx.pushForeground(style.foreground)
+		background := ctx.backgroundColor()
+		if style.background.A != 0 {
+			background = style.background
+		}
+		restore := ctx.pushColors(style.foreground, background)
 		defer restore()
 		if s.child != nil {
 			dims = s.child.Layout(ctx, gtx)

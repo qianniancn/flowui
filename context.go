@@ -38,6 +38,7 @@ type Context struct {
 	radioGroups       map[string]*radioGroupState
 	progressBars      map[string]*progressBarState
 	listBoxes         map[string]*listBoxState
+	tabs              map[string]*tabsState
 	popovers          map[string]*popoverState
 	modals            map[string]*modalState
 	lists             map[string]*layout.List
@@ -53,6 +54,8 @@ type Context struct {
 	viewport          image.Point
 	foreground        color.NRGBA
 	hasForeground     bool
+	background        color.NRGBA
+	hasBackground     bool
 }
 
 func newContext(w *app.Window) *Context {
@@ -215,11 +218,14 @@ func (ctx *Context) focusOnPress(tag event.Tag, history []widget.Press, before i
 	ctx.focus.OnPress(tag, history, before)
 }
 
-func (ctx *Context) pushForeground(foreground color.NRGBA) func() {
-	previous, hadPrevious := ctx.foreground, ctx.hasForeground
+func (ctx *Context) pushColors(foreground, background color.NRGBA) func() {
+	previousForeground, hadForeground := ctx.foreground, ctx.hasForeground
+	previousBackground, hadBackground := ctx.background, ctx.hasBackground
 	ctx.foreground, ctx.hasForeground = foreground, true
+	ctx.background, ctx.hasBackground = background, true
 	return func() {
-		ctx.foreground, ctx.hasForeground = previous, hadPrevious
+		ctx.foreground, ctx.hasForeground = previousForeground, hadForeground
+		ctx.background, ctx.hasBackground = previousBackground, hadBackground
 	}
 }
 
@@ -228,6 +234,13 @@ func (ctx *Context) foregroundColor() color.NRGBA {
 		return ctx.foreground
 	}
 	return ctx.Theme.Palette.Foreground
+}
+
+func (ctx *Context) backgroundColor() color.NRGBA {
+	if ctx.hasBackground {
+		return ctx.background
+	}
+	return ctx.Theme.Palette.Background
 }
 
 func activePresses(history []widget.Press) int {
@@ -274,6 +287,7 @@ func (ctx *Context) endFrame() {
 	flowstate.Sweep(ctx.radioGroups, frameKeys, flowstate.KindRadioGroup)
 	flowstate.Sweep(ctx.progressBars, frameKeys, flowstate.KindProgressBar)
 	flowstate.Sweep(ctx.listBoxes, frameKeys, flowstate.KindListBox)
+	flowstate.Sweep(ctx.tabs, frameKeys, flowstate.KindTabs)
 	flowstate.Sweep(ctx.popovers, frameKeys, flowstate.KindPopover)
 	flowstate.Sweep(ctx.modals, frameKeys, flowstate.KindModal)
 	flowstate.Sweep(ctx.lists, frameKeys, flowstate.KindList)
@@ -493,6 +507,19 @@ func (ctx *Context) listBoxState(key string) *listBoxState {
 	}
 	state := new(listBoxState)
 	ctx.listBoxes[key] = state
+	return state
+}
+
+func (ctx *Context) tabsState(key string) *tabsState {
+	key = ctx.claimKey(flowstate.KindTabs, key)
+	if ctx.tabs == nil {
+		ctx.tabs = make(map[string]*tabsState)
+	}
+	if state := ctx.tabs[key]; state != nil {
+		return state
+	}
+	state := new(tabsState)
+	ctx.tabs[key] = state
 	return state
 }
 

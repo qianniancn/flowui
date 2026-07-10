@@ -365,7 +365,7 @@ func (m ModalWidget) layoutDialogSurface(ctx *Context, gtx layout.Context, state
 	macro := op.Record(gtx.Ops)
 	var contentDims layout.Dimensions
 	func() {
-		restore := ctx.pushForeground(ctx.Theme.Palette.overlayForegroundColor())
+		restore := ctx.pushColors(ctx.Theme.Palette.overlayForegroundColor(), ctx.Theme.Palette.overlayColor())
 		defer restore()
 		contentDims = m.layoutDialogContent(ctx, contentGtx, state)
 	}()

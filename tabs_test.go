@@ -1,0 +1,590 @@
+package flowui
+
+import (
+	"image"
+	"testing"
+	"time"
+
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/layout"
+	"gioui.org/op"
+)
+
+func TestTabsOptions(t *testing.T) {
+	tabs := Tabs("settings", "account", tabsTestItems()).
+		Variant(TabsSecondary).
+		Orientation(TabsVertical).
+		Size(TabsSmall).
+		Color(TabsColorAccent).
+		Fit().
+		Disabled(true).
+		Separators(true).
+		OnChange(func(string) {})
+
+	if tabs.key != "settings" || tabs.selectedKey != "account" {
+		t.Fatalf("tabs identity = (%q, %q), want (settings, account)", tabs.key, tabs.selectedKey)
+	}
+	if tabs.variant != TabsSecondary || tabs.orientation != TabsVertical || tabs.size != TabsSmall || tabs.color != TabsColorAccent || !tabs.fit || !tabs.disabled || !tabs.separators || tabs.onChange == nil {
+		t.Fatal("tabs options were not retained")
+	}
+	if Tabs("settings", "", nil).Vertical().orientation != TabsVertical {
+		t.Fatal("Vertical did not select vertical orientation")
+	}
+}
+
+func TestTabsThemeMatchesHeroUI(t *testing.T) {
+	theme := DefaultTheme()
+	tabs := theme.Components.Tabs
+	if tabs.TabHeight != 32 || tabs.TextSize != 14 || tabs.ListPadding != 4 {
+		t.Fatalf("tabs metrics = height %v text %v padding %v, want 32, 14, 4", tabs.TabHeight, tabs.TextSize, tabs.ListPadding)
+	}
+	if tabs.SmallTabHeight != 24 || tabs.SmallTabPaddingX != 12 {
+		t.Fatalf("small tabs metrics = height %v padding %v, want 24 and 12", tabs.SmallTabHeight, tabs.SmallTabPaddingX)
+	}
+	if tabs.ScrollShadowSize != 64 {
+		t.Fatalf("tabs scroll shadow size = %v, want 64", tabs.ScrollShadowSize)
+	}
+	if tabs.IndicatorLineWidth != 2 || tabs.PanelPadding != 8 || tabs.RootGap+tabs.PanelGap != 24 {
+		t.Fatal("tabs indicator or panel metrics do not match HeroUI")
+	}
+	if theme.Palette.Segment.A == 0 || theme.Palette.SegmentForeground.A == 0 {
+		t.Fatal("tabs segment palette was not initialized")
+	}
+
+	primary := tabsItemStyleFor(&theme, TabsPrimary, TabsColorDefault, false, false)
+	secondary := tabsItemStyleFor(&theme, TabsSecondary, TabsColorDefault, false, false)
+	accent := tabsItemStyleFor(&theme, TabsPrimary, TabsColorAccent, false, false)
+	secondaryAccent := tabsItemStyleFor(&theme, TabsSecondary, TabsColorAccent, false, false)
+	if primary.indicator != theme.Palette.Segment || primary.selectedForeground != theme.Palette.SegmentForeground {
+		t.Fatal("primary tabs do not use segment palette")
+	}
+	if secondary.indicator != theme.Palette.Accent || secondary.selectedForeground != theme.Palette.Foreground {
+		t.Fatal("secondary tabs do not use accent line and foreground text")
+	}
+	buttonPrimary := buttonColors(&theme, ButtonPrimary)
+	if accent.indicator != buttonPrimary.bg || accent.selectedForeground != buttonPrimary.fg {
+		t.Fatal("accent tabs do not use the primary button palette")
+	}
+	if secondaryAccent.indicator != theme.Palette.Accent || secondaryAccent.selectedForeground != theme.Palette.Accent {
+		t.Fatal("secondary accent tabs do not use accent text and indicator")
+	}
+}
+
+func TestSmallFitTabsUseNaturalWidth(t *testing.T) {
+	gtx := testLayoutContext()
+	gtx.Constraints = layout.Constraints{Max: image.Pt(500, 100)}
+	items := []TabItem{
+		{Key: "daily", Label: "Daily"},
+		{Key: "weekly", Label: "Weekly"},
+		{Key: "monthly", Label: "Monthly"},
+	}
+
+	full := Tabs("full", "daily", items).Layout(newContext(nil), gtx)
+	fit := Tabs("fit", "daily", items).Size(TabsSmall).Fit().Layout(newContext(nil), gtx)
+	if full.Size.X != 500 {
+		t.Fatalf("full tabs width = %d, want 500", full.Size.X)
+	}
+	if fit.Size.X >= full.Size.X {
+		t.Fatalf("fit tabs width = %d, want less than %d", fit.Size.X, full.Size.X)
+	}
+	if fit.Size.Y != 32 {
+		t.Fatalf("small fit tabs height = %d, want 32", fit.Size.Y)
+	}
+}
+
+func TestTabsEffectiveSelection(t *testing.T) {
+	items := tabsTestItems()
+	if got := Tabs("tabs", "missing", items).effectiveSelectedKey(); got != "account" {
+		t.Fatalf("fallback selection = %q, want account", got)
+	}
+	items[0].Disabled = true
+	if got := Tabs("tabs", "", items).effectiveSelectedKey(); got != "security" {
+		t.Fatalf("enabled fallback selection = %q, want security", got)
+	}
+	if got := Tabs("tabs", "account", items).effectiveSelectedKey(); got != "account" {
+		t.Fatalf("controlled disabled selection = %q, want account", got)
+	}
+}
+
+func TestTabsClickChangesSelection(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	selected := "account"
+	widget := func() TabsWidget {
+		return Tabs("settings", selected, tabsTestItems()).OnChange(func(key string) {
+			selected = key
+		})
+	}
+
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, 0), image.Pt(300, 200))
+	clickTabsAt(router, f32.Pt(150, 20))
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(300, 200))
+
+	if selected != "security" {
+		t.Fatalf("selected = %q, want security", selected)
+	}
+}
+
+func TestTabsDisabledItemDoesNotChangeSelection(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	items := tabsTestItems()
+	items[1].Disabled = true
+	selected := "account"
+	widget := Tabs("settings", selected, items).OnChange(func(key string) {
+		selected = key
+	})
+
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(300, 200))
+	clickTabsAt(router, f32.Pt(150, 20))
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(300, 200))
+
+	if selected != "account" {
+		t.Fatalf("selected = %q, want account", selected)
+	}
+}
+
+func TestTabsArrowKeysSelectAndFocusNextEnabledTab(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	items := tabsTestItems()
+	items[1].Disabled = true
+	selected := "account"
+	widget := func() TabsWidget {
+		return Tabs("settings", selected, items).OnChange(func(key string) {
+			selected = key
+		})
+	}
+
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, 0), image.Pt(300, 200))
+	state := ctx.tabs["settings"]
+	router.Source().Execute(key.FocusCmd{Tag: &state.items["account"].clickable})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(300, 200))
+	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(2*time.Millisecond)), image.Pt(300, 200))
+
+	if selected != "billing" {
+		t.Fatalf("selected = %q, want billing", selected)
+	}
+	if !router.Source().Focused(&state.items["billing"].clickable) {
+		t.Fatal("next enabled tab did not gain focus")
+	}
+}
+
+func TestVerticalTabsUseVerticalArrowKeys(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	selected := "account"
+	widget := func() TabsWidget {
+		return Tabs("settings", selected, tabsTestItems()).Vertical().OnChange(func(key string) {
+			selected = key
+		})
+	}
+
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, 0), image.Pt(420, 240))
+	state := ctx.tabs["settings"]
+	router.Source().Execute(key.FocusCmd{Tag: &state.items["account"].clickable})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(420, 240))
+	router.Queue(key.Event{Name: key.NameDownArrow, State: key.Press})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(2*time.Millisecond)), image.Pt(420, 240))
+
+	if selected != "security" {
+		t.Fatalf("selected = %q, want security", selected)
+	}
+}
+
+func TestTabsHomeEndKeysSelectEdges(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	items := []TabItem{
+		{Key: "account", Label: "Account", Disabled: true},
+		{Key: "security", Label: "Security"},
+		{Key: "billing", Label: "Billing"},
+		{Key: "audit", Label: "Audit", Disabled: true},
+	}
+	selected := "billing"
+	widget := func() TabsWidget {
+		return Tabs("settings", selected, items).OnChange(func(key string) {
+			selected = key
+		})
+	}
+
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, 0), image.Pt(400, 100))
+	state := ctx.tabs["settings"]
+	router.Source().Execute(key.FocusCmd{Tag: &state.items["billing"].clickable})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(400, 100))
+
+	router.Queue(key.Event{Name: key.NameHome, State: key.Press})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(2*time.Millisecond)), image.Pt(400, 100))
+	if selected != "security" {
+		t.Fatalf("selected after Home = %q, want security", selected)
+	}
+	if !router.Source().Focused(&state.items["security"].clickable) {
+		t.Fatal("first enabled tab did not gain focus after Home")
+	}
+
+	router.Queue(key.Event{Name: key.NameEnd, State: key.Press})
+	layoutTabsFrame(ctx, router, widget(), time.Unix(1, int64(3*time.Millisecond)), image.Pt(400, 100))
+	if selected != "billing" {
+		t.Fatalf("selected after End = %q, want billing", selected)
+	}
+	if !router.Source().Focused(&state.items["billing"].clickable) {
+		t.Fatal("last enabled tab did not gain focus after End")
+	}
+}
+
+func TestTabsSelectedPanelOnly(t *testing.T) {
+	accountLayouts := 0
+	securityLayouts := 0
+	items := []TabItem{
+		{Key: "account", Label: "Account", Panel: &tabsPanelProbe{layouts: &accountLayouts}},
+		{Key: "security", Label: "Security", Panel: &tabsPanelProbe{layouts: &securityLayouts}},
+	}
+
+	Tabs("settings", "security", items).Layout(newContext(nil), testLayoutContext())
+	if accountLayouts != 0 || securityLayouts != 1 {
+		t.Fatalf("panel layouts = account %d security %d, want 0 and 1", accountLayouts, securityLayouts)
+	}
+}
+
+func TestTabsDefaultSelectionDoesNotHideFittingItems(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	layoutTabsFrame(ctx, router, Tabs("settings", "billing", tabsTestItems()), time.Unix(1, 0), image.Pt(500, 200))
+
+	state := ctx.tabs["settings"]
+	if state.list.Position.First != 0 || state.list.Position.Count != len(tabsTestItems()) {
+		t.Fatalf("list position = first %d count %d, want 0 and %d", state.list.Position.First, state.list.Position.Count, len(tabsTestItems()))
+	}
+}
+
+func TestTabsEnsureVisibleUnclipsEdgeItems(t *testing.T) {
+	state := tabsState{list: layout.List{Position: layout.Position{
+		First:      2,
+		Offset:     12,
+		OffsetLast: -18,
+		Count:      3,
+	}}}
+
+	state.ensureVisible(2)
+	if state.list.Position.Offset != 0 {
+		t.Fatalf("leading item offset = %d, want 0", state.list.Position.Offset)
+	}
+
+	state.list.Position.OffsetLast = -18
+	state.ensureVisible(4)
+	if state.list.Position.Offset != 18 {
+		t.Fatalf("trailing item offset = %d, want 18", state.list.Position.Offset)
+	}
+}
+
+func TestTabsSelectionVisibilityWaitsForFreshLayout(t *testing.T) {
+	items := make([]TabItem, 10)
+	for index := range items {
+		items[index].Key = string(rune('a' + index))
+	}
+	state := new(tabsState)
+	state.syncSelection(items, "j")
+	state.list.Position = layout.Position{First: 0, Count: 5}
+
+	if !state.ensureSelectionVisible(items, "j") {
+		t.Fatal("offscreen selection did not request a scroll adjustment")
+	}
+	if state.list.Position.First != 9 {
+		t.Fatalf("adjusted first item = %d, want selected index 9", state.list.Position.First)
+	}
+	if !state.selectionPending {
+		t.Fatal("selection pending was cleared before the adjusted list was laid out")
+	}
+
+	state.list.Position = layout.Position{First: 9, Count: 1, Offset: 0, OffsetLast: -120}
+	if state.ensureSelectionVisible(items, "j") {
+		t.Fatal("oversized visible selection requested another scroll adjustment")
+	}
+	if state.selectionPending {
+		t.Fatal("selection pending was not cleared after a fresh visible layout")
+	}
+}
+
+func TestTabsScrollShadowGeometryMatchesOrientation(t *testing.T) {
+	background := DefaultTheme().Palette.Background
+	horizontal, ok := tabsScrollShadowFor(image.Pt(300, 40), TabsHorizontal, 64, 1, background)
+	if !ok {
+		t.Fatal("horizontal trailing shadow was not created")
+	}
+	if horizontal.bounds != image.Rect(236, 0, 300, 40) || horizontal.color1.A != 0 || horizontal.color2 != background {
+		t.Fatalf("horizontal trailing shadow = %#v", horizontal)
+	}
+
+	vertical, ok := tabsScrollShadowFor(image.Pt(120, 200), TabsVertical, 64, -1, background)
+	if !ok {
+		t.Fatal("vertical leading shadow was not created")
+	}
+	if vertical.bounds != image.Rect(0, 0, 120, 64) || vertical.color1 != background || vertical.color2.A != 0 {
+		t.Fatalf("vertical leading shadow = %#v", vertical)
+	}
+
+	clamped, ok := tabsScrollShadowFor(image.Pt(80, 40), TabsHorizontal, 64, -1, background)
+	if !ok || clamped.bounds.Dx() != 40 {
+		t.Fatalf("clamped shadow width = %d, want 40", clamped.bounds.Dx())
+	}
+}
+
+func TestTabsOverflowScrollButtonAdvancesList(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	items := tabsOverflowItems()
+	widget := Tabs("overflow", "overview", items)
+
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(300, 160))
+	state := ctx.tabs["overflow"]
+	if !state.canScrollNext(len(items)) {
+		t.Fatal("overflowing tabs did not expose forward scrolling")
+	}
+	clickTabsAt(router, f32.Pt(288, 20))
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(300, 160))
+	if state.list.Position.First == 0 {
+		t.Fatal("forward scroll button did not advance the tab list")
+	}
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(2*time.Millisecond)), image.Pt(300, 160))
+	if state.list.Position.First == 0 {
+		t.Fatal("controlled selection pulled overflow scrolling back to the first tab")
+	}
+}
+
+func TestVerticalTabsOverflowScrollButtonAdvancesList(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	items := tabsOverflowItems()
+	widget := Tabs("vertical-overflow", "Overview", items).Vertical()
+
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(320, 120))
+	state := ctx.tabs["vertical-overflow"]
+	if !state.canScrollNext(len(items)) {
+		t.Fatal("overflowing vertical tabs did not expose downward scrolling")
+	}
+	buttonBounds, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Scroll tabs down")
+	if !ok {
+		t.Fatal("vertical tabs did not expose the down scroll button semantics")
+	}
+	clickTabsAt(router, f32.Pt(
+		float32(buttonBounds.Min.X+buttonBounds.Max.X)/2,
+		float32(buttonBounds.Min.Y+buttonBounds.Max.Y)/2,
+	))
+	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(320, 120))
+	if state.list.Position.First == 0 {
+		t.Fatal("down scroll button did not advance the vertical tab list")
+	}
+}
+
+func TestTabsScrollButtonLabelsMatchOrientation(t *testing.T) {
+	tests := []struct {
+		name      string
+		tabs      TabsWidget
+		direction int
+		want      string
+	}{
+		{name: "horizontal previous", tabs: TabsWidget{}, direction: -1, want: "Scroll tabs left"},
+		{name: "horizontal next", tabs: TabsWidget{}, direction: 1, want: "Scroll tabs right"},
+		{name: "vertical previous", tabs: TabsWidget{orientation: TabsVertical}, direction: -1, want: "Scroll tabs up"},
+		{name: "vertical next", tabs: TabsWidget{orientation: TabsVertical}, direction: 1, want: "Scroll tabs down"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.tabs.scrollButtonLabel(test.direction); got != test.want {
+				t.Fatalf("label = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestTabsSemanticsExposeSelectedTab(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	layoutTabsFrame(ctx, router, Tabs("settings", "security", tabsTestItems()), time.Unix(1, 0), image.Pt(400, 200))
+
+	selected := selectedSemanticLabels(router.AppendSemantics(nil))
+	if len(selected) != 1 || selected[0] != "Security" {
+		t.Fatalf("selected semantic labels = %v, want [Security]", selected)
+	}
+}
+
+func TestTabsLabelColorAnimation(t *testing.T) {
+	state := new(tabsItemState)
+	gtx := testLayoutContext()
+	start := time.Unix(1, 0)
+	gtx.Now = start
+	if got := state.selectionProgress(gtx, false); got != 0 {
+		t.Fatalf("initial selection = %v, want 0", got)
+	}
+	state.selectionProgress(gtx, true)
+	gtx.Now = start.Add(tabsColorDuration / 2)
+	if got := state.selectionProgress(gtx, true); got <= 0 || got >= 1 {
+		t.Fatalf("selection midpoint = %v, want between 0 and 1", got)
+	}
+	gtx.Now = start.Add(tabsColorDuration)
+	if got := state.selectionProgress(gtx, true); got != 1 {
+		t.Fatalf("selection end = %v, want 1", got)
+	}
+}
+
+func TestTabsIndicatorMovesAndResizesBetweenTabs(t *testing.T) {
+	state := new(tabsIndicatorState)
+	gtx := testLayoutContext()
+	start := time.Unix(1, 0)
+	first := image.Rect(0, 0, 80, 32)
+	second := image.Rect(80, 0, 200, 32)
+
+	gtx.Now = start
+	if got := state.transition(gtx, "first", TabsHorizontal, first); got != first {
+		t.Fatalf("initial indicator = %v, want %v", got, first)
+	}
+	if got := state.transition(gtx, "second", TabsHorizontal, second); got != first {
+		t.Fatalf("indicator at transition start = %v, want %v", got, first)
+	}
+
+	gtx.Now = start.Add(tabsIndicatorDuration / 2)
+	middle := state.transition(gtx, "second", TabsHorizontal, second)
+	if middle.Min.X <= first.Min.X || middle.Min.X >= second.Min.X {
+		t.Fatalf("indicator midpoint X = %d, want between %d and %d", middle.Min.X, first.Min.X, second.Min.X)
+	}
+	if middle.Dx() <= first.Dx() || middle.Dx() >= second.Dx() {
+		t.Fatalf("indicator midpoint width = %d, want between %d and %d", middle.Dx(), first.Dx(), second.Dx())
+	}
+
+	gtx.Now = start.Add(tabsIndicatorDuration)
+	if got := state.transition(gtx, "second", TabsHorizontal, second); got != second {
+		t.Fatalf("indicator at transition end = %v, want %v", got, second)
+	}
+}
+
+func TestTabsIndicatorTracksScrollingWithoutRestarting(t *testing.T) {
+	state := new(tabsIndicatorState)
+	gtx := testLayoutContext()
+	gtx.Now = time.Unix(1, 0)
+	initial := image.Rect(80, 0, 180, 32)
+	shifted := initial.Add(image.Pt(-24, 0))
+
+	state.transition(gtx, "selected", TabsHorizontal, initial)
+	if got := state.transition(gtx, "selected", TabsHorizontal, shifted); got != shifted {
+		t.Fatalf("indicator after scrolling = %v, want %v", got, shifted)
+	}
+}
+
+func TestTabsItemRectAccountsForListOffsetAndOrientation(t *testing.T) {
+	position := layout.Position{First: 1, Offset: 10}
+	widths := []int{80, 100, 120}
+
+	horizontal := TabsWidget{}.tabRect(position, widths, 2, 32, 4)
+	if want := image.Rect(90, 0, 210, 32); horizontal != want {
+		t.Fatalf("horizontal rect = %v, want %v", horizontal, want)
+	}
+	vertical := (TabsWidget{orientation: TabsVertical}).tabRect(position, widths, 2, 32, 4)
+	if want := image.Rect(0, 26, 120, 58); vertical != want {
+		t.Fatalf("vertical rect = %v, want %v", vertical, want)
+	}
+}
+
+func TestTabsRejectInvalidItemKeys(t *testing.T) {
+	state := new(tabsState)
+	state.beginFrame()
+	mustPanic(t, func() {
+		state.checkItems([]TabItem{{Label: "Missing key"}})
+	})
+	mustPanic(t, func() {
+		state.checkItems([]TabItem{{Key: "same"}, {Key: "same"}})
+	})
+}
+
+func tabsTestItems() []TabItem {
+	return []TabItem{
+		{Key: "account", Label: "Account", Panel: Text("Account panel")},
+		{Key: "security", Label: "Security", Panel: Text("Security panel")},
+		{Key: "billing", Label: "Billing", Panel: Text("Billing panel")},
+	}
+}
+
+func tabsOverflowItems() []TabItem {
+	labels := []string{"Overview", "Analytics", "Reports", "Performance", "Engagement", "Conversions", "Revenue", "Retention"}
+	items := make([]TabItem, 0, len(labels))
+	for _, label := range labels {
+		items = append(items, TabItem{Key: label, Label: label, Panel: Text(label + " panel")})
+	}
+	return items
+}
+
+func clickTabsAt(router *input.Router, position f32.Point) {
+	router.Queue(
+		pointer.Event{
+			Kind:      pointer.Press,
+			Source:    pointer.Mouse,
+			PointerID: 1,
+			Buttons:   pointer.ButtonPrimary,
+			Position:  position,
+		},
+		pointer.Event{
+			Kind:      pointer.Release,
+			Source:    pointer.Mouse,
+			PointerID: 1,
+			Position:  position,
+		},
+	)
+}
+
+func layoutTabsFrame(ctx *Context, router *input.Router, tabs TabsWidget, now time.Time, viewport image.Point) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Exact(viewport),
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	ctx.beginFrame()
+	tabs.Layout(ctx, gtx)
+	ctx.applyFrameCommands(gtx)
+	ctx.endFrame()
+	router.Frame(&ops)
+}
+
+type tabsPanelProbe struct {
+	layouts *int
+}
+
+func (p *tabsPanelProbe) Layout(_ *Context, _ layout.Context) layout.Dimensions {
+	*p.layouts++
+	return layout.Dimensions{Size: image.Pt(40, 20)}
+}
+
+func selectedSemanticLabels(nodes []input.SemanticNode) []string {
+	return collectSelectedSemanticLabels(nodes, make(map[input.SemanticID]struct{}))
+}
+
+func collectSelectedSemanticLabels(nodes []input.SemanticNode, seen map[input.SemanticID]struct{}) []string {
+	var labels []string
+	for _, node := range nodes {
+		if _, ok := seen[node.ID]; ok {
+			continue
+		}
+		seen[node.ID] = struct{}{}
+		if node.Desc.Selected {
+			labels = append(labels, node.Desc.Label)
+		}
+		labels = append(labels, collectSelectedSemanticLabels(node.Children, seen)...)
+	}
+	return labels
+}
+
+func semanticBoundsForLabel(nodes []input.SemanticNode, label string) (image.Rectangle, bool) {
+	for _, node := range nodes {
+		if node.Desc.Label == label {
+			return node.Desc.Bounds, true
+		}
+		if bounds, ok := semanticBoundsForLabel(node.Children, label); ok {
+			return bounds, true
+		}
+	}
+	return image.Rectangle{}, false
+}

@@ -61,8 +61,14 @@ func TestSurfaceLayoutPreservesChildSizeAndScopesForeground(t *testing.T) {
 	if probe.foreground != theme.Palette.SurfaceSecondaryForeground {
 		t.Fatalf("child foreground = %#v, want %#v", probe.foreground, theme.Palette.SurfaceSecondaryForeground)
 	}
+	if probe.background != theme.Palette.SurfaceSecondary {
+		t.Fatalf("child background = %#v, want %#v", probe.background, theme.Palette.SurfaceSecondary)
+	}
 	if got := ctx.foregroundColor(); got != theme.Palette.Foreground {
 		t.Fatalf("foreground after layout = %#v, want restored %#v", got, theme.Palette.Foreground)
+	}
+	if got := ctx.backgroundColor(); got != theme.Palette.Background {
+		t.Fatalf("background after layout = %#v, want restored %#v", got, theme.Palette.Background)
 	}
 }
 
@@ -83,6 +89,27 @@ func TestNestedSurfaceUsesInnermostForeground(t *testing.T) {
 
 	if probe.foreground != theme.Palette.SurfaceTertiaryForeground {
 		t.Fatalf("nested foreground = %#v, want innermost %#v", probe.foreground, theme.Palette.SurfaceTertiaryForeground)
+	}
+	if probe.background != theme.Palette.SurfaceTertiary {
+		t.Fatalf("nested background = %#v, want innermost %#v", probe.background, theme.Palette.SurfaceTertiary)
+	}
+}
+
+func TestTransparentSurfacePreservesParentBackground(t *testing.T) {
+	theme := DefaultTheme()
+	ctx := newContextWithTheme(nil, &theme)
+	probe := &surfaceProbeWidget{size: image.Pt(80, 32)}
+	var ops op.Ops
+
+	Surface(
+		Surface(probe).Variant(SurfaceTransparent),
+	).Variant(SurfaceSecondary).Layout(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
+		Ops:         &ops,
+	})
+
+	if probe.background != theme.Palette.SurfaceSecondary {
+		t.Fatalf("transparent surface background = %#v, want inherited %#v", probe.background, theme.Palette.SurfaceSecondary)
 	}
 }
 
@@ -178,6 +205,9 @@ func TestPopoverScopesOverlayForegroundToContent(t *testing.T) {
 	if probe.foreground != theme.Palette.OverlayForeground {
 		t.Fatalf("popover content foreground = %#v, want overlay foreground %#v", probe.foreground, theme.Palette.OverlayForeground)
 	}
+	if probe.background != theme.Palette.Overlay {
+		t.Fatalf("popover content background = %#v, want overlay background %#v", probe.background, theme.Palette.Overlay)
+	}
 }
 
 func TestModalScopesOverlayForegroundToContent(t *testing.T) {
@@ -196,14 +226,19 @@ func TestModalScopesOverlayForegroundToContent(t *testing.T) {
 	if probe.foreground != theme.Palette.OverlayForeground {
 		t.Fatalf("modal content foreground = %#v, want overlay foreground %#v", probe.foreground, theme.Palette.OverlayForeground)
 	}
+	if probe.background != theme.Palette.Overlay {
+		t.Fatalf("modal content background = %#v, want overlay background %#v", probe.background, theme.Palette.Overlay)
+	}
 }
 
 type surfaceProbeWidget struct {
 	size       image.Point
 	foreground color.NRGBA
+	background color.NRGBA
 }
 
 func (w *surfaceProbeWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	w.foreground = ctx.foregroundColor()
+	w.background = ctx.backgroundColor()
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
 }

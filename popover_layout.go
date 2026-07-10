@@ -84,7 +84,7 @@ func (p PopoverWidget) layoutPanel(ctx *Context, gtx layout.Context, placement P
 	macro := op.Record(gtx.Ops)
 	var contentDims layout.Dimensions
 	func() {
-		restore := ctx.pushForeground(style.text)
+		restore := ctx.pushColors(style.text, style.surface)
 		defer restore()
 		contentDims = p.layoutDialog(ctx, contentGtx, style)
 	}()

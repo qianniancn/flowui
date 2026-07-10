@@ -35,6 +35,8 @@ type Palette struct {
 	Foreground                 color.NRGBA
 	MutedForeground            color.NRGBA
 	Border                     color.NRGBA
+	Segment                    color.NRGBA
+	SegmentForeground          color.NRGBA
 	Accent                     color.NRGBA
 	AccentHover                color.NRGBA
 	AccentForeground           color.NRGBA
@@ -94,6 +96,7 @@ type ComponentsTheme struct {
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
 	ListBox     ListBoxTheme
+	Tabs        TabsTheme
 	Select      SelectTheme
 	Popover     PopoverTheme
 	Modal       ModalTheme
@@ -203,6 +206,30 @@ type ListBoxTheme struct {
 	ItemIndicatorStroke   unit.Dp
 	FocusRingWidth        unit.Dp
 	PressedScale          float32
+}
+
+type TabsTheme struct {
+	RootGap             unit.Dp
+	ListPadding         unit.Dp
+	ListRadius          unit.Dp
+	TabHeight           unit.Dp
+	SmallTabHeight      unit.Dp
+	TabMinWidth         unit.Dp
+	TabPaddingX         unit.Dp
+	SmallTabPaddingX    unit.Dp
+	TabGap              unit.Dp
+	TextSize            unit.Sp
+	IndicatorRadius     unit.Dp
+	IndicatorLineWidth  unit.Dp
+	FocusRingWidth      unit.Dp
+	SeparatorWidth      unit.Dp
+	PanelPadding        unit.Dp
+	PanelGap            unit.Dp
+	ScrollButtonSize    unit.Dp
+	ScrollButtonInset   unit.Dp
+	ScrollShadowSize    unit.Dp
+	ScrollChevronSize   unit.Dp
+	ScrollChevronStroke unit.Dp
 }
 
 type SelectTheme struct {
@@ -327,6 +354,8 @@ func DefaultTheme() Theme {
 			Foreground:                 color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			MutedForeground:            color.NRGBA{R: 0x76, G: 0x76, B: 0x7a, A: 0xff},
 			Border:                     color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+			Segment:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+			SegmentForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			Accent:                     color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
 			AccentHover:                color.NRGBA{R: 0x1a, G: 0x7f, B: 0xf0, A: 0xff},
 			AccentForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
@@ -466,6 +495,29 @@ func DefaultTheme() Theme {
 				FocusRingWidth:        2,
 				PressedScale:          0.98,
 			},
+			Tabs: TabsTheme{
+				RootGap:             8,
+				ListPadding:         4,
+				ListRadius:          20,
+				TabHeight:           32,
+				SmallTabHeight:      24,
+				TabMinWidth:         80,
+				TabPaddingX:         16,
+				SmallTabPaddingX:    12,
+				TabGap:              4,
+				TextSize:            14,
+				IndicatorRadius:     24,
+				IndicatorLineWidth:  2,
+				FocusRingWidth:      2,
+				SeparatorWidth:      1,
+				PanelPadding:        8,
+				PanelGap:            16,
+				ScrollButtonSize:    16,
+				ScrollButtonInset:   4,
+				ScrollShadowSize:    64,
+				ScrollChevronSize:   10,
+				ScrollChevronStroke: 1.5,
+			},
 			Select: SelectTheme{
 				Height:            36,
 				Radius:            12,
@@ -590,6 +642,8 @@ func DarkTheme() Theme {
 	theme.Palette.Foreground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.MutedForeground = color.NRGBA{R: 0xa1, G: 0xa1, B: 0xaa, A: 0xff}
 	theme.Palette.Border = color.NRGBA{R: 0x3f, G: 0x3f, B: 0x46, A: 0xff}
+	theme.Palette.Segment = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
+	theme.Palette.SegmentForeground = theme.Palette.Foreground
 	theme.Palette.SurfaceShadow = color.NRGBA{}
 	theme.Palette.OverlayShadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	theme.Palette.Shadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}

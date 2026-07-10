@@ -241,7 +241,7 @@ func (s SelectWidget) layoutPanel(ctx *Context, gtx layout.Context, state *selec
 	macro := op.Record(gtx.Ops)
 	var dims layout.Dimensions
 	func() {
-		restore := ctx.pushForeground(ctx.Theme.Palette.overlayForegroundColor())
+		restore := ctx.pushColors(ctx.Theme.Palette.overlayForegroundColor(), ctx.Theme.Palette.overlayColor())
 		defer restore()
 		list := s.listBox(ctx, state, open)
 		dims = list.Layout(ctx, gtx)

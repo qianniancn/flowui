@@ -175,6 +175,7 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	radio := ctx.radioGroupState("plan")
 	progress := ctx.progressBarState("upload")
 	listBox := ctx.listBoxState("files")
+	tabs := ctx.tabsState("settings-tabs")
 	popover := ctx.popoverState("help")
 	modal := ctx.modalState("settings")
 	list := ctx.listState("todos")
@@ -224,6 +225,9 @@ func TestEndFrameKeepsUsedState(t *testing.T) {
 	if ctx.listBoxes["files"] != listBox {
 		t.Fatal("list box state was not kept")
 	}
+	if ctx.tabs["settings-tabs"] != tabs {
+		t.Fatal("tabs state was not kept")
+	}
 	if ctx.popovers["help"] != popover {
 		t.Fatal("popover state was not kept")
 	}
@@ -255,6 +259,7 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	ctx.radioGroupState("plan")
 	ctx.progressBarState("upload")
 	ctx.listBoxState("files")
+	ctx.tabsState("settings-tabs")
 	ctx.popoverState("help")
 	ctx.modalState("settings")
 	ctx.listState("todos")
@@ -302,6 +307,9 @@ func TestEndFrameRemovesUnusedState(t *testing.T) {
 	}
 	if len(ctx.listBoxes) != 0 {
 		t.Fatalf("list boxes = %d, want 0", len(ctx.listBoxes))
+	}
+	if len(ctx.tabs) != 0 {
+		t.Fatalf("tabs = %d, want 0", len(ctx.tabs))
 	}
 	if len(ctx.popovers) != 0 {
 		t.Fatalf("popovers = %d, want 0", len(ctx.popovers))

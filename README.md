@@ -118,6 +118,7 @@ text/editor internals.
 - `RadioGroup`
 - `ProgressBar`
 - `ListBox`
+- `Tabs`
 - `Select`
 - `ComboBox`
 - `DatePicker`
@@ -162,6 +163,7 @@ Examples live in `examples/`:
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
+- `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.

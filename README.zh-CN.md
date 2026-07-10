@@ -104,6 +104,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 ### 基础控件
 
 - `Text`
+- `Label`
 - `Button`
 - `Input`
 - `Checkbox`
@@ -149,6 +150,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `async`：基于 command 的异步消息。
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `inputs`：输入框样式和事件。
+- `labels`：表单标签状态，以及与输入框、组合框和选择器的字段关联。
 - `checkboxes`：复选框状态和校验。
 - `switches`：开关状态、尺寸、描述、label 位置、thumb 内容和开关组。
 - `radio_groups`：互斥单选选项。

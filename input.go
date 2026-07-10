@@ -75,6 +75,7 @@ func (i InputWidget) FullWidth() InputWidget {
 
 func (i InputWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	key, editor := ctx.inputEditor(i.key)
+	ctx.registerFieldFocus(key, editor, gtx.Enabled() && !i.disabled)
 	state := ctx.inputState(key)
 	state.update(ctx, gtx, i.disabled, editor)
 
@@ -108,5 +109,5 @@ func (i InputWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions 
 	editorStyle.HintColor = style.placeholder
 	editorStyle.SelectionColor = style.selection
 
-	return i.layoutFrame(ctx, gtx, state, style, editorStyle.Layout)
+	return i.layoutFrame(ctx, gtx, state, style, ctx.withFieldLabel(key, editorStyle.Layout))
 }

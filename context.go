@@ -6,6 +6,7 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	flowstate "github.com/qianniancn/FlowUI/state"
@@ -43,6 +44,9 @@ type Context struct {
 	scrolls         map[string]*layout.List
 	keys            flowstate.Keys
 	focus           flowstate.Focus
+	fieldFocus      map[string]fieldFocusTarget
+	fieldLabels     map[string]string
+	frameLabels     map[string]struct{}
 	activeSelectKey string
 	viewport        image.Point
 	foreground      color.NRGBA
@@ -95,6 +99,11 @@ func (ctx *Context) beginFrame() {
 	}
 	ctx.keys.BeginFrame()
 	ctx.focus.BeginFrame()
+	if ctx.frameLabels == nil {
+		ctx.frameLabels = make(map[string]struct{})
+	} else {
+		clear(ctx.frameLabels)
+	}
 }
 
 func (ctx *Context) beginFrameWithViewport(viewport image.Point) {
@@ -119,6 +128,51 @@ func (ctx *Context) applyFrameCommands(gtx layout.Context) {
 
 func (ctx *Context) requestFocus(tag event.Tag) {
 	ctx.focus.Request(tag)
+}
+
+type fieldFocusTarget struct {
+	tag     event.Tag
+	enabled bool
+}
+
+func (ctx *Context) registerFieldFocus(key string, tag event.Tag, enabled bool) {
+	if ctx.fieldFocus == nil {
+		ctx.fieldFocus = make(map[string]fieldFocusTarget)
+	}
+	ctx.fieldFocus[key] = fieldFocusTarget{tag: tag, enabled: enabled}
+}
+
+func (ctx *Context) requestFieldFocus(key string) {
+	target, ok := ctx.fieldFocus[key]
+	if ok && target.enabled {
+		ctx.requestFocus(target.tag)
+	}
+}
+
+func (ctx *Context) registerFieldLabel(key, label string) {
+	if ctx.fieldLabels == nil {
+		ctx.fieldLabels = make(map[string]string)
+	}
+	if ctx.frameLabels == nil {
+		ctx.frameLabels = make(map[string]struct{})
+	}
+	ctx.fieldLabels[key] = label
+	ctx.frameLabels[key] = struct{}{}
+}
+
+func (ctx *Context) fieldLabel(key string) string {
+	return ctx.fieldLabels[key]
+}
+
+func (ctx *Context) withFieldLabel(key string, child layout.Widget) layout.Widget {
+	label := ctx.fieldLabel(key)
+	if label == "" {
+		return child
+	}
+	return func(gtx layout.Context) layout.Dimensions {
+		semantic.LabelOp(label).Add(gtx.Ops)
+		return child(gtx)
+	}
 }
 
 func (ctx *Context) focusOnPress(tag event.Tag, history []widget.Press, before int) {
@@ -146,6 +200,17 @@ func activePresses(history []widget.Press) int {
 
 func (ctx *Context) endFrame() {
 	frameKeys := ctx.keys.Frame()
+	for key := range ctx.fieldFocus {
+		kind := frameKeys[key]
+		if kind != flowstate.KindInput && kind != flowstate.KindComboBox && kind != flowstate.KindSelect {
+			delete(ctx.fieldFocus, key)
+		}
+	}
+	for key := range ctx.fieldLabels {
+		if _, ok := ctx.frameLabels[key]; !ok {
+			delete(ctx.fieldLabels, key)
+		}
+	}
 	flowstate.Sweep(ctx.clickables, frameKeys, flowstate.KindClickable)
 	flowstate.Sweep(ctx.buttons, frameKeys, flowstate.KindClickable)
 	sweepEditorState(ctx.editors, frameKeys)

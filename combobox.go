@@ -100,7 +100,9 @@ func (c ComboBoxWidget) AllowCustomValue() ComboBoxWidget {
 
 func (c ComboBoxWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	state := ctx.comboBoxState(c.key)
+	key := ctx.fullKey(c.key)
 	editor := &state.editor
+	ctx.registerFieldFocus(key, editor, gtx.Enabled() && !c.disabled)
 	editor.SingleLine = true
 	editor.Submit = true
 	state.beginFrame()
@@ -138,7 +140,7 @@ func (c ComboBoxWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensio
 	editorStyle.HintColor = style.placeholder
 	editorStyle.SelectionColor = style.selection
 
-	dims := c.layoutInput(ctx, gtx, state, editor, style, editorStyle.Layout)
+	dims := c.layoutInput(ctx, gtx, state, editor, style, ctx.withFieldLabel(key, editorStyle.Layout))
 	progress := state.popoverProgress(gtx, state.open && !c.disabled)
 	if progress == 0 {
 		state.endFrame()

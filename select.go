@@ -209,6 +209,7 @@ func (s SelectWidget) FullWidth() SelectWidget {
 
 func (s SelectWidget) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	state := ctx.selectState(s.key)
+	ctx.registerFieldFocus(state.key, &state.trigger, gtx.Enabled() && !s.disabled)
 	state.bind(s)
 	open := state.isOpen(s)
 	if s.disabled {

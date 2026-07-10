@@ -85,6 +85,7 @@ type Spacing struct {
 
 type ComponentsTheme struct {
 	Button      ButtonTheme
+	Label       LabelTheme
 	Input       InputTheme
 	Checkbox    CheckboxTheme
 	Switch      SwitchTheme
@@ -97,6 +98,11 @@ type ComponentsTheme struct {
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
+}
+
+type LabelTheme struct {
+	TextSize           unit.Sp
+	RequiredMarkOffset unit.Dp
 }
 
 type ButtonTheme struct {
@@ -196,24 +202,22 @@ type ListBoxTheme struct {
 }
 
 type SelectTheme struct {
-	Height             unit.Dp
-	Radius             unit.Dp
-	TextSize           unit.Sp
-	LabelTextSize      unit.Sp
-	DescriptionSize    unit.Sp
-	ContentGap         unit.Dp
-	TriggerPaddingX    unit.Dp
-	TriggerPaddingY    unit.Dp
-	IndicatorWidth     unit.Dp
-	IndicatorSize      unit.Dp
-	IndicatorStroke    unit.Dp
-	PanelGap           unit.Dp
-	PanelRadius        unit.Dp
-	PanelMaxHeight     unit.Dp
-	PanelPadding       unit.Dp
-	AnimationScale     float32
-	AnimationDistance  unit.Dp
-	RequiredMarkOffset unit.Dp
+	Height            unit.Dp
+	Radius            unit.Dp
+	TextSize          unit.Sp
+	DescriptionSize   unit.Sp
+	ContentGap        unit.Dp
+	TriggerPaddingX   unit.Dp
+	TriggerPaddingY   unit.Dp
+	IndicatorWidth    unit.Dp
+	IndicatorSize     unit.Dp
+	IndicatorStroke   unit.Dp
+	PanelGap          unit.Dp
+	PanelRadius       unit.Dp
+	PanelMaxHeight    unit.Dp
+	PanelPadding      unit.Dp
+	AnimationScale    float32
+	AnimationDistance unit.Dp
 }
 
 type PopoverTheme struct {
@@ -374,6 +378,10 @@ func DefaultTheme() Theme {
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,
 			},
+			Label: LabelTheme{
+				TextSize:           14,
+				RequiredMarkOffset: 2,
+			},
 			Input: InputTheme{
 				PaddingX:      12,
 				ShadowOpacity: 1,
@@ -454,24 +462,22 @@ func DefaultTheme() Theme {
 				PressedScale:          0.98,
 			},
 			Select: SelectTheme{
-				Height:             36,
-				Radius:             12,
-				TextSize:           14,
-				LabelTextSize:      14,
-				DescriptionSize:    12,
-				ContentGap:         4,
-				TriggerPaddingX:    12,
-				TriggerPaddingY:    8,
-				IndicatorWidth:     28,
-				IndicatorSize:      16,
-				IndicatorStroke:    1.7,
-				PanelGap:           6,
-				PanelRadius:        24,
-				PanelMaxHeight:     280,
-				PanelPadding:       6,
-				AnimationScale:     0.95,
-				AnimationDistance:  4,
-				RequiredMarkOffset: 2,
+				Height:            36,
+				Radius:            12,
+				TextSize:          14,
+				DescriptionSize:   12,
+				ContentGap:        4,
+				TriggerPaddingX:   12,
+				TriggerPaddingY:   8,
+				IndicatorWidth:    28,
+				IndicatorSize:     16,
+				IndicatorStroke:   1.7,
+				PanelGap:          6,
+				PanelRadius:       24,
+				PanelMaxHeight:    280,
+				PanelPadding:      6,
+				AnimationScale:    0.95,
+				AnimationDistance: 4,
 			},
 			Popover: PopoverTheme{
 				Offset:         8,

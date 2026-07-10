@@ -108,6 +108,7 @@ text/editor internals.
 ### Controls
 
 - `Text`
+- `Label`
 - `Button`
 - `Input`
 - `Checkbox`
@@ -153,6 +154,7 @@ Examples live in `examples/`:
 - `async`: asynchronous messages with commands.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `inputs`: input styles and events.
+- `labels`: form label states and field association for input, combo box, and select controls.
 - `checkboxes`: checkbox states and validation.
 - `switches`: switch states, sizes, descriptions, label position, thumb content, and switch groups.
 - `radio_groups`: mutually exclusive option selection.

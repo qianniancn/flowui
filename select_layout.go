@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"gioui.org/f32"
-	"gioui.org/font"
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
@@ -24,7 +23,7 @@ func (s SelectWidget) layout(ctx *Context, gtx layout.Context, state *selectStat
 	children := make([]layout.FlexChild, 0, 3)
 	if s.label != "" {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			labelDims = s.layoutLabel(ctx, gtx, style)
+			labelDims = s.layoutLabel(ctx, gtx)
 			return labelDims
 		}))
 	}
@@ -55,29 +54,13 @@ func (s SelectWidget) layout(ctx *Context, gtx layout.Context, state *selectStat
 	return dims
 }
 
-func (s SelectWidget) layoutLabel(ctx *Context, gtx layout.Context, style selectStyle) layout.Dimensions {
-	children := []layout.FlexChild{
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return Text(s.label).
-				Size(float32(ctx.Theme.Components.Select.LabelTextSize)).
-				Weight(font.Medium).
-				Color(style.label).
-				Layout(ctx, gtx)
-		}),
-	}
-	if s.required {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return Text("*").
-				Size(float32(ctx.Theme.Components.Select.LabelTextSize)).
-				Color(style.error).
-				Layout(ctx, gtx)
-		}))
-	}
-	return layout.Flex{
-		Axis:      layout.Horizontal,
-		Alignment: layout.Baseline,
-		Gap:       gtx.Dp(ctx.Theme.Components.Select.RequiredMarkOffset),
-	}.Layout(gtx, children...)
+func (s SelectWidget) layoutLabel(ctx *Context, gtx layout.Context) layout.Dimensions {
+	return Label(s.label).
+		For(s.key).
+		Required(s.required).
+		Disabled(s.disabled).
+		Invalid(s.invalid).
+		Layout(ctx, gtx)
 }
 
 func (s SelectWidget) supportMessage(style selectStyle) (string, color.NRGBA) {
@@ -107,7 +90,11 @@ func (s SelectWidget) layoutTrigger(ctx *Context, gtx layout.Context, state *sel
 		style.field.border = state.field.borderColor(animGtx, style.field.border)
 
 		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(s.semanticLabel(value)).Add(gtx.Ops)
+		label := s.label
+		if label == "" {
+			label = ctx.fieldLabel(state.key)
+		}
+		semantic.LabelOp(selectSemanticLabel(label, value)).Add(gtx.Ops)
 		if s.description != "" || (s.invalid && s.errorMessage != "") {
 			description := s.description
 			if s.invalid && s.errorMessage != "" {
@@ -177,10 +164,10 @@ func layoutSelectValue(ctx *Context, gtx layout.Context, value string, selected 
 	return label.Layout(gtx)
 }
 
-func (s SelectWidget) semanticLabel(value string) string {
+func selectSemanticLabel(label, value string) string {
 	parts := make([]string, 0, 2)
-	if s.label != "" {
-		parts = append(parts, s.label)
+	if label != "" {
+		parts = append(parts, label)
 	}
 	if value != "" {
 		parts = append(parts, value)

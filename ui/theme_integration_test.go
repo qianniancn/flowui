@@ -17,6 +17,15 @@ func TestThemeControlsButtonHeight(t *testing.T) {
 	}
 }
 
+func TestThemeControlsCloseButtonSize(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.CloseButton.Size = 30
+	dims := CloseButton("close").Layout(themeTestContext(&theme), testLayoutContext())
+	if dims.Size != image.Pt(30, 30) {
+		t.Fatalf("close button size = %v, want (30,30)", dims.Size)
+	}
+}
+
 func TestThemeControlsCardSpacing(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.Card.Padding = 20

@@ -20,19 +20,59 @@ type FocusAnimation struct {
 	ready        bool
 	focused      bool
 	pointerFocus bool
+	pendingPress bool
+	pendingAge   uint8
+	historyLen   int
+	lastPress    time.Time
+	historyReady bool
 }
 
 func (s *FocusAnimation) Visible(focused bool, history []widget.Press) bool {
+	pointerPress := s.observePointerPress(history)
 	if !focused {
 		s.focused = false
 		s.pointerFocus = false
+		// A pointer-issued focus command is observed on the following frame.
+		if s.pendingPress && !pointerPress {
+			s.pendingAge++
+			if s.pendingAge > 1 {
+				s.pendingPress = false
+				s.pendingAge = 0
+			}
+		}
 		return false
 	}
 	if !s.focused {
 		s.focused = true
-		s.pointerFocus = len(history) > 0
+		s.pointerFocus = s.pendingPress
+		s.pendingPress = false
+		s.pendingAge = 0
+	} else if pointerPress {
+		s.pointerFocus = true
+		s.pendingPress = false
+		s.pendingAge = 0
 	}
 	return !s.pointerFocus
+}
+
+func (s *FocusAnimation) observePointerPress(history []widget.Press) bool {
+	length := len(history)
+	var last time.Time
+	if length > 0 {
+		last = history[length-1].Start
+	}
+	pointerPress := s.historyReady && length > 0 && (length > s.historyLen || last != s.lastPress)
+	if !s.historyReady && length > 0 {
+		pointerPress = true
+	}
+	s.historyLen = length
+	s.lastPress = last
+	s.historyReady = true
+	if pointerPress {
+		s.pendingPress = true
+		s.pendingAge = 0
+	}
+	return pointerPress
 }
 
 func (s *FocusAnimation) Opacity(gtx layout.Context, visible bool) float32 {

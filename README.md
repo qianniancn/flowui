@@ -163,6 +163,7 @@ Examples live in `examples/`:
 - `counter`: basic MVU state updates.
 - `async`: asynchronous messages with commands.
 - `buttons`: button variants, loading, disabled, and interaction states.
+- `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.
 - `inputs`: input styles and events.
 - `labels`: form label states and field association for input, combo box, and select controls.
 - `descriptions`: supporting text states, field association, wrapping, and component compatibility.

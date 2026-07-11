@@ -88,6 +88,7 @@ type Spacing struct {
 
 type ComponentsTheme struct {
 	Button      ButtonTheme
+	CloseButton CloseButtonTheme
 	Card        CardTheme
 	Description DescriptionTheme
 	Label       LabelTheme
@@ -140,6 +141,15 @@ type ButtonTheme struct {
 	PressedScaleSmall  float32
 	PressedScaleMedium float32
 	PressedScaleLarge  float32
+}
+
+type CloseButtonTheme struct {
+	Size           unit.Dp
+	Radius         unit.Dp
+	Padding        unit.Dp
+	IconSize       unit.Dp
+	FocusRingWidth unit.Dp
+	PressedScale   float32
 }
 
 type InputTheme struct {
@@ -468,6 +478,14 @@ func DefaultTheme() Theme {
 				PressedScaleSmall:  0.98,
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,
+			},
+			CloseButton: CloseButtonTheme{
+				Size:           24,
+				Radius:         12,
+				Padding:        4,
+				IconSize:       16,
+				FocusRingWidth: 2,
+				PressedScale:   0.93,
 			},
 			Card: CardTheme{
 				Padding:               16,

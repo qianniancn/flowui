@@ -110,6 +110,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Label`
 - `Description`
 - `Button`
+- `ToggleButton`
 - `Input`
 - `Checkbox`
 - `Switch`
@@ -158,6 +159,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `counter`：基础 MVU 状态更新。
 - `async`：基于 command 的异步消息。
 - `buttons`：按钮变体、加载、禁用和交互状态。
+- `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。
 - `inputs`：输入框样式和事件。
 - `labels`：表单标签状态，以及与输入框、组合框和选择器的字段关联。

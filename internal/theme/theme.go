@@ -89,28 +89,29 @@ type Spacing struct {
 }
 
 type ComponentsTheme struct {
-	Button      ButtonTheme
-	CloseButton CloseButtonTheme
-	Card        CardTheme
-	Description DescriptionTheme
-	Label       LabelTheme
-	Input       InputTheme
-	Checkbox    CheckboxTheme
-	Switch      SwitchTheme
-	SwitchGroup SwitchGroupTheme
-	RadioGroup  RadioGroupTheme
-	ProgressBar ProgressBarTheme
-	Spinner     SpinnerTheme
-	Slider      SliderTheme
-	ListBox     ListBoxTheme
-	Tabs        TabsTheme
-	Select      SelectTheme
-	Popover     PopoverTheme
-	Tooltip     TooltipTheme
-	Toast       ToastTheme
-	Modal       ModalTheme
-	ComboBox    ComboBoxTheme
-	DatePicker  DatePickerTheme
+	Button       ButtonTheme
+	ToggleButton ToggleButtonTheme
+	CloseButton  CloseButtonTheme
+	Card         CardTheme
+	Description  DescriptionTheme
+	Label        LabelTheme
+	Input        InputTheme
+	Checkbox     CheckboxTheme
+	Switch       SwitchTheme
+	SwitchGroup  SwitchGroupTheme
+	RadioGroup   RadioGroupTheme
+	ProgressBar  ProgressBarTheme
+	Spinner      SpinnerTheme
+	Slider       SliderTheme
+	ListBox      ListBoxTheme
+	Tabs         TabsTheme
+	Select       SelectTheme
+	Popover      PopoverTheme
+	Tooltip      TooltipTheme
+	Toast        ToastTheme
+	Modal        ModalTheme
+	ComboBox     ComboBoxTheme
+	DatePicker   DatePickerTheme
 }
 
 type CardTheme struct {
@@ -141,6 +142,25 @@ type ButtonTheme struct {
 	SpinnerSmall       unit.Dp
 	SpinnerMedium      unit.Dp
 	SpinnerLarge       unit.Dp
+	PressedScaleSmall  float32
+	PressedScaleMedium float32
+	PressedScaleLarge  float32
+}
+
+type ToggleButtonTheme struct {
+	SmallHeight        unit.Dp
+	MediumHeight       unit.Dp
+	LargeHeight        unit.Dp
+	SmallPaddingX      unit.Dp
+	MediumPaddingX     unit.Dp
+	LargePaddingX      unit.Dp
+	Radius             unit.Dp
+	ContentGap         unit.Dp
+	SmallTextSize      unit.Sp
+	MediumTextSize     unit.Sp
+	LargeTextSize      unit.Sp
+	FocusRingWidth     unit.Dp
+	FocusRingOffset    unit.Dp
 	PressedScaleSmall  float32
 	PressedScaleMedium float32
 	PressedScaleLarge  float32
@@ -502,6 +522,24 @@ func DefaultTheme() Theme {
 				SpinnerSmall:       14,
 				SpinnerMedium:      16,
 				SpinnerLarge:       18,
+				PressedScaleSmall:  0.98,
+				PressedScaleMedium: 0.97,
+				PressedScaleLarge:  0.96,
+			},
+			ToggleButton: ToggleButtonTheme{
+				SmallHeight:        32,
+				MediumHeight:       36,
+				LargeHeight:        40,
+				SmallPaddingX:      12,
+				MediumPaddingX:     16,
+				LargePaddingX:      16,
+				Radius:             24,
+				ContentGap:         8,
+				SmallTextSize:      14,
+				MediumTextSize:     14,
+				LargeTextSize:      16,
+				FocusRingWidth:     2,
+				FocusRingOffset:    2,
 				PressedScaleSmall:  0.98,
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,

@@ -17,6 +17,15 @@ func TestThemeControlsButtonHeight(t *testing.T) {
 	}
 }
 
+func TestThemeControlsToggleButtonHeight(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.ToggleButton.MediumHeight = 42
+	dims := ToggleButton("pin", false, Text("Pin")).Layout(themeTestContext(&theme), testLayoutContext())
+	if dims.Size.Y != 42 {
+		t.Fatalf("toggle button height = %d, want 42", dims.Size.Y)
+	}
+}
+
 func TestThemeControlsCloseButtonSize(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.CloseButton.Size = 30

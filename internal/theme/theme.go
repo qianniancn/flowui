@@ -96,6 +96,7 @@ type ComponentsTheme struct {
 	SwitchGroup SwitchGroupTheme
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
+	Slider      SliderTheme
 	ListBox     ListBoxTheme
 	Tabs        TabsTheme
 	Select      SelectTheme
@@ -199,6 +200,22 @@ type ProgressBarTheme struct {
 	LargeRadius  unit.Dp
 	HeaderGap    unit.Dp
 	TextSize     unit.Sp
+}
+
+type SliderTheme struct {
+	TrackThickness  unit.Dp
+	TrackRadius     unit.Dp
+	EdgeInset       unit.Dp
+	ThumbLength     unit.Dp
+	ThumbCross      unit.Dp
+	ThumbExtra      unit.Dp
+	ThumbRadius     unit.Dp
+	HeaderGap       unit.Dp
+	VerticalGap     unit.Dp
+	TextSize        unit.Sp
+	FocusRingWidth  unit.Dp
+	FocusRingOffset unit.Dp
+	DraggingScale   float32
 }
 
 type ListBoxTheme struct {
@@ -500,6 +517,21 @@ func DefaultTheme() Theme {
 				LargeRadius:  6,
 				HeaderGap:    4,
 				TextSize:     14,
+			},
+			Slider: SliderTheme{
+				TrackThickness:  20,
+				TrackRadius:     12,
+				EdgeInset:       12,
+				ThumbLength:     24,
+				ThumbCross:      16,
+				ThumbExtra:      4,
+				ThumbRadius:     8,
+				HeaderGap:       4,
+				VerticalGap:     8,
+				TextSize:        14,
+				FocusRingWidth:  2,
+				FocusRingOffset: 2,
+				DraggingScale:   0.9,
 			},
 			ListBox: ListBoxTheme{
 				Padding:               4,

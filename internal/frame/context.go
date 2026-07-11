@@ -287,7 +287,7 @@ func EndFrame(ctx *Context) {
 	frameKeys := ctx.keys.Frame()
 	for key := range ctx.fieldFocus {
 		kind := frameKeys[key]
-		if kind != state.KindInput && kind != state.KindComboBox && kind != state.KindSelect {
+		if kind != state.KindInput && kind != state.KindComboBox && kind != state.KindSelect && kind != state.KindSlider {
 			delete(ctx.fieldFocus, key)
 		}
 	}

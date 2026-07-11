@@ -121,6 +121,7 @@ text/editor internals.
 - `SwitchGroup`
 - `RadioGroup`
 - `ProgressBar`
+- `Slider`, `RangeSlider`
 - `ListBox`
 - `Tabs`
 - `Select`
@@ -167,6 +168,7 @@ Examples live in `examples/`:
 - `switches`: switch states, sizes, descriptions, label position, thumb content, and switch groups.
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
+- `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.

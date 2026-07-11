@@ -26,6 +26,15 @@ func TestThemeControlsCardSpacing(t *testing.T) {
 	}
 }
 
+func TestThemeControlsSliderThickness(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.Slider.TrackThickness = 28
+	dims := Slider("volume", 30).Layout(themeTestContext(&theme), testLayoutContext())
+	if dims.Size.Y != 28 {
+		t.Fatalf("slider height = %d, want 28", dims.Size.Y)
+	}
+}
+
 func TestThemeControlsCheckboxSize(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.Checkbox.Size = 22

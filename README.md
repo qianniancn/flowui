@@ -129,6 +129,7 @@ text/editor internals.
 - `ComboBox`
 - `DatePicker`
 - `Popover`
+- `Tooltip`
 - `Modal`
 
 ### Layout
@@ -175,6 +176,7 @@ Examples live in `examples/`:
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
+- `tooltips`: HeroUI-aligned hover and focus hints with delays, arrows, placement, and viewport flipping.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.
 - `cards`: HeroUI-aligned card variants, semantic sections, and composed actions.
 - `selects`: single and multiple selection, sections, disabled options, validation, controlled open state, and Surface styling.

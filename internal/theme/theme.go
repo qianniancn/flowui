@@ -2,6 +2,7 @@ package theme
 
 import (
 	"image/color"
+	"time"
 
 	"gioui.org/unit"
 	"gioui.org/widget/material"
@@ -102,6 +103,7 @@ type ComponentsTheme struct {
 	Tabs        TabsTheme
 	Select      SelectTheme
 	Popover     PopoverTheme
+	Tooltip     TooltipTheme
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
@@ -302,6 +304,22 @@ type PopoverTheme struct {
 	BodyTextSize   unit.Sp
 	SectionGap     unit.Dp
 	AnimationScale float32
+}
+
+type TooltipTheme struct {
+	Offset            unit.Dp
+	ArrowOffset       unit.Dp
+	Padding           unit.Dp
+	Radius            unit.Dp
+	BorderWidth       unit.Dp
+	MaxWidth          unit.Dp
+	ArrowSize         unit.Dp
+	TextSize          unit.Sp
+	AnimationScale    float32
+	ExitScale         float32
+	AnimationDistance unit.Dp
+	Delay             time.Duration
+	CloseDelay        time.Duration
 }
 
 type ModalTheme struct {
@@ -622,6 +640,21 @@ func DefaultTheme() Theme {
 				BodyTextSize:   14,
 				SectionGap:     8,
 				AnimationScale: 0.90,
+			},
+			Tooltip: TooltipTheme{
+				Offset:            3,
+				ArrowOffset:       7,
+				Padding:           8,
+				Radius:            12,
+				BorderWidth:       1,
+				MaxWidth:          320,
+				ArrowSize:         12,
+				TextSize:          12,
+				AnimationScale:    0.90,
+				ExitScale:         0.95,
+				AnimationDistance: 4,
+				Delay:             1500 * time.Millisecond,
+				CloseDelay:        500 * time.Millisecond,
 			},
 			Modal: ModalTheme{
 				XSmallWidth:          320,

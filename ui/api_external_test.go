@@ -86,6 +86,10 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.Spinner().Color(ui.SpinnerSuccess).Size(ui.SpinnerSmall).Label("Saving"),
 		ui.Slider("volume", 30).Label("Volume").ShowValue(),
 		ui.RangeSlider("price", 10, 80).Range(0, 100).Step(5),
+		ui.Tooltip("save-help", ui.Button("save", ui.Text("Save")), ui.Text("Save changes")).
+			Placement(ui.TooltipTop).
+			Arrow(true).
+			Delay(0),
 		ui.Modal("dialog", model.open, "Settings", ui.Text("Body")).
 			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }),
 	)

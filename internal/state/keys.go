@@ -22,6 +22,7 @@ const (
 	KindListBox     Kind = "listbox"
 	KindTabs        Kind = "tabs"
 	KindPopover     Kind = "popover"
+	KindTooltip     Kind = "tooltip"
 	KindModal       Kind = "modal"
 	KindList        Kind = "list"
 	KindScroll      Kind = "scroll"

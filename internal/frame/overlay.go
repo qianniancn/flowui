@@ -28,7 +28,9 @@ type OverlayRequest struct {
 	Anchor    image.Rectangle
 	HasAnchor bool
 	Disabled  bool
-	Layout    func(layout.Context, image.Rectangle, bool) layout.Dimensions
+	// Passive overlays are painted normally but never own overlay input.
+	Passive bool
+	Layout  func(layout.Context, image.Rectangle, bool) layout.Dimensions
 	// Tail records a focus boundary for the nearest topmost overlay ancestor.
 	// It runs after all overlay layouts and must not register another overlay.
 	Tail func(layout.Context)
@@ -240,7 +242,7 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 		}
 		anchor, _, _, inheritedOpacity := resolveOverlayAnchor(request)
 		request.rendered = true
-		interactive := !host.hasEventTop || host.eventTop == request.identity
+		interactive := !request.Passive && (!host.hasEventTop || host.eventTop == request.identity)
 		func() {
 			host.active = request
 			previousCurrent := host.current
@@ -269,9 +271,11 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 				request.Layout(requestGtx, anchor, interactive)
 			}
 		}()
-		top = request.identity
-		topRequest = request
-		hasTop = true
+		if !request.Passive {
+			top = request.identity
+			topRequest = request
+			hasTop = true
+		}
 	}
 	tail := topOverlayTail(topRequest)
 	if tail != nil {

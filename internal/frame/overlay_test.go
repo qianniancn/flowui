@@ -58,6 +58,34 @@ func TestLayoutOverlaysRecordsRootInputOps(t *testing.T) {
 	}
 }
 
+func TestPassiveOverlayDoesNotOwnOverlayInput(t *testing.T) {
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	var popupInteractive, tooltipInteractive bool
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "popup",
+		Layout: func(_ layout.Context, _ image.Rectangle, interactive bool) layout.Dimensions {
+			popupInteractive = interactive
+			return layout.Dimensions{}
+		},
+	})
+	RegisterOverlay(ctx, OverlayRequest{
+		Key:     "tooltip",
+		Passive: true,
+		Layout: func(_ layout.Context, _ image.Rectangle, interactive bool) layout.Dimensions {
+			tooltipInteractive = interactive
+			return layout.Dimensions{}
+		},
+	})
+
+	LayoutOverlays(ctx, gtx)
+	if !popupInteractive || tooltipInteractive {
+		t.Fatalf("interactive states = popup %v tooltip %v", popupInteractive, tooltipInteractive)
+	}
+	if !OverlayTopmost(ctx, OverlayLayerPopup, "popup") {
+		t.Fatal("passive overlay replaced the active overlay owner")
+	}
+}
+
 func TestOverlayAnchorAccumulatesPlacedTransforms(t *testing.T) {
 	ctx, gtx := overlayTestContext(image.Pt(300, 200))
 	var got image.Rectangle

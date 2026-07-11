@@ -124,6 +124,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `ComboBox`
 - `DatePicker`
 - `Popover`
+- `Tooltip`
 - `Modal`
 
 ### 布局
@@ -170,6 +171,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。
 - `popovers`：受控浮层，包含位置、箭头、关闭行为和交互内容。
+- `tooltips`：对齐 HeroUI 的悬停与焦点提示，包含延时、箭头、位置和视口翻转。
 - `surfaces`：语义化 Surface 层级、前景色上下文、圆角和 Surface 阴影。
 - `cards`：对齐 HeroUI 的卡片变体、语义分区和组合操作。
 - `selects`：单选、多选、分组、禁用选项、校验、受控打开状态和 Surface 样式。

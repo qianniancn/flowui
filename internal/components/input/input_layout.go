@@ -5,22 +5,25 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/field"
+	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
-func (i InputWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *field.State, style field.Style, child layout.Widget) layout.Dimensions {
+func (i InputWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *inputState, style inputStyle, enabled bool, child layout.Widget) layout.Dimensions {
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.Input
 	frameConstraints := gtx.Constraints
 	if i.fullWidth {
 		frameConstraints.Min.X = frameConstraints.Max.X
 	}
-	height := min(gtx.Dp(frame.ActiveTheme(ctx).Spacing.ControlHeight), frameConstraints.Max.Y)
-	frameConstraints.Min.Y = min(max(frameConstraints.Min.Y, height), frameConstraints.Max.Y)
+	height := min(max(gtx.Dp(tokens.Height), frameConstraints.Min.Y), frameConstraints.Max.Y)
+	frameConstraints.Min.Y = height
+	frameConstraints.Max.Y = height
 
 	macro := op.Record(gtx.Ops)
 	childGtx := gtx
-	left := gtx.Dp(frame.ActiveTheme(ctx).Components.Input.PaddingX)
-	right := gtx.Dp(frame.ActiveTheme(ctx).Components.Input.PaddingX)
+	left := gtx.Dp(tokens.PaddingX)
+	right := gtx.Dp(tokens.PaddingX)
 	horizontalPadding := left + right
 	maxX := max(frameConstraints.Max.X-horizontalPadding, 0)
 	minX := min(max(frameConstraints.Min.X-horizontalPadding, 0), maxX)
@@ -34,13 +37,16 @@ func (i InputWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *
 	size = frameConstraints.Constrain(size)
 
 	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(frame.ActiveTheme(ctx).Shape.ControlRadius), 1), min(size.X, size.Y)/2)
+	radius := min(max(gtx.Dp(tokens.Radius), 1), min(size.X, size.Y)/2)
+	ringWidth := state.RingWidth(gtx, style.RingWidth)
 
-	field.DrawFrame(gtx, rect, radius, style)
+	opacity := paint.PushOpacity(gtx.Ops, style.Opacity)
+	drawInputFrame(gtx, activeTheme, rect, radius, style, ringWidth)
 	offset := image.Pt(left, max((size.Y-childDims.Size.Y)/2, 0))
 	stack := op.Offset(offset).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	stack.Pop()
-	state.AddPointer(gtx, size, i.disabled)
+	opacity.Pop()
+	state.AddPointer(gtx, size, !enabled)
 	return layout.Dimensions{Size: size}
 }

@@ -7,11 +7,13 @@ import (
 )
 
 type Model struct {
-	Name   string
-	Email  string
-	Search string
-	Full   string
-	Last   string
+	Name     string
+	Email    string
+	Age      string
+	Password string
+	Search   string
+	Full     string
+	Last     string
 }
 
 type Field string
@@ -19,6 +21,8 @@ type Field string
 const (
 	fieldName   Field = "name"
 	fieldEmail  Field = "email"
+	fieldAge    Field = "age"
+	fieldPass   Field = "password"
 	fieldSearch Field = "search"
 	fieldFull   Field = "full"
 )
@@ -46,6 +50,10 @@ func Update(m *Model, msg Msg) {
 		m.Name = msg.Text
 	case fieldEmail:
 		m.Email = msg.Text
+	case fieldAge:
+		m.Age = msg.Text
+	case fieldPass:
+		m.Password = msg.Text
 	case fieldSearch:
 		m.Search = msg.Text
 	case fieldFull:
@@ -54,7 +62,7 @@ func Update(m *Model, msg Msg) {
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
-	status := "Press Enter in a field to submit."
+	status := "No value submitted"
 	if m.Last != "" {
 		status = m.Last
 	}
@@ -62,37 +70,59 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 
 	return ui.Center(
 		ui.Box(
-			ui.Scroll("inputs",
-				ui.Column(
-					ui.Text("FlowUI Inputs").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Variants",
-						ui.Column(
-							ui.Box(input("primary", fieldName, m.Name, "Primary input", send)).
-								Width(320),
-							ui.Box(input("secondary", fieldSearch, m.Search, "Secondary input", send).
-								Variant(ui.InputSecondary)).
-								Width(320),
-						).Gap(12),
-					),
-					section("States",
-						ui.Column(
-							ui.Box(input("email", fieldEmail, m.Email, "Email", send).
-								Invalid(emailInvalid)).
-								Width(320),
-							ui.Box(ui.Input("disabled", "Disabled value").
-								Disabled(true)).
-								Width(320),
-						).Gap(12),
-					),
-					section("Full width",
-						input("full-width", fieldFull, m.Full, "Full width input", send).
-							Variant(ui.InputSecondary).
-							FullWidth(),
-					),
-				).Gap(18),
-			).Vertical(),
+			ui.Column(
+				ui.Text("FlowUI Input").Size(24),
+				ui.Text(status).Size(16),
+				ui.Divider(),
+				ui.Wrap(
+					ui.Column(
+						section("Variants",
+							ui.Column(
+								labeledInput("Primary", "primary",
+									input("primary", fieldName, m.Name, "Primary input", send)),
+								labeledInput("Secondary", "secondary",
+									input("secondary", fieldSearch, m.Search, "Secondary input", send).
+										Variant(ui.InputSecondary)),
+							).Gap(12),
+						),
+						section("Input types",
+							ui.Column(
+								labeledInput("Email", "email",
+									input("email", fieldEmail, m.Email, "jane@example.com", send).
+										Type(ui.InputEmail).
+										Invalid(emailInvalid)),
+								labeledInput("Age", "age",
+									input("age", fieldAge, m.Age, "30", send).
+										Type(ui.InputNumber).
+										MaxLength(3)),
+								labeledInput("Password", "password",
+									input("password", fieldPass, m.Password, "Enter password", send).
+										Type(ui.InputPassword).
+										MaxLength(32)),
+							).Gap(12),
+						),
+					).Gap(18),
+					ui.Column(
+						section("States",
+							ui.Column(
+								labeledInput("Read only", "read-only",
+									ui.Input("read-only", "Read-only value").ReadOnly(true)),
+								labeledInput("Disabled", "disabled",
+									ui.Input("disabled", "Disabled value").Disabled(true)),
+								labeledInput("Invalid", "invalid",
+									ui.Input("invalid", "Invalid value").Invalid(true)),
+							).Gap(12),
+						),
+						section("Full width",
+							ui.Box(
+								input("full-width", fieldFull, m.Full, "Full width input", send).
+									Variant(ui.InputSecondary).
+									FullWidth(),
+							).Width(320),
+						),
+					).Gap(18),
+				).Gap(32).LineGap(24).AlignStart(),
+			).Gap(18),
 		).FillWidth().MaxWidth(720).Padding(24),
 	)
 }
@@ -104,9 +134,16 @@ func section(title string, child ui.Widget) ui.Widget {
 	).Gap(10)
 }
 
+func labeledInput(label, key string, field ui.InputWidget) ui.Widget {
+	return ui.Column(
+		ui.Label(label).For(key),
+		ui.Box(field).Width(320),
+	).Gap(6)
+}
+
 func input(key string, field Field, value string, hint string, send ui.Send[Msg]) ui.InputWidget {
 	return ui.Input(key, value).
-		Hint(hint).
+		Placeholder(hint).
 		OnChange(func(text string) {
 			send(Msg{
 				Kind:  changed,
@@ -133,8 +170,8 @@ func containsAt(text string) bool {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
+	ui.Run(Model{Password: "heroui"}, Update, View,
 		ui.Title("FlowUI Inputs"),
-		ui.Size(900, 640),
+		ui.Size(900, 760),
 	)
 }

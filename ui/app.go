@@ -3,11 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
+	"image"
 	"io"
 	"os"
 
 	"gioui.org/app"
 	"gioui.org/layout"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/runtime"
 )
@@ -98,6 +101,11 @@ func runWindowCmd[M any, Msg any](
 		}
 	}, runtimeSubscriptions, onError, func(gtx layout.Context, model M, send func(Msg)) {
 		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+		paint.FillShape(
+			gtx.Ops,
+			frame.ActiveTheme(ctx).Palette.Background,
+			clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Op(),
+		)
 		if root := view(ctx, model, Send[Msg](send)); root != nil {
 			root.Layout(ctx, gtx)
 		}

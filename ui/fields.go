@@ -12,6 +12,7 @@ import (
 
 type InputWidget = input.InputWidget
 type InputVariant = input.InputVariant
+type InputType = input.InputType
 type ComboBoxItem = combobox.ComboBoxItem
 type ComboBoxWidget = combobox.ComboBoxWidget
 type ListBoxItem = listbox.ListBoxItem
@@ -30,6 +31,10 @@ type DatePickerLocale = datepicker.DatePickerLocale
 const (
 	InputPrimary   = input.InputPrimary
 	InputSecondary = input.InputSecondary
+	InputText      = input.InputText
+	InputEmail     = input.InputEmail
+	InputNumber    = input.InputNumber
+	InputPassword  = input.InputPassword
 
 	ListBoxItemDefault = listbox.ListBoxItemDefault
 	ListBoxItemDanger  = listbox.ListBoxItemDanger

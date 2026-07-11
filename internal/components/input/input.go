@@ -1,8 +1,8 @@
 package input
 
 import (
+	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -18,6 +18,10 @@ type InputWidget struct {
 	disabled  bool
 	invalid   bool
 	fullWidth bool
+	inputType InputType
+	readOnly  bool
+	maxLength int
+	label     string
 }
 
 type InputVariant = field.Variant
@@ -27,17 +31,16 @@ const (
 	InputSecondary = field.Secondary
 )
 
+type InputType uint8
+
 const (
-	inputHeight   = unit.Dp(40)
-	inputRadius   = unit.Dp(12)
-	inputTextSize = unit.Sp(14)
+	InputText InputType = iota
+	InputEmail
+	InputNumber
+	InputPassword
 )
 
 const stateSlotInput = "input"
-
-func inputStateFor(ctx *frame.Context, key string) *field.State {
-	return frame.UseState[field.State](ctx, key, stateSlotInput)
-}
 
 func Input(key, value string) InputWidget {
 	return InputWidget{key: key, value: value}
@@ -45,6 +48,11 @@ func Input(key, value string) InputWidget {
 
 func (i InputWidget) Hint(hint string) InputWidget {
 	i.hint = hint
+	return i
+}
+
+func (i InputWidget) Placeholder(placeholder string) InputWidget {
+	i.hint = placeholder
 	return i
 }
 
@@ -78,15 +86,40 @@ func (i InputWidget) FullWidth() InputWidget {
 	return i
 }
 
+func (i InputWidget) Type(inputType InputType) InputWidget {
+	i.inputType = inputType
+	return i
+}
+
+func (i InputWidget) ReadOnly(readOnly bool) InputWidget {
+	i.readOnly = readOnly
+	return i
+}
+
+func (i InputWidget) MaxLength(maxLength int) InputWidget {
+	i.maxLength = max(maxLength, 0)
+	return i
+}
+
+func (i InputWidget) Label(label string) InputWidget {
+	i.label = label
+	return i
+}
+
 func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	key, editor := frame.InputEditor(ctx, i.key)
-	frame.RegisterFieldFocus(ctx, key, editor, gtx.Enabled() && !i.disabled)
+	enabled := gtx.Enabled() && !i.disabled
+	disabled := !enabled
+	frame.RegisterFieldFocus(ctx, key, editor, enabled)
 	state := inputStateFor(ctx, key)
-	state.Update(ctx, gtx, i.disabled, editor)
+	state.State.Update(ctx, gtx, disabled, editor)
 
 	editor.SingleLine = true
 	editor.Submit = i.onSubmit != nil
-	if i.disabled {
+	editor.ReadOnly = i.readOnly
+	editor.MaxLen = i.maxLength
+	editor.Mask, editor.InputHint, editor.Filter = inputTypeConfig(i.inputType)
+	if disabled {
 		gtx = gtx.Disabled()
 	}
 
@@ -105,14 +138,28 @@ func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	}
 
 	focused := gtx.Focused(editor)
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, i.disabled, i.invalid)
+	style := inputStyleFor(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, disabled, i.invalid)
 	style.Background = state.Background(gtx, style.Background)
-	style.Border = state.BorderColor(gtx, style.Border)
+	style.Ring = state.BorderColor(gtx, style.Ring)
 	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, i.hint)
-	editorStyle.TextSize = frame.ActiveTheme(ctx).Typography.ControlSize
+	editorStyle.TextSize = frame.ActiveTheme(ctx).Components.Input.TextSize
+	editorStyle.LineHeight = frame.ActiveTheme(ctx).Components.Input.LineHeight
 	editorStyle.Color = style.Foreground
 	editorStyle.HintColor = style.Placeholder
 	editorStyle.SelectionColor = style.Selection
 
-	return i.layoutFrame(ctx, gtx, state, style, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
+	return i.layoutFrame(ctx, gtx, state, style, enabled, i.withSemantics(ctx, key, enabled, editorStyle.Layout))
+}
+
+func inputTypeConfig(inputType InputType) (rune, key.InputHint, string) {
+	switch inputType {
+	case InputEmail:
+		return 0, key.HintEmail, ""
+	case InputNumber:
+		return 0, key.HintNumeric, "0123456789+-.eE"
+	case InputPassword:
+		return '\u2022', key.HintPassword, ""
+	default:
+		return 0, key.HintText, ""
+	}
 }

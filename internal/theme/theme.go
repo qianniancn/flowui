@@ -176,8 +176,14 @@ type CloseButtonTheme struct {
 }
 
 type InputTheme struct {
-	PaddingX      unit.Dp
-	ShadowOpacity float32
+	Height              unit.Dp
+	Radius              unit.Dp
+	PaddingX            unit.Dp
+	TextSize            unit.Sp
+	LineHeight          unit.Sp
+	FocusRingWidth      unit.Dp
+	InvalidOutlineWidth unit.Dp
+	ShadowOpacity       float32
 }
 type CheckboxTheme struct {
 	Size        unit.Dp
@@ -453,7 +459,7 @@ type DatePickerTheme struct {
 func DefaultTheme() Theme {
 	theme := Theme{
 		Palette: Palette{
-			Background:                 color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+			Background:                 color.NRGBA{R: 0xf5, G: 0xf5, B: 0xf5, A: 0xff},
 			Surface:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 			SurfaceForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			SurfaceSecondary:           color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
@@ -486,7 +492,7 @@ func DefaultTheme() Theme {
 			DangerSoft:                 color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x26},
 			DangerSoftHover:            color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x33},
 			DangerSoftForeground:       color.NRGBA{R: 0xba, G: 0x0f, B: 0x49, A: 0xff},
-			Focus:                      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x99},
+			Focus:                      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
 			Selection:                  color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x40},
 			SurfaceShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x34},
 			OverlayShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
@@ -572,8 +578,14 @@ func DefaultTheme() Theme {
 				RequiredMarkOffset: 2,
 			},
 			Input: InputTheme{
-				PaddingX:      12,
-				ShadowOpacity: 1,
+				Height:              36,
+				Radius:              12,
+				PaddingX:            12,
+				TextSize:            14,
+				LineHeight:          20,
+				FocusRingWidth:      2,
+				InvalidOutlineWidth: 1,
+				ShadowOpacity:       1,
 			},
 			Checkbox: CheckboxTheme{
 				Size:        16,
@@ -840,6 +852,7 @@ func DefaultTheme() Theme {
 
 func DarkTheme() Theme {
 	theme := DefaultTheme()
+	theme.Components.Input.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

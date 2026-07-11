@@ -82,6 +82,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		).Variant(ui.SurfaceSecondary).Radius(8),
 		ui.Select("choice", model.selected, items).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
+		ui.Input("email", "").
+			Placeholder("name@example.com").
+			Type(ui.InputEmail).
+			ReadOnly(false).
+			MaxLength(120).
+			Label("Email address"),
 		ui.ProgressBar("progress", 50).ShowValue(),
 		ui.CloseButton("close").Label("Dismiss"),
 		ui.ToggleButton("pin", model.open, ui.Text("Pin")).

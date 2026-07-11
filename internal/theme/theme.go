@@ -87,6 +87,7 @@ type Spacing struct {
 
 type ComponentsTheme struct {
 	Button      ButtonTheme
+	Card        CardTheme
 	Description DescriptionTheme
 	Label       LabelTheme
 	Input       InputTheme
@@ -102,6 +103,19 @@ type ComponentsTheme struct {
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
+}
+
+type CardTheme struct {
+	Padding               unit.Dp
+	Gap                   unit.Dp
+	Radius                unit.Dp
+	HeaderGap             unit.Dp
+	ContentGap            unit.Dp
+	FooterGap             unit.Dp
+	TitleSize             unit.Sp
+	TitleLineHeight       unit.Sp
+	DescriptionSize       unit.Sp
+	DescriptionLineHeight unit.Sp
 }
 
 type DescriptionTheme struct {
@@ -409,6 +423,18 @@ func DefaultTheme() Theme {
 				PressedScaleSmall:  0.98,
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,
+			},
+			Card: CardTheme{
+				Padding:               16,
+				Gap:                   12,
+				Radius:                24,
+				HeaderGap:             0,
+				ContentGap:            4,
+				FooterGap:             0,
+				TitleSize:             14,
+				TitleLineHeight:       24,
+				DescriptionSize:       14,
+				DescriptionLineHeight: 20,
 			},
 			Description: DescriptionTheme{
 				TextSize: 12,

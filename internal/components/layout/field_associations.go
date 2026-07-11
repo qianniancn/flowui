@@ -6,6 +6,12 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
+// PrepareFieldAssociations pre-registers semantic field relationships for a
+// composite component before its children are laid out.
+func PrepareFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
+	prepareFieldAssociations(ctx, widgets...)
+}
+
 func prepareFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 	for _, widget := range widgets {
 		if widget == nil || label.PrepareFieldAssociation(ctx, widget) || description.PrepareFieldAssociation(ctx, widget) {

@@ -68,6 +68,14 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 
 	return ui.Column(
+		ui.Card(
+			ui.CardHeader(
+				ui.CardTitle("Settings"),
+				ui.CardDescription("Public facade contract"),
+			),
+			ui.CardContent(externalWidget{}),
+			ui.CardFooter(ui.Text("Footer")),
+		).Variant(ui.CardSecondary),
 		ui.Surface(externalWidget{}),
 		ui.Surface(
 			ui.Tabs("settings", "general", tabs).Variant(ui.TabsSecondary),

@@ -132,6 +132,7 @@ text/editor internals.
 ### Layout
 
 - `Surface`
+- `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`
 - `Box`, `Spacer`
 - `Center`
 - `Row`, `Column`
@@ -171,6 +172,7 @@ Examples live in `examples/`:
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.
+- `cards`: HeroUI-aligned card variants, semantic sections, and composed actions.
 - `selects`: single and multiple selection, sections, disabled options, validation, controlled open state, and Surface styling.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.

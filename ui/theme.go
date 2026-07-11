@@ -11,6 +11,7 @@ type ComponentsTheme = theme.ComponentsTheme
 type DescriptionTheme = theme.DescriptionTheme
 type LabelTheme = theme.LabelTheme
 type ButtonTheme = theme.ButtonTheme
+type CardTheme = theme.CardTheme
 type InputTheme = theme.InputTheme
 type CheckboxTheme = theme.CheckboxTheme
 type SwitchTheme = theme.SwitchTheme

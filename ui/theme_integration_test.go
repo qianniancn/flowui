@@ -17,6 +17,15 @@ func TestThemeControlsButtonHeight(t *testing.T) {
 	}
 }
 
+func TestThemeControlsCardSpacing(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.Card.Padding = 20
+	dims := Card(Spacer(40, 10)).Layout(themeTestContext(&theme), testLayoutContext())
+	if dims.Size != image.Pt(80, 50) {
+		t.Fatalf("card size = %v, want (80,50)", dims.Size)
+	}
+}
+
 func TestThemeControlsCheckboxSize(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.Checkbox.Size = 22

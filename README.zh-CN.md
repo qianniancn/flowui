@@ -127,6 +127,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 ### 布局
 
 - `Surface`
+- `Card`、`CardHeader`、`CardTitle`、`CardDescription`、`CardContent`、`CardFooter`
 - `Box`、`Spacer`
 - `Center`
 - `Row`、`Column`
@@ -166,6 +167,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。
 - `popovers`：受控浮层，包含位置、箭头、关闭行为和交互内容。
 - `surfaces`：语义化 Surface 层级、前景色上下文、圆角和 Surface 阴影。
+- `cards`：对齐 HeroUI 的卡片变体、语义分区和组合操作。
 - `selects`：单选、多选、分组、禁用选项、校验、受控打开状态和 Surface 样式。
 - `comboboxes`：选项选择和过滤。
 - `datepickers`：日期选择和范围限制。

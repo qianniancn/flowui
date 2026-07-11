@@ -109,13 +109,7 @@ func drawTabsScrollShadows(gtx layout.Context, theme *theme.Theme, size image.Po
 			continue
 		}
 		stack := clip.Rect(spec.bounds).Push(gtx.Ops)
-		paint.LinearGradientOp{
-			Stop1:  spec.stop1,
-			Color1: spec.color1,
-			Stop2:  spec.stop2,
-			Color2: spec.color2,
-		}.Add(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
+		render.PaintLinearGradient(gtx, spec.stop1, spec.color1, spec.stop2, spec.color2)
 		stack.Pop()
 	}
 }

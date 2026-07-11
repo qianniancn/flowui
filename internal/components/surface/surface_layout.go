@@ -16,7 +16,11 @@ func (s SurfaceWidget) layout(ctx *frame.Context, gtx layout.Context, style surf
 	var dims layout.Dimensions
 	func() {
 		background := ctx.BackgroundColor()
-		if style.background.A != 0 {
+		if s.hasBackground {
+			if sampled := s.background.ColorAt(.5); sampled.A != 0 {
+				background = sampled
+			}
+		} else if style.background.A != 0 {
 			background = style.background
 		}
 		restore := frame.PushColors(ctx, style.foreground, background)
@@ -34,7 +38,9 @@ func (s SurfaceWidget) layout(ctx *frame.Context, gtx layout.Context, style surf
 		shapeRadius := s.radius
 		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.SurfaceShadow(frame.ActiveTheme(ctx).Palette.SurfaceShadow))
 	}
-	if style.background.A != 0 && !rect.Empty() {
+	if s.hasBackground && !rect.Empty() {
+		render.DrawBrush(gtx, rect, radius, s.background)
+	} else if style.background.A != 0 && !rect.Empty() {
 		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 	}
 	content.Add(gtx.Ops)

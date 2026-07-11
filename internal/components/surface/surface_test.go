@@ -131,15 +131,44 @@ func TestTransparentSurfacePreservesParentBackground(t *testing.T) {
 
 func TestSurfaceOptionsKeepValueSemantics(t *testing.T) {
 	base := Surface(nil)
-	styled := base.Variant(SurfaceTertiary).Radius(20).Shadow(true)
-	if base.variant != SurfaceDefault || base.radius != 0 || base.shadow {
+	gradient := render.LinearGradient(
+		render.GradientStop{Color: color.NRGBA{R: 255, A: 255}},
+		render.GradientStop{Offset: 1, Color: color.NRGBA{B: 255, A: 255}},
+	)
+	foreground := color.NRGBA{G: 255, A: 255}
+	styled := base.Variant(SurfaceTertiary).Radius(20).Shadow(true).Background(gradient).Foreground(foreground)
+	if base.variant != SurfaceDefault || base.radius != 0 || base.shadow || base.hasBackground || base.hasForeground {
 		t.Fatal("surface options mutated the original value")
 	}
-	if styled.variant != SurfaceTertiary || styled.radius != 20 || !styled.shadow {
+	if styled.variant != SurfaceTertiary || styled.radius != 20 || !styled.shadow || !styled.hasBackground || !styled.hasForeground || styled.foreground != foreground {
 		t.Fatal("surface options did not configure the returned value")
 	}
 	if got := base.Radius(-10).radius; got != 0 {
 		t.Fatalf("negative radius = %v, want 0", got)
+	}
+}
+
+func TestGradientSurfaceScopesSampledBackgroundAndForeground(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := newContextWithTheme(nil, &activeTheme)
+	probe := &surfaceProbeWidget{size: image.Pt(120, 48)}
+	foreground := color.NRGBA{R: 250, G: 250, B: 250, A: 255}
+	gradient := render.LinearGradient(
+		render.GradientStop{Color: color.NRGBA{R: 255, A: 255}},
+		render.GradientStop{Offset: 1, Color: color.NRGBA{B: 255, A: 255}},
+	)
+	var ops op.Ops
+
+	Surface(probe).Background(gradient).Foreground(foreground).Layout(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
+		Ops:         &ops,
+	})
+
+	if probe.background != (color.NRGBA{R: 128, B: 128, A: 255}) {
+		t.Fatalf("gradient context background = %#v", probe.background)
+	}
+	if probe.foreground != foreground {
+		t.Fatalf("gradient foreground = %#v, want %#v", probe.foreground, foreground)
 	}
 }
 

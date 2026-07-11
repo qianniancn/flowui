@@ -1,9 +1,12 @@
 package surface
 
 import (
+	"image/color"
+
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/render"
 )
 
 type SurfaceVariant uint8
@@ -17,10 +20,14 @@ const (
 
 // SurfaceWidget provides a semantic, theme-aware background for non-overlay content.
 type SurfaceWidget struct {
-	child   frame.Widget
-	variant SurfaceVariant
-	radius  unit.Dp
-	shadow  bool
+	child         frame.Widget
+	variant       SurfaceVariant
+	radius        unit.Dp
+	shadow        bool
+	background    render.Brush
+	foreground    color.NRGBA
+	hasBackground bool
+	hasForeground bool
 }
 
 func Surface(child frame.Widget) SurfaceWidget {
@@ -42,6 +49,22 @@ func (s SurfaceWidget) Shadow(enabled bool) SurfaceWidget {
 	return s
 }
 
+func (s SurfaceWidget) Background(brush render.Brush) SurfaceWidget {
+	s.background = brush
+	s.hasBackground = true
+	return s
+}
+
+func (s SurfaceWidget) Foreground(col color.NRGBA) SurfaceWidget {
+	s.foreground = col
+	s.hasForeground = true
+	return s
+}
+
 func (s SurfaceWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	return s.layout(ctx, gtx, surfaceStyleFor(frame.ActiveTheme(ctx), s.variant))
+	style := surfaceStyleFor(frame.ActiveTheme(ctx), s.variant)
+	if s.hasForeground {
+		style.foreground = s.foreground
+	}
+	return s.layout(ctx, gtx, style)
 }

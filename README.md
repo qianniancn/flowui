@@ -178,6 +178,7 @@ Examples live in `examples/`:
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `tooltips`: HeroUI-aligned hover and focus hints with delays, arrows, placement, and viewport flipping.
+- `toasts`: HeroUI-aligned controlled notifications with variants, actions, timeouts, stacking, and six placements.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.
 - `cards`: HeroUI-aligned card variants, semantic sections, and composed actions.
 - `selects`: single and multiple selection, sections, disabled options, validation, controlled open state, and Surface styling.

@@ -93,6 +93,11 @@ func drawCloseIcon(gtx layout.Context, size image.Point, col color.NRGBA) {
 	paint.FillShape(gtx.Ops, col, clip.Outline{Path: path.End()}.Op())
 }
 
+// DrawIcon renders the HeroUI close glyph for internal component composition.
+func DrawIcon(gtx layout.Context, size image.Point, col color.NRGBA) {
+	drawCloseIcon(gtx, size, col)
+}
+
 type closeIconTransform struct {
 	scale   float32
 	offsetX float32

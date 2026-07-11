@@ -26,6 +26,7 @@ type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme
 type TooltipTheme = theme.TooltipTheme
+type ToastTheme = theme.ToastTheme
 type ModalTheme = theme.ModalTheme
 type ComboBoxTheme = theme.ComboBoxTheme
 type DatePickerTheme = theme.DatePickerTheme

@@ -91,6 +91,9 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Placement(ui.TooltipTop).
 			Arrow(true).
 			Delay(0),
+		ui.ToastProvider("toasts", []ui.ToastItem{
+			ui.Toast("saved", "Saved").Variant(ui.ToastSuccess).Description("Changes saved"),
+		}).OnClose(func(string) {}),
 		ui.Modal("dialog", model.open, "Settings", ui.Text("Body")).
 			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }),
 	)

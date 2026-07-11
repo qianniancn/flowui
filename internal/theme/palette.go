@@ -21,3 +21,11 @@ func (p Palette) OverlayForegroundColor() color.NRGBA {
 func (p Palette) OverlayShadowColor() color.NRGBA {
 	return ColorOr(p.OverlayShadow, p.Shadow)
 }
+
+func (p Palette) SuccessSoftForegroundColor() color.NRGBA {
+	return ColorOr(p.SuccessSoftForeground, p.Success)
+}
+
+func (p Palette) WarningSoftForegroundColor() color.NRGBA {
+	return ColorOr(p.WarningSoftForeground, p.Warning)
+}

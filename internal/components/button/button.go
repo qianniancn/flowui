@@ -6,6 +6,7 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -91,7 +92,22 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 }
 
 func (b ButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	key, clickable := frame.ClickableWithKey(ctx, b.key)
+	return layoutWithClickable(b, ctx, gtx, nil)
+}
+
+// LayoutWithClickable renders a button with caller-owned interaction state.
+// It is intended for internal component composition.
+func LayoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
+	return layoutWithClickable(b, ctx, gtx, clickable)
+}
+
+func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
+	var key string
+	if clickable == nil {
+		key, clickable = frame.ClickableWithKey(ctx, b.key)
+	} else {
+		key = frame.ClaimKey(ctx, state.KindClickable, b.key)
+	}
 	buttonState := buttonStateFor(ctx, key)
 	animGtx := gtx
 	presses := state.ActivePresses(clickable.History())

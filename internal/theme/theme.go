@@ -45,7 +45,9 @@ type Palette struct {
 	AccentSoftHover            color.NRGBA
 	AccentSoftForeground       color.NRGBA
 	Success                    color.NRGBA
+	SuccessSoftForeground      color.NRGBA
 	Warning                    color.NRGBA
+	WarningSoftForeground      color.NRGBA
 	Danger                     color.NRGBA
 	DangerHover                color.NRGBA
 	DangerForeground           color.NRGBA
@@ -105,6 +107,7 @@ type ComponentsTheme struct {
 	Select      SelectTheme
 	Popover     PopoverTheme
 	Tooltip     TooltipTheme
+	Toast       ToastTheme
 	Modal       ModalTheme
 	ComboBox    ComboBoxTheme
 	DatePicker  DatePickerTheme
@@ -332,6 +335,28 @@ type TooltipTheme struct {
 	CloseDelay        time.Duration
 }
 
+type ToastTheme struct {
+	Width             unit.Dp
+	Inset             unit.Dp
+	Gap               unit.Dp
+	PaddingX          unit.Dp
+	PaddingY          unit.Dp
+	Radius            unit.Dp
+	ContentGap        unit.Dp
+	IndicatorPadding  unit.Dp
+	IndicatorSize     unit.Dp
+	CloseSize         unit.Dp
+	CloseIconSize     unit.Dp
+	CloseInset        unit.Dp
+	FocusRingWidth    unit.Dp
+	TitleSize         unit.Sp
+	DescriptionSize   unit.Sp
+	MaxVisible        int
+	ScaleFactor       float32
+	AnimationDuration time.Duration
+	DefaultTimeout    time.Duration
+}
+
 type ModalTheme struct {
 	XSmallWidth          unit.Dp
 	SmallWidth           unit.Dp
@@ -432,7 +457,9 @@ func DefaultTheme() Theme {
 			AccentSoftHover:            color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
 			AccentSoftForeground:       color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
 			Success:                    color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0xff},
+			SuccessSoftForeground:      color.NRGBA{R: 0x2b, G: 0x77, B: 0x45, A: 0xff},
 			Warning:                    color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0xff},
+			WarningSoftForeground:      color.NRGBA{R: 0x85, G: 0x5f, B: 0x2e, A: 0xff},
 			Danger:                     color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
 			DangerHover:                color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
 			DangerForeground:           color.NRGBA{R: 0xff, G: 0xf7, B: 0xfb, A: 0xff},
@@ -674,6 +701,27 @@ func DefaultTheme() Theme {
 				Delay:             1500 * time.Millisecond,
 				CloseDelay:        500 * time.Millisecond,
 			},
+			Toast: ToastTheme{
+				Width:             460,
+				Inset:             16,
+				Gap:               12,
+				PaddingX:          16,
+				PaddingY:          12,
+				Radius:            24,
+				ContentGap:        6,
+				IndicatorPadding:  4,
+				IndicatorSize:     16,
+				CloseSize:         20,
+				CloseIconSize:     12,
+				CloseInset:        -4,
+				FocusRingWidth:    2,
+				TitleSize:         14,
+				DescriptionSize:   14,
+				MaxVisible:        3,
+				ScaleFactor:       0.05,
+				AnimationDuration: 350 * time.Millisecond,
+				DefaultTimeout:    4 * time.Second,
+			},
 			Modal: ModalTheme{
 				XSmallWidth:          320,
 				SmallWidth:           384,
@@ -771,6 +819,8 @@ func DarkTheme() Theme {
 	theme.Palette.Border = color.NRGBA{R: 0x3f, G: 0x3f, B: 0x46, A: 0xff}
 	theme.Palette.Segment = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
 	theme.Palette.SegmentForeground = theme.Palette.Foreground
+	theme.Palette.SuccessSoftForeground = color.NRGBA{R: 0x74, G: 0xd8, B: 0x8f, A: 0xff}
+	theme.Palette.WarningSoftForeground = color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff}
 	theme.Palette.SurfaceShadow = color.NRGBA{}
 	theme.Palette.OverlayShadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	theme.Palette.Shadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}

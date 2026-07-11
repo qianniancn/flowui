@@ -23,6 +23,7 @@ const (
 	KindTabs        Kind = "tabs"
 	KindPopover     Kind = "popover"
 	KindTooltip     Kind = "tooltip"
+	KindToast       Kind = "toast"
 	KindModal       Kind = "modal"
 	KindList        Kind = "list"
 	KindScroll      Kind = "scroll"

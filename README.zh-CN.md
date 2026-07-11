@@ -116,6 +116,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `SwitchGroup`
 - `RadioGroup`
 - `ProgressBar`
+- `Spinner`
 - `Slider`、`RangeSlider`
 - `ListBox`
 - `Tabs`
@@ -163,6 +164,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `switches`：开关状态、尺寸、描述、label 位置、thumb 内容和开关组。
 - `radio_groups`：互斥单选选项。
 - `progress_bars`：确定态和不定态进度指示器。
+- `spinners`：与 HeroUI 对齐的颜色和尺寸加载指示器。
 - `sliders`：受控单值、范围、纵向、禁用、步进和格式化滑块。
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。

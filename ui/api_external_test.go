@@ -83,6 +83,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.Select("choice", model.selected, items).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
 		ui.ProgressBar("progress", 50).ShowValue(),
+		ui.Spinner().Color(ui.SpinnerSuccess).Size(ui.SpinnerSmall).Label("Saving"),
 		ui.Slider("volume", 30).Label("Volume").ShowValue(),
 		ui.RangeSlider("price", 10, 80).Range(0, 100).Step(5),
 		ui.Modal("dialog", model.open, "Settings", ui.Text("Body")).

@@ -18,6 +18,7 @@ type SwitchTheme = theme.SwitchTheme
 type SwitchGroupTheme = theme.SwitchGroupTheme
 type RadioGroupTheme = theme.RadioGroupTheme
 type ProgressBarTheme = theme.ProgressBarTheme
+type SpinnerTheme = theme.SpinnerTheme
 type SliderTheme = theme.SliderTheme
 type ListBoxTheme = theme.ListBoxTheme
 type TabsTheme = theme.TabsTheme

@@ -96,6 +96,7 @@ type ComponentsTheme struct {
 	SwitchGroup SwitchGroupTheme
 	RadioGroup  RadioGroupTheme
 	ProgressBar ProgressBarTheme
+	Spinner     SpinnerTheme
 	Slider      SliderTheme
 	ListBox     ListBoxTheme
 	Tabs        TabsTheme
@@ -200,6 +201,15 @@ type ProgressBarTheme struct {
 	LargeRadius  unit.Dp
 	HeaderGap    unit.Dp
 	TextSize     unit.Sp
+}
+
+type SpinnerTheme struct {
+	SmallSize      unit.Dp
+	MediumSize     unit.Dp
+	LargeSize      unit.Dp
+	ExtraLargeSize unit.Dp
+	StrokeRatio    float32
+	InsetRatio     float32
 }
 
 type SliderTheme struct {
@@ -517,6 +527,14 @@ func DefaultTheme() Theme {
 				LargeRadius:  6,
 				HeaderGap:    4,
 				TextSize:     14,
+			},
+			Spinner: SpinnerTheme{
+				SmallSize:      16,
+				MediumSize:     24,
+				LargeSize:      32,
+				ExtraLargeSize: 40,
+				StrokeRatio:    0.125,
+				InsetRatio:     0.0625,
 			},
 			Slider: SliderTheme{
 				TrackThickness:  20,

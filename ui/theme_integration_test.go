@@ -35,6 +35,15 @@ func TestThemeControlsSliderThickness(t *testing.T) {
 	}
 }
 
+func TestThemeControlsSpinnerSize(t *testing.T) {
+	theme := DefaultTheme()
+	theme.Components.Spinner.MediumSize = 30
+	dims := Spinner().Layout(themeTestContext(&theme), testLayoutContext())
+	if dims.Size != image.Pt(30, 30) {
+		t.Fatalf("spinner size = %v, want (30,30)", dims.Size)
+	}
+}
+
 func TestThemeControlsCheckboxSize(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Components.Checkbox.Size = 22

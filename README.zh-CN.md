@@ -120,6 +120,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Spinner`
 - `Slider`、`RangeSlider`
 - `ListBox`
+- `Tree`
 - `Tabs`
 - `Select`
 - `ComboBox`
@@ -172,6 +173,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `spinners`：与 HeroUI 对齐的颜色和尺寸加载指示器。
 - `sliders`：受控单值、范围、纵向、禁用、步进和格式化滑块。
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
+- `trees`：受控的层级导航，包含展开、选择、自定义内容、禁用节点和滚动。
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。
 - `alert_dialogs`：对齐 HeroUI 的确认弹窗，包含语义状态、受控关闭、尺寸、位置和遮罩变体。

@@ -27,6 +27,7 @@ type ProgressBarTheme = theme.ProgressBarTheme
 type SpinnerTheme = theme.SpinnerTheme
 type SliderTheme = theme.SliderTheme
 type ListBoxTheme = theme.ListBoxTheme
+type TreeTheme = theme.TreeTheme
 type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme

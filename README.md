@@ -125,6 +125,7 @@ text/editor internals.
 - `Spinner`
 - `Slider`, `RangeSlider`
 - `ListBox`
+- `Tree`
 - `Tabs`
 - `Select`
 - `ComboBox`
@@ -177,6 +178,7 @@ Examples live in `examples/`:
 - `spinners`: animated loading indicators with HeroUI-aligned colors and sizes.
 - `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
+- `trees`: controlled hierarchical navigation with expansion, selection, custom content, disabled nodes, and scrolling.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
 - `alert_dialogs`: HeroUI-aligned confirmation dialogs with semantic statuses, controlled dismissal, sizes, placements, and backdrop variants.

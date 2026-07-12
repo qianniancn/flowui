@@ -112,6 +112,7 @@ type ComponentsTheme struct {
 	Spinner      SpinnerTheme
 	Slider       SliderTheme
 	ListBox      ListBoxTheme
+	Tree         TreeTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -347,6 +348,26 @@ type ListBoxTheme struct {
 	ItemIndicatorStroke   unit.Dp
 	FocusRingWidth        unit.Dp
 	PressedScale          float32
+}
+
+type TreeTheme struct {
+	Padding              unit.Dp
+	Gap                  unit.Dp
+	MaxHeight            unit.Dp
+	RowHeight            unit.Dp
+	DescriptionRowHeight unit.Dp
+	RowRadius            unit.Dp
+	RowPaddingX          unit.Dp
+	RowPaddingY          unit.Dp
+	Indent               unit.Dp
+	ChevronSlotSize      unit.Dp
+	ChevronIconSize      unit.Dp
+	ContentGap           unit.Dp
+	ItemTextSize         unit.Sp
+	ItemDescriptionSize  unit.Sp
+	FocusRingWidth       unit.Dp
+	PressedScale         float32
+	SurfaceRadius        unit.Dp
 }
 
 type TabsTheme struct {
@@ -794,6 +815,25 @@ func DefaultTheme() Theme {
 				ItemIndicatorStroke:   1.7,
 				FocusRingWidth:        2,
 				PressedScale:          0.98,
+			},
+			Tree: TreeTheme{
+				Padding:              4,
+				Gap:                  4,
+				MaxHeight:            320,
+				RowHeight:            36,
+				DescriptionRowHeight: 52,
+				RowRadius:            16,
+				RowPaddingX:          8,
+				RowPaddingY:          6,
+				Indent:               20,
+				ChevronSlotSize:      20,
+				ChevronIconSize:      16,
+				ContentGap:           8,
+				ItemTextSize:         14,
+				ItemDescriptionSize:  12,
+				FocusRingWidth:       2,
+				PressedScale:         0.98,
+				SurfaceRadius:        24,
 			},
 			Tabs: TabsTheme{
 				RootGap:             8,

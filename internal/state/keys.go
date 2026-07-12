@@ -21,6 +21,7 @@ const (
 	KindProgressBar  Kind = "progress-bar"
 	KindSlider       Kind = "slider"
 	KindListBox      Kind = "listbox"
+	KindTree         Kind = "tree"
 	KindTabs         Kind = "tabs"
 	KindPopover      Kind = "popover"
 	KindTooltip      Kind = "tooltip"

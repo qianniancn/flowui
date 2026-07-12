@@ -12,6 +12,7 @@ import (
 
 type facadeModel struct {
 	selected string
+	expanded []string
 	open     bool
 }
 
@@ -42,6 +43,7 @@ func TestContextExposesOnlySupportedMethods(t *testing.T) {
 
 type facadeMsg struct {
 	selected string
+	expanded []string
 	open     *bool
 }
 
@@ -55,6 +57,9 @@ func facadeUpdate(model *facadeModel, msg facadeMsg) {
 	if msg.selected != "" {
 		model.selected = msg.selected
 	}
+	if msg.expanded != nil {
+		model.expanded = append([]string(nil), msg.expanded...)
+	}
 	if msg.open != nil {
 		model.open = *msg.open
 	}
@@ -66,6 +71,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		var _ ui.Language = ctx.Language()
 	}
 	items := []ui.SelectItem{{Key: "one", Label: "One"}}
+	treeItems := []ui.TreeItem{{Key: "folder", Label: "Folder", Children: []ui.TreeItem{{Key: "file", Label: "File"}}}}
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 
 	return ui.Column(
@@ -88,6 +94,17 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		).Variant(ui.SurfaceSecondary).Radius(8),
 		ui.Select("choice", model.selected, items).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
+		ui.Tree("files", model.selected, treeItems).
+			ExpandedKeys(model.expanded).
+			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
+			OnExpandedChange(func(keys []string) { send(facadeMsg{expanded: keys}) }).
+			OnAction(func(string) {}).
+			Variant(ui.TreeSurface).
+			SelectionMode(ui.TreeSelectionSingle).
+			DisabledKeys([]string{"file"}).
+			AllowEmptySelection().
+			EmptyText("No files").
+			MaxHeight(240),
 		ui.Input("email", "").
 			Placeholder("name@example.com").
 			Type(ui.InputEmail).

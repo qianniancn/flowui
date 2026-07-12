@@ -399,6 +399,7 @@ type ModalTheme struct {
 	SectionGap           unit.Dp
 	IconSize             unit.Dp
 	CloseSize            unit.Dp
+	CloseIconSize        unit.Dp
 	CloseInset           unit.Dp
 	TitleSize            unit.Sp
 	BodyTextSize         unit.Sp
@@ -787,8 +788,9 @@ func DefaultTheme() Theme {
 				FooterGap:            8,
 				SectionGap:           20,
 				IconSize:             40,
-				CloseSize:            32,
-				CloseInset:           12,
+				CloseSize:            24,
+				CloseIconSize:        16,
+				CloseInset:           16,
 				TitleSize:            16,
 				BodyTextSize:         14,
 				Backdrop:             color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x66},

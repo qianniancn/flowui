@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type Model struct {
@@ -154,7 +155,7 @@ func modalLayer(m Model, send ui.Send[Msg]) ui.Widget {
 		baseModal("default", m, send,
 			"Welcome to FlowUI",
 			"Modal is controlled by your Model and closes by calling OnOpenChange(false).",
-		).Icon(ui.Text("!")),
+		).Icon(ui.Icon(lucide.Info).Size(20)),
 		baseModal("form", m, send,
 			"Contact us",
 			"Compose inputs and buttons inside the modal body just like any other FlowUI view.",

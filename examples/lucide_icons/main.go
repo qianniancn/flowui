@@ -4,7 +4,7 @@ import (
 	"image/color"
 
 	"github.com/qianniancn/FlowUI/ui"
-	"github.com/qianniancn/flowui-icons-lucide/lucide"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type Model struct {

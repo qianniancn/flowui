@@ -150,16 +150,6 @@ func TestDisabledCloseButtonDoesNotBlockUnderlyingPointerTarget(t *testing.T) {
 	}
 }
 
-func TestCloseIconTransformPreservesHeroUIViewBox(t *testing.T) {
-	transform := newCloseIconTransform(image.Pt(20, 16))
-	if got := transform.point(0, 0); got != f32.Pt(2, 0) {
-		t.Fatalf("viewbox origin = %v, want (2,0)", got)
-	}
-	if got := transform.point(16, 16); got != f32.Pt(18, 16) {
-		t.Fatalf("viewbox extent = %v, want (18,16)", got)
-	}
-}
-
 func TestCloseButtonFocusGeometryFitsExpandedBounds(t *testing.T) {
 	rect, radius := closeButtonFocusGeometry(image.Rect(0, 0, 24, 24), 12, 2)
 	if rect != image.Rect(-1, -1, 25, 25) {

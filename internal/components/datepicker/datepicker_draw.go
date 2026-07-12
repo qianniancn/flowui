@@ -6,10 +6,13 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawDatePickerPopover(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {
@@ -23,43 +26,27 @@ func drawDatePickerNavButton(gtx layout.Context, size image.Point, delta int, st
 	drawDatePickerChevron(gtx, style.theme, size, delta, style.fg)
 }
 
-func drawDatePickerYearPickerIndicator(gtx layout.Context, theme *theme.Theme, size image.Point, open bool, col color.NRGBA) {
-	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	width := max(render.DpFloat(gtx, theme.Components.DatePicker.NavChevronStroke), 1)
-	var path clip.Path
-	path.Begin(gtx.Ops)
+func drawDatePickerYearPickerIndicator(gtx layout.Context, size image.Point, open bool, col color.NRGBA) {
+	data := lucide.ChevronRight
 	if open {
-		path.MoveTo(f32.Pt(center.X-4, center.Y-2))
-		path.LineTo(f32.Pt(center.X, center.Y+2))
-		path.LineTo(f32.Pt(center.X+4, center.Y-2))
-	} else {
-		path.MoveTo(f32.Pt(center.X-2, center.Y-4))
-		path.LineTo(f32.Pt(center.X+2, center.Y))
-		path.LineTo(f32.Pt(center.X-2, center.Y+4))
+		data = lucide.ChevronDown
 	}
-	stroke := clip.Stroke{
-		Path:  path.End(),
-		Width: width,
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(size)
+	icon.Layout(data, iconGtx, col)
 }
 
 func drawDatePickerChevron(gtx layout.Context, theme *theme.Theme, size image.Point, delta int, col color.NRGBA) {
-	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	dir := float32(delta)
-	width := max(render.DpFloat(gtx, theme.Components.DatePicker.NavChevronStroke), 1)
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(f32.Pt(center.X-dir*2, center.Y-5))
-	path.LineTo(f32.Pt(center.X+dir*3, center.Y))
-	path.LineTo(f32.Pt(center.X-dir*2, center.Y+5))
-	stroke := clip.Stroke{
-		Path:  path.End(),
-		Width: width,
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	data := lucide.ChevronRight
+	if delta < 0 {
+		data = lucide.ChevronLeft
+	}
+	diameter := min(icon.LucideSizeForStroke(gtx, theme.Components.DatePicker.NavChevronStroke), min(size.X, size.Y))
+	offset := op.Offset(image.Pt((size.X-diameter)/2, (size.Y-diameter)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
+	icon.Layout(data, iconGtx, col)
+	offset.Pop()
 }
 
 func drawDatePickerCell(gtx layout.Context, size image.Point, style datePickerCellStyle) {
@@ -86,22 +73,10 @@ func drawDatePickerStrike(gtx layout.Context, theme *theme.Theme, size image.Poi
 	stroke.Pop()
 }
 
-func drawDatePickerCalendarIcon(gtx layout.Context, theme *theme.Theme, size image.Point, col color.NRGBA) {
-	rect := image.Rect(1, 2, size.X-1, size.Y-1)
-	radius := max(gtx.Dp(theme.Components.DatePicker.IconRadius), 1)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
-		Width: max(render.DpFloat(gtx, theme.Components.DatePicker.IconStroke), 1),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
-
-	top := image.Rect(rect.Min.X+1, rect.Min.Y+4, rect.Max.X-1, rect.Min.Y+5)
-	paint.FillShape(gtx.Ops, col, clip.Rect(top).Op())
-	for _, x := range []int{rect.Min.X + 4, rect.Max.X - 4} {
-		line := image.Rect(x, rect.Min.Y-1, x+1, rect.Min.Y+3)
-		paint.FillShape(gtx.Ops, col, clip.Rect(line).Op())
-	}
+func drawDatePickerCalendarIcon(gtx layout.Context, size image.Point, col color.NRGBA) {
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(size)
+	icon.Layout(lucide.Calendar, iconGtx, col)
 }
 
 func datePickerNavStyle(theme *theme.Theme, hovered, pressed, disabled bool) datePickerNavButtonStyle {

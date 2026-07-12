@@ -71,7 +71,7 @@ func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pi
 	iconSize := image.Pt(gtx.Dp(theme.IconSize), gtx.Dp(theme.IconSize))
 	iconOffset := image.Pt(size.X-right+(right-iconSize.X)/2, (size.Y-iconSize.Y)/2)
 	stack = op.Offset(iconOffset).Push(gtx.Ops)
-	drawDatePickerCalendarIcon(gtx, frame.ActiveTheme(ctx), iconSize, style.Placeholder)
+	drawDatePickerCalendarIcon(gtx, iconSize, style.Placeholder)
 	stack.Pop()
 
 	return pickerState.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -282,7 +282,7 @@ func (d DatePickerWidget) layoutHeaderTrigger(ctx *frame.Context, gtx layout.Con
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			size := image.Pt(iconSize, iconSize)
 			gtx.Constraints = layout.Exact(size)
-			drawDatePickerYearPickerIndicator(gtx, frame.ActiveTheme(ctx), size, state.viewMode == datePickerViewYears, col)
+			drawDatePickerYearPickerIndicator(gtx, size, state.viewMode == datePickerViewYears, col)
 			return layout.Dimensions{Size: size}
 		}),
 	)

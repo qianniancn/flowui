@@ -7,7 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/ui"
-	"github.com/qianniancn/flowui-icons-lucide/lucide"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type facadeModel struct {

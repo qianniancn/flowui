@@ -22,6 +22,18 @@ import (
 
 const stateSlotClickable = "clickable"
 
+func TestModalCloseGeometryMatchesHeroUI(t *testing.T) {
+	component := theme.DefaultTheme().Components.Modal
+	if component.CloseSize != 24 || component.CloseIconSize != 16 || component.CloseInset != 16 {
+		t.Fatalf(
+			"modal close geometry = size %v icon %v inset %v, want 24/16/16",
+			component.CloseSize,
+			component.CloseIconSize,
+			component.CloseInset,
+		)
+	}
+}
+
 func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
 }

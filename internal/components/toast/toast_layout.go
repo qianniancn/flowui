@@ -13,12 +13,13 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/components/closebutton"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
 	"github.com/qianniancn/FlowUI/internal/components/spinner"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type toastRecord struct {
@@ -288,7 +289,7 @@ func (p ToastProviderWidget) layoutToastIndicator(ctx *frame.Context, gtx layout
 			item.indicator.Layout(ctx, gtx)
 			return layout.Dimensions{Size: image.Pt(size, size)}
 		}
-		drawToastIndicator(gtx, image.Pt(size, size), style.surface, style.indicator, item.variant)
+		drawToastIndicator(gtx, image.Pt(size, size), style.indicator, item.variant)
 		return layout.Dimensions{Size: image.Pt(size, size)}
 	})
 }
@@ -326,7 +327,9 @@ func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Con
 		drawToastCloseButton(gtx, frame.ActiveTheme(ctx), image.Pt(size, size), style, entry.close.Hovered())
 		iconSize := gtx.Dp(tokens.CloseIconSize)
 		iconOffset := op.Offset(image.Pt((size-iconSize)/2, (size-iconSize)/2)).Push(gtx.Ops)
-		closebutton.DrawIcon(gtx, image.Pt(iconSize, iconSize), style.description)
+		iconGtx := gtx
+		iconGtx.Constraints = layout.Exact(image.Pt(iconSize, iconSize))
+		icon.Layout(lucide.X, iconGtx, style.description)
 		iconOffset.Pop()
 		return layout.Dimensions{Size: image.Pt(size, size)}
 	})

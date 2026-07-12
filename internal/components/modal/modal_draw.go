@@ -4,13 +4,14 @@ import (
 	"image"
 	"image/color"
 
-	"gioui.org/f32"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawModalBackdrop(gtx layout.Context, size image.Point, style modalStyle, progress float32) {
@@ -60,7 +61,15 @@ func drawModalCloseButton(gtx layout.Context, theme *theme.Theme, size image.Poi
 	if focused {
 		drawModalCloseFocus(gtx, theme, rect, radius)
 	}
-	drawModalCloseX(gtx, theme.Palette.MutedForeground, size)
+	diameter := min(gtx.Dp(theme.Components.Modal.CloseIconSize), min(size.X, size.Y))
+	if diameter <= 0 {
+		diameter = min(size.X, size.Y) * 3 / 4
+	}
+	offset := op.Offset(image.Pt((size.X-diameter)/2, (size.Y-diameter)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
+	icon.Layout(lucide.X, iconGtx, theme.Palette.MutedForeground)
+	offset.Pop()
 }
 
 func drawModalCloseFocus(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {
@@ -75,24 +84,5 @@ func drawModalCloseFocus(gtx layout.Context, theme *theme.Theme, rect image.Rect
 		Width: float32(width),
 	}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, theme.Palette.Focus)
-	stroke.Pop()
-}
-
-func drawModalCloseX(gtx layout.Context, col color.NRGBA, size image.Point) {
-	strokeWidth := float32(max(gtx.Dp(unit.Dp(1.8)), 1))
-	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	half := float32(min(size.X, size.Y)) * 0.18
-
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(f32.Pt(center.X-half, center.Y-half))
-	path.LineTo(f32.Pt(center.X+half, center.Y+half))
-	path.MoveTo(f32.Pt(center.X+half, center.Y-half))
-	path.LineTo(f32.Pt(center.X-half, center.Y+half))
-	stroke := clip.Stroke{
-		Path:  path.End(),
-		Width: strokeWidth,
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
 	stroke.Pop()
 }

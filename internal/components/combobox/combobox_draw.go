@@ -10,8 +10,10 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawComboBoxPanel(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {
@@ -32,36 +34,17 @@ func drawComboBoxChevron(gtx layout.Context, theme *theme.Theme, size image.Poin
 	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
 	angle := progress * float32(math.Pi)
 	stack := op.Affine(f32.AffineId().Rotate(center, angle)).Push(gtx.Ops)
-	width := render.DpFloat(gtx, theme.Components.ComboBox.ChevronStroke)
-	if width < 1 {
-		width = 1
-	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(f32.Pt(center.X-5, center.Y-2))
-	path.LineTo(f32.Pt(center.X, center.Y+3))
-	path.LineTo(f32.Pt(center.X+5, center.Y-2))
-	stroke := clip.Stroke{
-		Path:  path.End(),
-		Width: width,
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	diameter := min(icon.LucideSizeForStroke(gtx, theme.Components.ComboBox.ChevronStroke), min(size.X, size.Y))
+	offset := op.Offset(image.Pt((size.X-diameter)/2, (size.Y-diameter)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
+	icon.Layout(lucide.ChevronDown, iconGtx, col)
+	offset.Pop()
 	stack.Pop()
 }
 
 func drawComboBoxCheck(gtx layout.Context, theme *theme.Theme, size image.Point) {
-	rect := image.Rectangle{Max: size}.Inset(gtx.Dp(theme.Components.ComboBox.ItemCheckInset))
-	points := [3]f32.Point{
-		f32.Pt(float32(rect.Min.X), float32(rect.Min.Y+rect.Dy()/2)),
-		f32.Pt(float32(rect.Min.X+rect.Dx()/3), float32(rect.Max.Y)),
-		f32.Pt(float32(rect.Max.X), float32(rect.Min.Y)),
-	}
-	path := render.CheckPath(gtx.Ops, points, 1)
-	stroke := clip.Stroke{
-		Path:  path,
-		Width: max(render.DpFloat(gtx, theme.Components.ComboBox.ItemCheckStroke), 1),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, theme.Palette.Accent)
-	stroke.Pop()
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(size)
+	icon.Layout(lucide.Check, iconGtx, theme.Palette.Accent)
 }

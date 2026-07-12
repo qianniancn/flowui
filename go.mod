@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	gioui.org v0.10.1
-	github.com/qianniancn/flowui-icons-lucide v0.2.0
+	github.com/qianniancn/flowui-icons-lucide v0.3.0
 	golang.org/x/sys v0.39.0
 )
 

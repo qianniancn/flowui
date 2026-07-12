@@ -6,10 +6,13 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type tabsScrollShadowSpec struct {
@@ -184,26 +187,23 @@ func drawTabsScrollShadowBorders(gtx layout.Context, theme *theme.Theme, size im
 }
 
 func drawTabsChevron(gtx layout.Context, theme *theme.Theme, size image.Point, orientation TabsOrientation, direction int, col color.NRGBA) {
-	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	half := float32(gtx.Dp(theme.Components.Tabs.ScrollChevronSize)) / 2
-	if half < 2 {
-		half = 2
-	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
+	data := lucide.ChevronRight
 	if orientation == TabsVertical {
-		path.MoveTo(f32.Pt(center.X-half, center.Y-float32(direction)*half/2))
-		path.LineTo(f32.Pt(center.X, center.Y+float32(direction)*half/2))
-		path.LineTo(f32.Pt(center.X+half, center.Y-float32(direction)*half/2))
-	} else {
-		path.MoveTo(f32.Pt(center.X-float32(direction)*half/2, center.Y-half))
-		path.LineTo(f32.Pt(center.X+float32(direction)*half/2, center.Y))
-		path.LineTo(f32.Pt(center.X-float32(direction)*half/2, center.Y+half))
+		data = lucide.ChevronDown
+		if direction < 0 {
+			data = lucide.ChevronUp
+		}
+	} else if direction < 0 {
+		data = lucide.ChevronLeft
 	}
-	stroke := clip.Stroke{
-		Path:  path.End(),
-		Width: max(render.DpFloat(gtx, theme.Components.Tabs.ScrollChevronStroke), 1),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	diameter := max(
+		gtx.Dp(theme.Components.Tabs.ScrollChevronSize*2),
+		icon.LucideSizeForStroke(gtx, theme.Components.Tabs.ScrollChevronStroke),
+	)
+	diameter = min(diameter, min(size.X, size.Y))
+	offset := op.Offset(image.Pt((size.X-diameter)/2, (size.Y-diameter)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
+	icon.Layout(data, iconGtx, col)
+	offset.Pop()
 }

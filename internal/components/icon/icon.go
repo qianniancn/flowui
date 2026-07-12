@@ -14,6 +14,8 @@ import (
 
 const defaultSize = unit.Dp(24)
 
+const lucideStrokeScale = 12
+
 type Widget struct {
 	data     []byte
 	size     unit.Dp
@@ -48,6 +50,12 @@ func (w Widget) Color(col color.NRGBA) Widget {
 	return w
 }
 
+// LucideSizeForStroke returns the icon size that preserves Lucide's standard
+// 2-unit stroke in its 24-unit viewBox.
+func LucideSizeForStroke(gtx layout.Context, stroke unit.Dp) int {
+	return max(gtx.Dp(stroke*lucideStrokeScale), lucideStrokeScale)
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	if w.data == nil {
 		return layout.Dimensions{}
@@ -68,12 +76,13 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
 	offset := image.Pt((outerSize.X-diameter)/2, (outerSize.Y-diameter)/2)
 	stack := op.Offset(offset).Push(gtx.Ops)
-	layoutIcon(w.data, iconGtx, col)
+	Layout(w.data, iconGtx, col)
 	stack.Pop()
 	return layout.Dimensions{Size: outerSize}
 }
 
-func layoutIcon(data []byte, gtx layout.Context, col color.NRGBA) layout.Dimensions {
+// Layout renders IconVG data using the supplied constraints and color.
+func Layout(data []byte, gtx layout.Context, col color.NRGBA) layout.Dimensions {
 	if len(data) == 0 {
 		return layout.Dimensions{}
 	}

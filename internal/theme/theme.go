@@ -93,6 +93,7 @@ type ComponentsTheme struct {
 	ToggleButton ToggleButtonTheme
 	CloseButton  CloseButtonTheme
 	Card         CardTheme
+	Alert        AlertTheme
 	Description  DescriptionTheme
 	Label        LabelTheme
 	Input        InputTheme
@@ -122,6 +123,19 @@ type CardTheme struct {
 	HeaderGap             unit.Dp
 	ContentGap            unit.Dp
 	FooterGap             unit.Dp
+	TitleSize             unit.Sp
+	TitleLineHeight       unit.Sp
+	DescriptionSize       unit.Sp
+	DescriptionLineHeight unit.Sp
+}
+
+type AlertTheme struct {
+	PaddingX              unit.Dp
+	PaddingY              unit.Dp
+	Gap                   unit.Dp
+	Radius                unit.Dp
+	IndicatorPadding      unit.Dp
+	IconSize              unit.Dp
 	TitleSize             unit.Sp
 	TitleLineHeight       unit.Sp
 	DescriptionSize       unit.Sp
@@ -579,6 +593,18 @@ func DefaultTheme() Theme {
 				HeaderGap:             0,
 				ContentGap:            4,
 				FooterGap:             0,
+				TitleSize:             14,
+				TitleLineHeight:       24,
+				DescriptionSize:       14,
+				DescriptionLineHeight: 20,
+			},
+			Alert: AlertTheme{
+				PaddingX:              16,
+				PaddingY:              12,
+				Gap:                   16,
+				Radius:                24,
+				IndicatorPadding:      4,
+				IconSize:              16,
 				TitleSize:             14,
 				TitleLineHeight:       24,
 				DescriptionSize:       14,

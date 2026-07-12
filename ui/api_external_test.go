@@ -69,6 +69,11 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 
 	return ui.Column(
+		ui.Alert("Update available", "Refresh to get the latest features.").
+			Status(ui.AlertAccent).
+			Indicator(ui.Icon(lucide.Info).Size(16)).
+			Content(ui.Text("Custom alert content")).
+			Action(ui.CloseButton("dismiss-alert")),
 		ui.Card(
 			ui.CardHeader(
 				ui.CardTitle("Settings"),

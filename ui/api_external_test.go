@@ -155,10 +155,20 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				{Key: "delete", Label: "Delete", Variant: ui.MenuItemDanger},
 			}).
 				Sections([]ui.MenuSection{{Title: "Actions", Items: []ui.MenuItem{{Key: "inspect", Label: "Inspect"}}}}).
+				AutoSeparateSections(true).
+				BeforeContent(ui.Text("Menu header")).
+				AfterContent(ui.Text("Menu footer")).
 				EmptyText("No actions").
+				SelectionMode(ui.MenuSelectionMultiple).
+				SelectedKey(model.selected).
+				SelectedKeys(model.tableSelected).
+				DisabledKeys([]string{"delete"}).
 				OnAction(func(string) {}).
+				OnChange(func(string) {}).
+				OnSelectionChange(func([]string) {}).
 				OnCheckedChange(func(string, bool) {}).
 				OnRadioChange(func(string, string) {}).
+				CloseOnSelect(false).
 				Disabled(false).
 				Width(240),
 		).
@@ -167,6 +177,40 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }).
 			LongPressDisabled(false).
 			Disabled(false),
+		ui.Dropdown("account-dropdown", ui.Button("account-trigger", ui.Text("Account")), []ui.DropdownItem{
+			{
+				Key: "profile", Label: "Profile", Description: "View profile", Shortcut: "Ctrl+P", Leading: ui.Icon(lucide.UserRound).Size(16),
+				Indicator: func(bool) ui.Widget { return ui.Icon(lucide.Check).Size(12) },
+			},
+			ui.DropdownSeparator(),
+			{
+				Key: "theme", Label: "Theme", IndicatorType: ui.DropdownIndicatorCheckmark,
+				SubmenuIndicator: ui.Icon(lucide.ChevronRight).Size(14), Children: []ui.DropdownItem{{Key: "dark", Label: "Dark"}},
+			},
+			{Key: "delete", Label: "Delete", Variant: ui.DropdownItemDanger, Disabled: true},
+		}).
+			Sections([]ui.DropdownSection{{Title: "Account", Items: []ui.DropdownItem{{Key: "settings", Label: "Settings"}}}}).
+			BeforeContent(ui.Text("Signed in")).
+			AfterContent(ui.Text("Footer")).
+			EmptyText("No actions").
+			SelectionMode(ui.DropdownSelectionMultiple).
+			SelectedKey(model.selected).
+			SelectedKeys(model.tableSelected).
+			DisabledKeys([]string{"delete"}).
+			OnAction(func(string) {}).
+			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
+			OnSelectionChange(func(keys []string) { send(facadeMsg{tableSelected: keys}) }).
+			Open(model.open).
+			DefaultOpen(false).
+			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }).
+			TriggerMode(ui.DropdownTriggerPress).
+			Placement(ui.PopoverBottomStart).
+			Offset(4).
+			ShouldFlip(true).
+			AvoidOverflow(true).
+			CloseOnSelect(false).
+			Disabled(false).
+			Width(240),
 		ui.Input("email", "").
 			Placeholder("name@example.com").
 			Type(ui.InputEmail).

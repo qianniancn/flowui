@@ -92,16 +92,41 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 }
 
 func (b ButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	return layoutWithClickable(b, ctx, gtx, nil)
+	dims, _ := layoutWithClickable(b, ctx, gtx, nil, true)
+	return dims
 }
 
 // LayoutWithClickable renders a button with caller-owned interaction state.
 // It is intended for internal component composition.
 func LayoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
-	return layoutWithClickable(b, ctx, gtx, clickable)
+	dims, _ := layoutWithClickable(b, ctx, gtx, clickable, true)
+	return dims
 }
 
-func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
+// LayoutWithClickableNoEvents renders a button with caller-owned event handling.
+func LayoutWithClickableNoEvents(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
+	dims, _ := layoutWithClickable(b, ctx, gtx, clickable, false)
+	return dims
+}
+
+// FocusHandle controls the modality of caller-requested button focus.
+type FocusHandle struct {
+	state *buttonState
+}
+
+// Prepare marks the next focus as keyboard-visible or pointer-originated.
+func (h FocusHandle) Prepare(visible bool) {
+	if h.state != nil {
+		h.state.prepareFocus(visible)
+	}
+}
+
+// LayoutWithClickableNoEventsAndFocus also returns control of focus modality.
+func LayoutWithClickableNoEventsAndFocus(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) (layout.Dimensions, FocusHandle) {
+	return layoutWithClickable(b, ctx, gtx, clickable, false)
+}
+
+func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) (layout.Dimensions, FocusHandle) {
 	var key string
 	if clickable == nil {
 		key, clickable = frame.ClickableWithKey(ctx, b.key)
@@ -113,7 +138,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 	presses := state.ActivePresses(clickable.History())
 	if b.disabled || b.loading {
 		gtx = gtx.Disabled()
-	} else {
+	} else if handleEvents {
 		for clickable.Clicked(gtx) {
 			if b.onClick != nil {
 				b.onClick()
@@ -135,7 +160,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		gtx.Constraints.Min.X = width
 	}
 
-	return clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	dims := clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		focused := gtx.Focused(clickable)
 		focusVisible := buttonState.focusVisible(focused, clickable.History())
 		style := b.style(frame.ActiveTheme(ctx), clickable)
@@ -164,4 +189,5 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		stack.Pop()
 		return dims
 	})
+	return dims, FocusHandle{state: buttonState}
 }

@@ -97,9 +97,9 @@ func buttonSpinnerSize(theme *theme.Theme, size ButtonSize) unit.Dp {
 
 func buttonColors(theme *theme.Theme, variant ButtonVariant) buttonPalette {
 	transparent := color.NRGBA{}
-	foreground := theme.Palette.Foreground
-	defaultBg := theme.Palette.SurfaceRaised
-	defaultHover := theme.Palette.SurfacePressed
+	foreground := theme.Palette.DefaultForegroundColor()
+	defaultBg := theme.Palette.DefaultColor()
+	defaultHover := theme.Palette.DefaultHoverColor()
 	accent := theme.Palette.Accent
 	accentHover := theme.Palette.AccentHover
 	accentFg := theme.Palette.AccentForeground

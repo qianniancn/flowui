@@ -50,18 +50,21 @@ func buttonPressedScale(theme *theme.Theme, size ButtonSize) float32 {
 }
 
 type buttonState struct {
-	bg           color.NRGBA
-	bgFrom       color.NRGBA
-	bgTo         color.NRGBA
-	bgStart      time.Time
-	bgReady      bool
-	focus        float32
-	focusFrom    float32
-	focusTo      float32
-	focusAt      time.Time
-	focusReady   bool
-	focused      bool
-	pointerFocus bool
+	bg              color.NRGBA
+	bgFrom          color.NRGBA
+	bgTo            color.NRGBA
+	bgStart         time.Time
+	bgReady         bool
+	focus           float32
+	focusFrom       float32
+	focusTo         float32
+	focusAt         time.Time
+	focusReady      bool
+	focused         bool
+	pointerFocus    bool
+	focusPrepared   bool
+	preparedVisible bool
+	preparedAge     uint8
 }
 
 func (s *buttonState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
@@ -123,12 +126,35 @@ func (s *buttonState) focusOpacity(gtx layout.Context, focused bool) float32 {
 func (s *buttonState) focusVisible(focused bool, history []widget.Press) bool {
 	if !focused {
 		s.focused = false
-		s.pointerFocus = false
+		if s.focusPrepared {
+			s.preparedAge++
+			if s.preparedAge > 1 {
+				s.focusPrepared = false
+				s.preparedAge = 0
+				s.pointerFocus = false
+			}
+		} else {
+			s.pointerFocus = false
+		}
 		return false
 	}
 	if !s.focused {
 		s.focused = true
-		s.pointerFocus = len(history) > 0
+		if s.focusPrepared {
+			s.pointerFocus = !s.preparedVisible
+			s.focusPrepared = false
+			s.preparedAge = 0
+		} else {
+			s.pointerFocus = len(history) > 0
+		}
 	}
 	return !s.pointerFocus
+}
+
+func (s *buttonState) prepareFocus(visible bool) {
+	s.focused = false
+	s.pointerFocus = !visible
+	s.focusPrepared = true
+	s.preparedVisible = visible
+	s.preparedAge = 0
 }

@@ -161,6 +161,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。
+- `chips`：对齐 HeroUI 的紧凑标签，包含颜色、变体、尺寸、图标和语义状态。
 - `inputs`：对齐 HeroUI 的输入框变体、类型、状态和受控事件。
 - `labels`：表单标签状态，以及与输入框、组合框和选择器的字段关联。
 - `descriptions`：辅助文本状态、字段关联、自动换行和组件兼容性。

@@ -22,10 +22,10 @@ func alertDialogStyleFor(activeTheme *theme.Theme, status Status) alertDialogSty
 		style.iconBackground = softColor(palette.AccentSoft, palette.Accent)
 		style.iconForeground = theme.ColorOr(palette.AccentSoftForeground, palette.Accent)
 	case StatusSuccess:
-		style.iconBackground = softColor(color.NRGBA{}, palette.Success)
+		style.iconBackground = softColor(palette.SuccessSoft, palette.Success)
 		style.iconForeground = palette.SuccessSoftForegroundColor()
 	case StatusWarning:
-		style.iconBackground = softColor(color.NRGBA{}, palette.Warning)
+		style.iconBackground = softColor(palette.WarningSoft, palette.Warning)
 		style.iconForeground = palette.WarningSoftForegroundColor()
 	case StatusDanger:
 		style.iconBackground = softColor(palette.DangerSoft, palette.Danger)

@@ -166,6 +166,7 @@ Examples live in `examples/`:
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.
+- `chips`: HeroUI-aligned compact labels with colors, variants, sizes, icons, and semantic statuses.
 - `inputs`: HeroUI-aligned input variants, types, states, and controlled events.
 - `labels`: form label states and field association for input, combo box, and select controls.
 - `descriptions`: supporting text states, field association, wrapping, and component compatibility.

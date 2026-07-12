@@ -157,8 +157,8 @@ func TestAlertDialogStatusStylesUseSoftSemanticColors(t *testing.T) {
 	}{
 		{StatusDefault, activeTheme.Palette.SurfaceSecondary, activeTheme.Palette.OverlayForeground},
 		{StatusAccent, activeTheme.Palette.AccentSoft, activeTheme.Palette.AccentSoftForeground},
-		{StatusSuccess, softColor(color.NRGBA{}, activeTheme.Palette.Success), activeTheme.Palette.SuccessSoftForeground},
-		{StatusWarning, softColor(color.NRGBA{}, activeTheme.Palette.Warning), activeTheme.Palette.WarningSoftForeground},
+		{StatusSuccess, activeTheme.Palette.SuccessSoft, activeTheme.Palette.SuccessSoftForeground},
+		{StatusWarning, activeTheme.Palette.WarningSoft, activeTheme.Palette.WarningSoftForeground},
 		{StatusDanger, activeTheme.Palette.DangerSoft, activeTheme.Palette.DangerSoftForeground},
 	}
 	for _, test := range tests {

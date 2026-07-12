@@ -13,6 +13,7 @@ type LabelTheme = theme.LabelTheme
 type ButtonTheme = theme.ButtonTheme
 type ToggleButtonTheme = theme.ToggleButtonTheme
 type CloseButtonTheme = theme.CloseButtonTheme
+type ChipTheme = theme.ChipTheme
 type CardTheme = theme.CardTheme
 type AlertTheme = theme.AlertTheme
 type AlertDialogTheme = theme.AlertDialogTheme

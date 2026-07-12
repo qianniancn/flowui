@@ -106,6 +106,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			FullWidth(),
 		ui.ProgressBar("progress", 50).ShowValue(),
 		ui.CloseButton("close").Label("Dismiss"),
+		ui.Chip("Completed").
+			Color(ui.ChipSuccess).
+			Variant(ui.ChipSoft).
+			Size(ui.ChipSmall).
+			StartContent(ui.Icon(lucide.CircleCheck).Size(12)).
+			EndContent(ui.Icon(lucide.X).Size(12)),
 		ui.ToggleButton("pin", model.open, ui.Text("Pin")).
 			OnChange(func(selected bool) { send(facadeMsg{open: &selected}) }),
 		ui.Icon(lucide.Search).Size(18),

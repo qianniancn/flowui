@@ -45,8 +45,12 @@ type Palette struct {
 	AccentSoftHover            color.NRGBA
 	AccentSoftForeground       color.NRGBA
 	Success                    color.NRGBA
+	SuccessForeground          color.NRGBA
+	SuccessSoft                color.NRGBA
 	SuccessSoftForeground      color.NRGBA
 	Warning                    color.NRGBA
+	WarningForeground          color.NRGBA
+	WarningSoft                color.NRGBA
 	WarningSoftForeground      color.NRGBA
 	Danger                     color.NRGBA
 	DangerHover                color.NRGBA
@@ -92,6 +96,7 @@ type ComponentsTheme struct {
 	Button       ButtonTheme
 	ToggleButton ToggleButtonTheme
 	CloseButton  CloseButtonTheme
+	Chip         ChipTheme
 	Card         CardTheme
 	Alert        AlertTheme
 	AlertDialog  AlertDialogTheme
@@ -196,6 +201,25 @@ type CloseButtonTheme struct {
 	IconSize       unit.Dp
 	FocusRingWidth unit.Dp
 	PressedScale   float32
+}
+
+type ChipTheme struct {
+	SmallHeight    unit.Dp
+	MediumHeight   unit.Dp
+	LargeHeight    unit.Dp
+	SmallPaddingX  unit.Dp
+	MediumPaddingX unit.Dp
+	LargePaddingX  unit.Dp
+	SmallPaddingY  unit.Dp
+	MediumPaddingY unit.Dp
+	LargePaddingY  unit.Dp
+	LabelPaddingX  unit.Dp
+	ContentGap     unit.Dp
+	Radius         unit.Dp
+	SmallTextSize  unit.Sp
+	MediumTextSize unit.Sp
+	LargeTextSize  unit.Sp
+	LineHeight     unit.Sp
 }
 
 type InputTheme struct {
@@ -519,8 +543,12 @@ func DefaultTheme() Theme {
 			AccentSoftHover:            color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
 			AccentSoftForeground:       color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
 			Success:                    color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0xff},
+			SuccessForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			SuccessSoft:                color.NRGBA{R: 0x17, G: 0xc9, B: 0x64, A: 0x26},
 			SuccessSoftForeground:      color.NRGBA{R: 0x2b, G: 0x77, B: 0x45, A: 0xff},
 			Warning:                    color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0xff},
+			WarningForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+			WarningSoft:                color.NRGBA{R: 0xf5, G: 0xa5, B: 0x24, A: 0x26},
 			WarningSoftForeground:      color.NRGBA{R: 0x85, G: 0x5f, B: 0x2e, A: 0xff},
 			Danger:                     color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
 			DangerHover:                color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
@@ -593,6 +621,24 @@ func DefaultTheme() Theme {
 				IconSize:       16,
 				FocusRingWidth: 2,
 				PressedScale:   0.93,
+			},
+			Chip: ChipTheme{
+				SmallHeight:    20,
+				MediumHeight:   24,
+				LargeHeight:    28,
+				SmallPaddingX:  4,
+				MediumPaddingX: 8,
+				LargePaddingX:  12,
+				SmallPaddingY:  0,
+				MediumPaddingY: 2,
+				LargePaddingY:  4,
+				LabelPaddingX:  2,
+				ContentGap:     2,
+				Radius:         16,
+				SmallTextSize:  12,
+				MediumTextSize: 12,
+				LargeTextSize:  14,
+				LineHeight:     20,
 			},
 			Card: CardTheme{
 				Padding:               16,
@@ -938,7 +984,9 @@ func DarkTheme() Theme {
 	theme.Palette.Segment = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
 	theme.Palette.SegmentForeground = theme.Palette.Foreground
 	theme.Palette.SuccessSoftForeground = color.NRGBA{R: 0x74, G: 0xd8, B: 0x8f, A: 0xff}
+	theme.Palette.SuccessSoft.A = 0x1f
 	theme.Palette.WarningSoftForeground = color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff}
+	theme.Palette.WarningSoft.A = 0x1f
 	theme.Palette.SurfaceShadow = color.NRGBA{}
 	theme.Palette.OverlayShadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	theme.Palette.Shadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}

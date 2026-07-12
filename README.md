@@ -171,7 +171,7 @@ Examples live in `examples/`:
 - `inputs`: HeroUI-aligned input variants, types, states, and controlled events.
 - `labels`: form label states and field association for input, combo box, and select controls.
 - `descriptions`: supporting text states, field association, wrapping, and component compatibility.
-- `checkboxes`: checkbox states and validation.
+- `checkboxes`: HeroUI-aligned variants, indeterminate and read-only states, descriptions, validation, and custom indicators.
 - `switches`: switch states, sizes, descriptions, label position, thumb content, and switch groups.
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.

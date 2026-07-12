@@ -7,6 +7,8 @@ import (
 )
 
 type CheckboxWidget = checkbox.CheckboxWidget
+type CheckboxVariant = checkbox.CheckboxVariant
+type CheckboxIndicatorState = checkbox.IndicatorState
 type SwitchWidget = switches.SwitchWidget
 type SwitchSize = switches.SwitchSize
 type SwitchGroupWidget = switches.SwitchGroupWidget
@@ -15,6 +17,9 @@ type RadioGroupWidget = radiogroup.RadioGroupWidget
 type RadioGroupVariant = radiogroup.RadioGroupVariant
 
 const (
+	CheckboxPrimary   = checkbox.CheckboxPrimary
+	CheckboxSecondary = checkbox.CheckboxSecondary
+
 	SwitchMedium = switches.SwitchMedium
 	SwitchSmall  = switches.SwitchSmall
 	SwitchLarge  = switches.SwitchLarge

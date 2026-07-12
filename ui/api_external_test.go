@@ -111,6 +111,22 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ReadOnly(false).
 			MaxLength(120).
 			Label("Email address"),
+		ui.Checkbox("agreement", model.open, "Agreement").
+			Variant(ui.CheckboxSecondary).
+			Indeterminate(false).
+			ReadOnly(false).
+			Required(true).
+			Description("Accept the agreement").
+			ErrorMessage("Agreement is required").
+			Indicator(func(state ui.CheckboxIndicatorState) ui.Widget {
+				if !state.Checked && !state.Indeterminate {
+					return nil
+				}
+				return ui.Icon(lucide.Check).Size(10)
+			}).
+			Invalid(false).
+			Disabled(false).
+			OnChange(func(checked bool) { send(facadeMsg{open: &checked}) }),
 		ui.InputGroup(
 			ui.Input("website", "flowui").Label("Website"),
 		).

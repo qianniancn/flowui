@@ -1,27 +1,33 @@
 package main
 
-import "github.com/qianniancn/FlowUI/ui"
+import (
+	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui-icons-lucide"
+)
 
 type Model struct {
-	Terms     bool
+	Primary   bool
+	Secondary bool
 	Email     bool
 	Reports   bool
-	TwoFactor bool
-	Archived  bool
-	Invalid   bool
-	Compact   bool
+	Security  bool
+	Terms     bool
+	Heart     bool
+	Plus      bool
 }
 
 type Field string
 
 const (
-	fieldTerms     Field = "terms"
+	fieldPrimary   Field = "primary"
+	fieldSecondary Field = "secondary"
+	fieldAll       Field = "all"
 	fieldEmail     Field = "email"
 	fieldReports   Field = "reports"
-	fieldTwoFactor Field = "two-factor"
-	fieldArchived  Field = "archived"
-	fieldInvalid   Field = "invalid"
-	fieldCompact   Field = "compact"
+	fieldSecurity  Field = "security"
+	fieldTerms     Field = "terms"
+	fieldHeart     Field = "heart"
+	fieldPlus      Field = "plus"
 )
 
 type Msg struct {
@@ -29,71 +35,124 @@ type Msg struct {
 	Checked bool
 }
 
-func Update(m *Model, msg Msg) {
+func Update(model *Model, msg Msg) {
+	if msg.Field == fieldAll {
+		model.Email = msg.Checked
+		model.Reports = msg.Checked
+		model.Security = msg.Checked
+		return
+	}
 	switch msg.Field {
-	case fieldTerms:
-		m.Terms = msg.Checked
+	case fieldPrimary:
+		model.Primary = msg.Checked
+	case fieldSecondary:
+		model.Secondary = msg.Checked
 	case fieldEmail:
-		m.Email = msg.Checked
+		model.Email = msg.Checked
 	case fieldReports:
-		m.Reports = msg.Checked
-	case fieldTwoFactor:
-		m.TwoFactor = msg.Checked
-	case fieldArchived:
-		m.Archived = msg.Checked
-	case fieldInvalid:
-		m.Invalid = msg.Checked
-	case fieldCompact:
-		m.Compact = msg.Checked
+		model.Reports = msg.Checked
+	case fieldSecurity:
+		model.Security = msg.Checked
+	case fieldTerms:
+		model.Terms = msg.Checked
+	case fieldHeart:
+		model.Heart = msg.Checked
+	case fieldPlus:
+		model.Plus = msg.Checked
 	}
 }
 
-func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
+func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
+	selected := 0
+	for _, value := range []bool{model.Email, model.Reports, model.Security} {
+		if value {
+			selected++
+		}
+	}
+	all := selected == 3
+	indeterminate := selected > 0 && selected < 3
+
 	return ui.Center(
 		ui.Box(
 			ui.Scroll("checkboxes",
 				ui.Column(
-					ui.Text("FlowUI Checkboxes").Size(24),
-					ui.Text("Account").Size(18),
-					ui.Column(
-						checkbox("terms", fieldTerms, m.Terms, "Accept terms", send).
-							Invalid(!m.Terms),
-						checkbox("email", fieldEmail, m.Email, "Email updates", send),
-						checkbox("reports", fieldReports, m.Reports, "Weekly reports", send),
-						checkbox("two-factor", fieldTwoFactor, m.TwoFactor, "Two-factor prompts", send),
-					).Gap(14),
+					ui.Text("FlowUI Checkbox").Size(24),
 					ui.Divider(),
-					ui.Text("States").Size(18),
-					ui.Column(
-						checkbox("archived", fieldArchived, m.Archived, "Archive item", send),
-						checkbox("invalid-selected", fieldInvalid, m.Invalid, "Always invalid", send).
-							Invalid(true),
-						ui.Checkbox("checked-disabled", true, "Disabled checked").Disabled(true),
-						ui.Checkbox("disabled", false, "Disabled").Disabled(true),
+					section("Variants",
+						ui.Column(
+							controlled("primary", fieldPrimary, model.Primary, "Primary checkbox", send).
+								Description("Standard field styling with a subtle shadow"),
+							controlled("secondary", fieldSecondary, model.Secondary, "Secondary checkbox", send).
+								Variant(ui.CheckboxSecondary).
+								Description("Lower emphasis styling for use on surfaces"),
+						).Gap(16),
+					),
+					section("Indeterminate",
+						ui.Column(
+							controlled("select-all", fieldAll, all, "Select all notifications", send).
+								Indeterminate(indeterminate).
+								Description("Select or clear every notification channel"),
+							ui.Box(
+								ui.Column(
+									controlled("email", fieldEmail, model.Email, "Email notifications", send),
+									controlled("reports", fieldReports, model.Reports, "Weekly reports", send),
+									controlled("security", fieldSecurity, model.Security, "Security alerts", send),
+								).Gap(12),
+							).PaddingLeft(28),
+						).Gap(14),
+					),
+					section("Validation and states",
+						ui.Column(
+							controlled("terms", fieldTerms, model.Terms, "Accept terms", send).
+								Required(true).
+								Invalid(!model.Terms).
+								ErrorMessage("Accept the terms before continuing"),
+							ui.Checkbox("readonly", true, "Read-only selection").
+								ReadOnly(true).
+								Description("The value is visible but cannot be changed"),
+							ui.Checkbox("disabled-checked", true, "Disabled checked").Disabled(true),
+							ui.Checkbox("disabled", false, "Disabled").Disabled(true),
+						).Gap(16),
+					),
+					section("Custom indicators",
 						ui.Row(
-							checkbox("compact", fieldCompact, m.Compact, "", send),
-							ui.Text("Control only").Size(14),
-						).Gap(12).AlignMiddle(),
-					).Gap(14),
-				).Gap(18),
+							controlled("heart", fieldHeart, model.Heart, "Favorite", send).
+								Indicator(customIndicator(lucide.Heart)),
+							controlled("plus", fieldPlus, model.Plus, "Add item", send).
+								Indicator(customIndicator(lucide.Plus)),
+						).Gap(28).AlignMiddle(),
+					),
+				).Gap(22),
 			).Vertical(),
-		).FillWidth().MaxWidth(640).Padding(24),
+		).FillWidth().MaxWidth(680).Padding(24),
 	)
 }
 
-func checkbox(key string, field Field, checked bool, label string, send ui.Send[Msg]) ui.CheckboxWidget {
-	return ui.Checkbox(key, checked, label).
-		OnChange(func(checked bool) {
-			send(Msg{
-				Field:   field,
-				Checked: checked,
-			})
-		})
+func section(title string, child ui.Widget) ui.Widget {
+	return ui.Column(ui.Text(title).Size(18), child).Gap(10)
+}
+
+func controlled(key string, field Field, checked bool, label string, send ui.Send[Msg]) ui.CheckboxWidget {
+	return ui.Checkbox(key, checked, label).OnChange(func(checked bool) {
+		send(Msg{Field: field, Checked: checked})
+	})
+}
+
+func customIndicator(data lucide.Data) func(ui.CheckboxIndicatorState) ui.Widget {
+	return func(state ui.CheckboxIndicatorState) ui.Widget {
+		if !state.Checked && !state.Indeterminate {
+			return nil
+		}
+		return ui.Icon(data).Size(10)
+	}
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Checkboxes"),
-		ui.Size(900, 640),
+	ui.Run(
+		Model{Primary: true, Email: true, Heart: true, Plus: true},
+		Update,
+		View,
+		ui.Title("FlowUI Checkbox"),
+		ui.Size(900, 760),
 	)
 }

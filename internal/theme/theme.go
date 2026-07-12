@@ -246,11 +246,17 @@ type InputGroupTheme struct {
 	ShadowOpacity       float32
 }
 type CheckboxTheme struct {
-	Size        unit.Dp
-	FocusSpace  unit.Dp
-	BorderWidth unit.Dp
-	CheckStroke unit.Dp
-	LabelGap    unit.Dp
+	Size                unit.Dp
+	FocusSpace          unit.Dp
+	FocusRingWidth      unit.Dp
+	BorderWidth         unit.Dp
+	CheckStroke         unit.Dp
+	IndeterminateStroke unit.Dp
+	IndicatorSize       unit.Dp
+	LabelGap            unit.Dp
+	DescriptionGap      unit.Dp
+	DescriptionIndent   unit.Dp
+	ShadowOpacity       float32
 }
 
 type SwitchTheme struct {
@@ -720,11 +726,17 @@ func DefaultTheme() Theme {
 				ShadowOpacity:       1,
 			},
 			Checkbox: CheckboxTheme{
-				Size:        16,
-				FocusSpace:  2,
-				BorderWidth: 1,
-				CheckStroke: 1.5,
-				LabelGap:    10,
+				Size:                16,
+				FocusSpace:          2,
+				FocusRingWidth:      2,
+				BorderWidth:         1,
+				CheckStroke:         1.5,
+				IndeterminateStroke: 1.5,
+				IndicatorSize:       12,
+				LabelGap:            8,
+				DescriptionGap:      4,
+				DescriptionIndent:   28,
+				ShadowOpacity:       1,
 			},
 			Switch: SwitchTheme{
 				SmallTrackWidth:   32,
@@ -1006,6 +1018,7 @@ func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Components.Input.ShadowOpacity = 0
 	theme.Components.InputGroup.ShadowOpacity = 0
+	theme.Components.Checkbox.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

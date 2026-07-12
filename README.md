@@ -178,6 +178,7 @@ Examples live in `examples/`:
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.
+- `alert_dialogs`: HeroUI-aligned confirmation dialogs with semantic statuses, controlled dismissal, sizes, placements, and backdrop variants.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `tooltips`: HeroUI-aligned hover and focus hints with delays, arrows, placement, and viewport flipping.
 - `toasts`: HeroUI-aligned controlled notifications with variants, actions, timeouts, stacking, and six placements.

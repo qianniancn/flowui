@@ -121,6 +121,19 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		}).OnClose(func(string) {}),
 		ui.Modal("dialog", model.open, "Settings", ui.Text("Body")).
 			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }),
+		ui.AlertDialog("confirm", model.open, "Delete project?", "This action cannot be undone.").
+			Status(ui.AlertDialogDanger).
+			Icon(ui.Icon(lucide.CircleAlert).Size(20)).
+			Body(ui.Text("Custom body")).
+			Header(ui.Text("Custom header")).
+			Footer(ui.Button("cancel", ui.Text("Cancel"))).
+			Size(ui.AlertDialogSmall).
+			Placement(ui.AlertDialogCenter).
+			Backdrop(ui.AlertDialogBackdropBlur).
+			Dismissable(false).
+			KeyboardDismissDisabled(true).
+			CloseButton(true).
+			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }),
 	)
 }
 

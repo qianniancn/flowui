@@ -173,6 +173,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。
+- `alert_dialogs`：对齐 HeroUI 的确认弹窗，包含语义状态、受控关闭、尺寸、位置和遮罩变体。
 - `popovers`：受控浮层，包含位置、箭头、关闭行为和交互内容。
 - `tooltips`：对齐 HeroUI 的悬停与焦点提示，包含延时、箭头、位置和视口翻转。
 - `toasts`：对齐 HeroUI 的受控通知，包含变体、操作、超时、堆叠和六种位置。

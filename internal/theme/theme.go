@@ -94,6 +94,7 @@ type ComponentsTheme struct {
 	CloseButton  CloseButtonTheme
 	Card         CardTheme
 	Alert        AlertTheme
+	AlertDialog  AlertDialogTheme
 	Description  DescriptionTheme
 	Label        LabelTheme
 	Input        InputTheme
@@ -140,6 +141,13 @@ type AlertTheme struct {
 	TitleLineHeight       unit.Sp
 	DescriptionSize       unit.Sp
 	DescriptionLineHeight unit.Sp
+}
+
+type AlertDialogTheme struct {
+	IconSize      unit.Dp
+	IconGlyphSize unit.Dp
+	HeaderGap     unit.Dp
+	TitleSize     unit.Sp
 }
 
 type DescriptionTheme struct {
@@ -609,6 +617,12 @@ func DefaultTheme() Theme {
 				TitleLineHeight:       24,
 				DescriptionSize:       14,
 				DescriptionLineHeight: 20,
+			},
+			AlertDialog: AlertDialogTheme{
+				IconSize:      40,
+				IconGlyphSize: 20,
+				HeaderGap:     12,
+				TitleSize:     16,
 			},
 			Description: DescriptionTheme{
 				TextSize: 12,

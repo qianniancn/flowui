@@ -15,6 +15,7 @@ type ToggleButtonTheme = theme.ToggleButtonTheme
 type CloseButtonTheme = theme.CloseButtonTheme
 type CardTheme = theme.CardTheme
 type AlertTheme = theme.AlertTheme
+type AlertDialogTheme = theme.AlertDialogTheme
 type InputTheme = theme.InputTheme
 type InputGroupTheme = theme.InputGroupTheme
 type CheckboxTheme = theme.CheckboxTheme

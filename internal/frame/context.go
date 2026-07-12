@@ -152,7 +152,19 @@ func ApplyFrameCommands(ctx *Context, gtx layout.Context) {
 }
 
 func RequestFocus(ctx *Context, tag event.Tag) {
-	ctx.focus.Request(tag)
+	RequestFocusVisible(ctx, tag, true)
+}
+
+func RequestFocusVisible(ctx *Context, tag event.Tag, visible bool) {
+	origin := state.FocusOriginKeyboard
+	if !visible {
+		origin = state.FocusOriginPointer
+	}
+	ctx.focus.Request(tag, origin)
+}
+
+func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {
+	return ctx.focus.Visible(tag, focused)
 }
 
 type fieldFocusTarget struct {

@@ -9,6 +9,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 )
 
 func TestFocusPreserveLastsOnlyForCurrentFrame(t *testing.T) {
@@ -56,6 +57,75 @@ func TestFocusPreservePreventsPointerFocusClear(t *testing.T) {
 				t.Fatalf("focused = %v, want %v", got, test.focused)
 			}
 		})
+	}
+}
+
+func TestPointerFocusOriginSurvivesDelayedFocus(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.Request(tag, FocusOriginPointer)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if focus.Visible(tag, true) {
+		t.Fatal("delayed pointer focus was reported as keyboard-visible")
+	}
+}
+
+func TestFocusOnPressRecordsPointerOrigin(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.OnPress(tag, []widget.Press{{}}, 0)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if focus.Visible(tag, true) {
+		t.Fatal("pointer press focus was reported as keyboard-visible")
+	}
+}
+
+func TestKeyboardFocusOriginRemainsVisible(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.Request(tag, FocusOriginKeyboard)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if !focus.Visible(tag, true) {
+		t.Fatal("delayed keyboard focus was hidden")
+	}
+}
+
+func TestDifferentFocusedTargetClearsStaleOrigin(t *testing.T) {
+	var focus Focus
+	pointerTarget := new(int)
+	keyboardTarget := new(int)
+	focus.Request(pointerTarget, FocusOriginPointer)
+	focus.ApplyFrameCommands(layout.Context{Ops: new(op.Ops)})
+	focus.BeginFrame()
+	if !focus.Visible(keyboardTarget, true) {
+		t.Fatal("unrequested focus did not default to keyboard-visible")
+	}
+	focus.Visible(keyboardTarget, false)
+	if !focus.Visible(pointerTarget, true) {
+		t.Fatal("stale pointer origin hid a later native keyboard focus")
+	}
+}
+
+func TestCurrentlyFocusedTargetDoesNotClearNewRequest(t *testing.T) {
+	var focus Focus
+	current := new(int)
+	next := new(int)
+	focus.Visible(current, true)
+	focus.Request(next, FocusOriginPointer)
+	if !focus.Visible(current, true) {
+		t.Fatal("current keyboard focus changed before the pending command applied")
+	}
+	if focus.Visible(next, true) {
+		t.Fatal("current focus cleared the pending pointer origin")
 	}
 }
 

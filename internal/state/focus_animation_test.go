@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/widget"
 )
 
@@ -67,5 +69,18 @@ func TestFocusAnimationPreparesProgrammaticFocusModality(t *testing.T) {
 	animation.Prepare(true)
 	if !animation.Visible(true, nil) {
 		t.Fatal("keyboard-originated programmatic focus was hidden")
+	}
+}
+
+func TestPointerPreparationImmediatelyClearsVisibleFocus(t *testing.T) {
+	var animation FocusAnimation
+	gtx := layout.Context{Ops: new(op.Ops), Now: time.Unix(1, 0)}
+	if got := animation.Opacity(gtx, true); got != 1 {
+		t.Fatalf("initial keyboard focus opacity = %v, want 1", got)
+	}
+
+	animation.Prepare(false)
+	if got := animation.Opacity(gtx, false); got != 0 {
+		t.Fatalf("pointer focus opacity = %v, want 0", got)
 	}
 }

@@ -33,6 +33,12 @@ func (s *FocusAnimation) Prepare(visible bool) {
 	s.pointerFocus = !visible
 	s.pendingPress = !visible
 	s.pendingAge = 0
+	if !visible {
+		s.value = 0
+		s.from = 0
+		s.to = 0
+		s.ready = true
+	}
 }
 
 func (s *FocusAnimation) Visible(focused bool, history []widget.Press) bool {

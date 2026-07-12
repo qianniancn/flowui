@@ -18,24 +18,62 @@ type Focus struct {
 	pointerPress bool
 	preserve     bool
 	target       event.Tag
+	pending      focusTarget
+	active       focusTarget
+	frame        uint64
 }
 
 type focusCatcher struct{}
 
+type FocusOrigin uint8
+
+const (
+	FocusOriginKeyboard FocusOrigin = iota
+	FocusOriginPointer
+)
+
+type focusTarget struct {
+	tag         event.Tag
+	origin      FocusOrigin
+	requestedAt uint64
+	applied     bool
+}
+
 func (f *Focus) BeginFrame() {
+	f.frame++
 	f.pointerPress = false
 	f.preserve = false
 	f.target = nil
 }
 
-func (f *Focus) Request(tag event.Tag) {
+func (f *Focus) Request(tag event.Tag, origin FocusOrigin) {
 	f.target = tag
+	f.pending = focusTarget{tag: tag, origin: origin, requestedAt: f.frame}
 }
 
 func (f *Focus) OnPress(tag event.Tag, history []widget.Press, before int) {
 	if ActivePresses(history) > before {
-		f.Request(tag)
+		f.Request(tag, FocusOriginPointer)
 	}
+}
+
+func (f *Focus) Visible(tag event.Tag, focused bool) bool {
+	if !focused {
+		if f.active.tag == tag {
+			f.active = focusTarget{}
+		}
+		return false
+	}
+	if f.pending.tag == tag {
+		f.active = f.pending
+		f.pending = focusTarget{}
+	} else if f.active.tag != tag {
+		f.active = focusTarget{tag: tag, origin: FocusOriginKeyboard}
+		if f.pending.applied && f.pending.requestedAt < f.frame {
+			f.pending = focusTarget{}
+		}
+	}
+	return f.active.origin != FocusOriginPointer
 }
 
 func (f *Focus) Preserve() {
@@ -46,8 +84,13 @@ func (f *Focus) ApplyFrameCommands(gtx layout.Context) {
 	f.updatePointerPress(gtx)
 	if f.target != nil {
 		gtx.Execute(key.FocusCmd{Tag: f.target})
+		if f.pending.tag == f.target {
+			f.pending.applied = true
+		}
 	} else if f.pointerPress && !f.preserve {
 		gtx.Execute(key.FocusCmd{})
+		f.pending = focusTarget{}
+		f.active = focusTarget{}
 	}
 	f.addCatcher(gtx)
 }

@@ -3,15 +3,18 @@ package input
 import (
 	"gioui.org/layout"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
 const stateSlotInputGroup = "input-group"
 
-// InputGroupWidget combines an Input with optional prefix and suffix content
+// InputGroupWidget combines an Input or TextArea with optional prefix and suffix content
 // inside one HeroUI-style field shell.
 type InputGroupWidget struct {
 	input              InputWidget
+	textArea           TextAreaWidget
+	multiline          bool
 	prefix             frame.Widget
 	suffix             frame.Widget
 	variant            InputVariant
@@ -33,6 +36,17 @@ func InputGroup(input InputWidget) InputGroupWidget {
 		disabled:  input.disabled,
 		invalid:   input.invalid,
 		fullWidth: input.fullWidth,
+	}
+}
+
+func InputGroupTextArea(textArea TextAreaWidget) InputGroupWidget {
+	return InputGroupWidget{
+		textArea:  textArea,
+		multiline: true,
+		variant:   textArea.variant,
+		disabled:  textArea.disabled,
+		invalid:   textArea.invalid,
+		fullWidth: textArea.fullWidth,
 	}
 }
 
@@ -81,7 +95,14 @@ func (g InputGroupWidget) FullWidth() InputGroupWidget {
 }
 
 func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	gtx, key, editor, enabled := g.input.prepareEditor(ctx, gtx, g.disabled)
+	var key string
+	var editor *widget.Editor
+	var enabled bool
+	if g.multiline {
+		gtx, key, editor, enabled = g.textArea.prepareEditor(ctx, gtx, g.disabled)
+	} else {
+		gtx, key, editor, enabled = g.input.prepareEditor(ctx, gtx, g.disabled)
+	}
 	disabled := !enabled
 	state := inputGroupStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
@@ -97,13 +118,11 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 		Selection:   style.Selection,
 	}
 	tokens := frame.ActiveTheme(ctx).Components.InputGroup
-	return g.layoutFrame(ctx, gtx, state, style, enabled, g.input.editorLayoutWithTypography(
-		ctx,
-		key,
-		enabled,
-		editor,
-		inputStyle,
-		tokens.TextSize,
-		tokens.LineHeight,
-	))
+	var editorLayout layout.Widget
+	if g.multiline {
+		editorLayout = g.textArea.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, tokens.TextSize, tokens.LineHeight)
+	} else {
+		editorLayout = g.input.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, tokens.TextSize, tokens.LineHeight)
+	}
+	return g.layoutFrame(ctx, gtx, state, style, enabled, editorLayout)
 }

@@ -18,6 +18,7 @@ type CardTheme = theme.CardTheme
 type AlertTheme = theme.AlertTheme
 type AlertDialogTheme = theme.AlertDialogTheme
 type InputTheme = theme.InputTheme
+type TextAreaTheme = theme.TextAreaTheme
 type InputGroupTheme = theme.InputGroupTheme
 type CheckboxTheme = theme.CheckboxTheme
 type SwitchTheme = theme.SwitchTheme

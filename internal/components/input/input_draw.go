@@ -13,11 +13,18 @@ import (
 )
 
 func drawInputFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style inputStyle, ringWidthDp float32) {
+	drawFieldFrame(gtx, rect, radius, activeTheme.Components.Input.Radius, style, ringWidthDp)
+}
+
+func drawTextAreaFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style inputStyle, ringWidthDp float32) {
+	drawFieldFrame(gtx, rect, radius, activeTheme.Components.TextArea.Radius, style, ringWidthDp)
+}
+
+func drawFieldFrame(gtx layout.Context, rect image.Rectangle, radius int, radiusDp unit.Dp, style inputStyle, ringWidthDp float32) {
 	if rect.Empty() {
 		return
 	}
 	if style.ShadowOpacity > 0 {
-		radiusDp := activeTheme.Components.Input.Radius
 		render.DrawShadow(
 			gtx,
 			rect,

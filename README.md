@@ -117,6 +117,7 @@ text/editor internals.
 - `Button`
 - `ToggleButton`
 - `Input`
+- `TextArea`
 - `Checkbox`
 - `Switch`
 - `SwitchGroup`
@@ -170,6 +171,8 @@ Examples live in `examples/`:
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.
 - `chips`: HeroUI-aligned compact labels with colors, variants, sizes, icons, and semantic statuses.
 - `inputs`: HeroUI-aligned input variants, types, states, and controlled events.
+- `input_groups`: HeroUI-aligned grouped fields with single-line or multiline editors, prefixes, suffixes, variants, validation states, and interactive actions.
+- `textareas`: HeroUI-aligned multiline fields with variants, controlled values, row sizing, states, InputGroup integration, and surface usage.
 - `labels`: form label states and field association for input, combo box, and select controls.
 - `descriptions`: supporting text states, field association, wrapping, and component compatibility.
 - `checkboxes`: HeroUI-aligned variants, indeterminate and read-only states, descriptions, validation, and custom indicators.

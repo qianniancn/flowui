@@ -148,6 +148,23 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ReadOnly(false).
 			MaxLength(120).
 			Label("Email address"),
+		ui.TextArea("biography", "").
+			Placeholder("Tell us about yourself").
+			Variant(ui.TextAreaSecondary).
+			Rows(4).
+			ReadOnly(false).
+			MaxLength(500).
+			Label("Biography").
+			Invalid(false).
+			Disabled(false).
+			FullWidth().
+			OnChange(func(string) {}),
+		ui.InputGroupTextArea(
+			ui.TextArea("notes", "").Rows(5),
+		).
+			Prefix(ui.Icon(lucide.MessageSquare).Size(16)).
+			Suffix(ui.Icon(lucide.SendHorizontal).Size(16)).
+			FullWidth(),
 		ui.Checkbox("agreement", model.open, "Agreement").
 			Variant(ui.CheckboxSecondary).
 			Indeterminate(false).

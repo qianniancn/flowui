@@ -22,6 +22,16 @@ type inputStyle struct {
 }
 
 func inputStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool) inputStyle {
+	tokens := activeTheme.Components.Input
+	return fieldStyleFor(activeTheme, variant, hovered, focused, disabled, invalid, tokens.FocusRingWidth, tokens.InvalidOutlineWidth, tokens.ShadowOpacity)
+}
+
+func textAreaStyleFor(activeTheme *theme.Theme, variant TextAreaVariant, hovered, focused, disabled, invalid bool) inputStyle {
+	tokens := activeTheme.Components.TextArea
+	return fieldStyleFor(activeTheme, variant, hovered, focused, disabled, invalid, tokens.FocusRingWidth, tokens.InvalidOutlineWidth, tokens.ShadowOpacity)
+}
+
+func fieldStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool, focusRingWidth, invalidOutlineWidth unit.Dp, shadowOpacity float32) inputStyle {
 	background := activeTheme.Palette.Surface
 	hoverBackground := render.LerpColor(
 		activeTheme.Palette.Surface,
@@ -29,7 +39,6 @@ func inputStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focu
 		primaryHoverStrength,
 	)
 	focusBackground := activeTheme.Palette.Surface
-	shadowOpacity := activeTheme.Components.Input.ShadowOpacity
 	if variant == InputSecondary {
 		background = activeTheme.Palette.SurfacePressed
 		hoverBackground = activeTheme.Palette.Border
@@ -47,13 +56,13 @@ func inputStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focu
 	ringWidth := unit.Dp(0)
 	if focused {
 		ring = activeTheme.Palette.Focus
-		ringWidth = activeTheme.Components.Input.FocusRingWidth
+		ringWidth = focusRingWidth
 	}
 	if invalid {
 		ring = activeTheme.Palette.Danger
-		ringWidth = activeTheme.Components.Input.InvalidOutlineWidth
+		ringWidth = invalidOutlineWidth
 		if focused {
-			ringWidth = activeTheme.Components.Input.FocusRingWidth
+			ringWidth = focusRingWidth
 		}
 	}
 

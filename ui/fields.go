@@ -11,8 +11,10 @@ import (
 )
 
 type InputWidget = input.InputWidget
+type TextAreaWidget = input.TextAreaWidget
 type InputGroupWidget = input.InputGroupWidget
 type InputVariant = input.InputVariant
+type TextAreaVariant = input.TextAreaVariant
 type InputType = input.InputType
 type ComboBoxItem = combobox.ComboBoxItem
 type ComboBoxWidget = combobox.ComboBoxWidget
@@ -37,6 +39,9 @@ const (
 	InputNumber    = input.InputNumber
 	InputPassword  = input.InputPassword
 
+	TextAreaPrimary   = input.TextAreaPrimary
+	TextAreaSecondary = input.TextAreaSecondary
+
 	ListBoxItemDefault = listbox.ListBoxItemDefault
 	ListBoxItemDanger  = listbox.ListBoxItemDanger
 
@@ -55,8 +60,16 @@ func Input(key, value string) InputWidget {
 	return input.Input(key, value)
 }
 
+func TextArea(key, value string) TextAreaWidget {
+	return input.TextArea(key, value)
+}
+
 func InputGroup(field InputWidget) InputGroupWidget {
 	return input.InputGroup(field)
+}
+
+func InputGroupTextArea(field TextAreaWidget) InputGroupWidget {
+	return input.InputGroupTextArea(field)
 }
 
 func ComboBox(key, selectedKey string, items []ComboBoxItem) ComboBoxWidget {

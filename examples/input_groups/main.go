@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/qianniancn/FlowUI/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
@@ -13,18 +14,28 @@ type Model struct {
 	Price   string
 	Search  string
 	Token   string
+	Prompt  string
 	Last    string
 }
 
 type Msg struct {
-	Field string
-	Value string
-	Copy  bool
+	Field  string
+	Value  string
+	Copy   bool
+	Submit bool
 }
 
 func Update(m *Model, msg Msg) {
 	if msg.Copy {
 		m.Last = fmt.Sprintf("Copied %s", m.Token)
+		return
+	}
+	if msg.Submit {
+		if strings.TrimSpace(m.Prompt) == "" {
+			return
+		}
+		m.Last = fmt.Sprintf("Submitted prompt: %s", m.Prompt)
+		m.Prompt = ""
 		return
 	}
 	switch msg.Field {
@@ -38,6 +49,8 @@ func Update(m *Model, msg Msg) {
 		m.Search = msg.Value
 	case "token":
 		m.Token = msg.Value
+	case "prompt":
+		m.Prompt = msg.Value
 	}
 }
 
@@ -89,6 +102,24 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							),
 						).Gap(28),
 						ui.Column(
+							section("Text area",
+								labeledGroup("Prompt", "prompt",
+									ui.InputGroupTextArea(
+										boundTextArea("prompt", m.Prompt, "Assign tasks or ask anything", send).Rows(5),
+									).
+										Prefix(ui.Icon(lucide.MessageSquare).Size(16)).
+										Suffix(
+											ui.Button("send-prompt", ui.Icon(lucide.SendHorizontal).Size(16)).
+												Variant(ui.ButtonGhost).
+												Size(ui.ButtonSmall).
+												IconOnly().
+												Disabled(strings.TrimSpace(m.Prompt) == "").
+												OnClick(func() { send(Msg{Submit: true}) }),
+										).
+										SuffixPadding(8, 4).
+										FullWidth(),
+								),
+							),
 							section("Action suffix",
 								labeledGroup("API token", "token",
 									ui.InputGroup(boundInput("token", m.Token, "flow_live_...", send)).
@@ -142,6 +173,14 @@ func labeledGroup(label, key string, group ui.InputGroupWidget) ui.Widget {
 
 func boundInput(key, value, placeholder string, send ui.Send[Msg]) ui.InputWidget {
 	return ui.Input(key, value).
+		Placeholder(placeholder).
+		OnChange(func(value string) {
+			send(Msg{Field: key, Value: value})
+		})
+}
+
+func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) ui.TextAreaWidget {
+	return ui.TextArea(key, value).
 		Placeholder(placeholder).
 		OnChange(func(value string) {
 			send(Msg{Field: key, Value: value})

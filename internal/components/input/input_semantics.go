@@ -7,7 +7,14 @@ import (
 )
 
 func (i InputWidget) withSemantics(ctx *frame.Context, key string, enabled bool, child layout.Widget) layout.Widget {
-	label := i.label
+	return withEditorSemantics(ctx, key, i.label, enabled, child)
+}
+
+func (t TextAreaWidget) withSemantics(ctx *frame.Context, key string, enabled bool, child layout.Widget) layout.Widget {
+	return withEditorSemantics(ctx, key, t.label, enabled, child)
+}
+
+func withEditorSemantics(ctx *frame.Context, key, label string, enabled bool, child layout.Widget) layout.Widget {
 	if label == "" {
 		label = frame.FieldLabel(ctx, key)
 	}

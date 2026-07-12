@@ -11,6 +11,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -57,9 +58,35 @@ func TestInputGroupOptionsAreImmutableAndInheritInput(t *testing.T) {
 	}
 }
 
+func TestInputGroupTextAreaOptionsAreImmutableAndInherited(t *testing.T) {
+	field := TextArea("prompt", "").
+		Variant(TextAreaSecondary).
+		Disabled(true).
+		Invalid(true).
+		FullWidth().
+		Rows(5)
+	base := InputGroupTextArea(field)
+	configured := base.
+		Prefix(inputGroupFixedWidget{size: image.Pt(16, 16)}).
+		Suffix(inputGroupFixedWidget{size: image.Pt(24, 16)}).
+		Variant(InputPrimary).
+		Disabled(false).
+		Invalid(false)
+
+	if !base.multiline || base.textArea.rows != 5 || base.variant != InputSecondary || !base.disabled || !base.invalid || !base.fullWidth {
+		t.Fatalf("inherited textarea group options = %#v", base)
+	}
+	if base.prefix != nil || base.suffix != nil {
+		t.Fatal("base textarea group was mutated")
+	}
+	if configured.prefix == nil || configured.suffix == nil || configured.variant != InputPrimary || configured.disabled || configured.invalid {
+		t.Fatalf("configured textarea group = %#v", configured)
+	}
+}
+
 func TestInputGroupHeroUIDefaultTheme(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.InputGroup
-	if tokens.MinHeight != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.DividerWidth != 0 {
+	if tokens.MinHeight != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.TextAreaMinHeight != 38 || tokens.TextAreaPaddingY != 8 || tokens.DividerWidth != 0 {
 		t.Fatalf("input group geometry = %#v", tokens)
 	}
 	if tokens.TextSize != 14 || tokens.LineHeight != 20 || tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 {
@@ -85,6 +112,79 @@ func TestInputGroupDefaultAndFullWidthLayout(t *testing.T) {
 	dims = group.FullWidth().Layout(newContext(nil), testLayoutContext())
 	if dims.Size.X != 300 {
 		t.Fatalf("full-width input group width = %d, want 300", dims.Size.X)
+	}
+}
+
+func TestInputGroupTextAreaRowsControlHeight(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		rows int
+		want int
+	}{
+		{name: "one", rows: 1, want: 38},
+		{name: "default", rows: 0, want: 76},
+		{name: "six", rows: 6, want: 136},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			area := TextArea(test.name, "")
+			if test.rows > 0 {
+				area = area.Rows(test.rows)
+			}
+			dims := InputGroupTextArea(area).
+				Prefix(inputGroupFixedWidget{size: image.Pt(16, 16)}).
+				Suffix(inputGroupFixedWidget{size: image.Pt(16, 16)}).
+				FullWidth().
+				Layout(newContext(nil), testLayoutContext())
+			if dims.Size != image.Pt(300, test.want) {
+				t.Fatalf("textarea group size = %v, want 300x%d", dims.Size, test.want)
+			}
+		})
+	}
+}
+
+func TestInputGroupTextAreaConfiguresMultilineEditor(t *testing.T) {
+	ctx := newContext(nil)
+	InputGroupTextArea(TextArea("prompt", "First\nSecond").Rows(4)).Layout(ctx, testLayoutContext())
+	editor := testComponentState[widget.Editor](ctx, "prompt", stateSlotEditor)
+	if editor == nil {
+		t.Fatal("missing textarea group editor")
+	}
+	if editor.SingleLine || editor.Submit || editor.Text() != "First\nSecond" {
+		t.Fatalf("textarea group editor = single line %v submit %v text %q", editor.SingleLine, editor.Submit, editor.Text())
+	}
+}
+
+func TestInputGroupTextAreaAlignsSlotsToTop(t *testing.T) {
+	if got := inputGroupChildY(76, 16, 8, true); got != 8 {
+		t.Fatalf("multiline slot y = %d, want 8", got)
+	}
+	if got := inputGroupChildY(76, 16, 8, false); got != 30 {
+		t.Fatalf("single-line slot y = %d, want 30", got)
+	}
+	if got := inputGroupSlotHeight(16, 8, true, true); got != 24 {
+		t.Fatalf("multiline slot height = %d, want 24", got)
+	}
+}
+
+func TestInputGroupEditorInsetScalesOnceAtHighDPI(t *testing.T) {
+	gtx := testLayoutContext()
+	gtx.Metric = unit.Metric{PxPerDp: 2, PxPerSp: 2}
+	gtx.Constraints = layout.Exact(image.Pt(200, 100))
+	var got layout.Constraints
+	child := insetInputGroupEditor(func(gtx layout.Context) layout.Dimensions {
+		got = gtx.Constraints
+		return layout.Dimensions{Size: gtx.Constraints.Min}
+	}, 12, 12, 8)
+	dims := child(gtx)
+	if got != layout.Exact(image.Pt(152, 68)) || dims.Size != image.Pt(200, 100) {
+		t.Fatalf("high-DPI inset = constraints %#v size %v", got, dims.Size)
+	}
+}
+
+func TestInputGroupTextAreaHeightDoesNotOverflow(t *testing.T) {
+	maxInt := int(^uint(0) >> 1)
+	if got := inputGroupTextAreaContentHeight(20, maxInt, 200); got != 200 {
+		t.Fatalf("clamped content height = %d, want 200", got)
 	}
 }
 
@@ -154,6 +254,31 @@ func TestInputGroupPrefixPressFocusesInput(t *testing.T) {
 	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
 	if !router.Source().Focused(editor) {
 		t.Fatal("pressing the prefix did not focus the input")
+	}
+}
+
+func TestInputGroupTextAreaPrefixPressFocusesEditor(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(gioinput.Router)
+	group := InputGroupTextArea(TextArea("prompt", "").Rows(3)).
+		Prefix(inputGroupFixedWidget{size: image.Pt(16, 16)}).
+		FullWidth()
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	editor := testComponentState[widget.Editor](ctx, "prompt", stateSlotEditor)
+	if editor == nil {
+		t.Fatal("missing textarea group editor")
+	}
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  f32.Pt(8, 18),
+	})
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	if !router.Source().Focused(editor) {
+		t.Fatal("pressing the prefix did not focus the textarea")
 	}
 }
 

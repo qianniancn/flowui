@@ -103,6 +103,7 @@ type ComponentsTheme struct {
 	Description  DescriptionTheme
 	Label        LabelTheme
 	Input        InputTheme
+	TextArea     TextAreaTheme
 	InputGroup   InputGroupTheme
 	Checkbox     CheckboxTheme
 	Switch       SwitchTheme
@@ -235,10 +236,24 @@ type InputTheme struct {
 	ShadowOpacity       float32
 }
 
+type TextAreaTheme struct {
+	MinHeight           unit.Dp
+	Radius              unit.Dp
+	PaddingX            unit.Dp
+	PaddingY            unit.Dp
+	TextSize            unit.Sp
+	LineHeight          unit.Sp
+	FocusRingWidth      unit.Dp
+	InvalidOutlineWidth unit.Dp
+	ShadowOpacity       float32
+}
+
 type InputGroupTheme struct {
 	MinHeight           unit.Dp
 	Radius              unit.Dp
 	PaddingX            unit.Dp
+	TextAreaMinHeight   unit.Dp
+	TextAreaPaddingY    unit.Dp
 	DividerWidth        unit.Dp
 	TextSize            unit.Sp
 	LineHeight          unit.Sp
@@ -740,10 +755,23 @@ func DefaultTheme() Theme {
 				InvalidOutlineWidth: 1,
 				ShadowOpacity:       1,
 			},
+			TextArea: TextAreaTheme{
+				MinHeight:           38,
+				Radius:              12,
+				PaddingX:            12,
+				PaddingY:            8,
+				TextSize:            14,
+				LineHeight:          20,
+				FocusRingWidth:      2,
+				InvalidOutlineWidth: 1,
+				ShadowOpacity:       1,
+			},
 			InputGroup: InputGroupTheme{
 				MinHeight:           36,
 				Radius:              12,
 				PaddingX:            12,
+				TextAreaMinHeight:   38,
+				TextAreaPaddingY:    8,
 				DividerWidth:        0,
 				TextSize:            14,
 				LineHeight:          20,
@@ -1067,6 +1095,7 @@ func DefaultTheme() Theme {
 func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Components.Input.ShadowOpacity = 0
+	theme.Components.TextArea.ShadowOpacity = 0
 	theme.Components.Checkbox.ShadowOpacity = 0
 	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}

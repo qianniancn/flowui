@@ -11,9 +11,11 @@ import (
 )
 
 type facadeModel struct {
-	selected string
-	expanded []string
-	open     bool
+	selected      string
+	expanded      []string
+	tableSelected []string
+	tableSort     ui.TableSortDescriptor
+	open          bool
 }
 
 func TestContextExposesOnlySupportedMethods(t *testing.T) {
@@ -42,9 +44,11 @@ func TestContextExposesOnlySupportedMethods(t *testing.T) {
 }
 
 type facadeMsg struct {
-	selected string
-	expanded []string
-	open     *bool
+	selected      string
+	expanded      []string
+	tableSelected []string
+	tableSort     *ui.TableSortDescriptor
+	open          *bool
 }
 
 type externalWidget struct{}
@@ -60,6 +64,12 @@ func facadeUpdate(model *facadeModel, msg facadeMsg) {
 	if msg.expanded != nil {
 		model.expanded = append([]string(nil), msg.expanded...)
 	}
+	if msg.tableSelected != nil {
+		model.tableSelected = append([]string(nil), msg.tableSelected...)
+	}
+	if msg.tableSort != nil {
+		model.tableSort = *msg.tableSort
+	}
 	if msg.open != nil {
 		model.open = *msg.open
 	}
@@ -72,6 +82,14 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	}
 	items := []ui.SelectItem{{Key: "one", Label: "One"}}
 	treeItems := []ui.TreeItem{{Key: "folder", Label: "Folder", Children: []ui.TreeItem{{Key: "file", Label: "File"}}}}
+	tableColumns := []ui.TableColumn{
+		{Key: "name", Label: "Name", Sortable: true, RowHeader: true, Weight: 2},
+		{Key: "status", Label: "Status", Width: 120, Align: ui.TableAlignEnd},
+	}
+	tableRows := []ui.TableRow{{
+		Key: "member", Label: "Member",
+		Cells: []ui.TableCell{{Text: "Member"}, {Content: ui.Chip("Active").Color(ui.ChipSuccess)}},
+	}}
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 
 	return ui.Column(
@@ -105,6 +123,25 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			AllowEmptySelection().
 			EmptyText("No files").
 			MaxHeight(240),
+		ui.Table("members", tableColumns, tableRows).
+			Variant(ui.TableSecondary).
+			SelectionMode(ui.TableSelectionMultiple).
+			SelectedKey(model.selected).
+			SelectedKeys(model.tableSelected).
+			SortDescriptor(model.tableSort).
+			DisabledKeys([]string{"archived"}).
+			ShowSelectionIndicator().
+			AllowEmptySelection().
+			EmptyText("No members").
+			EmptyContent(ui.Text("Empty")).
+			Footer(ui.Text("Footer")).
+			MinWidth(640).
+			MaxHeight(280).
+			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
+			OnSelectionChange(func(keys []string) { send(facadeMsg{tableSelected: keys}) }).
+			OnSortChange(func(sort ui.TableSortDescriptor) { send(facadeMsg{tableSort: &sort}) }).
+			OnAction(func(string) {}).
+			Disabled(false),
 		ui.Input("email", "").
 			Placeholder("name@example.com").
 			Type(ui.InputEmail).

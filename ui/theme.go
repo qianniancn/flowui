@@ -28,6 +28,7 @@ type SpinnerTheme = theme.SpinnerTheme
 type SliderTheme = theme.SliderTheme
 type ListBoxTheme = theme.ListBoxTheme
 type TreeTheme = theme.TreeTheme
+type TableTheme = theme.TableTheme
 type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme

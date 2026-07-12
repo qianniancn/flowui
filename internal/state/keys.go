@@ -22,6 +22,7 @@ const (
 	KindSlider       Kind = "slider"
 	KindListBox      Kind = "listbox"
 	KindTree         Kind = "tree"
+	KindTable        Kind = "table"
 	KindTabs         Kind = "tabs"
 	KindPopover      Kind = "popover"
 	KindTooltip      Kind = "tooltip"

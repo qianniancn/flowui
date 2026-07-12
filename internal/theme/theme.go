@@ -113,6 +113,7 @@ type ComponentsTheme struct {
 	Slider       SliderTheme
 	ListBox      ListBoxTheme
 	Tree         TreeTheme
+	Table        TableTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -374,6 +375,31 @@ type TreeTheme struct {
 	FocusRingWidth       unit.Dp
 	PressedScale         float32
 	SurfaceRadius        unit.Dp
+}
+
+type TableTheme struct {
+	RootPadding           unit.Dp
+	RootRadius            unit.Dp
+	HeaderRadius          unit.Dp
+	BodyRadius            unit.Dp
+	HeaderHeight          unit.Dp
+	RowMinHeight          unit.Dp
+	EmptyHeight           unit.Dp
+	MaxHeight             unit.Dp
+	MinColumnWidth        unit.Dp
+	CellPaddingX          unit.Dp
+	CellPaddingY          unit.Dp
+	HeaderTextSize        unit.Sp
+	CellTextSize          unit.Sp
+	SeparatorWidth        unit.Dp
+	ColumnSeparatorHeight unit.Dp
+	FocusRingWidth        unit.Dp
+	FocusRadius           unit.Dp
+	SelectionColumnWidth  unit.Dp
+	SortIconSize          unit.Dp
+	SortGap               unit.Dp
+	FooterPaddingX        unit.Dp
+	FooterPaddingY        unit.Dp
 }
 
 type TabsTheme struct {
@@ -847,6 +873,30 @@ func DefaultTheme() Theme {
 				PressedScale:         0.98,
 				SurfaceRadius:        24,
 			},
+			Table: TableTheme{
+				RootPadding:           4,
+				RootRadius:            28,
+				HeaderRadius:          20,
+				BodyRadius:            20,
+				HeaderHeight:          40,
+				RowMinHeight:          48,
+				EmptyHeight:           144,
+				MaxHeight:             360,
+				MinColumnWidth:        96,
+				CellPaddingX:          16,
+				CellPaddingY:          12,
+				HeaderTextSize:        12,
+				CellTextSize:          14,
+				SeparatorWidth:        1,
+				ColumnSeparatorHeight: 16,
+				FocusRingWidth:        2,
+				FocusRadius:           8,
+				SelectionColumnWidth:  40,
+				SortIconSize:          12,
+				SortGap:               8,
+				FooterPaddingX:        16,
+				FooterPaddingY:        10,
+			},
 			Tabs: TabsTheme{
 				RootGap:             8,
 				ListPadding:         4,
@@ -1017,8 +1067,8 @@ func DefaultTheme() Theme {
 func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Components.Input.ShadowOpacity = 0
-	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Components.Checkbox.ShadowOpacity = 0
+	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

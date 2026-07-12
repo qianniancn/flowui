@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui-icons-lucide/lucide"
 )
 
 type facadeModel struct {
@@ -92,6 +93,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.CloseButton("close").Label("Dismiss"),
 		ui.ToggleButton("pin", model.open, ui.Text("Pin")).
 			OnChange(func(selected bool) { send(facadeMsg{open: &selected}) }),
+		ui.Icon(lucide.Search).Size(18),
 		ui.Spinner().Color(ui.SpinnerSuccess).Size(ui.SpinnerSmall).Label("Saving"),
 		ui.Slider("volume", 30).Label("Volume").ShowValue(),
 		ui.RangeSlider("price", 10, 80).Range(0, 100).Step(5),

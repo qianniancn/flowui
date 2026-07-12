@@ -483,12 +483,33 @@ func TestButtonPassesDisabledContext(t *testing.T) {
 	}
 }
 
+func TestButtonPassesForegroundColorToCustomContent(t *testing.T) {
+	probe := &foregroundProbeWidget{}
+	ctx := newContext(nil)
+
+	Button("icon", probe).Layout(ctx, testLayoutContext())
+
+	want := buttonColors(frame.ActiveTheme(ctx), ButtonPrimary).fg
+	if probe.foreground != want {
+		t.Fatalf("child foreground = %#v, want %#v", probe.foreground, want)
+	}
+}
+
 type enabledProbeWidget struct {
 	enabled bool
 }
 
 func (w *enabledProbeWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 	w.enabled = gtx.Enabled()
+	return layout.Dimensions{Size: image.Pt(16, 16)}
+}
+
+type foregroundProbeWidget struct {
+	foreground color.NRGBA
+}
+
+func (w *foregroundProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+	w.foreground = ctx.ForegroundColor()
 	return layout.Dimensions{Size: image.Pt(16, 16)}
 }
 

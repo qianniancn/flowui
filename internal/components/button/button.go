@@ -150,6 +150,8 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		macro := op.Record(gtx.Ops)
 		dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return style.inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				restore := frame.PushColors(ctx, style.fg, style.bg)
+				defer restore()
 				return b.layoutContent(ctx, gtx, style, child)
 			})
 		})

@@ -53,6 +53,23 @@ func TestDefaultThemeSyncsMaterialBridge(t *testing.T) {
 	}
 }
 
+func TestMenuHeroUI32SemanticColors(t *testing.T) {
+	light := theme.DefaultTheme()
+	if light.Palette.Default != (color.NRGBA{R: 0xeb, G: 0xeb, B: 0xec, A: 0xff}) ||
+		light.Palette.DefaultForeground != (color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff}) ||
+		light.Palette.Separator != (color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff}) ||
+		light.Components.Menu.DangerColor != (color.NRGBA{R: 0xff, G: 0x38, B: 0x3c, A: 0xff}) {
+		t.Fatalf("light Menu semantic colors = palette %#v tokens %#v", light.Palette, light.Components.Menu)
+	}
+	dark := theme.DarkTheme()
+	if dark.Palette.Default != (color.NRGBA{R: 0x27, G: 0x27, B: 0x2a, A: 0xff}) ||
+		dark.Palette.Separator != (color.NRGBA{R: 0x21, G: 0x21, B: 0x24, A: 0xff}) ||
+		dark.Components.Menu.BackgroundColor != (color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff}) ||
+		dark.Components.Menu.DangerColor != (color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0xff}) {
+		t.Fatalf("dark Menu semantic colors = palette %#v tokens %#v", dark.Palette, dark.Components.Menu)
+	}
+}
+
 func TestDarkThemeDefinesThemedSurfaceAndShadow(t *testing.T) {
 	dark := theme.DarkTheme()
 	if dark.Palette.Surface == theme.DefaultTheme().Palette.Surface {

@@ -73,7 +73,7 @@ func (c ContextMenuWidget) updateTriggerPointer(ctx *frame.Context, gtx layout.C
 			state.hasAnchor = true
 			state.trigger.touchTracking = false
 			state.focusVisible = false
-			frame.RequestFocus(ctx, &state.trigger)
+			frame.RequestFocusVisible(ctx, &state.trigger, false)
 			*open = state.requestOpen(ctx, c, true)
 		}
 		return
@@ -115,7 +115,7 @@ func (c ContextMenuWidget) updateLongPress(ctx *frame.Context, gtx layout.Contex
 	state.hasAnchor = true
 	state.trigger.touchTracking = false
 	state.focusVisible = false
-	frame.RequestFocus(ctx, &state.trigger)
+	frame.RequestFocusVisible(ctx, &state.trigger, false)
 	*open = state.requestOpen(ctx, c, true)
 }
 
@@ -159,7 +159,7 @@ func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Co
 		}
 		event, ok := e.(key.Event)
 		if ok && event.State == key.Press {
-			frame.RequestFocus(ctx, &state.trigger)
+			frame.RequestFocusVisible(ctx, &state.trigger, true)
 			open = state.requestOpen(ctx, c, false)
 		}
 	}
@@ -172,9 +172,10 @@ func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context,
 	panelGtx.Constraints = layout.Constraints{Max: bounds}
 	rootMenu := c.menu.withDerivedIdentity(state.key, "menu")
 	menuState := rootMenu.stateFor(ctx)
-	rootMenu = rootMenu.withClose(func() {
+	rootMenu = rootMenu.withClose(func(focusVisible bool) {
 		menuState.openSubmenu = ""
-		frame.RequestFocus(ctx, &state.trigger)
+		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
+		state.skipRestore = true
 		state.requestOpen(ctx, c, false)
 	})
 	if !open {
@@ -182,7 +183,7 @@ func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context,
 	}
 	macro := op.Record(gtx.Ops)
 	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return rootMenu.layout(ctx, panelGtx, menuState, open && (interactive || menuState.openSubmenu != ""))
+		return rootMenu.layout(ctx, panelGtx, menuState, open && (interactive || menuState.openSubmenu != "" || menuState.submenuActive))
 	})
 	panelCall := macro.Stop()
 
@@ -225,7 +226,7 @@ func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context,
 	if open && interactive {
 		frame.AfterOverlays(ctx, func() {
 			if frame.OverlayBecameTopmost(ctx, frame.OverlayLayerPopup, state.key) {
-				rootMenu.focusFirst(ctx, menuState, state.focusVisible)
+				menuState.focusFirstEntry(ctx, rootMenu, state.focusVisible)
 			}
 		})
 	}

@@ -93,6 +93,12 @@ func (r RowWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensi
 	return flexLayout(ctx, gtx, layout.Horizontal, r.gap, r.align, r.children)
 }
 
+// LayoutTrackedFlex keeps overlay anchors aligned with flex children.
+func LayoutTrackedFlex(ctx *frame.Context, gtx layout.Context, axis layout.Axis, gap unit.Dp, align layout.Alignment, children ...frame.Widget) layout.Dimensions {
+	prepareFieldAssociations(ctx, children...)
+	return flexLayout(ctx, gtx, axis, gap, align, children)
+}
+
 type FlexWidget struct {
 	child  frame.Widget
 	weight float32

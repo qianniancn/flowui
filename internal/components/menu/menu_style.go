@@ -26,35 +26,68 @@ type itemStyle struct {
 }
 
 func menuPanelStyle(activeTheme *theme.Theme) panelStyle {
+	tokens := activeTheme.Components.Menu
+	shadow := tokens.ShadowColor
+	if shadow.A == 0 && tokens.ShadowOpacity > 0 {
+		shadow = activeTheme.Palette.OverlayShadowColor()
+	}
+	border := tokens.BorderColor
+	if border.A == 0 {
+		border = activeTheme.Palette.Border
+	}
 	return panelStyle{
-		background:    activeTheme.Palette.OverlayColor(),
-		foreground:    activeTheme.Palette.OverlayForegroundColor(),
-		border:        activeTheme.Palette.Border,
-		shadow:        activeTheme.Palette.OverlayShadowColor(),
-		shadowOpacity: min(max(activeTheme.Components.Menu.ShadowOpacity, 0), 1),
+		background:    menuBackgroundColor(activeTheme),
+		foreground:    menuForegroundColor(activeTheme),
+		border:        border,
+		shadow:        shadow,
+		shadowOpacity: min(max(tokens.ShadowOpacity, 0), 1),
 	}
 }
 
 func menuItemStyle(activeTheme *theme.Theme, variant ItemVariant, hovered, disabled bool) itemStyle {
-	foreground := activeTheme.Palette.OverlayForegroundColor()
+	foreground := menuForegroundColor(activeTheme)
 	background := color.NRGBA{}
 	if hovered {
-		background = activeTheme.Palette.SurfaceTertiary
+		background = activeTheme.Palette.DefaultColor()
 	}
 	if variant == ItemDanger {
-		foreground = activeTheme.Palette.Danger
+		foreground = menuDangerColor(activeTheme)
 	}
 	opacity := float32(1)
 	if disabled {
 		opacity = activeTheme.DisabledOpacityValue()
 	}
-	return itemStyle{
+	style := itemStyle{
 		background:  background,
 		foreground:  foreground,
-		description: activeTheme.Palette.MutedForeground,
-		shortcut:    activeTheme.Palette.MutedForeground,
-		indicator:   foreground,
-		focusColor:  activeTheme.Palette.Focus,
+		description: menuMutedColor(activeTheme),
+		shortcut:    menuMutedColor(activeTheme),
+		indicator:   menuMutedColor(activeTheme),
+		focusColor:  menuFocusColor(activeTheme),
 		opacity:     opacity,
 	}
+	if variant == ItemDanger {
+		style.indicator = menuDangerColor(activeTheme)
+	}
+	return style
+}
+
+func menuBackgroundColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.BackgroundColor, activeTheme.Palette.OverlayColor())
+}
+
+func menuForegroundColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.ForegroundColor, activeTheme.Palette.OverlayForegroundColor())
+}
+
+func menuMutedColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.MutedColor, activeTheme.Palette.MutedForeground)
+}
+
+func menuDangerColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.DangerColor, activeTheme.Palette.Danger)
+}
+
+func menuFocusColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.FocusColor, activeTheme.Palette.Focus)
 }

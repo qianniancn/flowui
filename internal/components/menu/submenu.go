@@ -21,7 +21,7 @@ func (m Widget) updateSubmenuHover(gtx layout.Context, state *menuState, item It
 	if !hovered {
 		return
 	}
-	if item.Kind != ItemSubmenu {
+	if !itemHasSubmenu(item) {
 		state.hoverSubmenu = ""
 		state.openSubmenu = ""
 		return
@@ -44,8 +44,9 @@ func (m Widget) updateSubmenuHover(gtx layout.Context, state *menuState, item It
 }
 
 func (m Widget) registerSubmenus(ctx *frame.Context, gtx layout.Context, state *menuState, interactive bool) {
-	for _, item := range m.actionableItems() {
-		if item.Kind != ItemSubmenu {
+	for _, entry := range m.actionableEntries() {
+		item := entry.item
+		if !itemHasSubmenu(item) {
 			continue
 		}
 		anchor, hasAnchor := state.anchors[item.Key]
@@ -57,13 +58,14 @@ func (m Widget) registerSubmenus(ctx *frame.Context, gtx layout.Context, state *
 		open := state.openSubmenu == item.Key
 		if open && !childState.submenuWasOpen {
 			childState.focusPending = true
-			childState.submenuFocusVisible = state.submenuFocusVisible
+			childState.requestedFocusVisible = state.submenuFocusVisible
 		}
 		childState.submenuWasOpen = open
 		progress := childState.submenuProgress(gtx, open)
 		if progress <= 0 {
 			continue
 		}
+		state.submenuActive = true
 		child.registerSubmenuOverlay(ctx, gtx, childState, anchor, open, progress)
 	}
 }
@@ -123,7 +125,7 @@ func (m Widget) handleSubmenuEvents(ctx *frame.Context, gtx layout.Context, stat
 		}
 	}
 	if dismissed && open {
-		m.closeToParent(ctx)
+		m.dismissToParent()
 		open = false
 	}
 	if !interactive || !open {
@@ -152,7 +154,7 @@ func (m Widget) layoutSubmenuOverlay(ctx *frame.Context, gtx layout.Context, sta
 	}
 	macro := op.Record(gtx.Ops)
 	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return m.layout(ctx, panelGtx, state, open && (interactive || state.openSubmenu != ""))
+		return m.layout(ctx, panelGtx, state, open && (interactive || state.openSubmenu != "" || state.submenuActive))
 	})
 	panelCall := macro.Stop()
 
@@ -193,7 +195,7 @@ func (m Widget) layoutSubmenuOverlay(ctx *frame.Context, gtx layout.Context, sta
 	if open && interactive && state.focusPending {
 		frame.AfterOverlays(ctx, func() {
 			if frame.OverlayTopmost(ctx, frame.OverlayLayerPopup, state.key) {
-				m.focusFirst(ctx, state, state.submenuFocusVisible)
+				state.focusFirstEntry(ctx, m, state.requestedFocusVisible)
 				state.focusPending = false
 			}
 		})

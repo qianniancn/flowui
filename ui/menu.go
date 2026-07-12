@@ -8,6 +8,8 @@ type MenuItem = menu.Item
 type MenuSection = menu.Section
 type MenuItemKind = menu.ItemKind
 type MenuItemVariant = menu.ItemVariant
+type MenuSelectionMode = menu.SelectionMode
+type MenuIndicatorType = menu.IndicatorType
 
 const (
 	MenuItemAction     = menu.ItemAction
@@ -19,6 +21,14 @@ const (
 
 	MenuItemDefault = menu.ItemDefault
 	MenuItemDanger  = menu.ItemDanger
+
+	MenuSelectionNone     = menu.SelectionNone
+	MenuSelectionSingle   = menu.SelectionSingle
+	MenuSelectionMultiple = menu.SelectionMultiple
+
+	MenuIndicatorNone      = menu.IndicatorNone
+	MenuIndicatorCheckmark = menu.IndicatorCheckmark
+	MenuIndicatorDot       = menu.IndicatorDot
 )
 
 func Menu(key string, items []MenuItem) MenuWidget {

@@ -31,6 +31,7 @@ type ListBoxTheme = theme.ListBoxTheme
 type TreeTheme = theme.TreeTheme
 type TableTheme = theme.TableTheme
 type MenuTheme = theme.MenuTheme
+type DropdownTheme = theme.DropdownTheme
 type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme

@@ -138,6 +138,9 @@ func TestContextMenuEscapeClosesAndRestoresTriggerFocus(t *testing.T) {
 	if state.open || !router.Source().Focused(&state.trigger) {
 		t.Fatalf("escape = open %v trigger focused %v", state.open, router.Source().Focused(&state.trigger))
 	}
+	if !frame.FocusVisible(ctx, &state.trigger, true) {
+		t.Fatal("ContextMenu Escape did not restore keyboard-visible trigger focus")
+	}
 }
 
 func TestContextMenuProgrammaticOpenUsesTriggerCenter(t *testing.T) {
@@ -184,6 +187,9 @@ func TestContextMenuActionClosesAndRestoresTriggerFocus(t *testing.T) {
 	if action != "copy" || contextState.open || !router.Source().Focused(&contextState.trigger) {
 		t.Fatalf("action = %q open %v trigger focused %v", action, contextState.open, router.Source().Focused(&contextState.trigger))
 	}
+	if frame.FocusVisible(ctx, &contextState.trigger, true) {
+		t.Fatal("pointer-selected ContextMenu item exposed keyboard-visible trigger focus")
+	}
 }
 
 func TestContextMenuSubmenuOpensAndEscapeReturnsToParent(t *testing.T) {
@@ -212,6 +218,9 @@ func TestContextMenuSubmenuOpensAndEscapeReturnsToParent(t *testing.T) {
 	if rootState.openSubmenu != "" || !contextState.open || !router.Source().Focused(&rootState.item("share").clickable) {
 		t.Fatalf("submenu escape = child %q root open %v parent focused %v", rootState.openSubmenu, contextState.open, router.Source().Focused(&rootState.item("share").clickable))
 	}
+	if !menuItemFocusVisible(ctx, rootState.item("share"), true) {
+		t.Fatal("submenu Escape did not restore keyboard-visible parent focus")
+	}
 }
 
 func TestContextMenuSubmenuActionClosesRoot(t *testing.T) {
@@ -238,6 +247,78 @@ func TestContextMenuSubmenuActionClosesRoot(t *testing.T) {
 	layoutContextMenuFrame(ctx, router, widget, start.Add(contextMenuEnterDuration+4*time.Millisecond))
 	if action != "copy-link" || contextState.open {
 		t.Fatalf("submenu action = %q root open %v", action, contextState.open)
+	}
+}
+
+func TestSubmenuExitKeepsParentMenuHoverInteractive(t *testing.T) {
+	ctx := menuTestContext()
+	router := new(input.Router)
+	widget := ContextMenu(
+		"row-menu",
+		contextMenuFixedWidget{size: image.Pt(160, 100)},
+		Menu("actions", []Item{
+			{Key: "share", Label: "Share", Children: []Item{{Key: "copy-link", Label: "Copy link"}}},
+			{Key: "rename", Label: "Rename"},
+		}),
+	)
+	start := openContextMenuForTest(ctx, router, widget)
+	contextState, _ := frame.PeekState[contextMenuState](ctx, "row-menu", stateSlotContextMenu)
+	rootState := contextRootMenuState(t, ctx, contextState)
+
+	hoverStart := start.Add(time.Millisecond)
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 2, Position: f32.Pt(60, 50)})
+	layoutContextMenuFrame(ctx, router, widget, hoverStart)
+	layoutContextMenuFrame(ctx, router, widget, hoverStart.Add(menuSubmenuOpenDelay+time.Millisecond))
+	layoutContextMenuFrame(ctx, router, widget, hoverStart.Add(menuSubmenuOpenDelay+contextMenuEnterDuration+2*time.Millisecond))
+	if rootState.openSubmenu != "share" {
+		t.Fatalf("hovered submenu = %q, want share", rootState.openSubmenu)
+	}
+
+	switchAt := hoverStart.Add(menuSubmenuOpenDelay + contextMenuEnterDuration + 3*time.Millisecond)
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 2, Position: f32.Pt(60, 90)})
+	layoutContextMenuFrame(ctx, router, widget, switchAt)
+	if rootState.openSubmenu != "" || !rootState.item("rename").clickable.Hovered() || !rootState.submenuActive {
+		t.Fatalf("submenu switch = open %q rename hovered %v exit active %v", rootState.openSubmenu, rootState.item("rename").clickable.Hovered(), rootState.submenuActive)
+	}
+
+	layoutContextMenuFrame(ctx, router, widget, switchAt.Add(contextMenuExitDuration/2))
+	if !rootState.item("rename").clickable.Hovered() {
+		t.Fatal("parent Menu hover stopped during submenu exit animation")
+	}
+}
+
+func TestClickingHoveredSubmenuParentKeepsPointerFocusHidden(t *testing.T) {
+	ctx := menuTestContext()
+	router := new(input.Router)
+	widget := contextMenuTestWidget([]Item{{
+		Key: "share", Label: "Share", Children: []Item{{Key: "copy-link", Label: "Copy link"}},
+	}})
+	start := openContextMenuForTest(ctx, router, widget)
+	contextState, _ := frame.PeekState[contextMenuState](ctx, "row-menu", stateSlotContextMenu)
+	rootState := contextRootMenuState(t, ctx, contextState)
+
+	hoverStart := start.Add(time.Millisecond)
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 2, Position: f32.Pt(60, 50)})
+	layoutContextMenuFrame(ctx, router, widget, hoverStart)
+	layoutContextMenuFrame(ctx, router, widget, hoverStart.Add(menuSubmenuOpenDelay+time.Millisecond))
+	layoutContextMenuFrame(ctx, router, widget, hoverStart.Add(menuSubmenuOpenDelay+contextMenuEnterDuration+2*time.Millisecond))
+	if rootState.openSubmenu != "share" {
+		t.Fatalf("hovered submenu = %q, want share", rootState.openSubmenu)
+	}
+
+	clickAt := hoverStart.Add(menuSubmenuOpenDelay + contextMenuEnterDuration + 3*time.Millisecond)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 3, Buttons: pointer.ButtonPrimary, Position: f32.Pt(60, 50)})
+	layoutContextMenuFrame(ctx, router, widget, clickAt)
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 3, Position: f32.Pt(60, 50)})
+	layoutContextMenuFrame(ctx, router, widget, clickAt.Add(time.Millisecond))
+	layoutContextMenuFrame(ctx, router, widget, clickAt.Add(2*time.Millisecond))
+
+	parent := rootState.item("share")
+	if !router.Source().Focused(&parent.clickable) {
+		t.Fatal("clicked submenu parent did not receive focus")
+	}
+	if menuItemFocusVisible(ctx, parent, true) {
+		t.Fatal("pointer dismissal overwrote submenu parent with keyboard-visible focus")
 	}
 }
 

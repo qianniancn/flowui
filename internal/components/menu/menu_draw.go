@@ -34,7 +34,7 @@ func heroMenuShadow(col color.NRGBA, opacity float32) render.BoxShadow {
 	}
 	layer := func(offsetY, blur, alpha float32) render.ShadowLayer {
 		layerColor := col
-		layerColor.A = byte(255*alpha*opacity + 0.5)
+		layerColor.A = byte(float32(col.A)*alpha*opacity + 0.5)
 		return render.ShadowLayer{OffsetY: offsetY, Blur: blur, Color: layerColor}
 	}
 	return render.BoxShadow{Layers: []render.ShadowLayer{
@@ -56,19 +56,22 @@ func drawMenuItem(gtx layout.Context, activeTheme *theme.Theme, size image.Point
 		return
 	}
 	width := max(gtx.Dp(activeTheme.Components.Menu.FocusRingWidth), 1)
-	inset := max(width/2+1, 1)
-	focusRect := rect.Inset(inset)
+	offset := max(gtx.Dp(activeTheme.Components.Menu.FocusRingOffset), 0)
+	focusRect, focusRadius := menuFocusRingGeometry(rect, radius, width, offset)
 	if focusRect.Empty() {
 		return
 	}
 	col := style.focusColor
 	col.A = byte(float32(col.A)*style.focus + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(focusRect, max(radius-inset, 0)).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
+	stroke := clip.Stroke{Path: clip.UniformRRect(focusRect, focusRadius).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, col)
 	stroke.Pop()
+}
+
+func menuFocusRingGeometry(rect image.Rectangle, radius, width, offset int) (image.Rectangle, int) {
+	inset := max(offset, 0) + (max(width, 1)+1)/2
+	focusRect := rect.Inset(inset)
+	return focusRect, max(radius-inset, 0)
 }
 
 func drawMenuSeparator(gtx layout.Context, size image.Point, col color.NRGBA) {
@@ -78,7 +81,7 @@ func drawMenuSeparator(gtx layout.Context, size image.Point, col color.NRGBA) {
 	paint.FillShape(gtx.Ops, col, clip.Rect{Max: size}.Op())
 }
 
-func drawRadioIndicator(gtx layout.Context, size image.Point, dotSize int, col color.NRGBA) {
+func drawMenuDot(gtx layout.Context, size image.Point, dotSize int, col color.NRGBA) {
 	if size.X <= 0 || size.Y <= 0 || col.A == 0 {
 		return
 	}

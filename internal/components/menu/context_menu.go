@@ -75,7 +75,7 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	if restoreFocus {
 		frame.AfterOverlays(ctx, func() {
 			if !frame.HasTopOverlay(ctx) {
-				frame.RequestFocus(ctx, &state.trigger)
+				frame.RequestFocusVisible(ctx, &state.trigger, state.focusVisible)
 			}
 		})
 	}

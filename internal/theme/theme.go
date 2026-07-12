@@ -36,6 +36,10 @@ type Palette struct {
 	Foreground                 color.NRGBA
 	MutedForeground            color.NRGBA
 	Border                     color.NRGBA
+	Separator                  color.NRGBA
+	Default                    color.NRGBA
+	DefaultForeground          color.NRGBA
+	DefaultHover               color.NRGBA
 	Segment                    color.NRGBA
 	SegmentForeground          color.NRGBA
 	Accent                     color.NRGBA
@@ -116,6 +120,7 @@ type ComponentsTheme struct {
 	Tree         TreeTheme
 	Table        TableTheme
 	Menu         MenuTheme
+	Dropdown     DropdownTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -419,39 +424,62 @@ type TableTheme struct {
 }
 
 type MenuTheme struct {
-	Width                unit.Dp
-	MaxHeight            unit.Dp
-	Padding              unit.Dp
-	Radius               unit.Dp
-	BorderWidth          unit.Dp
-	ItemGap              unit.Dp
-	ItemMinHeight        unit.Dp
-	ItemRadius           unit.Dp
-	ItemPaddingX         unit.Dp
-	ItemPaddingY         unit.Dp
-	ItemContentGap       unit.Dp
-	ItemTextSize         unit.Sp
-	ItemDescriptionSize  unit.Sp
-	ShortcutTextSize     unit.Sp
-	IndicatorSize        unit.Dp
-	IndicatorContentGap  unit.Dp
-	CheckmarkSize        unit.Dp
-	RadioDotSize         unit.Dp
-	SubmenuIndicatorSize unit.Dp
-	FocusRingWidth       unit.Dp
-	PressedScale         float32
-	SectionTextSize      unit.Sp
-	SectionPaddingX      unit.Dp
-	SectionPaddingY      unit.Dp
-	SeparatorMarginX     unit.Dp
-	SeparatorMarginY     unit.Dp
-	SeparatorWidth       unit.Dp
-	SubmenuGap           unit.Dp
-	ContextMenuOffset    unit.Dp
-	EnterScale           float32
-	ExitScale            float32
-	AnimationDistance    unit.Dp
-	ShadowOpacity        float32
+	BackgroundColor            color.NRGBA
+	ForegroundColor            color.NRGBA
+	MutedColor                 color.NRGBA
+	DangerColor                color.NRGBA
+	FocusColor                 color.NRGBA
+	BorderColor                color.NRGBA
+	ShadowColor                color.NRGBA
+	Width                      unit.Dp
+	MaxHeight                  unit.Dp
+	MaxWidthFraction           float32
+	Padding                    unit.Dp
+	Radius                     unit.Dp
+	BorderWidth                unit.Dp
+	ItemGap                    unit.Dp
+	ItemMinHeight              unit.Dp
+	ItemRadius                 unit.Dp
+	ItemPaddingX               unit.Dp
+	ItemPaddingY               unit.Dp
+	ItemContentGap             unit.Dp
+	ItemTextSize               unit.Sp
+	ItemDescriptionSize        unit.Sp
+	ShortcutTextSize           unit.Sp
+	ShortcutHeight             unit.Dp
+	ShortcutPaddingX           unit.Dp
+	IndicatorSize              unit.Dp
+	IndicatorContentGap        unit.Dp
+	CheckmarkSize              unit.Dp
+	RadioDotSize               unit.Dp
+	SubmenuIndicatorSize       unit.Dp
+	FocusRingWidth             unit.Dp
+	FocusRingOffset            unit.Dp
+	PressedScale               float32
+	SectionTextSize            unit.Sp
+	SectionPaddingX            unit.Dp
+	SectionPaddingTop          unit.Dp
+	SectionPaddingBottom       unit.Dp
+	SeparatorMarginX           unit.Dp
+	SeparatorMarginY           unit.Dp
+	SeparatorWidth             unit.Dp
+	DescriptionLeadingHeight   unit.Dp
+	DescriptionLeadingInsetTop unit.Dp
+	SubmenuGap                 unit.Dp
+	ContextMenuOffset          unit.Dp
+	EnterScale                 float32
+	ExitScale                  float32
+	AnimationDistance          unit.Dp
+	ShadowOpacity              float32
+}
+
+type DropdownTheme struct {
+	FocusColor             color.NRGBA
+	TriggerFocusRingWidth  unit.Dp
+	TriggerFocusRingOffset unit.Dp
+	TriggerFocusRadius     unit.Dp
+	TriggerPressedScale    float32
+	PanelGap               unit.Dp
 }
 
 type TabsTheme struct {
@@ -639,6 +667,10 @@ func DefaultTheme() Theme {
 			Foreground:                 color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			MutedForeground:            color.NRGBA{R: 0x76, G: 0x76, B: 0x7a, A: 0xff},
 			Border:                     color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+			Separator:                  color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+			Default:                    color.NRGBA{R: 0xeb, G: 0xeb, B: 0xec, A: 0xff},
+			DefaultForeground:          color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff},
+			DefaultHover:               color.NRGBA{R: 0xe1, G: 0xe1, B: 0xe2, A: 0xff},
 			Segment:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 			SegmentForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			Accent:                     color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
@@ -963,39 +995,60 @@ func DefaultTheme() Theme {
 				FooterPaddingY:        10,
 			},
 			Menu: MenuTheme{
-				Width:                220,
-				MaxHeight:            360,
-				Padding:              6,
-				Radius:               24,
-				BorderWidth:          0,
-				ItemGap:              2,
-				ItemMinHeight:        36,
-				ItemRadius:           16,
-				ItemPaddingX:         10,
-				ItemPaddingY:         6,
-				ItemContentGap:       12,
-				ItemTextSize:         14,
-				ItemDescriptionSize:  12,
-				ShortcutTextSize:     12,
-				IndicatorSize:        16,
-				IndicatorContentGap:  2,
-				CheckmarkSize:        10,
-				RadioDotSize:         8,
-				SubmenuIndicatorSize: 12,
-				FocusRingWidth:       2,
-				PressedScale:         0.98,
-				SectionTextSize:      12,
-				SectionPaddingX:      10,
-				SectionPaddingY:      6,
-				SeparatorMarginX:     6,
-				SeparatorMarginY:     4,
-				SeparatorWidth:       1,
-				SubmenuGap:           4,
-				ContextMenuOffset:    2,
-				EnterScale:           0.9,
-				ExitScale:            0.95,
-				AnimationDistance:    4,
-				ShadowOpacity:        1,
+				BackgroundColor:            color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+				ForegroundColor:            color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff},
+				MutedColor:                 color.NRGBA{R: 0x71, G: 0x71, B: 0x7a, A: 0xff},
+				DangerColor:                color.NRGBA{R: 0xff, G: 0x38, B: 0x3c, A: 0xff},
+				FocusColor:                 color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
+				ShadowColor:                color.NRGBA{A: 0xff},
+				Width:                      220,
+				MaxHeight:                  0,
+				MaxWidthFraction:           0.48,
+				Padding:                    6,
+				Radius:                     24,
+				BorderWidth:                0,
+				ItemGap:                    2,
+				ItemMinHeight:              36,
+				ItemRadius:                 16,
+				ItemPaddingX:               10,
+				ItemPaddingY:               6,
+				ItemContentGap:             12,
+				ItemTextSize:               14,
+				ItemDescriptionSize:        12,
+				ShortcutTextSize:           14,
+				ShortcutHeight:             24,
+				ShortcutPaddingX:           8,
+				IndicatorSize:              16,
+				IndicatorContentGap:        2,
+				CheckmarkSize:              10,
+				RadioDotSize:               8,
+				SubmenuIndicatorSize:       14,
+				FocusRingWidth:             2,
+				FocusRingOffset:            2,
+				PressedScale:               0.98,
+				SectionTextSize:            12,
+				SectionPaddingX:            8,
+				SectionPaddingTop:          6,
+				SectionPaddingBottom:       4,
+				SeparatorMarginX:           6,
+				SeparatorMarginY:           0,
+				SeparatorWidth:             1,
+				DescriptionLeadingHeight:   32,
+				DescriptionLeadingInsetTop: 1,
+				SubmenuGap:                 8,
+				ContextMenuOffset:          2,
+				EnterScale:                 0.9,
+				ExitScale:                  0.95,
+				AnimationDistance:          4,
+				ShadowOpacity:              1,
+			},
+			Dropdown: DropdownTheme{
+				FocusColor:             color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
+				TriggerFocusRingWidth:  2,
+				TriggerFocusRingOffset: 2,
+				TriggerFocusRadius:     12,
+				TriggerPressedScale:    0.97,
+				PanelGap:               4,
 			},
 			Tabs: TabsTheme{
 				RootGap:             8,
@@ -1170,6 +1223,13 @@ func DarkTheme() Theme {
 	theme.Components.TextArea.ShadowOpacity = 0
 	theme.Components.Menu.ShadowOpacity = 0
 	theme.Components.Menu.BorderWidth = 1
+	theme.Components.Menu.BorderColor = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x4d}
+	theme.Components.Menu.BackgroundColor = color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff}
+	theme.Components.Menu.ForegroundColor = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff}
+	theme.Components.Menu.MutedColor = color.NRGBA{R: 0x9f, G: 0x9f, B: 0xa9, A: 0xff}
+	theme.Components.Menu.DangerColor = color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0xff}
+	theme.Components.Menu.FocusColor = color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff}
+	theme.Components.Dropdown.FocusColor = color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff}
 	theme.Components.Checkbox.ShadowOpacity = 0
 	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
@@ -1187,6 +1247,10 @@ func DarkTheme() Theme {
 	theme.Palette.Foreground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.MutedForeground = color.NRGBA{R: 0xa1, G: 0xa1, B: 0xaa, A: 0xff}
 	theme.Palette.Border = color.NRGBA{R: 0x3f, G: 0x3f, B: 0x46, A: 0xff}
+	theme.Palette.Separator = color.NRGBA{R: 0x21, G: 0x21, B: 0x24, A: 0xff}
+	theme.Palette.Default = color.NRGBA{R: 0x27, G: 0x27, B: 0x2a, A: 0xff}
+	theme.Palette.DefaultForeground = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff}
+	theme.Palette.DefaultHover = color.NRGBA{R: 0x2e, G: 0x2e, B: 0x31, A: 0xff}
 	theme.Palette.Segment = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
 	theme.Palette.SegmentForeground = theme.Palette.Foreground
 	theme.Palette.SuccessSoftForeground = color.NRGBA{R: 0x74, G: 0xd8, B: 0x8f, A: 0xff}

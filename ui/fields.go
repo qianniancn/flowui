@@ -11,6 +11,7 @@ import (
 )
 
 type InputWidget = input.InputWidget
+type InputGroupWidget = input.InputGroupWidget
 type InputVariant = input.InputVariant
 type InputType = input.InputType
 type ComboBoxItem = combobox.ComboBoxItem
@@ -52,6 +53,10 @@ const (
 
 func Input(key, value string) InputWidget {
 	return input.Input(key, value)
+}
+
+func InputGroup(field InputWidget) InputGroupWidget {
+	return input.InputGroup(field)
 }
 
 func ComboBox(key, selectedKey string, items []ComboBoxItem) ComboBoxWidget {

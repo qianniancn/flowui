@@ -89,6 +89,16 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ReadOnly(false).
 			MaxLength(120).
 			Label("Email address"),
+		ui.InputGroup(
+			ui.Input("website", "flowui").Label("Website"),
+		).
+			Prefix(ui.Icon(lucide.Globe).Size(16)).
+			Suffix(ui.Text(".com")).
+			SuffixPadding(12, 0).
+			Variant(ui.InputSecondary).
+			Invalid(false).
+			Disabled(false).
+			FullWidth(),
 		ui.ProgressBar("progress", 50).ShowValue(),
 		ui.CloseButton("close").Label("Dismiss"),
 		ui.ToggleButton("pin", model.open, ui.Text("Pin")).

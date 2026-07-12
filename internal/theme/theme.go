@@ -96,6 +96,7 @@ type ComponentsTheme struct {
 	Description  DescriptionTheme
 	Label        LabelTheme
 	Input        InputTheme
+	InputGroup   InputGroupTheme
 	Checkbox     CheckboxTheme
 	Switch       SwitchTheme
 	SwitchGroup  SwitchGroupTheme
@@ -179,6 +180,18 @@ type InputTheme struct {
 	Height              unit.Dp
 	Radius              unit.Dp
 	PaddingX            unit.Dp
+	TextSize            unit.Sp
+	LineHeight          unit.Sp
+	FocusRingWidth      unit.Dp
+	InvalidOutlineWidth unit.Dp
+	ShadowOpacity       float32
+}
+
+type InputGroupTheme struct {
+	MinHeight           unit.Dp
+	Radius              unit.Dp
+	PaddingX            unit.Dp
+	DividerWidth        unit.Dp
 	TextSize            unit.Sp
 	LineHeight          unit.Sp
 	FocusRingWidth      unit.Dp
@@ -588,6 +601,17 @@ func DefaultTheme() Theme {
 				InvalidOutlineWidth: 1,
 				ShadowOpacity:       1,
 			},
+			InputGroup: InputGroupTheme{
+				MinHeight:           36,
+				Radius:              12,
+				PaddingX:            12,
+				DividerWidth:        0,
+				TextSize:            14,
+				LineHeight:          20,
+				FocusRingWidth:      2,
+				InvalidOutlineWidth: 1,
+				ShadowOpacity:       1,
+			},
 			Checkbox: CheckboxTheme{
 				Size:        16,
 				FocusSpace:  2,
@@ -855,6 +879,7 @@ func DefaultTheme() Theme {
 func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Components.Input.ShadowOpacity = 0
+	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

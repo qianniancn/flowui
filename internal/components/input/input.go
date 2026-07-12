@@ -3,6 +3,8 @@ package input
 import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -107,19 +109,30 @@ func (i InputWidget) Label(label string) InputWidget {
 }
 
 func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	key, editor := frame.InputEditor(ctx, i.key)
-	enabled := gtx.Enabled() && !i.disabled
+	gtx, key, editor, enabled := i.prepareEditor(ctx, gtx, i.disabled)
 	disabled := !enabled
-	frame.RegisterFieldFocus(ctx, key, editor, enabled)
 	state := inputStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
+
+	focused := gtx.Focused(editor)
+	style := inputStyleFor(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, disabled, i.invalid)
+	style.Background = state.Background(gtx, style.Background)
+	style.Ring = state.BorderColor(gtx, style.Ring)
+
+	return i.layoutFrame(ctx, gtx, state, style, enabled, i.editorLayout(ctx, key, enabled, editor, style))
+}
+
+func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disabled bool) (layout.Context, string, *widget.Editor, bool) {
+	key, editor := frame.InputEditor(ctx, i.key)
+	enabled := gtx.Enabled() && !disabled
+	frame.RegisterFieldFocus(ctx, key, editor, enabled)
 
 	editor.SingleLine = true
 	editor.Submit = i.onSubmit != nil
 	editor.ReadOnly = i.readOnly
 	editor.MaxLen = i.maxLength
 	editor.Mask, editor.InputHint, editor.Filter = inputTypeConfig(i.inputType)
-	if disabled {
+	if !enabled {
 		gtx = gtx.Disabled()
 	}
 
@@ -136,19 +149,22 @@ func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	} else if editor.Text() != i.value {
 		editor.SetText(i.value)
 	}
+	return gtx, key, editor, enabled
+}
 
-	focused := gtx.Focused(editor)
-	style := inputStyleFor(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, disabled, i.invalid)
-	style.Background = state.Background(gtx, style.Background)
-	style.Ring = state.BorderColor(gtx, style.Ring)
+func (i InputWidget) editorLayout(ctx *frame.Context, key string, enabled bool, editor *widget.Editor, style inputStyle) layout.Widget {
+	tokens := frame.ActiveTheme(ctx).Components.Input
+	return i.editorLayoutWithTypography(ctx, key, enabled, editor, style, tokens.TextSize, tokens.LineHeight)
+}
+
+func (i InputWidget) editorLayoutWithTypography(ctx *frame.Context, key string, enabled bool, editor *widget.Editor, style inputStyle, textSize, lineHeight unit.Sp) layout.Widget {
 	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, i.hint)
-	editorStyle.TextSize = frame.ActiveTheme(ctx).Components.Input.TextSize
-	editorStyle.LineHeight = frame.ActiveTheme(ctx).Components.Input.LineHeight
+	editorStyle.TextSize = textSize
+	editorStyle.LineHeight = lineHeight
 	editorStyle.Color = style.Foreground
 	editorStyle.HintColor = style.Placeholder
 	editorStyle.SelectionColor = style.Selection
-
-	return i.layoutFrame(ctx, gtx, state, style, enabled, i.withSemantics(ctx, key, enabled, editorStyle.Layout))
+	return i.withSemantics(ctx, key, enabled, editorStyle.Layout)
 }
 
 func inputTypeConfig(inputType InputType) (rune, key.InputHint, string) {

@@ -142,6 +142,31 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnSortChange(func(sort ui.TableSortDescriptor) { send(facadeMsg{tableSort: &sort}) }).
 			OnAction(func(string) {}).
 			Disabled(false),
+		ui.ContextMenu(
+			"member-actions",
+			ui.Text("Member"),
+			ui.Menu("actions", []ui.MenuItem{
+				{Key: "open", Label: "Open", Leading: ui.Icon(lucide.UserRound).Size(16)},
+				{Key: "favorite", Label: "Favorite", Kind: ui.MenuItemCheckbox, Checked: model.open, KeepOpen: true},
+				{Key: "compact", Label: "Compact", Kind: ui.MenuItemRadio, RadioGroup: "density", Value: "compact", KeepOpen: true},
+				ui.MenuSeparator(),
+				ui.MenuGroupLabel("More"),
+				{Key: "share", Label: "Share", Kind: ui.MenuItemSubmenu, Children: []ui.MenuItem{{Key: "copy-link", Label: "Copy link"}}},
+				{Key: "delete", Label: "Delete", Variant: ui.MenuItemDanger},
+			}).
+				Sections([]ui.MenuSection{{Title: "Actions", Items: []ui.MenuItem{{Key: "inspect", Label: "Inspect"}}}}).
+				EmptyText("No actions").
+				OnAction(func(string) {}).
+				OnCheckedChange(func(string, bool) {}).
+				OnRadioChange(func(string, string) {}).
+				Disabled(false).
+				Width(240),
+		).
+			Open(model.open).
+			DefaultOpen(false).
+			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }).
+			LongPressDisabled(false).
+			Disabled(false),
 		ui.Input("email", "").
 			Placeholder("name@example.com").
 			Type(ui.InputEmail).

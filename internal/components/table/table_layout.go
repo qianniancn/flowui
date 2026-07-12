@@ -13,6 +13,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -51,7 +52,9 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 	innerGtx.Constraints.Max.X = viewportWidth
 	innerGtx.Constraints.Min.Y = 0
 	innerGtx.Constraints.Max.Y = max(contentMaxHeight, 0)
-	contentDims := t.layoutHorizontal(ctx, innerGtx, stateValue, columns, style)
+	contentDims, contentPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return t.layoutHorizontal(ctx, innerGtx, stateValue, columns, style)
+	})
 	call := macro.Stop()
 
 	footerHeight := 0
@@ -81,6 +84,8 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 	radius := tableRootRadius(gtx, activeTheme, size, t.variant)
 	drawTableRoot(gtx, size, radius, style.root)
 	root := clip.UniformRRect(image.Rectangle{Max: size}, radius).Push(gtx.Ops)
+	contentPlacement.PlaceOffset(image.Pt(padding, 0))
+	contentPlacement.ClipTo(image.Rectangle{Max: image.Pt(viewportWidth, contentDims.Size.Y)})
 	offset := op.Offset(image.Pt(padding, 0)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	if t.footer != nil {
@@ -98,7 +103,7 @@ func (t Widget) layoutHorizontal(ctx *frame.Context, gtx layout.Context, stateVa
 	stateValue.horizontal.Gap = 0
 	stateValue.horizontal.Alignment = layout.Start
 	stateValue.horizontal.ScrollAnyAxis = false
-	return stateValue.horizontal.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutui.LayoutTrackedList(ctx, gtx, &stateValue.horizontal, 1, func(gtx layout.Context, _ int) layout.Dimensions {
 		gtx.Constraints.Min.X = columns.width
 		gtx.Constraints.Max.X = columns.width
 		return t.layoutContent(ctx, gtx, stateValue, columns, style)
@@ -116,8 +121,11 @@ func (t Widget) layoutContent(ctx *frame.Context, gtx layout.Context, stateValue
 	bodyGtx.Constraints.Min.Y = 0
 	bodyGtx.Constraints.Max.Y = max(gtx.Constraints.Max.Y-headerDims.Size.Y, 0)
 	bodyOffset := op.Offset(image.Pt(0, headerDims.Size.Y)).Push(gtx.Ops)
-	bodyDims := t.layoutBody(ctx, bodyGtx, stateValue, columns, style)
+	bodyDims, bodyPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return t.layoutBody(ctx, bodyGtx, stateValue, columns, style)
+	})
 	bodyOffset.Pop()
+	bodyPlacement.PlaceOffset(image.Pt(0, headerDims.Size.Y))
 	return layout.Dimensions{Size: image.Pt(columns.width, headerDims.Size.Y+bodyDims.Size.Y)}
 }
 
@@ -251,7 +259,7 @@ func (t Widget) layoutBody(ctx *frame.Context, gtx layout.Context, stateValue *t
 		stateValue.vertical.Gap = 0
 		stateValue.vertical.Alignment = layout.Start
 		stateValue.vertical.ScrollAnyAxis = false
-		contentDims = stateValue.vertical.Layout(gtx, len(t.rows), func(gtx layout.Context, index int) layout.Dimensions {
+		contentDims = layoutui.LayoutTrackedList(ctx, gtx, &stateValue.vertical, len(t.rows), func(gtx layout.Context, index int) layout.Dimensions {
 			return t.layoutRow(ctx, gtx, stateValue, columns, style, t.rows[index], index == len(t.rows)-1)
 		})
 	}
@@ -280,8 +288,9 @@ func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, width int, s
 }
 
 type recordedCell struct {
-	call op.CallOp
-	dims layout.Dimensions
+	call      op.CallOp
+	dims      layout.Dimensions
+	placement frame.OverlayPlacement
 }
 
 func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle, row Row, last bool) layout.Dimensions {
@@ -333,6 +342,7 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 		x := 0
 		for _, cell := range recorded {
 			y := max((rowHeight-cell.dims.Size.Y)/2, 0)
+			cell.placement.PlaceOffset(image.Pt(x, y))
 			offset := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
 			cell.call.Add(gtx.Ops)
 			offset.Pop()
@@ -369,26 +379,31 @@ func (t Widget) recordCell(ctx *frame.Context, gtx layout.Context, width int, co
 	if content == nil {
 		content = tableCellText{text: cell.Text, size: frame.ActiveTheme(ctx).Components.Table.CellTextSize, color: style.foreground}
 	}
-	dims := layout.Inset{
+	inset := layout.Inset{
 		Top: frame.ActiveTheme(ctx).Components.Table.CellPaddingY, Right: frame.ActiveTheme(ctx).Components.Table.CellPaddingX,
 		Bottom: frame.ActiveTheme(ctx).Components.Table.CellPaddingY, Left: frame.ActiveTheme(ctx).Components.Table.CellPaddingX,
-	}.Layout(cellGtx, func(gtx layout.Context) layout.Dimensions {
-		return alignWidget(ctx, gtx, column.Align, content)
+	}
+	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		return layoutui.LayoutTrackedInset(ctx, cellGtx, inset, func(gtx layout.Context) layout.Dimensions {
+			return alignWidget(ctx, gtx, column.Align, content)
+		})
 	})
 	dims.Size.X = width
-	return recordedCell{call: macro.Stop(), dims: dims}
+	return recordedCell{call: macro.Stop(), dims: dims, placement: placement}
 }
 
 func alignWidget(ctx *frame.Context, gtx layout.Context, alignment Alignment, child frame.Widget) layout.Dimensions {
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X
+	direction := layout.W
 	switch alignment {
 	case AlignCenter:
-		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return child.Layout(ctx, gtx) })
+		direction = layout.Center
 	case AlignEnd:
-		return layout.E.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return child.Layout(ctx, gtx) })
-	default:
-		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return child.Layout(ctx, gtx) })
+		direction = layout.E
 	}
+	return layoutui.LayoutTrackedDirection(ctx, gtx, direction, func(gtx layout.Context) layout.Dimensions {
+		return child.Layout(ctx, gtx)
+	})
 }
 
 type tableCellText struct {

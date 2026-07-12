@@ -23,6 +23,8 @@ const (
 	KindListBox      Kind = "listbox"
 	KindTree         Kind = "tree"
 	KindTable        Kind = "table"
+	KindMenu         Kind = "menu"
+	KindContextMenu  Kind = "context-menu"
 	KindTabs         Kind = "tabs"
 	KindPopover      Kind = "popover"
 	KindTooltip      Kind = "tooltip"

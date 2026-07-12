@@ -22,6 +22,23 @@ type tableProbe struct {
 	background color.NRGBA
 }
 
+type tableOverlayProbe struct {
+	anchor image.Rectangle
+}
+
+func (p *tableOverlayProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	frame.RegisterOverlay(ctx, frame.OverlayRequest{
+		Key:       "cell-overlay",
+		Anchor:    image.Rect(1, 2, 2, 3),
+		HasAnchor: true,
+		Layout: func(_ layout.Context, anchor image.Rectangle, _ bool) layout.Dimensions {
+			p.anchor = anchor
+			return layout.Dimensions{}
+		},
+	})
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(80, 20))}
+}
+
 func (p *tableProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	p.layouts++
 	p.foreground = ctx.ForegroundColor()
@@ -91,6 +108,38 @@ func TestTableRejectsInvalidStructure(t *testing.T) {
 			}()
 			new(tableState).check(test.columns, test.rows)
 		})
+	}
+}
+
+func TestTableTracksOverlayAnchorInsideCustomCell(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := tableTestContext(&activeTheme)
+	probe := new(tableOverlayProbe)
+	table := New(
+		"tracked-cell",
+		[]Column{{Key: "name", Label: "Name", Width: 200}},
+		[]Row{
+			{Key: "first", Label: "First", Cells: []Cell{{Text: "First"}}},
+			{Key: "member", Label: "Member", Cells: []Cell{{Content: probe}}},
+		},
+	).Variant(VariantSecondary)
+	gtx := tableLayoutContext(nil, image.Pt(400, 240), time.Unix(1, 0))
+	frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+	table.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	tokens := activeTheme.Components.Table
+	cellHeight := gtx.Dp(tokens.CellPaddingY)*2 + 20
+	rowOffset := max((gtx.Dp(tokens.RowMinHeight)-cellHeight)/2, 0)
+	want := image.Rect(
+		gtx.Dp(tokens.CellPaddingX)+1,
+		gtx.Dp(tokens.HeaderHeight)+gtx.Dp(tokens.RowMinHeight)+rowOffset+gtx.Dp(tokens.CellPaddingY)+2,
+		gtx.Dp(tokens.CellPaddingX)+2,
+		gtx.Dp(tokens.HeaderHeight)+gtx.Dp(tokens.RowMinHeight)+rowOffset+gtx.Dp(tokens.CellPaddingY)+3,
+	)
+	if probe.anchor != want {
+		t.Fatalf("custom cell overlay anchor = %v, want %v", probe.anchor, want)
 	}
 }
 

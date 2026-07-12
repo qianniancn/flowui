@@ -56,3 +56,16 @@ func TestFocusAnimationDropsUnappliedPointerFocus(t *testing.T) {
 		t.Fatal("unapplied pointer focus poisoned later keyboard focus")
 	}
 }
+
+func TestFocusAnimationPreparesProgrammaticFocusModality(t *testing.T) {
+	var animation FocusAnimation
+	animation.Prepare(false)
+	if animation.Visible(true, nil) {
+		t.Fatal("pointer-originated programmatic focus was visible")
+	}
+	animation.Visible(false, nil)
+	animation.Prepare(true)
+	if !animation.Visible(true, nil) {
+		t.Fatal("keyboard-originated programmatic focus was hidden")
+	}
+}

@@ -27,6 +27,14 @@ type FocusAnimation struct {
 	historyReady bool
 }
 
+// Prepare controls whether the next programmatic focus should be keyboard-visible.
+func (s *FocusAnimation) Prepare(visible bool) {
+	s.focused = false
+	s.pointerFocus = !visible
+	s.pendingPress = !visible
+	s.pendingAge = 0
+}
+
 func (s *FocusAnimation) Visible(focused bool, history []widget.Press) bool {
 	pointerPress := s.observePointerPress(history)
 	if !focused {

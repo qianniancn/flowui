@@ -134,6 +134,7 @@ text/editor internals.
 - `DatePicker`
 - `Popover`
 - `Tooltip`
+- `Menu`, `ContextMenu`
 - `Modal`
 
 ### Layout
@@ -189,6 +190,7 @@ Examples live in `examples/`:
 - `alert_dialogs`: HeroUI-aligned confirmation dialogs with semantic statuses, controlled dismissal, sizes, placements, and backdrop variants.
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `tooltips`: HeroUI-aligned hover and focus hints with delays, arrows, placement, and viewport flipping.
+- `context_menus`: right-click and long-press menus for table rows, including checkbox, radio, disabled, danger, and submenu items.
 - `toasts`: HeroUI-aligned controlled notifications with variants, actions, timeouts, stacking, and six placements.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.
 - `cards`: HeroUI-aligned card variants, semantic sections, and composed actions.

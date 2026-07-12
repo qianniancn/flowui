@@ -22,6 +22,11 @@ func layoutTrackedInset(ctx *frame.Context, gtx layout.Context, inset layout.Ins
 	return dims
 }
 
+// LayoutTrackedInset keeps overlay anchors aligned with an inset child.
+func LayoutTrackedInset(ctx *frame.Context, gtx layout.Context, inset layout.Inset, child layout.Widget) layout.Dimensions {
+	return layoutTrackedInset(ctx, gtx, inset, child)
+}
+
 func insetOffset(gtx layout.Context, inset layout.Inset) image.Point {
 	top := gtx.Dp(inset.Top)
 	right := gtx.Dp(inset.Right)
@@ -49,6 +54,11 @@ func layoutTrackedDirection(ctx *frame.Context, gtx layout.Context, direction la
 	return dims
 }
 
+// LayoutTrackedDirection keeps overlay anchors aligned with a positioned child.
+func LayoutTrackedDirection(ctx *frame.Context, gtx layout.Context, direction layout.Direction, child layout.Widget) layout.Dimensions {
+	return layoutTrackedDirection(ctx, gtx, direction, child)
+}
+
 type listChildPlacement struct {
 	index     int
 	dims      layout.Dimensions
@@ -71,6 +81,11 @@ func layoutTrackedList(ctx *frame.Context, gtx layout.Context, state *layout.Lis
 	children = deduplicateListChildren(children)
 	placeListChildren(state, children, image.Rectangle{Max: dims.Size})
 	return dims
+}
+
+// LayoutTrackedList keeps overlay anchors aligned with scrolling list items.
+func LayoutTrackedList(ctx *frame.Context, gtx layout.Context, state *layout.List, count int, item layout.ListElement) layout.Dimensions {
+	return layoutTrackedList(ctx, gtx, state, count, item)
 }
 
 func deduplicateListChildren(children []listChildPlacement) []listChildPlacement {

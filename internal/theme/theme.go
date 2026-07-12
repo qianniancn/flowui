@@ -115,6 +115,7 @@ type ComponentsTheme struct {
 	ListBox      ListBoxTheme
 	Tree         TreeTheme
 	Table        TableTheme
+	Menu         MenuTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -415,6 +416,42 @@ type TableTheme struct {
 	SortGap               unit.Dp
 	FooterPaddingX        unit.Dp
 	FooterPaddingY        unit.Dp
+}
+
+type MenuTheme struct {
+	Width                unit.Dp
+	MaxHeight            unit.Dp
+	Padding              unit.Dp
+	Radius               unit.Dp
+	BorderWidth          unit.Dp
+	ItemGap              unit.Dp
+	ItemMinHeight        unit.Dp
+	ItemRadius           unit.Dp
+	ItemPaddingX         unit.Dp
+	ItemPaddingY         unit.Dp
+	ItemContentGap       unit.Dp
+	ItemTextSize         unit.Sp
+	ItemDescriptionSize  unit.Sp
+	ShortcutTextSize     unit.Sp
+	IndicatorSize        unit.Dp
+	IndicatorContentGap  unit.Dp
+	CheckmarkSize        unit.Dp
+	RadioDotSize         unit.Dp
+	SubmenuIndicatorSize unit.Dp
+	FocusRingWidth       unit.Dp
+	PressedScale         float32
+	SectionTextSize      unit.Sp
+	SectionPaddingX      unit.Dp
+	SectionPaddingY      unit.Dp
+	SeparatorMarginX     unit.Dp
+	SeparatorMarginY     unit.Dp
+	SeparatorWidth       unit.Dp
+	SubmenuGap           unit.Dp
+	ContextMenuOffset    unit.Dp
+	EnterScale           float32
+	ExitScale            float32
+	AnimationDistance    unit.Dp
+	ShadowOpacity        float32
 }
 
 type TabsTheme struct {
@@ -925,6 +962,41 @@ func DefaultTheme() Theme {
 				FooterPaddingX:        16,
 				FooterPaddingY:        10,
 			},
+			Menu: MenuTheme{
+				Width:                220,
+				MaxHeight:            360,
+				Padding:              6,
+				Radius:               24,
+				BorderWidth:          0,
+				ItemGap:              2,
+				ItemMinHeight:        36,
+				ItemRadius:           16,
+				ItemPaddingX:         10,
+				ItemPaddingY:         6,
+				ItemContentGap:       12,
+				ItemTextSize:         14,
+				ItemDescriptionSize:  12,
+				ShortcutTextSize:     12,
+				IndicatorSize:        16,
+				IndicatorContentGap:  2,
+				CheckmarkSize:        10,
+				RadioDotSize:         8,
+				SubmenuIndicatorSize: 12,
+				FocusRingWidth:       2,
+				PressedScale:         0.98,
+				SectionTextSize:      12,
+				SectionPaddingX:      10,
+				SectionPaddingY:      6,
+				SeparatorMarginX:     6,
+				SeparatorMarginY:     4,
+				SeparatorWidth:       1,
+				SubmenuGap:           4,
+				ContextMenuOffset:    2,
+				EnterScale:           0.9,
+				ExitScale:            0.95,
+				AnimationDistance:    4,
+				ShadowOpacity:        1,
+			},
 			Tabs: TabsTheme{
 				RootGap:             8,
 				ListPadding:         4,
@@ -1096,6 +1168,8 @@ func DarkTheme() Theme {
 	theme := DefaultTheme()
 	theme.Components.Input.ShadowOpacity = 0
 	theme.Components.TextArea.ShadowOpacity = 0
+	theme.Components.Menu.ShadowOpacity = 0
+	theme.Components.Menu.BorderWidth = 1
 	theme.Components.Checkbox.ShadowOpacity = 0
 	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}

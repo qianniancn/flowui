@@ -132,6 +132,7 @@ type ComponentsTheme struct {
 	ListBox          ListBoxTheme
 	Tree             TreeTheme
 	Sidebar          SidebarTheme
+	Scrollbar        ScrollbarTheme
 	Table            TableTheme
 	Menu             MenuTheme
 	Dropdown         DropdownTheme
@@ -477,6 +478,16 @@ type SidebarTheme struct {
 	SectionSeparatorInset unit.Dp
 	BorderWidth           unit.Dp
 	FocusRingWidth        unit.Dp
+}
+
+type ScrollbarTheme struct {
+	TrackWidth     unit.Dp
+	ThumbWidth     unit.Dp
+	MinThumbLength unit.Dp
+	MajorPadding   unit.Dp
+	Radius         unit.Dp
+	ThumbOpacity   float32
+	HoverOpacity   float32
 }
 
 type TableTheme struct {
@@ -1220,6 +1231,15 @@ func DefaultTheme() Theme {
 				SectionSeparatorInset: 10,
 				BorderWidth:           1,
 				FocusRingWidth:        2,
+			},
+			Scrollbar: ScrollbarTheme{
+				TrackWidth:     10,
+				ThumbWidth:     6,
+				MinThumbLength: 32,
+				MajorPadding:   2,
+				Radius:         3,
+				ThumbOpacity:   0.15,
+				HoverOpacity:   0.28,
 			},
 			Table: TableTheme{
 				RootPadding:           4,

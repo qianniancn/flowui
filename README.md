@@ -158,7 +158,7 @@ text/editor internals.
 - `Expanded`, `Flexible`
 - `Adaptive`
 - `Wrap`
-- `Scroll`, `List`
+- `Scroll`, `Scrollbar`, `List`
 - `Stack`, `Stacked`, `Overlay`
 - `AspectRatio`
 - `Grid`, `AutoGrid`
@@ -211,6 +211,7 @@ Examples live in `examples/`:
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
 - `trees`: controlled hierarchical navigation with expansion, selection, custom content, disabled nodes, and scrolling.
 - `sidebars`: controlled desktop navigation with sections, collapsed rail, custom content, disabled destinations, and keyboard navigation.
+- `scrollbars`: HeroUI-aligned thin vertical and horizontal scrollbars backed by Gio track and thumb interactions.
 - `tables`: HeroUI-aligned data tables with variants, controlled selection and sorting, custom cells, disabled rows, and scrolling.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.

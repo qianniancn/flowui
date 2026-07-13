@@ -401,6 +401,13 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnAction(func(string) {}).
 			Disabled(false),
+		ui.Scrollbar("facade-scrollbar", ui.Spacer(640, 480)).
+			Horizontal().
+			AlignEnd().
+			StickToEnd().
+			ScrollAnyAxis().
+			Overlay().
+			Disabled(false),
 		ui.Table("members", tableColumns, tableRows).
 			Variant(ui.TableSecondary).
 			SelectionMode(ui.TableSelectionMultiple).

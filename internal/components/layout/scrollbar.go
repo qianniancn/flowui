@@ -1,0 +1,180 @@
+package layoutui
+
+import (
+	"image/color"
+
+	"gioui.org/layout"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
+)
+
+const stateSlotScrollbar = "scrollbar"
+
+type ScrollbarWidget struct {
+	key           string
+	child         frame.Widget
+	axis          layout.Axis
+	align         layout.Alignment
+	disabled      bool
+	stickToEnd    bool
+	scrollAnyAxis bool
+	overlay       bool
+}
+
+type scrollbarState struct {
+	list layout.List
+	bar  widget.Scrollbar
+}
+
+func Scrollbar(key string, child frame.Widget) ScrollbarWidget {
+	return ScrollbarWidget{key: key, child: child, axis: layout.Vertical}
+}
+
+func (s ScrollbarWidget) Vertical() ScrollbarWidget {
+	s.axis = layout.Vertical
+	return s
+}
+
+func (s ScrollbarWidget) Horizontal() ScrollbarWidget {
+	s.axis = layout.Horizontal
+	return s
+}
+
+func (s ScrollbarWidget) Disabled(disabled bool) ScrollbarWidget {
+	s.disabled = disabled
+	return s
+}
+
+func (s ScrollbarWidget) AlignStart() ScrollbarWidget {
+	s.align = layout.Start
+	return s
+}
+
+func (s ScrollbarWidget) AlignMiddle() ScrollbarWidget {
+	s.align = layout.Middle
+	return s
+}
+
+func (s ScrollbarWidget) AlignEnd() ScrollbarWidget {
+	s.align = layout.End
+	return s
+}
+
+func (s ScrollbarWidget) StickToEnd() ScrollbarWidget {
+	s.stickToEnd = true
+	return s
+}
+
+func (s ScrollbarWidget) ScrollAnyAxis() ScrollbarWidget {
+	s.scrollAnyAxis = true
+	return s
+}
+
+func (s ScrollbarWidget) Overlay() ScrollbarWidget {
+	s.overlay = true
+	return s
+}
+
+func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	prepareFieldAssociations(ctx, s.child)
+	key := frame.ClaimKey(ctx, stateutil.KindScrollbar, s.key)
+	state := frame.UseState[scrollbarState](ctx, key, stateSlotScrollbar)
+	state.list.Axis = s.axis
+	state.list.Gap = 0
+	state.list.Alignment = s.align
+	state.list.ScrollToEnd = s.stickToEnd
+	state.list.ScrollAnyAxis = s.scrollAnyAxis
+	if s.disabled {
+		gtx = gtx.Disabled()
+	}
+
+	style := scrollbarStyleFor(frame.ActiveTheme(ctx), &state.bar, s.disabled)
+	originalConstraints := gtx.Constraints
+	barWidth := gtx.Dp(style.Width())
+	if !s.overlay {
+		maxConstraints := s.axis.Convert(gtx.Constraints.Max)
+		minConstraints := s.axis.Convert(gtx.Constraints.Min)
+		maxConstraints.Y = max(maxConstraints.Y-barWidth, 0)
+		minConstraints.Y = max(minConstraints.Y-barWidth, 0)
+		gtx.Constraints.Max = s.axis.Convert(maxConstraints)
+		gtx.Constraints.Min = s.axis.Convert(minConstraints)
+	}
+
+	listDims := layoutTrackedList(ctx, gtx, &state.list, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+		return s.child.Layout(ctx, gtx)
+	})
+	gtx.Constraints = originalConstraints
+	majorAxisSize := s.axis.Convert(listDims.Size).X
+	start, end := scrollbarViewport(state.list.Position, 1, majorAxisSize)
+
+	gtx.Constraints.Min = listDims.Size
+	if !s.overlay {
+		minor := s.axis.Convert(gtx.Constraints.Min)
+		minor.Y += barWidth
+		gtx.Constraints.Min = s.axis.Convert(minor)
+	}
+	anchor := layout.E
+	if s.axis == layout.Horizontal {
+		anchor = layout.S
+	}
+	anchor.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return style.Layout(gtx, s.axis, start, end)
+	})
+
+	if distance := state.bar.ScrollDistance(); distance != 0 {
+		state.list.ScrollBy(distance)
+	}
+	if !s.overlay {
+		minor := s.axis.Convert(listDims.Size)
+		minor.Y += barWidth
+		listDims.Size = s.axis.Convert(minor)
+	}
+	return listDims
+}
+
+func scrollbarStyleFor(activeTheme *theme.Theme, state *widget.Scrollbar, disabled bool) material.ScrollbarStyle {
+	tokens := activeTheme.Components.Scrollbar
+	style := material.Scrollbar(activeTheme.Material, state)
+	style.Track.MajorPadding = tokens.MajorPadding
+	style.Track.MinorPadding = max((tokens.TrackWidth-tokens.ThumbWidth)/2, 0)
+	style.Track.Color = color.NRGBA{}
+	style.Indicator.MajorMinLen = tokens.MinThumbLength
+	style.Indicator.MinorWidth = tokens.ThumbWidth
+	style.Indicator.CornerRadius = tokens.Radius
+	style.Indicator.Color = scrollbarColor(activeTheme.Palette.Foreground, tokens.ThumbOpacity)
+	style.Indicator.HoverColor = scrollbarColor(activeTheme.Palette.Foreground, tokens.HoverOpacity)
+	if disabled {
+		style.Indicator.Color = activeTheme.DisabledColor(style.Indicator.Color)
+		style.Indicator.HoverColor = style.Indicator.Color
+	} else if state.Dragging() {
+		style.Indicator.Color = style.Indicator.HoverColor
+	}
+	return style
+}
+
+func scrollbarColor(value color.NRGBA, opacity float32) color.NRGBA {
+	opacity = min(max(opacity, 0), 1)
+	value.A = byte(float32(value.A)*opacity + .5)
+	return value
+}
+
+// scrollbarViewport maps Gio's estimated list position to the normalized range used by widget.Scrollbar.
+func scrollbarViewport(position layout.Position, elements, majorAxisSize int) (start, end float32) {
+	if elements <= 0 || position.Length <= 0 || majorAxisSize >= position.Length {
+		return 0, 1
+	}
+	length := float32(position.Length)
+	elementLength := length / float32(elements)
+	start = min(max((float32(position.First)*elementLength+float32(position.Offset))/length, 0), 1)
+	end = min(max((float32(position.First+position.Count)*elementLength+float32(position.OffsetLast))/length, 0), 1)
+	visibleFraction := min(max(float32(majorAxisSize)/length, 0), 1)
+	viewportFraction := end - start
+	if viewportFraction < 1 {
+		start -= start / (1 - viewportFraction) * (visibleFraction - viewportFraction)
+		end += (1 - end) / (1 - viewportFraction) * (visibleFraction - viewportFraction)
+	}
+	return min(max(start, 0), 1), min(max(end, 0), 1)
+}

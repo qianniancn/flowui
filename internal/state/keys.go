@@ -41,6 +41,7 @@ const (
 	KindModal            Kind = "modal"
 	KindList             Kind = "list"
 	KindScroll           Kind = "scroll"
+	KindScrollbar        Kind = "scrollbar"
 )
 
 type Keys struct {

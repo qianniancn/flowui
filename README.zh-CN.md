@@ -153,7 +153,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Expanded`、`Flexible`
 - `Adaptive`
 - `Wrap`
-- `Scroll`、`List`
+- `Scroll`、`Scrollbar`、`List`
 - `Stack`、`Stacked`、`Overlay`
 - `AspectRatio`
 - `Grid`、`AutoGrid`
@@ -205,6 +205,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `trees`：受控的层级导航，包含展开、选择、自定义内容、禁用节点和滚动。
 - `sidebars`：受控桌面导航，包含分组、折叠导航轨、自定义内容、禁用目的地和键盘导航。
+- `scrollbars`：对齐 HeroUI 的细型纵向与横向滚动条，使用 Gio 的轨道与滑块交互。
 - `tables`：对齐 HeroUI 的数据表格，包含变体、受控选择与排序、自定义单元格、禁用行和滚动。
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。

@@ -19,6 +19,7 @@ type GridWidget = layoutui.GridWidget
 type KeyWidget = layoutui.KeyWidget
 type ListWidget = layoutui.ListWidget
 type ScrollWidget = layoutui.ScrollWidget
+type ScrollbarWidget = layoutui.ScrollbarWidget
 type StackWidget = layoutui.StackWidget
 type StackLayer = layoutui.StackLayer
 type WrapWidget = layoutui.WrapWidget
@@ -100,6 +101,10 @@ func List(key string, count int, item func(int) Widget) ListWidget {
 
 func Scroll(key string, child Widget) ScrollWidget {
 	return layoutui.Scroll(key, child)
+}
+
+func Scrollbar(key string, child Widget) ScrollbarWidget {
+	return layoutui.Scrollbar(key, child)
 }
 
 func Stack(layers ...StackLayer) StackWidget {

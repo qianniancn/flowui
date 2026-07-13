@@ -34,6 +34,7 @@ type SliderTheme = theme.SliderTheme
 type ListBoxTheme = theme.ListBoxTheme
 type TreeTheme = theme.TreeTheme
 type SidebarTheme = theme.SidebarTheme
+type ScrollbarTheme = theme.ScrollbarTheme
 type TableTheme = theme.TableTheme
 type MenuTheme = theme.MenuTheme
 type DropdownTheme = theme.DropdownTheme

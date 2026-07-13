@@ -102,6 +102,7 @@ type ComponentsTheme struct {
 	CloseButton  CloseButtonTheme
 	Chip         ChipTheme
 	Avatar       AvatarTheme
+	Badge        BadgeTheme
 	Card         CardTheme
 	Alert        AlertTheme
 	AlertDialog  AlertDialogTheme
@@ -245,6 +246,24 @@ type AvatarTheme struct {
 	SmallIconSize  unit.Dp
 	MediumIconSize unit.Dp
 	LargeIconSize  unit.Dp
+}
+
+type BadgeTheme struct {
+	SmallMinSize         unit.Dp
+	MediumMinSize        unit.Dp
+	LargeMinSize         unit.Dp
+	SmallRadius          unit.Dp
+	MediumRadius         unit.Dp
+	LargeRadius          unit.Dp
+	SmallTextSize        unit.Sp
+	MediumTextSize       unit.Sp
+	LargeTextSize        unit.Sp
+	SmallLineHeight      unit.Sp
+	MediumLineHeight     unit.Sp
+	LargeLineHeight      unit.Sp
+	LabelPaddingX        unit.Dp
+	BorderWidth          unit.Dp
+	PlacementOffsetRatio float32
 }
 
 type InputTheme struct {
@@ -806,6 +825,23 @@ func DefaultTheme() Theme {
 				SmallIconSize:  16,
 				MediumIconSize: 20,
 				LargeIconSize:  24,
+			},
+			Badge: BadgeTheme{
+				SmallMinSize:         16,
+				MediumMinSize:        28,
+				LargeMinSize:         32,
+				SmallRadius:          12,
+				MediumRadius:         24,
+				LargeRadius:          16,
+				SmallTextSize:        10,
+				MediumTextSize:       12,
+				LargeTextSize:        14,
+				SmallLineHeight:      14,
+				MediumLineHeight:     16,
+				LargeLineHeight:      20,
+				LabelPaddingX:        2,
+				BorderWidth:          1,
+				PlacementOffsetRatio: 0.25,
 			},
 			Card: CardTheme{
 				Padding:               16,

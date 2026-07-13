@@ -109,6 +109,13 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Color(ui.AvatarAccent).
 			Variant(ui.AvatarSoft).
 			Size(ui.AvatarLarge),
+		ui.Badge(ui.Avatar("AM"), "5").
+			Content(ui.Icon(lucide.Bell).Size(10)).
+			Alt("Notifications").
+			Color(ui.BadgeDanger).
+			Variant(ui.BadgeSoft).
+			Size(ui.BadgeSmall).
+			Placement(ui.BadgeBottomRight),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

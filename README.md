@@ -116,6 +116,7 @@ text/editor internals.
 - `Description`
 - `Image`
 - `Avatar`
+- `Badge`
 - `Button`
 - `ToggleButton`
 - `Input`
@@ -176,6 +177,7 @@ Examples live in `examples/`:
 - `chips`: HeroUI-aligned compact labels with colors, variants, sizes, icons, and semantic statuses.
 - `images`: reusable images with scaling, positioning, dimensions, rounded clipping, opacity, and accessible labels.
 - `avatars`: HeroUI-aligned profile images with sizes, semantic colors, soft variants, and text or icon fallbacks.
+- `badges`: HeroUI-aligned anchored indicators with colors, variants, sizes, placements, text, icons, and status dots.
 - `inputs`: HeroUI-aligned input variants, types, states, and controlled events.
 - `input_groups`: HeroUI-aligned grouped fields with single-line or multiline editors, prefixes, suffixes, variants, validation states, and interactive actions.
 - `textareas`: HeroUI-aligned multiline fields with variants, controlled values, row sizing, states, InputGroup integration, and surface usage.

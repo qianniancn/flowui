@@ -77,9 +77,11 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 		if geometry.horizontal {
 			center = f32.Pt(geometry.mapY(mark.Y), barCategoryX(geometry, mark.X))
 		}
-		size := max(gtx.Dp(mark.ResolvedSize(unit.Dp(9))), 3)
 		color := mark.ResolvedColor(pointFallback)
-		paint.FillShape(gtx.Ops, color, clip.Ellipse(barMarkPointRect(center, size)).Op(gtx.Ops))
+		size, custom := chart.LayoutMarkPointContent(ctx, gtx, mark, center, geometry.plot, unit.Dp(9), pointFallback)
+		if !custom {
+			paint.FillShape(gtx.Ops, color, clip.Ellipse(barMarkPointRect(center, size)).Op(gtx.Ops))
+		}
 		if mark.Label != "" {
 			label := recordChartText(ctx, gtx, mark.Label, activeTheme.Components.BarChart.AxisTextSize, font.Medium, style.axisLabel, max(geometry.plot.Dx()/2, 1))
 			position := clampBarAnnotationLabel(image.Pt(int(center.X)+size/2+4, int(center.Y)-label.dims.Size.Y/2), label.dims.Size, geometry.plot)

@@ -74,9 +74,11 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 			continue
 		}
 		center := image.Pt(int(math.Round(float64(geometry.mapX(mark.X)))), int(math.Round(float64(geometry.mapY(mark.Y)))))
-		size := max(gtx.Dp(mark.ResolvedSize(unit.Dp(9))), 3)
 		color := mark.ResolvedColor(pointFallback)
-		paint.FillShape(gtx.Ops, color, clip.Ellipse(chartPointRect(floatPoint(center), size)).Op(gtx.Ops))
+		size, custom := chart.LayoutMarkPointContent(ctx, gtx, mark, floatPoint(center), geometry.plot, unit.Dp(9), pointFallback)
+		if !custom {
+			paint.FillShape(gtx.Ops, color, clip.Ellipse(chartPointRect(floatPoint(center), size)).Op(gtx.Ops))
+		}
 		if mark.Label != "" {
 			label := recordChartText(ctx, gtx, mark.Label, activeTheme.Components.LineChart.AxisTextSize, font.Medium, style.axisLabel, max(geometry.plot.Dx()/2, 1))
 			position := clampLineAnnotationLabel(image.Pt(center.X+size/2+4, center.Y-label.dims.Size.Y/2), label.dims.Size, geometry.plot)

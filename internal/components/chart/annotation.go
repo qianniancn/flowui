@@ -1,10 +1,16 @@
 package chart
 
 import (
+	"image"
 	"image/color"
 	"math"
 
+	"gioui.org/f32"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
 // Axis identifies a chart axis.
@@ -101,11 +107,12 @@ func (m MarkArea) ResolvedColor(fallback color.NRGBA) color.NRGBA {
 // MarkPoint draws a labeled point at one Cartesian coordinate. Bar charts
 // interpret X as a category index.
 type MarkPoint struct {
-	X     float64
-	Y     float64
-	Label string
-	color color.NRGBA
-	size  unit.Dp
+	X       float64
+	Y       float64
+	Label   string
+	color   color.NRGBA
+	size    unit.Dp
+	content frame.Widget
 }
 
 func NewMarkPoint(x, y float64) MarkPoint {
@@ -132,6 +139,12 @@ func (m MarkPoint) Size(dp int) MarkPoint {
 	return m
 }
 
+// Content replaces the default point with a custom non-interactive FlowUI widget.
+func (m MarkPoint) Content(content frame.Widget) MarkPoint {
+	m.content = content
+	return m
+}
+
 func (m MarkPoint) ResolvedColor(fallback color.NRGBA) color.NRGBA {
 	if m.color.A != 0 {
 		return m.color
@@ -144,6 +157,40 @@ func (m MarkPoint) ResolvedSize(fallback unit.Dp) unit.Dp {
 		return m.size
 	}
 	return fallback
+}
+
+func (m MarkPoint) ResolvedContent() frame.Widget {
+	return m.content
+}
+
+// LayoutMarkPointContent lays out custom point content centered at a chart
+// coordinate. It returns the resolved point size and whether custom content
+// replaced the default marker.
+func LayoutMarkPointContent(ctx *frame.Context, gtx layout.Context, mark MarkPoint, center f32.Point, plot image.Rectangle, fallbackSize unit.Dp, fallbackColor color.NRGBA) (int, bool) {
+	size := max(gtx.Dp(mark.ResolvedSize(fallbackSize)), 3)
+	content := mark.ResolvedContent()
+	if content == nil {
+		return size, false
+	}
+
+	markerGtx := gtx.Disabled()
+	markerGtx.Constraints = layout.Exact(image.Pt(size, size))
+	macro := op.Record(gtx.Ops)
+	restore := frame.PushColors(ctx, mark.ResolvedColor(fallbackColor), ctx.BackgroundColor())
+	dims := content.Layout(ctx, markerGtx)
+	restore()
+	call := macro.Stop()
+
+	position := image.Pt(
+		int(math.Round(float64(center.X)))-dims.Size.X/2,
+		int(math.Round(float64(center.Y)))-dims.Size.Y/2,
+	)
+	area := clip.Rect(plot).Push(gtx.Ops)
+	offset := op.Offset(position).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	offset.Pop()
+	area.Pop()
+	return size, true
 }
 
 func ValidateAnnotations(lines []MarkLine, areas []MarkArea, points []MarkPoint) {

@@ -107,45 +107,46 @@ type Spacing struct {
 }
 
 type ComponentsTheme struct {
-	Button       ButtonTheme
-	ToggleButton ToggleButtonTheme
-	CloseButton  CloseButtonTheme
-	Chip         ChipTheme
-	Avatar       AvatarTheme
-	Badge        BadgeTheme
-	Card         CardTheme
-	Alert        AlertTheme
-	AlertDialog  AlertDialogTheme
-	Description  DescriptionTheme
-	Label        LabelTheme
-	Input        InputTheme
-	TextArea     TextAreaTheme
-	InputGroup   InputGroupTheme
-	Checkbox     CheckboxTheme
-	Switch       SwitchTheme
-	SwitchGroup  SwitchGroupTheme
-	RadioGroup   RadioGroupTheme
-	ProgressBar  ProgressBarTheme
-	Meter        MeterTheme
-	Spinner      SpinnerTheme
-	Slider       SliderTheme
-	ListBox      ListBoxTheme
-	Tree         TreeTheme
-	Table        TableTheme
-	Menu         MenuTheme
-	Dropdown     DropdownTheme
-	Menubar      MenubarTheme
-	LineChart    LineChartTheme
-	BarChart     BarChartTheme
-	PieChart     PieChartTheme
-	Tabs         TabsTheme
-	Select       SelectTheme
-	Popover      PopoverTheme
-	Tooltip      TooltipTheme
-	Toast        ToastTheme
-	Modal        ModalTheme
-	ComboBox     ComboBoxTheme
-	DatePicker   DatePickerTheme
+	Button           ButtonTheme
+	ToggleButton     ToggleButtonTheme
+	CloseButton      CloseButtonTheme
+	Chip             ChipTheme
+	Avatar           AvatarTheme
+	Badge            BadgeTheme
+	Card             CardTheme
+	Alert            AlertTheme
+	AlertDialog      AlertDialogTheme
+	Description      DescriptionTheme
+	Label            LabelTheme
+	Input            InputTheme
+	TextArea         TextAreaTheme
+	InputGroup       InputGroupTheme
+	Checkbox         CheckboxTheme
+	Switch           SwitchTheme
+	SwitchGroup      SwitchGroupTheme
+	RadioGroup       RadioGroupTheme
+	ProgressBar      ProgressBarTheme
+	Meter            MeterTheme
+	Spinner          SpinnerTheme
+	Slider           SliderTheme
+	ListBox          ListBoxTheme
+	Tree             TreeTheme
+	Table            TableTheme
+	Menu             MenuTheme
+	Dropdown         DropdownTheme
+	Menubar          MenubarTheme
+	LineChart        LineChartTheme
+	BarChart         BarChartTheme
+	PieChart         PieChartTheme
+	CandlestickChart CandlestickChartTheme
+	Tabs             TabsTheme
+	Select           SelectTheme
+	Popover          PopoverTheme
+	Tooltip          TooltipTheme
+	Toast            ToastTheme
+	Modal            ModalTheme
+	ComboBox         ComboBoxTheme
+	DatePicker       DatePickerTheme
 }
 
 type CardTheme struct {
@@ -631,6 +632,28 @@ type PieChartTheme struct {
 	TooltipRowGap      unit.Dp
 	TooltipMarkerSize  unit.Dp
 	SeriesColors       [9]color.NRGBA
+}
+
+type CandlestickChartTheme struct {
+	Height              unit.Dp
+	PlotPaddingTop      unit.Dp
+	PlotPaddingRight    unit.Dp
+	PlotPaddingBottom   unit.Dp
+	PlotPaddingLeft     unit.Dp
+	AxisNameGap         unit.Dp
+	TickLabelGap        unit.Dp
+	AxisTextSize        unit.Sp
+	GridWidth           unit.Dp
+	AxisWidth           unit.Dp
+	CrosshairWidth      unit.Dp
+	WickWidth           unit.Dp
+	BorderWidth         unit.Dp
+	EmphasisBorderWidth unit.Dp
+	TooltipGap          unit.Dp
+	TooltipRowGap       unit.Dp
+	UpColor             color.NRGBA
+	DownColor           color.NRGBA
+	DojiColor           color.NRGBA
 }
 
 type TabsTheme struct {
@@ -1357,6 +1380,26 @@ func DefaultTheme() Theme {
 					{R: 0x78, G: 0x5d, B: 0xb0, A: 0xff},
 					{R: 0x3f, G: 0xbe, B: 0x95, A: 0xff},
 				},
+			},
+			CandlestickChart: CandlestickChartTheme{
+				Height:              360,
+				PlotPaddingTop:      12,
+				PlotPaddingRight:    16,
+				PlotPaddingBottom:   36,
+				PlotPaddingLeft:     56,
+				AxisNameGap:         6,
+				TickLabelGap:        8,
+				AxisTextSize:        12,
+				GridWidth:           1,
+				AxisWidth:           1,
+				CrosshairWidth:      1,
+				WickWidth:           1,
+				BorderWidth:         1,
+				EmphasisBorderWidth: 2,
+				TooltipGap:          12,
+				TooltipRowGap:       5,
+				UpColor:             color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff},
+				DownColor:           color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff},
 			},
 			Tabs: TabsTheme{
 				RootGap:             8,

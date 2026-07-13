@@ -10,7 +10,12 @@ type Datum struct {
 	Y           float64
 	// Percent is populated by proportional charts such as PieChart.
 	Percent float64
-	Color   color.NRGBA
+	// Open, Close, Low, and High are populated by CandlestickChart.
+	Open  float64
+	Close float64
+	Low   float64
+	High  float64
+	Color color.NRGBA
 }
 
 // Selection describes the current chart selection.

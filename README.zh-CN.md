@@ -125,6 +125,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `LineChart`
 - `BarChart`
 - `PieChart`
+- `CandlestickChart`
 - `Spinner`
 - `Slider`、`RangeSlider`
 - `ListBox`

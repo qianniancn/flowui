@@ -130,6 +130,7 @@ text/editor internals.
 - `LineChart`
 - `BarChart`
 - `PieChart`
+- `CandlestickChart`
 - `Spinner`
 - `Slider`, `RangeSlider`
 - `ListBox`

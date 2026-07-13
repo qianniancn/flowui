@@ -291,6 +291,48 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Label("Traffic sources").
 			EmptyText("No sources").
 			Disabled(false),
+		ui.CandlestickChart("market", []ui.CandlestickChartData{
+			ui.Candle(100, 105, 98, 108),
+		}).
+			Times([]time.Time{time.Unix(1, 0)}).
+			FormatTime(func(value time.Time) string { return value.Format("15:04") }).
+			Height(320).
+			Grid(true).
+			Tooltip(true).
+			Crosshair(true).
+			YRange(90, 110).
+			YTicks(5).
+			FormatY(func(value float64) string { return fmt.Sprint(value) }).
+			XAxis("Date").
+			YAxis("Price").
+			Width(10).
+			MaxWidth(18).
+			MinWidth(2).
+			UpColor(color.NRGBA{R: 1, A: 0xff}).
+			DownColor(color.NRGBA{G: 1, A: 0xff}).
+			DojiColor(color.NRGBA{B: 1, A: 0xff}).
+			Animation(true).
+			AnimationDuration(time.Second).
+			AnimationEasing(ui.EaseCubicOut).
+			UpdateAnimationDuration(500*time.Millisecond).
+			UpdateAnimationEasing(ui.EaseCubicInOut).
+			OnDataClick(func(selection ui.ChartSelection) {
+				_ = selection.Items[0].Open
+				_ = selection.Items[0].Close
+				_ = selection.Items[0].Low
+				_ = selection.Items[0].High
+			}).
+			TooltipContent(func(selection ui.ChartSelection) ui.Widget { return ui.Text(selection.Label) }).
+			DataWindow(0.1, 0.9).
+			OnDataWindowChange(func(ui.ChartDataWindow) {}).
+			MarkLines([]ui.ChartMarkLine{ui.MarkLine(ui.ChartAxisY, 100).Text("Target")}).
+			MarkAreas([]ui.ChartMarkArea{ui.MarkArea(ui.ChartAxisX, 0, 1).Text("Session")}).
+			MarkPoints([]ui.ChartMarkPoint{
+				ui.MarkPoint(0, 105).Text("Buy").Content(ui.Icon(lucide.ArrowUp).Size(14)),
+			}).
+			Label("Market").
+			EmptyText("No candles").
+			Disabled(false),
 		ui.Menubar("application-menu", []ui.MenubarItem{
 			ui.MenubarMenu("file", "File", []ui.MenuItem{{Key: "new", Label: "New"}}).
 				OnAction(func(string) {}).

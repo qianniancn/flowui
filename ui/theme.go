@@ -40,6 +40,7 @@ type MenubarTheme = theme.MenubarTheme
 type LineChartTheme = theme.LineChartTheme
 type BarChartTheme = theme.BarChartTheme
 type PieChartTheme = theme.PieChartTheme
+type CandlestickChartTheme = theme.CandlestickChartTheme
 type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme

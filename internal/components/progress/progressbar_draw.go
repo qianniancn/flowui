@@ -2,6 +2,7 @@ package progress
 
 import (
 	"image"
+	"image/color"
 	"time"
 
 	"gioui.org/layout"
@@ -12,7 +13,16 @@ import (
 	"github.com/qianniancn/FlowUI/internal/render"
 )
 
+type linearTrackStyle struct {
+	track color.NRGBA
+	fill  color.NRGBA
+}
+
 func drawProgressBar(gtx layout.Context, size image.Point, radius unit.Dp, style progressBarStyle, progress float32, indeterminate, animate bool) {
+	drawLinearTrack(gtx, size, radius, linearTrackStyle{track: style.track, fill: style.fill}, progress, indeterminate, animate)
+}
+
+func drawLinearTrack(gtx layout.Context, size image.Point, radius unit.Dp, style linearTrackStyle, progress float32, indeterminate, animate bool) {
 	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
@@ -30,7 +40,7 @@ func drawProgressBar(gtx layout.Context, size image.Point, radius unit.Dp, style
 	clipStack.Pop()
 }
 
-func drawProgressBarFill(gtx layout.Context, size image.Point, radius int, style progressBarStyle, progress float32) {
+func drawProgressBarFill(gtx layout.Context, size image.Point, radius int, style linearTrackStyle, progress float32) {
 	if progress <= 0 {
 		return
 	}
@@ -43,7 +53,7 @@ func drawProgressBarFill(gtx layout.Context, size image.Point, radius int, style
 	paint.FillShape(gtx.Ops, style.fill, clip.UniformRRect(rect, min(radius, rect.Dx()/2)).Op(gtx.Ops))
 }
 
-func drawProgressBarIndeterminate(gtx layout.Context, size image.Point, radius int, style progressBarStyle, animate bool) {
+func drawProgressBarIndeterminate(gtx layout.Context, size image.Point, radius int, style linearTrackStyle, animate bool) {
 	width := max(int(float32(size.X)*progressBarIndeterminateFillRate+0.5), 1)
 	x := progressBarIndeterminatePosition(gtx.Now, width, animate)
 	if animate {

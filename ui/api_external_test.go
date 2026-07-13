@@ -116,6 +116,17 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Variant(ui.BadgeSoft).
 			Size(ui.BadgeSmall).
 			Placement(ui.BadgeBottomRight),
+		ui.Meter("storage-meter", 60).
+			Label("Storage").
+			Alt("Storage usage").
+			ShowValue().
+			ValueText("60 GB").
+			ValueFormatter(func(value float64) string { return "formatted" }).
+			ValueContent(ui.Text("60 GB")).
+			Range(0, 100).
+			Color(ui.MeterSuccess).
+			Size(ui.MeterLarge).
+			Disabled(false),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

@@ -19,6 +19,7 @@ const (
 	KindToggleButton Kind = "toggle-button"
 	KindRadioGroup   Kind = "radio-group"
 	KindProgressBar  Kind = "progress-bar"
+	KindMeter        Kind = "meter"
 	KindSlider       Kind = "slider"
 	KindListBox      Kind = "listbox"
 	KindTree         Kind = "tree"

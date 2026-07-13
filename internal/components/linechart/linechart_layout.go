@@ -48,7 +48,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	restoreKey := frame.PushKey(ctx, w.key)
 	defer restoreKey()
 	enabled := gtx.Enabled() && !w.disabled
-	activated, resetWindow := state.requestPointerFocus(ctx, gtx, enabled)
+	activated, resetWindow := state.updateClicks(gtx, enabled)
 
 	tokens := frame.ActiveTheme(ctx).Components.LineChart
 	height := tokens.Height
@@ -74,12 +74,11 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		eventGtx = eventGtx.Disabled()
 	}
 	eventGtx.Constraints = layout.Exact(size)
-	return state.root.Layout(eventGtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.EnabledOp(enabled).Add(gtx.Ops)
-		semantic.DescriptionOp(w.semanticDescription(data)).Add(gtx.Ops)
-		w.layoutContent(ctx, gtx, state, data, enabled, activated, size)
-		return layout.Dimensions{Size: size}
-	})
+	semantic.EnabledOp(enabled).Add(eventGtx.Ops)
+	semantic.DescriptionOp(w.semanticDescription(data)).Add(eventGtx.Ops)
+	w.layoutContent(ctx, eventGtx, state, data, enabled, activated, size)
+	state.addClickInput(eventGtx, size, enabled && (w.onDataClick != nil || w.onDataWindowChange != nil))
+	return layout.Dimensions{Size: size}
 }
 
 func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, enabled, activated bool, size image.Point) {
@@ -126,21 +125,32 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	visibleX := visibleXValues(data.xValues, geometry.xScale)
 	state.updatePointer(gtx, enabled, plot, w.effectiveDataWindow(), w.onDataWindowChange)
 	selectionEnabled := w.showTooltip || w.onDataClick != nil
-	if selectionEnabled {
-		state.updateKeyboard(ctx, gtx, visibleX, enabled)
-	} else {
+	if !selectionEnabled {
 		state.clearSelection()
 	}
-	focused := gtx.Focused(&state.root)
 	selection := chartSelection{}
 	selected := false
 	if selectionEnabled {
-		selectedX, hasSelection := state.selectedX(visibleX, geometry.xScale, plot, focused)
+		selectedX, hasSelection := state.selectedX(visibleX, geometry.xScale, plot)
 		selected = hasSelection
 		selection = w.resolveSelection(data, geometry, selectedX, hasSelection)
 	}
 	if activated && selected && w.onDataClick != nil {
 		w.onDataClick(w.publicSelection(selection, geometry))
+	}
+	tooltipVisible := enabled && w.showTooltip && len(selection.entries) > 0
+	if tooltipVisible {
+		state.tooltipSelection = selection
+	}
+	tooltipProgress := float32(0)
+	if enabled && w.showTooltip {
+		tooltipProgress = state.tooltipTransition.Progress(gtx, tooltipVisible)
+		if !tooltipVisible && tooltipProgress <= 0 {
+			state.tooltipSelection = chartSelection{}
+		}
+	} else {
+		state.tooltipTransition.Reset()
+		state.tooltipSelection = chartSelection{}
 	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
@@ -158,19 +168,15 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	if w.showTooltip {
 		drawChartCrosshair(gtx, geometry, selection, style, tokens)
 		drawChartSelection(ctx, gtx, selection, tokens)
-		if selected {
-			w.drawTooltip(ctx, gtx, geometry, selection, style)
-		}
+	}
+	if tooltipVisible || tooltipProgress > 0 {
+		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, lineTooltipAnchor(state.pointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		position := image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0))
 		placeChartText(gtx, xName, position)
 	}
 	opacity.Pop()
-
-	focusVisible := frame.FocusVisible(ctx, &state.root, focused)
-	focusOpacity := state.focus.Opacity(gtx, focusVisible && enabled)
-	drawChartFocus(gtx, size, style.focus, focusOpacity, tokens)
 	state.addPointerInput(gtx, plot, enabled && (selectionEnabled || w.onDataWindowChange != nil))
 }
 

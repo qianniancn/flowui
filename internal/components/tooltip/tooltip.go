@@ -38,7 +38,6 @@ type TooltipWidget struct {
 	avoidOverflow    bool
 	hasAvoidOverflow bool
 	arrow            bool
-	hasArrow         bool
 	disabled         bool
 }
 
@@ -93,7 +92,6 @@ func (t TooltipWidget) AvoidOverflow(avoidOverflow bool) TooltipWidget {
 
 func (t TooltipWidget) Arrow(show bool) TooltipWidget {
 	t.arrow = show
-	t.hasArrow = true
 	return t
 }
 
@@ -142,7 +140,7 @@ func (t TooltipWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 		Disabled:  true,
 		Passive:   true,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, _ bool) layout.Dimensions {
-			return t.layoutOverlay(ctx, gtx, state, anchor, progress)
+			return t.popup(progress, state.exiting()).Layout(ctx, gtx, anchor)
 		},
 	})
 	return triggerDims
@@ -153,18 +151,6 @@ func (t TooltipWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context) lay
 		return layout.Dimensions{}
 	}
 	return t.trigger.Layout(ctx, gtx)
-}
-
-func (t TooltipWidget) showArrow() bool {
-	return t.hasArrow && t.arrow
-}
-
-func (t TooltipWidget) flipEnabled() bool {
-	return !t.hasShouldFlip || t.shouldFlip
-}
-
-func (t TooltipWidget) overflowAvoidanceEnabled() bool {
-	return !t.hasAvoidOverflow || t.avoidOverflow
 }
 
 func (t TooltipWidget) showDelay(ctx *frame.Context) time.Duration {

@@ -574,15 +574,9 @@ type LineChartTheme struct {
 	PointSize         unit.Dp
 	HoverPointSize    unit.Dp
 	CrosshairWidth    unit.Dp
-	TooltipPadding    unit.Dp
-	TooltipRadius     unit.Dp
 	TooltipGap        unit.Dp
 	TooltipRowGap     unit.Dp
 	TooltipMarkerSize unit.Dp
-	TooltipTextSize   unit.Sp
-	TooltipMaxWidth   unit.Dp
-	FocusRingWidth    unit.Dp
-	FocusRadius       unit.Dp
 	SeriesColors      [9]color.NRGBA
 }
 
@@ -607,15 +601,9 @@ type BarChartTheme struct {
 	BarRadius          unit.Dp
 	MinBarHeight       unit.Dp
 	BackgroundRadius   unit.Dp
-	TooltipPadding     unit.Dp
-	TooltipRadius      unit.Dp
 	TooltipGap         unit.Dp
 	TooltipRowGap      unit.Dp
 	TooltipMarkerSize  unit.Dp
-	TooltipTextSize    unit.Sp
-	TooltipMaxWidth    unit.Dp
-	FocusRingWidth     unit.Dp
-	FocusRadius        unit.Dp
 	SeriesColors       [9]color.NRGBA
 }
 
@@ -1259,15 +1247,9 @@ func DefaultTheme() Theme {
 				PointSize:         6,
 				HoverPointSize:    10,
 				CrosshairWidth:    1,
-				TooltipPadding:    10,
-				TooltipRadius:     8,
 				TooltipGap:        12,
 				TooltipRowGap:     6,
 				TooltipMarkerSize: 7,
-				TooltipTextSize:   12,
-				TooltipMaxWidth:   240,
-				FocusRingWidth:    2,
-				FocusRadius:       8,
 				SeriesColors: [9]color.NRGBA{
 					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
 					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},
@@ -1301,15 +1283,9 @@ func DefaultTheme() Theme {
 				BarRadius:          0,
 				MinBarHeight:       0,
 				BackgroundRadius:   0,
-				TooltipPadding:     10,
-				TooltipRadius:      8,
 				TooltipGap:         12,
 				TooltipRowGap:      6,
 				TooltipMarkerSize:  8,
-				TooltipTextSize:    12,
-				TooltipMaxWidth:    240,
-				FocusRingWidth:     2,
-				FocusRadius:        8,
 				SeriesColors: [9]color.NRGBA{
 					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
 					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},

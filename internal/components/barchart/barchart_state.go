@@ -4,13 +4,13 @@ import (
 	"image"
 
 	"gioui.org/f32"
+	"gioui.org/gesture"
 	"gioui.org/io/event"
-	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
+	"github.com/qianniancn/FlowUI/internal/components/tooltip"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
@@ -18,18 +18,16 @@ import (
 const stateSlotBarChart = "bar-chart"
 
 type chartState struct {
-	root          widget.Clickable
-	pointerTag    struct{}
-	focus         stateutil.FocusAnimation
-	hovered       bool
-	pointer       f32.Point
-	keyboard      bool
-	keyboardIndex int
-	pointerIndex  int
-	animation     barChartAnimation
-	legendItems   map[string]*widget.Clickable
-	legendFrame   map[string]struct{}
-	windowGesture chart.DataWindowGesture
+	click             gesture.Click
+	pointerTag        struct{}
+	hovered           bool
+	pointer           f32.Point
+	animation         barChartAnimation
+	legendItems       map[string]*chart.LegendItem
+	legendFrame       map[string]struct{}
+	windowGesture     chart.DataWindowGesture
+	tooltipTransition tooltip.PopupTransition
+	tooltipSelection  chartSelection
 }
 
 func (s *chartState) beginLegendFrame() {
@@ -48,24 +46,22 @@ func (s *chartState) endLegendFrame() {
 	}
 }
 
-func (s *chartState) legendItem(key string) *widget.Clickable {
+func (s *chartState) legendItem(key string) *chart.LegendItem {
 	if s.legendItems == nil {
-		s.legendItems = make(map[string]*widget.Clickable)
+		s.legendItems = make(map[string]*chart.LegendItem)
 	}
 	s.legendFrame[key] = struct{}{}
 	if item := s.legendItems[key]; item != nil {
 		return item
 	}
-	item := new(widget.Clickable)
+	item := new(chart.LegendItem)
 	s.legendItems[key] = item
 	return item
 }
 
 func chartStateFor(ctx *frame.Context, key string) *chartState {
 	key = frame.ClaimKey(ctx, stateutil.KindBarChart, key)
-	return frame.UseStateWith(ctx, key, stateSlotBarChart, func() *chartState {
-		return &chartState{keyboardIndex: -1, pointerIndex: -1}
-	})
+	return frame.UseState[chartState](ctx, key, stateSlotBarChart)
 }
 
 func (s *chartState) updatePointer(gtx layout.Context, enabled bool, plot image.Rectangle, window chart.DataWindow, verticalWindow bool, onWindowChange func(chart.DataWindow)) {
@@ -108,12 +104,8 @@ func (s *chartState) updatePointer(gtx layout.Context, enabled bool, plot image.
 		case pointer.Enter, pointer.Move, pointer.Drag, pointer.Press, pointer.Scroll:
 			s.hovered = true
 			s.pointer = eventValue.Position
-			s.keyboard = false
-			s.keyboardIndex = -1
-			s.pointerIndex = -1
 		case pointer.Leave, pointer.Cancel:
 			s.hovered = false
-			s.pointerIndex = -1
 		}
 	}
 	if !enabled {
@@ -122,78 +114,7 @@ func (s *chartState) updatePointer(gtx layout.Context, enabled bool, plot image.
 	}
 }
 
-func (s *chartState) updateKeyboard(ctx *frame.Context, gtx layout.Context, start, end int, horizontal, enabled bool) {
-	for {
-		value, ok := gtx.Event(
-			key.Filter{Focus: &s.root, Name: key.NameLeftArrow},
-			key.Filter{Focus: &s.root, Name: key.NameRightArrow},
-			key.Filter{Focus: &s.root, Name: key.NameUpArrow},
-			key.Filter{Focus: &s.root, Name: key.NameDownArrow},
-			key.Filter{Focus: &s.root, Name: key.NameHome},
-			key.Filter{Focus: &s.root, Name: key.NameEnd},
-			key.Filter{Focus: &s.root, Name: key.NameEscape},
-		)
-		if !ok {
-			break
-		}
-		eventValue, ok := value.(key.Event)
-		if !ok || eventValue.State != key.Press || !enabled {
-			continue
-		}
-		if eventValue.Name == key.NameEscape {
-			s.keyboard = false
-			s.keyboardIndex = -1
-			continue
-		}
-		if end <= start {
-			continue
-		}
-		s.keyboard = true
-		s.hovered = false
-		s.focus.Prepare(true)
-		frame.RequestFocusVisible(ctx, &s.root, true)
-		switch eventValue.Name {
-		case key.NameHome:
-			s.keyboardIndex = start
-		case key.NameEnd:
-			s.keyboardIndex = end - 1
-		case key.NameLeftArrow, key.NameUpArrow:
-			if horizontal && eventValue.Name == key.NameLeftArrow {
-				continue
-			}
-			if s.keyboardIndex < start || s.keyboardIndex >= end {
-				if s.pointerIndex >= start && s.pointerIndex < end {
-					s.keyboardIndex = max(s.pointerIndex-1, start)
-				} else {
-					s.keyboardIndex = end - 1
-				}
-			} else {
-				s.keyboardIndex = max(s.keyboardIndex-1, start)
-			}
-		case key.NameRightArrow, key.NameDownArrow:
-			if horizontal && eventValue.Name == key.NameRightArrow {
-				continue
-			}
-			if s.keyboardIndex < start || s.keyboardIndex >= end {
-				if s.pointerIndex >= start && s.pointerIndex < end {
-					s.keyboardIndex = min(s.pointerIndex+1, end-1)
-				} else {
-					s.keyboardIndex = start
-				}
-			} else {
-				s.keyboardIndex = min(s.keyboardIndex+1, end-1)
-			}
-		}
-	}
-	if s.keyboardIndex < start || s.keyboardIndex >= end {
-		s.keyboardIndex = -1
-	}
-}
-
-func (s *chartState) selectedIndex(start, end int, plot image.Rectangle, horizontal, focused bool) (int, bool) {
-	if s.keyboard && focused && s.keyboardIndex >= start && s.keyboardIndex < end {
-		return s.keyboardIndex, true
-	}
+func (s *chartState) selectedIndex(start, end int, plot image.Rectangle, horizontal bool) (int, bool) {
 	if !s.hovered || end <= start || plot.Empty() {
 		return 0, false
 	}
@@ -203,7 +124,6 @@ func (s *chartState) selectedIndex(start, end int, plot image.Rectangle, horizon
 	}
 	index := start + int(ratio*float64(end-start))
 	index = min(max(index, start), end-1)
-	s.pointerIndex = index
 	return index, true
 }
 
@@ -221,25 +141,33 @@ func (s *chartState) addPointerInput(gtx layout.Context, plot image.Rectangle, e
 
 func (s *chartState) clearSelection() {
 	s.hovered = false
-	s.keyboard = false
-	s.keyboardIndex = -1
-	s.pointerIndex = -1
+	s.tooltipTransition.Reset()
+	s.tooltipSelection = chartSelection{}
 }
 
-func (s *chartState) requestPointerFocus(ctx *frame.Context, gtx layout.Context, enabled bool) (bool, bool) {
-	presses := stateutil.ActivePresses(s.root.History())
+func (s *chartState) updateClicks(gtx layout.Context, enabled bool) (bool, bool) {
 	activated := false
 	reset := false
 	for {
-		click, ok := s.root.Update(gtx)
+		click, ok := s.click.Update(gtx.Source)
 		if !ok {
 			break
 		}
-		activated = true
-		reset = reset || click.NumClicks >= 2
-	}
-	if enabled {
-		frame.FocusOnPress(ctx, &s.root, s.root.History(), presses)
+		if click.Kind == gesture.KindClick {
+			activated = true
+			reset = reset || click.NumClicks >= 2
+		}
 	}
 	return activated && enabled, reset && enabled
+}
+
+func (s *chartState) addClickInput(gtx layout.Context, size image.Point, enabled bool) {
+	if !enabled || size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	area := clip.Rect{Max: size}.Push(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	s.click.Add(gtx.Ops)
+	pass.Pop()
+	area.Pop()
 }

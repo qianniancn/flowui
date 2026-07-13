@@ -429,7 +429,7 @@ func TestLineChartSelectionUsesSharedNearestX(t *testing.T) {
 	}
 }
 
-func TestLineChartPointerAndKeyboardSelection(t *testing.T) {
+func TestLineChartPointerSelection(t *testing.T) {
 	ctx := lineChartTestContext()
 	router := new(input.Router)
 	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20, 30})}).Categories([]string{"A", "B", "C"})
@@ -441,19 +441,47 @@ func TestLineChartPointerAndKeyboardSelection(t *testing.T) {
 	}
 	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(300, 100)})
 	layoutLineChartFrame(ctx, router, widget, now.Add(time.Millisecond))
-	if !state.hovered || state.keyboard {
+	if !state.hovered || state.pointer != f32.Pt(300, 100) {
 		t.Fatalf("pointer LineChart state = %#v", state)
 	}
+}
 
-	router.Source().Execute(key.FocusCmd{Tag: &state.root})
-	layoutLineChartFrame(ctx, router, widget, now.Add(2*time.Millisecond))
-	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
-	layoutLineChartFrame(ctx, router, widget, now.Add(3*time.Millisecond))
-	if !state.keyboard || state.keyboardIndex != 2 {
-		t.Fatalf("keyboard LineChart state = %#v", state)
+func TestLineChartRootDoesNotEnterKeyboardFocusOrder(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	widget := New("chart", []Series{
+		Values("first", "First", []float64{10, 20}),
+		Values("second", "Second", []float64{12, 24}),
+	}).OnLegendChange(func(string, bool) {})
+	layoutLineChartFrame(ctx, router, widget, time.Unix(1, 0))
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotLineChart)
+
+	router.MoveFocus(key.FocusForward)
+	if router.Source().Focused(&state.click) {
+		t.Fatal("LineChart root entered keyboard focus order")
 	}
-	if !frame.FocusVisible(ctx, &state.root, router.Source().Focused(&state.root)) {
-		t.Fatal("keyboard LineChart navigation did not restore visible focus")
+	for key, item := range state.legendItems {
+		if router.Source().Focused(item) {
+			t.Fatalf("LineChart legend item %q entered keyboard focus order", key)
+		}
+	}
+}
+
+func TestLineChartDoubleClickResetsDataWindow(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	requested := chart.DataWindow{}
+	widget := New("chart", []Series{Values("series", "Series", []float64{1, 2, 3, 4})}).
+		DataWindow(.2, .8).
+		OnDataWindowChange(func(window chart.DataWindow) { requested = window })
+	start := time.Unix(2, 0)
+	layoutLineChartFrame(ctx, router, widget, start)
+	queueLineChartClick(router, 1, f32.Pt(300, 140))
+	layoutLineChartFrame(ctx, router, widget, start.Add(time.Millisecond))
+	queueLineChartClick(router, 2, f32.Pt(300, 140))
+	layoutLineChartFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	if requested != chart.FullDataWindow() {
+		t.Fatalf("LineChart double-click window = %#v", requested)
 	}
 }
 
@@ -518,9 +546,7 @@ func TestLineChartLegendClickDataClickAndCustomTooltip(t *testing.T) {
 		t.Fatalf("LineChart legend request = key %q hidden %v, want hidden false", legendKey, legendHidden)
 	}
 
-	state.hovered = true
-	state.pointer = f32.Pt(300, 140)
-	state.root.Click()
+	queueLineChartClick(router, 1, f32.Pt(300, 140))
 	layoutLineChartFrame(ctx, router, widget, now.Add(2*time.Millisecond))
 	if clicked.Label == "" || clicked.Index < 0 || len(clicked.Items) != 1 || clicked.Items[0].SeriesKey != "visible" {
 		t.Fatalf("LineChart click selection = %#v", clicked)
@@ -531,9 +557,7 @@ func TestLineChartLegendClickDataClickAndCustomTooltip(t *testing.T) {
 
 	clicked = chart.Selection{}
 	tooltipLaidOut = false
-	state.hovered = true
-	state.pointer = f32.Pt(300, 140)
-	state.root.Click()
+	queueLineChartClick(router, 2, f32.Pt(300, 140))
 	layoutLineChartFrame(ctx, router, widget.Tooltip(false), now.Add(3*time.Millisecond))
 	if len(clicked.Items) != 1 {
 		t.Fatalf("LineChart data click with tooltip disabled = %#v", clicked)
@@ -551,12 +575,51 @@ func TestLineChartTooltipDisabledClearsInteraction(t *testing.T) {
 	layoutLineChartFrame(ctx, router, widget, now)
 	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotLineChart)
 	state.hovered = true
-	state.keyboard = true
-	state.keyboardIndex = 1
-	state.pointerIndex = 1
 	layoutLineChartFrame(ctx, router, widget.Tooltip(false), now.Add(time.Millisecond))
-	if state.hovered || state.keyboard || state.keyboardIndex != -1 || state.pointerIndex != -1 {
+	if state.hovered {
 		t.Fatalf("disabled LineChart tooltip retained interaction state: %#v", state)
+	}
+	if state.tooltipTransition.Value() != 0 || len(state.tooltipSelection.entries) != 0 {
+		t.Fatalf("disabled LineChart retained tooltip presentation state: %#v", state)
+	}
+}
+
+func TestLineChartTooltipAnchorTracksPointer(t *testing.T) {
+	if got := lineTooltipAnchor(f32.Pt(100.4, 79.6)); got != image.Rect(100, 80, 101, 81) {
+		t.Fatalf("LineChart tooltip anchor = %v", got)
+	}
+}
+
+func TestLineChartTooltipAnimatesOutWithLastSelection(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	tooltipLayouts := 0
+	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20})}).
+		TooltipContent(func(chart.Selection) frame.Widget {
+			return frame.WidgetFunc(func(*frame.Context, layout.Context) layout.Dimensions {
+				tooltipLayouts++
+				return layout.Dimensions{Size: image.Pt(80, 24)}
+			})
+		})
+	start := time.Unix(10, 0)
+	layoutLineChartFrame(ctx, router, widget, start)
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotLineChart)
+	state.hovered = true
+	state.pointer = f32.Pt(300, 140)
+	layoutLineChartFrame(ctx, router, widget, start.Add(time.Millisecond))
+	layoutLineChartFrame(ctx, router, widget, start.Add(201*time.Millisecond))
+
+	tooltipLayouts = 0
+	state.hovered = false
+	layoutLineChartFrame(ctx, router, widget, start.Add(202*time.Millisecond))
+	if tooltipLayouts != 1 || !state.tooltipTransition.Exiting() || len(state.tooltipSelection.entries) == 0 {
+		t.Fatalf("LineChart exit state = layouts %d exiting %v entries %d", tooltipLayouts, state.tooltipTransition.Exiting(), len(state.tooltipSelection.entries))
+	}
+
+	tooltipLayouts = 0
+	layoutLineChartFrame(ctx, router, widget, start.Add(302*time.Millisecond))
+	if tooltipLayouts != 0 || state.tooltipTransition.Value() != 0 || len(state.tooltipSelection.entries) != 0 {
+		t.Fatalf("LineChart completed exit = layouts %d progress %v entries %d", tooltipLayouts, state.tooltipTransition.Value(), len(state.tooltipSelection.entries))
 	}
 }
 
@@ -622,6 +685,13 @@ func layoutLineChartFrame(ctx *frame.Context, router *input.Router, widget Widge
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
 	return dims
+}
+
+func queueLineChartClick(router *input.Router, id pointer.ID, position f32.Point) {
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: id, Buttons: pointer.ButtonPrimary, Position: position},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: id, Position: position},
+	)
 }
 
 func layoutLineChartListFrame(ctx *frame.Context, router *input.Router, list *layout.List, widget Widget, now time.Time) layout.Dimensions {

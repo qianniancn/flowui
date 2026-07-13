@@ -40,7 +40,8 @@ func TestTooltipOptionsAndDefaults(t *testing.T) {
 	if value.offset != 9 || !value.hasOffset || value.delay != 20*time.Millisecond || value.closeDelay != 30*time.Millisecond {
 		t.Fatal("timing or offset option was not retained")
 	}
-	if value.flipEnabled() || value.overflowAvoidanceEnabled() || !value.showArrow() || !value.disabled {
+	popup := value.popup(1, false)
+	if popup.flipEnabled() || popup.overflowAvoidanceEnabled() || !popup.arrow || !value.disabled {
 		t.Fatal("boolean options were not retained")
 	}
 
@@ -191,13 +192,13 @@ func TestTooltipDisabledClosesImmediately(t *testing.T) {
 func TestTooltipOffsetUsesArrowDefault(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	gtx := testContextAt(time.Time{})
-	if got := Tooltip("plain", nil, nil).offsetPx(ctx, gtx); got != 3 {
+	if got := Tooltip("plain", nil, nil).popup(1, false).offsetPx(ctx, gtx); got != 3 {
 		t.Fatalf("plain offset = %d, want 3", got)
 	}
-	if got := Tooltip("arrow", nil, nil).Arrow(true).offsetPx(ctx, gtx); got != 7 {
+	if got := Tooltip("arrow", nil, nil).Arrow(true).popup(1, false).offsetPx(ctx, gtx); got != 7 {
 		t.Fatalf("arrow offset = %d, want 7", got)
 	}
-	if got := Tooltip("custom", nil, nil).Arrow(true).Offset(11).offsetPx(ctx, gtx); got != 11 {
+	if got := Tooltip("custom", nil, nil).Arrow(true).Offset(11).popup(1, false).offsetPx(ctx, gtx); got != 11 {
 		t.Fatalf("custom offset = %d, want 11", got)
 	}
 }
@@ -209,12 +210,13 @@ func TestTooltipPositionAndFlip(t *testing.T) {
 	panel := image.Pt(80, 40)
 	bounds := image.Pt(300, 200)
 	value := Tooltip("help", nil, nil).Delay(0).Offset(3).AvoidOverflow(false)
-	if got := value.resolvedPosition(ctx, gtx, trigger, panel, bounds).Position; got != image.Pt(80, 7) {
+	popup := value.popup(1, false)
+	if got := popup.resolvedPosition(ctx, gtx, trigger, panel, bounds).Position; got != image.Pt(80, 7) {
 		t.Fatalf("top position = %v, want (80,7)", got)
 	}
 
 	edgeTrigger := image.Rect(20, 2, 60, 22)
-	if got := value.resolvedPosition(ctx, gtx, edgeTrigger, panel, bounds).Placement.PopoverPlacement(); got != overlay.PopoverBottom {
+	if got := popup.resolvedPosition(ctx, gtx, edgeTrigger, panel, bounds).Placement.PopoverPlacement(); got != overlay.PopoverBottom {
 		t.Fatalf("resolved placement = %v, want bottom", got)
 	}
 }
@@ -247,9 +249,70 @@ func TestTooltipPanelHonorsThemePadding(t *testing.T) {
 	themeValue.Components.Tooltip.Radius = 6
 	ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
 	gtx := testContextAt(time.Time{})
-	dims := Tooltip("help", nil, fixedWidget{size: image.Pt(30, 10)}).layoutPanel(ctx, gtx)
+	dims := Tooltip("help", nil, fixedWidget{size: image.Pt(30, 10)}).popup(1, false).layoutPanel(ctx, gtx)
 	if dims.Size != image.Pt(50, 30) {
 		t.Fatalf("panel size = %v, want (50,30)", dims.Size)
+	}
+}
+
+func TestPopupPanelUsesSharedTooltipTheme(t *testing.T) {
+	themeValue := theme.DefaultTheme()
+	themeValue.Components.Tooltip.Padding = 10
+	themeValue.Components.Tooltip.MaxWidth = 72
+	ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+	gtx := testContextAt(time.Time{})
+	content := new(constraintProbe)
+	popup := NewPopup(content)
+	panelGtx := gtx
+	panelGtx.Constraints = popup.panelConstraints(ctx, gtx, gtx.Constraints.Max)
+
+	dims := popup.layoutPanel(ctx, panelGtx)
+	if content.constraints.Max != image.Pt(52, 180) {
+		t.Fatalf("popup content constraints = %v, want max (52,180)", content.constraints)
+	}
+	if dims.Size != image.Pt(72, 32) {
+		t.Fatalf("popup panel size = %v, want (72,32)", dims.Size)
+	}
+}
+
+func TestPopupTransitionEnterExitAndReset(t *testing.T) {
+	start := time.Unix(1, 0)
+	transition := new(PopupTransition)
+	if got := transition.Progress(testContextAt(start), true); got != 0 {
+		t.Fatalf("initial enter progress = %v, want 0", got)
+	}
+	if got := transition.Progress(testContextAt(start.Add(tooltipEnterDuration/2)), true); got != .5 {
+		t.Fatalf("half enter progress = %v, want 0.5", got)
+	}
+	if got := transition.Progress(testContextAt(start.Add(tooltipEnterDuration)), true); got != 1 {
+		t.Fatalf("completed enter progress = %v, want 1", got)
+	}
+
+	exitStart := start.Add(tooltipEnterDuration + time.Millisecond)
+	if got := transition.Progress(testContextAt(exitStart), false); got != 1 || !transition.Exiting() {
+		t.Fatalf("initial exit = progress %v exiting %v, want 1/true", got, transition.Exiting())
+	}
+	if got := transition.Progress(testContextAt(exitStart.Add(tooltipExitDuration/2)), false); got != .5 {
+		t.Fatalf("half exit progress = %v, want 0.5", got)
+	}
+	if got := transition.Progress(testContextAt(exitStart.Add(tooltipExitDuration)), false); got != 0 {
+		t.Fatalf("completed exit progress = %v, want 0", got)
+	}
+
+	transition.Reset()
+	if transition.Value() != 0 || transition.Exiting() {
+		t.Fatalf("reset transition = value %v exiting %v", transition.Value(), transition.Exiting())
+	}
+}
+
+func TestPopupWithoutAnchorOrContentHasNoLayoutSize(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	gtx := testContextAt(time.Time{})
+	if got := NewPopup(fixedWidget{size: image.Pt(20, 10)}).Layout(ctx, gtx, image.Rectangle{}).Size; got != (image.Point{}) {
+		t.Fatalf("empty anchor size = %v, want zero", got)
+	}
+	if got := NewPopup(nil).Layout(ctx, gtx, image.Rect(10, 10, 20, 20)).Size; got != (image.Point{}) {
+		t.Fatalf("nil content size = %v, want zero", got)
 	}
 }
 
@@ -413,6 +476,15 @@ type fixedWidget struct{ size image.Point }
 
 func (w fixedWidget) Layout(*frame.Context, layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: w.size}
+}
+
+type constraintProbe struct {
+	constraints layout.Constraints
+}
+
+func (p *constraintProbe) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	p.constraints = gtx.Constraints
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(200, 12))}
 }
 
 type clickProbe struct {

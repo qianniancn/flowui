@@ -12,10 +12,6 @@ type chartStyle struct {
 	grid          color.NRGBA
 	categoryHover color.NRGBA
 	barBackground color.NRGBA
-	tooltip       color.NRGBA
-	tooltipText   color.NRGBA
-	tooltipBorder color.NRGBA
-	focus         color.NRGBA
 	opacity       float32
 }
 
@@ -36,10 +32,6 @@ func barChartStyleFor(activeTheme *theme.Theme, disabled bool) chartStyle {
 		grid:          grid,
 		categoryHover: categoryHover,
 		barBackground: barBackground,
-		tooltip:       activeTheme.Palette.Overlay,
-		tooltipText:   activeTheme.Palette.OverlayForeground,
-		tooltipBorder: activeTheme.Palette.Border,
-		focus:         activeTheme.Palette.Focus,
 		opacity:       opacity,
 	}
 }

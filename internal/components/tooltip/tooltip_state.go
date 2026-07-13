@@ -11,7 +11,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -33,11 +32,7 @@ type tooltipState struct {
 	open    bool
 	showAt  time.Time
 	hideAt  time.Time
-	value   float32
-	from    float32
-	to      float32
-	at      time.Time
-	ready   bool
+	popup   PopupTransition
 }
 
 func (s *tooltipState) closeForPeer() {
@@ -68,7 +63,7 @@ func (s *tooltipState) updateActive(gtx layout.Context, active, disabled bool, d
 		s.active = active
 		if active {
 			s.hideAt = time.Time{}
-			if s.open || s.value > 0 || delay <= 0 {
+			if s.open || s.popup.Value() > 0 || delay <= 0 {
 				s.open = true
 				s.showAt = time.Time{}
 			} else {
@@ -152,35 +147,9 @@ func (s *tooltipState) addInput(gtx layout.Context, size image.Point, disabled b
 }
 
 func (s *tooltipState) progress(gtx layout.Context) float32 {
-	target := float32(0)
-	if s.open {
-		target = 1
-	}
-	if !s.ready {
-		s.at = gtx.Now
-		s.ready = true
-	}
-	if target != s.to {
-		s.from = s.value
-		s.to = target
-		s.at = gtx.Now
-	}
-	if s.from == s.to {
-		s.value = s.to
-		return s.value
-	}
-	duration := tooltipEnterDuration
-	if s.to == 0 {
-		duration = tooltipExitDuration
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.value = render.Lerp(s.from, s.to, progress)
-	return s.value
+	return s.popup.Progress(gtx, s.open)
 }
 
 func (s *tooltipState) exiting() bool {
-	return s.to == 0 && s.from > 0
+	return s.popup.Exiting()
 }

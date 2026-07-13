@@ -222,23 +222,6 @@ func barCategoryBounds(geometry chartGeometry, column columnLayout, category int
 	return left, right
 }
 
-func drawChartFocus(gtx layout.Context, size image.Point, col color.NRGBA, opacity float32, tokens theme.BarChartTheme) {
-	if opacity <= 0 || size.X <= 0 || size.Y <= 0 || col.A == 0 {
-		return
-	}
-	width := max(gtx.Dp(tokens.FocusRingWidth), 1)
-	inset := max(width/2+1, 1)
-	rect := image.Rectangle{Max: size}.Inset(inset)
-	if rect.Empty() {
-		return
-	}
-	radius := min(max(gtx.Dp(tokens.FocusRadius), 0), min(rect.Dx(), rect.Dy())/2)
-	col.A = byte(float32(col.A)*opacity + 0.5)
-	stroke := clip.Stroke{Path: clip.UniformRRect(rect, radius).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
-}
-
 func drawChartLine(gtx layout.Context, from, to f32.Point, width float32, col color.NRGBA) {
 	if width <= 0 || col.A == 0 {
 		return

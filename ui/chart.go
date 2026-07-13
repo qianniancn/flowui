@@ -2,10 +2,10 @@ package ui
 
 import "github.com/qianniancn/FlowUI/internal/components/chart"
 
-// ChartDatum describes one visible series value in a chart selection.
+// ChartDatum describes one visible value in a chart selection.
 type ChartDatum = chart.Datum
 
-// ChartSelection describes the values selected at one X position or category.
+// ChartSelection describes the current chart selection.
 type ChartSelection = chart.Selection
 
 // ChartDataWindow is a normalized visible range from the data start to end.

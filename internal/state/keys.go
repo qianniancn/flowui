@@ -30,6 +30,7 @@ const (
 	KindMenubar      Kind = "menubar"
 	KindLineChart    Kind = "line-chart"
 	KindBarChart     Kind = "bar-chart"
+	KindPieChart     Kind = "pie-chart"
 	KindTween        Kind = "tween"
 	KindTabs         Kind = "tabs"
 	KindPopover      Kind = "popover"

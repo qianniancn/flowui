@@ -260,6 +260,36 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Label("Sales").
 			EmptyText("No samples").
 			Disabled(false),
+		ui.PieChart("sources", []ui.PieChartData{
+			ui.PieData("search", "Search", 1048).
+				Color(color.NRGBA{R: 1, A: 0xff}).
+				Hidden(false),
+		}).
+			Height(320).
+			InnerRadius(.35).
+			OuterRadius(.7).
+			Clockwise(true).
+			StartAngle(90).
+			PadAngle(2).
+			MinAngle(1).
+			StillShowZeroSum(true).
+			Labels(true).
+			Legend(true).
+			Tooltip(true).
+			Animation(true).
+			AnimationDuration(time.Second).
+			AnimationEasing(ui.EaseCubicInOut).
+			UpdateAnimationDuration(500*time.Millisecond).
+			UpdateAnimationEasing(ui.EaseCubicInOut).
+			OnLegendChange(func(string, bool) {}).
+			OnDataClick(func(ui.ChartSelection) {}).
+			TooltipContent(func(selection ui.ChartSelection) ui.Widget {
+				_ = selection.Items[0].Percent
+				return ui.Text(selection.Label)
+			}).
+			Label("Traffic sources").
+			EmptyText("No sources").
+			Disabled(false),
 		ui.Menubar("application-menu", []ui.MenubarItem{
 			ui.MenubarMenu("file", "File", []ui.MenuItem{{Key: "new", Label: "New"}}).
 				OnAction(func(string) {}).

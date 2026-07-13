@@ -137,6 +137,7 @@ type ComponentsTheme struct {
 	Menubar      MenubarTheme
 	LineChart    LineChartTheme
 	BarChart     BarChartTheme
+	PieChart     PieChartTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -601,6 +602,31 @@ type BarChartTheme struct {
 	BarRadius          unit.Dp
 	MinBarHeight       unit.Dp
 	BackgroundRadius   unit.Dp
+	TooltipGap         unit.Dp
+	TooltipRowGap      unit.Dp
+	TooltipMarkerSize  unit.Dp
+	SeriesColors       [9]color.NRGBA
+}
+
+type PieChartTheme struct {
+	Height             unit.Dp
+	PlotPaddingTop     unit.Dp
+	PlotPaddingRight   unit.Dp
+	PlotPaddingBottom  unit.Dp
+	PlotPaddingLeft    unit.Dp
+	LegendTextSize     unit.Sp
+	LegendMarkerSize   unit.Dp
+	LegendMarkerGap    unit.Dp
+	LegendMarkerRadius unit.Dp
+	LegendItemGap      unit.Dp
+	LegendLineGap      unit.Dp
+	LegendGap          unit.Dp
+	LabelTextSize      unit.Sp
+	LabelLineLength    unit.Dp
+	LabelLineLength2   unit.Dp
+	LabelLineWidth     unit.Dp
+	LabelGap           unit.Dp
+	EmphasisSize       unit.Dp
 	TooltipGap         unit.Dp
 	TooltipRowGap      unit.Dp
 	TooltipMarkerSize  unit.Dp
@@ -1283,6 +1309,40 @@ func DefaultTheme() Theme {
 				BarRadius:          0,
 				MinBarHeight:       0,
 				BackgroundRadius:   0,
+				TooltipGap:         12,
+				TooltipRowGap:      6,
+				TooltipMarkerSize:  8,
+				SeriesColors: [9]color.NRGBA{
+					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
+					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},
+					{R: 0x50, G: 0x53, B: 0x72, A: 0xff},
+					{R: 0xff, G: 0x99, B: 0x4d, A: 0xff},
+					{R: 0x0c, G: 0xa8, B: 0xdf, A: 0xff},
+					{R: 0xff, G: 0xd1, B: 0x0a, A: 0xff},
+					{R: 0xfb, G: 0x62, B: 0x8b, A: 0xff},
+					{R: 0x78, G: 0x5d, B: 0xb0, A: 0xff},
+					{R: 0x3f, G: 0xbe, B: 0x95, A: 0xff},
+				},
+			},
+			PieChart: PieChartTheme{
+				Height:             360,
+				PlotPaddingTop:     12,
+				PlotPaddingRight:   16,
+				PlotPaddingBottom:  12,
+				PlotPaddingLeft:    16,
+				LegendTextSize:     12,
+				LegendMarkerSize:   10,
+				LegendMarkerGap:    7,
+				LegendMarkerRadius: 2,
+				LegendItemGap:      20,
+				LegendLineGap:      8,
+				LegendGap:          12,
+				LabelTextSize:      12,
+				LabelLineLength:    15,
+				LabelLineLength2:   30,
+				LabelLineWidth:     1,
+				LabelGap:           5,
+				EmphasisSize:       5,
 				TooltipGap:         12,
 				TooltipRowGap:      6,
 				TooltipMarkerSize:  8,

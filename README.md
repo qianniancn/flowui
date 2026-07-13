@@ -129,6 +129,7 @@ text/editor internals.
 - `Meter`
 - `LineChart`
 - `BarChart`
+- `PieChart`
 - `Spinner`
 - `Slider`, `RangeSlider`
 - `ListBox`
@@ -202,6 +203,7 @@ Examples live in `examples/`:
 - `meters`: HeroUI-aligned known-range measurements with labels, formatted values, colors, sizes, and accessible label-free usage.
 - `line_charts`: native Gio straight, smooth, stepped, dashed, dotted, and area line charts with animations, interactive legends, data windows, annotations, data activation, custom tooltips, gaps, and crosshairs.
 - `bar_charts`: native Gio vertical and horizontal grouped or stacked bar charts with animations, value labels, interactive legends, data windows, annotations, data activation, custom tooltips, positive and negative values, and category highlights.
+- `pie_charts`: native Gio pie and donut charts with ECharts-aligned angles, labels, animations, interactive legends, data activation, and custom tooltips.
 - `spinners`: animated loading indicators with HeroUI-aligned colors and sizes.
 - `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.

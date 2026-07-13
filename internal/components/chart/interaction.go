@@ -2,19 +2,21 @@ package chart
 
 import "image/color"
 
-// Datum describes one visible series value in a chart selection.
+// Datum describes one visible value in a chart selection.
 type Datum struct {
 	SeriesKey   string
 	SeriesLabel string
 	X           float64
 	Y           float64
-	Color       color.NRGBA
+	// Percent is populated by proportional charts such as PieChart.
+	Percent float64
+	Color   color.NRGBA
 }
 
-// Selection describes the values selected at one X position or category.
+// Selection describes the current chart selection.
 type Selection struct {
 	Label string
-	// Index is the category index, or -1 for non-category Cartesian data.
+	// Index is the source data or category index, or -1 when not applicable.
 	Index int
 	X     float64
 	Items []Datum

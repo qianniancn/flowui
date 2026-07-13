@@ -14,28 +14,67 @@ import (
 
 const smoothSamplesPerSegment = 12
 
-func seriesPixelSegments(series resolvedSeries, geometry chartGeometry) [][]f32.Point {
-	segments := splitSmoothLine(series.points, series.connectNulls, func(point resolvedPoint) f32.Point {
+type linePixelSegment struct {
+	points    []f32.Point
+	stackedOn []f32.Point
+}
+
+func seriesPixelSegments(series resolvedSeries, geometry chartGeometry) []linePixelSegment {
+	pointSegments := splitSmoothLine(series.points, series.connectNulls, func(point resolvedPoint) f32.Point {
 		return f32.Pt(geometry.mapX(point.X), geometry.mapY(point.Y))
 	})
-	for index, segment := range segments {
-		segment = visiblePixelSegment(segment, float32(geometry.plot.Min.X), float32(geometry.plot.Max.X))
+	var baseSegments [][]f32.Point
+	if series.area {
+		baseline := min(max(float64(0), geometry.yScale.minimum), geometry.yScale.maximum)
+		baseSegments = splitSmoothLine(series.points, series.connectNulls, func(point resolvedPoint) f32.Point {
+			return f32.Pt(geometry.mapX(point.X), geometry.mapY(linePointStackBase(point, baseline)))
+		})
+	}
+	segments := make([]linePixelSegment, 0, len(pointSegments))
+	for index, points := range pointSegments {
+		var stackedOn []f32.Point
+		if series.area {
+			stackedOn = baseSegments[index]
+		}
+		start, end := visiblePixelRange(points, float32(geometry.plot.Min.X), float32(geometry.plot.Max.X))
+		points = points[start:end]
+		if series.area {
+			stackedOn = stackedOn[start:end]
+		}
 		if series.sampling == SamplingMinMax {
-			segment = minMaxPixelSample(segment, max(geometry.plot.Dx(), 1))
+			if sample := minMaxPixelSampleIndices(points, max(geometry.plot.Dx(), 1)); sample != nil {
+				points = selectPixelPoints(points, sample)
+				if series.area {
+					stackedOn = selectPixelPoints(stackedOn, sample)
+				}
+			}
 		}
-		switch {
-		case series.step != StepNone:
-			segments[index] = steppedPoints(segment, series.step)
-		case series.smooth > 0:
-			segments[index] = sampledSmoothPoints(segment, series.smooth)
+		if series.step != StepNone {
+			points = steppedPoints(points, series.step)
+			if series.area {
+				stackedOn = steppedPoints(stackedOn, series.step)
+			}
+		} else {
+			if series.smooth > 0 {
+				points = sampledSmoothPoints(points, series.smooth)
+			}
+			if series.area && series.stackedOnSmooth > 0 {
+				stackedOn = sampledSmoothPoints(stackedOn, series.stackedOnSmooth)
+			}
 		}
+		segments = append(segments, linePixelSegment{points: points, stackedOn: stackedOn})
 	}
 	return segments
 }
 
 func visiblePixelSegment(points []f32.Point, minimumX, maximumX float32) []f32.Point {
+	start, end := visiblePixelRange(points, minimumX, maximumX)
+	return points[start:end]
+}
+
+func visiblePixelRange(points []f32.Point, minimumX, maximumX float32) (int, int) {
 	if len(points) < 2 || !monotonicPointX(points) {
-		return points
+		return 0, len(points)
 	}
 	start := sort.Search(len(points), func(index int) bool { return points[index].X >= minimumX })
 	if start > 0 {
@@ -46,22 +85,30 @@ func visiblePixelSegment(points []f32.Point, minimumX, maximumX float32) []f32.P
 		end++
 	}
 	if start >= end {
-		return nil
+		return 0, 0
 	}
-	return points[start:end]
+	return start, end
 }
 
 func minMaxPixelSample(points []f32.Point, pixelWidth int) []f32.Point {
-	if len(points) <= pixelWidth*2 || pixelWidth <= 0 || !monotonicPointX(points) {
+	indices := minMaxPixelSampleIndices(points, pixelWidth)
+	if indices == nil {
 		return points
+	}
+	return selectPixelPoints(points, indices)
+}
+
+func minMaxPixelSampleIndices(points []f32.Point, pixelWidth int) []int {
+	if len(points) <= pixelWidth*2 || pixelWidth <= 0 || !monotonicPointX(points) {
+		return nil
 	}
 	minimumX := points[0].X
 	maximumX := points[len(points)-1].X
 	if maximumX <= minimumX {
-		return points
+		return nil
 	}
-	result := make([]f32.Point, 0, pixelWidth*2+2)
-	result = append(result, points[0])
+	result := make([]int, 0, pixelWidth*2+2)
+	result = append(result, 0)
 	for start := 1; start < len(points)-1; {
 		bucket := int((points[start].X - minimumX) / (maximumX - minimumX) * float32(pixelWidth))
 		end := start + 1
@@ -82,16 +129,24 @@ func minMaxPixelSample(points []f32.Point, pixelWidth int) []f32.Point {
 			}
 		}
 		if minimumIndex < maximumIndex {
-			result = append(result, points[minimumIndex], points[maximumIndex])
+			result = append(result, minimumIndex, maximumIndex)
 		} else if maximumIndex < minimumIndex {
-			result = append(result, points[maximumIndex], points[minimumIndex])
+			result = append(result, maximumIndex, minimumIndex)
 		} else {
-			result = append(result, points[minimumIndex])
+			result = append(result, minimumIndex)
 		}
 		start = end
 	}
-	result = append(result, points[len(points)-1])
+	result = append(result, len(points)-1)
 	return result
+}
+
+func selectPixelPoints(points []f32.Point, indices []int) []f32.Point {
+	selected := make([]f32.Point, len(indices))
+	for index, sourceIndex := range indices {
+		selected[index] = points[sourceIndex]
+	}
+	return selected
 }
 
 func monotonicPointX(points []f32.Point) bool {

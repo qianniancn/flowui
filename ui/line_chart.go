@@ -8,6 +8,8 @@ type LineChartPoint = linechart.Point
 type LineChartStepMode = linechart.StepMode
 type LineChartLineStyle = linechart.LineStyle
 type LineChartSamplingMode = linechart.SamplingMode
+type LineChartStackStrategy = linechart.StackStrategy
+type LineChartStackOrder = linechart.StackOrder
 
 const (
 	LineStepNone   = linechart.StepNone
@@ -21,6 +23,14 @@ const (
 
 	LineSamplingNone   = linechart.SamplingNone
 	LineSamplingMinMax = linechart.SamplingMinMax
+
+	LineStackSameSign = linechart.StackSameSign
+	LineStackAll      = linechart.StackAll
+	LineStackPositive = linechart.StackPositive
+	LineStackNegative = linechart.StackNegative
+
+	LineStackSeriesAscending  = linechart.StackSeriesAscending
+	LineStackSeriesDescending = linechart.StackSeriesDescending
 )
 
 func LineChart(key string, series []LineChartSeries) LineChartWidget {

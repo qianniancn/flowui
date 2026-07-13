@@ -1,6 +1,7 @@
 package linechart
 
 import (
+	"math"
 	"time"
 
 	"gioui.org/layout"
@@ -49,7 +50,7 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 		transition.displayed = target
 		return target
 	}
-	transition.displayed = interpolateLineData(transition.from, target, progress)
+	transition.displayed = interpolateLineData(transition.from, target, progress, w.animationBaseline(target))
 	return transition.displayed
 }
 
@@ -60,6 +61,8 @@ func lineBaselineData(target chartData, value float64) chartData {
 			point := &baseline.series[seriesIndex].points[pointIndex]
 			if point.valid {
 				point.Y = value
+				point.stackBase = value
+				point.hasStackBase = true
 			}
 		}
 	}
@@ -81,7 +84,10 @@ func lineTransitionFrom(previous, target chartData, baseline float64) chartData 
 			if pointIndex >= len(old.points) || !from.series[seriesIndex].points[pointIndex].valid || !old.points[pointIndex].valid {
 				continue
 			}
-			from.series[seriesIndex].points[pointIndex].Point = old.points[pointIndex].Point
+			point := &from.series[seriesIndex].points[pointIndex]
+			point.Point = old.points[pointIndex].Point
+			point.stackBase = old.points[pointIndex].stackBase
+			point.hasStackBase = old.points[pointIndex].hasStackBase
 		}
 	}
 	return from
@@ -92,7 +98,7 @@ func (w Widget) animationBaseline(target chartData) float64 {
 	return min(max(float64(0), scale.minimum), scale.maximum)
 }
 
-func interpolateLineData(from, target chartData, progress float32) chartData {
+func interpolateLineData(from, target chartData, progress float32, baseline float64) chartData {
 	result := cloneLineData(target)
 	for seriesIndex := range result.series {
 		if seriesIndex >= len(from.series) || from.series[seriesIndex].key != result.series[seriesIndex].key {
@@ -110,6 +116,8 @@ func interpolateLineData(from, target chartData, progress float32) chartData {
 			point := &result.series[seriesIndex].points[pointIndex]
 			point.X = animation.LerpFloat64(start.X, end.X, progress)
 			point.Y = animation.LerpFloat64(start.Y, end.Y, progress)
+			point.stackBase = animation.LerpFloat64(linePointStackBase(start, baseline), linePointStackBase(end, baseline), progress)
+			point.hasStackBase = true
 		}
 	}
 	return result
@@ -138,10 +146,24 @@ func sameLineGeometry(first, second chartData) bool {
 			if leftPoint.valid != rightPoint.valid {
 				return false
 			}
-			if leftPoint.valid && (leftPoint.X != rightPoint.X || leftPoint.Y != rightPoint.Y) {
+			if leftPoint.valid && (leftPoint.X != rightPoint.X || leftPoint.Y != rightPoint.Y || !sameLineStackBase(leftPoint, rightPoint)) {
 				return false
 			}
 		}
 	}
 	return true
+}
+
+func linePointStackBase(point resolvedPoint, fallback float64) float64 {
+	if point.hasStackBase && finite(point.stackBase) {
+		return point.stackBase
+	}
+	return fallback
+}
+
+func sameLineStackBase(first, second resolvedPoint) bool {
+	if first.hasStackBase != second.hasStackBase {
+		return false
+	}
+	return !first.hasStackBase || first.stackBase == second.stackBase || math.IsNaN(first.stackBase) && math.IsNaN(second.stackBase)
 }

@@ -290,7 +290,7 @@ func (w Widget) publicSelection(selection chartSelection, geometry chartGeometry
 			SeriesKey:   entry.series.key,
 			SeriesLabel: entry.series.label,
 			X:           entry.point.X,
-			Y:           entry.point.Y,
+			Y:           entry.point.rawY,
 			Color:       entry.series.color,
 		})
 	}

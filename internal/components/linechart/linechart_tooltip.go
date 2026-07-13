@@ -39,7 +39,7 @@ func (w Widget) drawTooltip(ctx *frame.Context, gtx layout.Context, geometry cha
 	colors := make([][4]uint8, 0, limit+1)
 	for index := 0; index < limit; index++ {
 		entry := selection.entries[index]
-		value := fmt.Sprintf("%s  %s", entry.series.label, w.yLabel(entry.point.Y, geometry.yScale.interval))
+		value := fmt.Sprintf("%s  %s", entry.series.label, w.yLabel(entry.point.rawY, geometry.yScale.interval))
 		row := recordChartText(ctx, gtx, value, tokens.TooltipTextSize, font.Normal, style.tooltipText, max(contentWidth-markerSize-markerGap, 1))
 		rows = append(rows, row)
 		colors = append(colors, [4]uint8{entry.series.color.R, entry.series.color.G, entry.series.color.B, entry.series.color.A})

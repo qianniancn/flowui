@@ -92,6 +92,22 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			send(DataWindowChanged{Chart: "latency", Window: window})
 		}).
 		Height(280)
+
+	stackedTraffic := ui.LineChart("stacked-traffic", []ui.LineChartSeries{
+		ui.LineSeries("stacked-direct", "Direct", []float64{42, 48, 46, 54, 58, 62, 68}).
+			Stack("traffic").Area(true).Smooth(true).Hidden(model.hidden["stacked-direct"]),
+		ui.LineSeries("stacked-referral", "Referral", []float64{24, 28, 26, 32, 30, 36, 38}).
+			Stack("traffic").Area(true).Smooth(true).Hidden(model.hidden["stacked-referral"]),
+		ui.LineSeries("stacked-campaign", "Campaign", []float64{16, 18, 22, 20, 24, 26, 30}).
+			Stack("traffic").Area(true).Smooth(true).Hidden(model.hidden["stacked-campaign"]),
+	}).
+		Categories([]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}).
+		XAxis("Day").
+		YAxis("Visits (thousands)").
+		Label("Traffic sources, stacked total").
+		OnLegendChange(func(key string, hidden bool) { send(LegendChanged{Key: key, Hidden: hidden}) }).
+		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
+		Height(300)
 	selection := "No data selected"
 	if model.selected != "" {
 		selection = "Selected: " + model.selected
@@ -109,6 +125,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				ui.Text(selection).Size(14),
 				ui.Surface(ui.Box(requests).Padding(16)).Radius(8),
 				ui.Surface(ui.Box(latency).Padding(16)).Radius(8),
+				ui.Surface(ui.Box(stackedTraffic).Padding(16)).Radius(8),
 			).Gap(16),
 		).FillWidth().MaxWidth(980).Padding(24),
 	)

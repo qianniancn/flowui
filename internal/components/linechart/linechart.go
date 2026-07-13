@@ -46,6 +46,24 @@ const (
 	SamplingMinMax
 )
 
+// StackStrategy controls which preceding cumulative values a series stacks on.
+type StackStrategy uint8
+
+const (
+	StackSameSign StackStrategy = iota
+	StackAll
+	StackPositive
+	StackNegative
+)
+
+// StackOrder controls the calculation order inside one stack group.
+type StackOrder uint8
+
+const (
+	StackSeriesAscending StackOrder = iota
+	StackSeriesDescending
+)
+
 // Series describes one line and its data.
 type Series struct {
 	key           string
@@ -66,6 +84,9 @@ type Series struct {
 	areaColor     color.NRGBA
 	hasAreaColor  bool
 	sampling      SamplingMode
+	stack         string
+	stackStrategy StackStrategy
+	stackOrder    StackOrder
 	hidden        bool
 }
 
@@ -164,6 +185,30 @@ func (s Series) Sampling(mode SamplingMode) Series {
 		panic("flowui: invalid line chart sampling mode")
 	}
 	s.sampling = mode
+	return s
+}
+
+// Stack assigns the series to a stack group. An empty name disables stacking.
+func (s Series) Stack(name string) Series {
+	s.stack = name
+	return s
+}
+
+// StackStrategy applies the ECharts stack strategy to this series.
+func (s Series) StackStrategy(strategy StackStrategy) Series {
+	if strategy > StackNegative {
+		panic("flowui: invalid line chart stack strategy")
+	}
+	s.stackStrategy = strategy
+	return s
+}
+
+// StackOrder controls the complete group using the first visible series value.
+func (s Series) StackOrder(order StackOrder) Series {
+	if order > StackSeriesDescending {
+		panic("flowui: invalid line chart stack order")
+	}
+	s.stackOrder = order
 	return s
 }
 

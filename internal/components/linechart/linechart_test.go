@@ -213,7 +213,7 @@ func TestLineChartAnimationInterpolatesPointGeometry(t *testing.T) {
 		Values("series", "Series", []float64{10, 20}),
 	}), &activeTheme, testDp)
 	from := lineBaselineData(target, 0)
-	midpoint := interpolateLineData(from, target, 0.5)
+	midpoint := interpolateLineData(from, target, 0.5, 0)
 	if midpoint.series[0].points[0].Y != 5 || midpoint.series[0].points[1].Y != 10 {
 		t.Fatalf("animated LineChart midpoint = %#v", midpoint.series[0].points)
 	}

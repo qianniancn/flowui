@@ -58,25 +58,25 @@ func drawChartSeries(ctx *frame.Context, gtx layout.Context, data chartData, geo
 func drawOneChartSeries(ctx *frame.Context, gtx layout.Context, series resolvedSeries, geometry chartGeometry, tokens theme.LineChartTheme) {
 	segments := seriesPixelSegments(series, geometry)
 	if series.area {
-		baselineValue := min(max(float64(0), geometry.yScale.minimum), geometry.yScale.maximum)
-		baseline := geometry.mapY(baselineValue)
 		for _, segment := range segments {
-			if len(segment) == 0 {
+			if len(segment.points) == 0 || len(segment.stackedOn) == 0 {
 				continue
 			}
 			var area clip.Path
 			area.Begin(gtx.Ops)
-			area.MoveTo(f32.Pt(segment[0].X, baseline))
-			for _, point := range segment {
+			area.MoveTo(segment.points[0])
+			for _, point := range segment.points[1:] {
 				area.LineTo(point)
 			}
-			area.LineTo(f32.Pt(segment[len(segment)-1].X, baseline))
+			for index := len(segment.stackedOn) - 1; index >= 0; index-- {
+				area.LineTo(segment.stackedOn[index])
+			}
 			area.Close()
 			paint.FillShape(gtx.Ops, series.areaColor, clip.Outline{Path: area.End()}.Op())
 		}
 	}
 	for _, segment := range segments {
-		drawLineSeriesSegment(gtx, segment, series.width, series.color, series.lineStyle)
+		drawLineSeriesSegment(gtx, segment.points, series.width, series.color, series.lineStyle)
 	}
 
 	validCount := countValidPoints(series.points)

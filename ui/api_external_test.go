@@ -171,6 +171,9 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				Area(true).
 				AreaColor(color.NRGBA{R: 1, A: 0x40}).
 				Sampling(ui.LineSamplingMinMax).
+				Stack("traffic").
+				StackStrategy(ui.LineStackSameSign).
+				StackOrder(ui.LineStackSeriesDescending).
 				Width(2).
 				Hidden(false),
 			ui.LineXYSeries("latency", "Latency", []ui.LineChartPoint{{X: 0, Y: 8}, {X: 1, Y: 11}}).

@@ -7,6 +7,7 @@ type Palette = theme.Palette
 type Typography = theme.Typography
 type Shape = theme.Shape
 type Spacing = theme.Spacing
+type MotionTheme = theme.MotionTheme
 type ComponentsTheme = theme.ComponentsTheme
 type DescriptionTheme = theme.DescriptionTheme
 type LabelTheme = theme.LabelTheme

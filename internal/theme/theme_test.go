@@ -3,9 +3,17 @@ package theme_test
 import (
 	"image/color"
 	"testing"
+	"time"
 
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
+
+func TestDefaultMotionTheme(t *testing.T) {
+	motion := theme.DefaultTheme().Motion
+	if !motion.Enabled || motion.DefaultDuration != 200*time.Millisecond || motion.DurationScale != 1 {
+		t.Fatalf("default motion theme = %#v", motion)
+	}
+}
 
 func TestDisabledColorUsesOpacity(t *testing.T) {
 	theme := theme.DefaultTheme()

@@ -15,9 +15,19 @@ type Theme struct {
 	Typography      Typography
 	Shape           Shape
 	Spacing         Spacing
+	Motion          MotionTheme
 	Components      ComponentsTheme
 	DisabledOpacity float32
 	Material        *material.Theme
+}
+
+type MotionTheme struct {
+	// Enabled controls all framework animations.
+	Enabled bool
+	// DefaultDuration is used by Tween when no duration is specified.
+	DefaultDuration time.Duration
+	// DurationScale scales animation time globally. Zero disables motion.
+	DurationScale float32
 }
 
 type Palette struct {
@@ -1473,7 +1483,12 @@ func DefaultTheme() Theme {
 			},
 		},
 		DisabledOpacity: 0.5,
-		Material:        material.NewTheme(),
+		Motion: MotionTheme{
+			Enabled:         true,
+			DefaultDuration: 200 * time.Millisecond,
+			DurationScale:   1,
+		},
+		Material: material.NewTheme(),
 	}
 	SyncMaterialTheme(&theme)
 	return theme

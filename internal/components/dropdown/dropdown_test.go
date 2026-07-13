@@ -244,6 +244,25 @@ func TestDropdownMenuActionClosesAndRestoresTriggerFocus(t *testing.T) {
 	}
 }
 
+func TestDropdownOutsidePressClosesImmediately(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}})
+	start := openDropdownForTest(ctx, router, widget)
+	state, _ := frame.PeekState[dropdownState](ctx, "actions", stateSlotDropdown)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 9,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  f32.Pt(420, 300),
+	})
+	layoutDropdownFrame(ctx, router, widget, start.Add(time.Millisecond))
+	if state.open {
+		t.Fatal("outside press did not close Dropdown")
+	}
+}
+
 func TestDropdownCloseOnSelectIsDelegatedToMenu(t *testing.T) {
 	ctx := dropdownTestContext()
 	router := new(input.Router)

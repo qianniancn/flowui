@@ -39,6 +39,7 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 		for state.dismiss[index].Clicked(gtx) {
 			dismissed = true
 		}
+		dismissed = state.dismiss[index].TakePressed() || dismissed
 	}
 	if dismissed && open {
 		state.skipRestore = true

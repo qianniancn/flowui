@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/layout"
+	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
@@ -93,6 +94,21 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 
 	return ui.Column(
+		ui.Image(paint.ImageOp{}).
+			Fit(ui.ImageCover).
+			Position(ui.AlignCenter).
+			Width(160).
+			Height(90).
+			Radius(16).
+			Opacity(0.8).
+			Alt("Cover image"),
+		ui.Avatar("AM").
+			Image(paint.ImageOp{}).
+			Alt("Alex Morgan").
+			Fallback(ui.Icon(lucide.UserRound).Size(20)).
+			Color(ui.AvatarAccent).
+			Variant(ui.AvatarSoft).
+			Size(ui.AvatarLarge),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

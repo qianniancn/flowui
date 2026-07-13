@@ -101,6 +101,7 @@ type ComponentsTheme struct {
 	ToggleButton ToggleButtonTheme
 	CloseButton  CloseButtonTheme
 	Chip         ChipTheme
+	Avatar       AvatarTheme
 	Card         CardTheme
 	Alert        AlertTheme
 	AlertDialog  AlertDialogTheme
@@ -229,6 +230,21 @@ type ChipTheme struct {
 	MediumTextSize unit.Sp
 	LargeTextSize  unit.Sp
 	LineHeight     unit.Sp
+}
+
+type AvatarTheme struct {
+	SmallSize      unit.Dp
+	MediumSize     unit.Dp
+	LargeSize      unit.Dp
+	SmallRadius    unit.Dp
+	MediumRadius   unit.Dp
+	LargeRadius    unit.Dp
+	SmallTextSize  unit.Sp
+	MediumTextSize unit.Sp
+	LargeTextSize  unit.Sp
+	SmallIconSize  unit.Dp
+	MediumIconSize unit.Dp
+	LargeIconSize  unit.Dp
 }
 
 type InputTheme struct {
@@ -776,6 +792,20 @@ func DefaultTheme() Theme {
 				MediumTextSize: 12,
 				LargeTextSize:  14,
 				LineHeight:     20,
+			},
+			Avatar: AvatarTheme{
+				SmallSize:      32,
+				MediumSize:     40,
+				LargeSize:      48,
+				SmallRadius:    16,
+				MediumRadius:   24,
+				LargeRadius:    24,
+				SmallTextSize:  14,
+				MediumTextSize: 14,
+				LargeTextSize:  16,
+				SmallIconSize:  16,
+				MediumIconSize: 20,
+				LargeIconSize:  24,
 			},
 			Card: CardTheme{
 				Padding:               16,

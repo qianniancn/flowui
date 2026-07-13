@@ -109,6 +109,8 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Text`
 - `Label`
 - `Description`
+- `Image`
+- `Avatar`
 - `Button`
 - `ToggleButton`
 - `Input`
@@ -167,6 +169,8 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。
 - `chips`：对齐 HeroUI 的紧凑标签，包含颜色、变体、尺寸、图标和语义状态。
+- `images`：可复用图片，包含缩放、定位、尺寸、圆角裁剪、透明度和无障碍标签。
+- `avatars`：对齐 HeroUI 的头像，包含尺寸、语义色、柔和变体，以及文本或图标回退内容。
 - `inputs`：对齐 HeroUI 的输入框变体、类型、状态和受控事件。
 - `input_groups`：对齐 HeroUI 的组合输入框，包含单行或多行编辑器、前后缀、变体、校验状态和可交互操作。
 - `textareas`：对齐 HeroUI 的多行文本框，包含变体、受控值、行数、状态、InputGroup 集成和 Surface 用法。

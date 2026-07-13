@@ -61,14 +61,19 @@ func TestBarChartOptionsUseValueSemantics(t *testing.T) {
 		BarGap(1.2).
 		CategoryGap(0.3).
 		FormatY(func(float64) string { return "value" }).
+		Animation(false).
+		AnimationDuration(250 * time.Millisecond).
+		AnimationEasing(func(value float32) float32 { return value }).
+		UpdateAnimationDuration(150 * time.Millisecond).
+		UpdateAnimationEasing(func(value float32) float32 { return value }).
 		Label("Sales").
 		EmptyText("Empty").
 		Disabled(true)
 	categories[0] = "Changed"
-	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || base.disabled {
+	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring BarChart mutated base: %#v", base)
 	}
-	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
+	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured BarChart = %#v", configured)
 	}
 }
@@ -88,6 +93,10 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 		{"negative bar gap", func() { New("chart", nil).BarGap(-0.1) }},
 		{"large category gap", func() { New("chart", nil).CategoryGap(1) }},
 		{"NaN gap", func() { New("chart", nil).BarGap(float32(math.NaN())) }},
+		{"animation duration", func() { New("chart", nil).AnimationDuration(-time.Millisecond) }},
+		{"update animation duration", func() { New("chart", nil).UpdateAnimationDuration(-time.Millisecond) }},
+		{"animation easing", func() { New("chart", nil).AnimationEasing(nil) }},
+		{"update animation easing", func() { New("chart", nil).UpdateAnimationEasing(nil) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -98,6 +107,34 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 			}()
 			test.run()
 		})
+	}
+}
+
+func TestBarChartAnimationInterpolatesStackGeometry(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	target := resolveChartData(New("chart", []Series{
+		Values("first", "First", []float64{10}).Stack("total"),
+		Values("second", "Second", []float64{5}).Stack("total"),
+	}), &activeTheme, testDp)
+	from := barBaselineData(target)
+	midpoint := interpolateBarData(from, target, 0.5)
+	first := midpoint.series[0].values[0]
+	second := midpoint.series[1].values[0]
+	if first.start != 0 || first.end != 5 || second.start != 5 || second.end != 7.5 {
+		t.Fatalf("animated BarChart stack midpoint = first %#v second %#v", first, second)
+	}
+	if target.series[0].values[0].end != 10 || target.series[1].values[0].end != 15 {
+		t.Fatalf("BarChart animation mutated target = %#v", target.series)
+	}
+}
+
+func TestBarChartUpdateAnimationStartsFromDisplayedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	previous := resolveChartData(New("chart", []Series{Values("series", "Series", []float64{4})}), &activeTheme, testDp)
+	target := resolveChartData(New("chart", []Series{Values("series", "Series", []float64{10})}), &activeTheme, testDp)
+	from := barTransitionFrom(previous, target)
+	if from.series[0].values[0].value != 4 || from.series[0].values[0].end != 4 {
+		t.Fatalf("BarChart update start = %#v", from.series[0].values[0])
 	}
 }
 

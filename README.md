@@ -169,10 +169,18 @@ text/editor internals.
 - `RoundedShadowCorners`
 - `EllipseShadow`
 
+### Animation
+
+- `Tween`
+- ECharts/zrender-compatible linear, quadratic, cubic, quartic, quintic, sinusoidal,
+  exponential, circular, elastic, back, and bounce easing families
+- `LerpFloat`, `LerpFloat64`, `LerpColor`, `LerpPoint`, `LerpRect`
+
 ## Examples
 
 Examples live in `examples/`:
 
+- `animations`: reusable easing, tween state, value interpolation, direction changes, and custom Gio drawing.
 - `counter`: basic MVU state updates.
 - `async`: asynchronous messages with commands.
 - `buttons`: button variants, loading, disabled, and interaction states.
@@ -192,8 +200,8 @@ Examples live in `examples/`:
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `meters`: HeroUI-aligned known-range measurements with labels, formatted values, colors, sizes, and accessible label-free usage.
-- `line_charts`: native Gio straight and smooth line charts with multiple series, Cartesian axes, ECharts-inspired ticks, legends, gaps, crosshairs, and tooltips.
-- `bar_charts`: native Gio grouped and stacked bar charts with ECharts-inspired column sizing, positive and negative values, legends, category highlights, and tooltips.
+- `line_charts`: native Gio straight and smooth line charts with multiple series, ECharts-inspired initial and update animations, Cartesian axes, legends, gaps, crosshairs, and tooltips.
+- `bar_charts`: native Gio grouped and stacked bar charts with ECharts-inspired initial and update animations, column sizing, positive and negative values, legends, category highlights, and tooltips.
 - `spinners`: animated loading indicators with HeroUI-aligned colors and sizes.
 - `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.

@@ -164,10 +164,17 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `RoundedShadowCorners`
 - `EllipseShadow`
 
+### 动画能力
+
+- `Tween`
+- 兼容 ECharts/zrender 的线性、二次、三次、四次、五次、正弦、指数、圆形、弹性、回退和弹跳缓动族
+- `LerpFloat`、`LerpFloat64`、`LerpColor`、`LerpPoint`、`LerpRect`
+
 ## 示例目录
 
 示例统一放在 `examples/` 下：
 
+- `animations`：可复用缓动、Tween 状态、数值插值、方向切换和自定义 Gio 绘制。
 - `counter`：基础 MVU 状态更新。
 - `async`：基于 command 的异步消息。
 - `buttons`：按钮变体、加载、禁用和交互状态。
@@ -187,8 +194,8 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `radio_groups`：互斥单选选项。
 - `progress_bars`：确定态和不定态进度指示器。
 - `meters`：对齐 HeroUI 的已知范围测量组件，包含标签、格式化数值、颜色、尺寸和无可见标签用法。
-- `line_charts`：原生 Gio 直线与平滑折线图，包含多系列、笛卡尔坐标轴、参考 ECharts 的刻度、图例、断点、十字准线和提示框。
-- `bar_charts`：原生 Gio 分组与堆叠柱状图，包含参考 ECharts 的柱宽计算、正负值、图例、分类高亮和提示框。
+- `line_charts`：原生 Gio 直线与平滑折线图，包含多系列、参考 ECharts 的入场与更新动画、笛卡尔坐标轴、图例、断点、十字准线和提示框。
+- `bar_charts`：原生 Gio 分组与堆叠柱状图，包含参考 ECharts 的入场与更新动画、柱宽计算、正负值、图例、分类高亮和提示框。
 - `spinners`：与 HeroUI 对齐的颜色和尺寸加载指示器。
 - `sliders`：受控单值、范围、纵向、禁用、步进和格式化滑块。
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。

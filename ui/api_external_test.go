@@ -3,10 +3,13 @@ package ui_test
 import (
 	"context"
 	"fmt"
+	"image"
 	"image/color"
 	"reflect"
 	"testing"
+	"time"
 
+	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/ui"
@@ -56,7 +59,35 @@ type facadeMsg struct {
 
 type externalWidget struct{}
 
-func (externalWidget) Layout(*ui.Context, layout.Context) layout.Dimensions {
+func (externalWidget) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+	progress, _ := ui.Tween("external-tween", 1).
+		Initial(0).
+		Revision(1).
+		Duration(time.Millisecond).
+		Easing(ui.EaseCubicOut).
+		Disabled(false).
+		Sample(ctx, gtx)
+	easings := []ui.Easing{
+		ui.EaseLinear,
+		ui.EaseQuadraticIn, ui.EaseQuadraticOut, ui.EaseQuadraticInOut,
+		ui.EaseCubicIn, ui.EaseCubicOut, ui.EaseCubicInOut,
+		ui.EaseQuarticIn, ui.EaseQuarticOut, ui.EaseQuarticInOut,
+		ui.EaseQuinticIn, ui.EaseQuinticOut, ui.EaseQuinticInOut,
+		ui.EaseSinusoidalIn, ui.EaseSinusoidalOut, ui.EaseSinusoidalInOut,
+		ui.EaseExponentialIn, ui.EaseExponentialOut, ui.EaseExponentialInOut,
+		ui.EaseCircularIn, ui.EaseCircularOut, ui.EaseCircularInOut,
+		ui.EaseElasticIn, ui.EaseElasticOut, ui.EaseElasticInOut,
+		ui.EaseBackIn, ui.EaseBackOut, ui.EaseBackInOut,
+		ui.EaseBounceIn, ui.EaseBounceOut, ui.EaseBounceInOut,
+	}
+	for _, easing := range easings {
+		_ = easing(progress)
+	}
+	_ = ui.LerpFloat(0, 1, progress)
+	_ = ui.LerpFloat64(0, 1, progress)
+	_ = ui.LerpColor(color.NRGBA{}, color.NRGBA{A: 0xff}, progress)
+	_ = ui.LerpPoint(f32.Point{}, f32.Pt(1, 1), progress)
+	_ = ui.LerpRect(image.Rectangle{}, image.Rect(1, 1, 2, 2), progress)
 	return layout.Dimensions{}
 }
 
@@ -151,6 +182,11 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			YTicks(5).
 			FormatX(func(value float64) string { return fmt.Sprint(value) }).
 			FormatY(func(value float64) string { return fmt.Sprint(value) }).
+			Animation(true).
+			AnimationDuration(time.Second).
+			AnimationEasing(ui.EaseCubicOut).
+			UpdateAnimationDuration(500*time.Millisecond).
+			UpdateAnimationEasing(ui.EaseCubicInOut).
 			Label("Traffic").
 			EmptyText("No samples").
 			Disabled(false),
@@ -179,6 +215,11 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			BarGap(0.1).
 			CategoryGap(0.25).
 			FormatY(func(value float64) string { return fmt.Sprint(value) }).
+			Animation(true).
+			AnimationDuration(time.Second).
+			AnimationEasing(ui.EaseCubicOut).
+			UpdateAnimationDuration(500*time.Millisecond).
+			UpdateAnimationEasing(ui.EaseCubicInOut).
 			Label("Sales").
 			EmptyText("No samples").
 			Disabled(false),

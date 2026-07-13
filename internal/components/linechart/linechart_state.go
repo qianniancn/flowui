@@ -26,6 +26,7 @@ type chartState struct {
 	keyboard      bool
 	keyboardIndex int
 	pointerIndex  int
+	animation     lineChartAnimation
 }
 
 func chartStateFor(ctx *frame.Context, key string) *chartState {

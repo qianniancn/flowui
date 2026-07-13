@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"time"
 
 	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -91,41 +93,51 @@ func (s Series) Hidden(hidden bool) Series {
 }
 
 type Widget struct {
-	key           string
-	series        []Series
-	categories    []string
-	height        unit.Dp
-	showGrid      bool
-	showLegend    bool
-	hasShowLegend bool
-	showTooltip   bool
-	includeZero   bool
-	disabled      bool
-	label         string
-	emptyText     string
-	xAxisLabel    string
-	yAxisLabel    string
-	xTickCount    int
-	yTickCount    int
-	xMin          float64
-	xMax          float64
-	hasXRange     bool
-	yMin          float64
-	yMax          float64
-	hasYRange     bool
-	formatX       func(float64) string
-	formatY       func(float64) string
+	key                     string
+	series                  []Series
+	categories              []string
+	height                  unit.Dp
+	showGrid                bool
+	showLegend              bool
+	hasShowLegend           bool
+	showTooltip             bool
+	includeZero             bool
+	disabled                bool
+	label                   string
+	emptyText               string
+	xAxisLabel              string
+	yAxisLabel              string
+	xTickCount              int
+	yTickCount              int
+	xMin                    float64
+	xMax                    float64
+	hasXRange               bool
+	yMin                    float64
+	yMax                    float64
+	hasYRange               bool
+	formatX                 func(float64) string
+	formatY                 func(float64) string
+	animation               bool
+	animationDuration       time.Duration
+	animationEasing         animation.Easing
+	updateAnimationDuration time.Duration
+	updateAnimationEasing   animation.Easing
 }
 
 func New(key string, series []Series) Widget {
 	return Widget{
-		key:         key,
-		series:      append([]Series(nil), series...),
-		showGrid:    true,
-		showTooltip: true,
-		includeZero: true,
-		xTickCount:  6,
-		yTickCount:  5,
+		key:                     key,
+		series:                  append([]Series(nil), series...),
+		showGrid:                true,
+		showTooltip:             true,
+		includeZero:             true,
+		xTickCount:              6,
+		yTickCount:              5,
+		animation:               true,
+		animationDuration:       time.Second,
+		animationEasing:         animation.EaseCubicOut,
+		updateAnimationDuration: 500 * time.Millisecond,
+		updateAnimationEasing:   animation.EaseCubicInOut,
 	}
 }
 
@@ -213,6 +225,40 @@ func (w Widget) FormatY(format func(float64) string) Widget {
 	return w
 }
 
+// Animation enables initial and data-update transitions.
+func (w Widget) Animation(enabled bool) Widget {
+	w.animation = enabled
+	return w
+}
+
+// AnimationDuration sets the initial transition duration.
+func (w Widget) AnimationDuration(duration time.Duration) Widget {
+	validateAnimationDuration(duration)
+	w.animationDuration = duration
+	return w
+}
+
+// AnimationEasing sets the initial transition timing curve.
+func (w Widget) AnimationEasing(easing animation.Easing) Widget {
+	validateAnimationEasing(easing)
+	w.animationEasing = easing
+	return w
+}
+
+// UpdateAnimationDuration sets the data-update transition duration.
+func (w Widget) UpdateAnimationDuration(duration time.Duration) Widget {
+	validateAnimationDuration(duration)
+	w.updateAnimationDuration = duration
+	return w
+}
+
+// UpdateAnimationEasing sets the data-update transition timing curve.
+func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
+	validateAnimationEasing(easing)
+	w.updateAnimationEasing = easing
+	return w
+}
+
 func (w Widget) Label(label string) Widget {
 	w.label = label
 	return w
@@ -262,5 +308,17 @@ func (w Widget) yLabel(value float64, interval float64) string {
 func validateChartRange(axis string, minimum, maximum float64) {
 	if !finite(minimum) || !finite(maximum) || maximum <= minimum {
 		panic(fmt.Sprintf("flowui: line chart %s maximum must be greater than minimum", axis))
+	}
+}
+
+func validateAnimationDuration(duration time.Duration) {
+	if duration < 0 {
+		panic("flowui: line chart animation duration must not be negative")
+	}
+}
+
+func validateAnimationEasing(easing animation.Easing) {
+	if easing == nil {
+		panic("flowui: line chart animation easing must not be nil")
 	}
 }

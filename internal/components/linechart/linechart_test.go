@@ -54,13 +54,18 @@ func TestLineChartOptionsUseValueSemantics(t *testing.T) {
 		YTicks(6).
 		FormatX(func(float64) string { return "x" }).
 		FormatY(func(float64) string { return "y" }).
+		Animation(false).
+		AnimationDuration(250 * time.Millisecond).
+		AnimationEasing(func(value float32) float32 { return value }).
+		UpdateAnimationDuration(150 * time.Millisecond).
+		UpdateAnimationEasing(func(value float32) float32 { return value }).
 		Label("Traffic").
 		EmptyText("Empty").
 		Disabled(true)
-	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasXRange || base.hasYRange || base.disabled {
+	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasXRange || base.hasYRange || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring LineChart mutated base: %#v", base)
 	}
-	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
+	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured LineChart = %#v", configured)
 	}
 }
@@ -79,6 +84,10 @@ func TestLineChartRejectsInvalidConfiguration(t *testing.T) {
 		{"negative smoothness", func() { Values("a", "A", nil).Smoothness(-0.1) }},
 		{"large smoothness", func() { Values("a", "A", nil).Smoothness(1.1) }},
 		{"NaN smoothness", func() { Values("a", "A", nil).Smoothness(float32(math.NaN())) }},
+		{"animation duration", func() { New("chart", nil).AnimationDuration(-time.Millisecond) }},
+		{"update animation duration", func() { New("chart", nil).UpdateAnimationDuration(-time.Millisecond) }},
+		{"animation easing", func() { New("chart", nil).AnimationEasing(nil) }},
+		{"update animation easing", func() { New("chart", nil).UpdateAnimationEasing(nil) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -89,6 +98,45 @@ func TestLineChartRejectsInvalidConfiguration(t *testing.T) {
 			}()
 			test.run()
 		})
+	}
+}
+
+func TestLineChartAnimationInterpolatesPointGeometry(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	target := resolveChartData(New("chart", []Series{
+		Values("series", "Series", []float64{10, 20}),
+	}), &activeTheme, testDp)
+	from := lineBaselineData(target, 0)
+	midpoint := interpolateLineData(from, target, 0.5)
+	if midpoint.series[0].points[0].Y != 5 || midpoint.series[0].points[1].Y != 10 {
+		t.Fatalf("animated LineChart midpoint = %#v", midpoint.series[0].points)
+	}
+	if target.series[0].points[0].Y != 10 || target.series[0].points[1].Y != 20 {
+		t.Fatalf("LineChart animation mutated target = %#v", target.series[0].points)
+	}
+}
+
+func TestLineChartUpdateAnimationStartsFromDisplayedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	previous := resolveChartData(New("chart", []Series{
+		Values("series", "Series", []float64{4, 8}),
+	}), &activeTheme, testDp)
+	target := resolveChartData(New("chart", []Series{
+		Values("series", "Series", []float64{10, 20}),
+	}), &activeTheme, testDp)
+	from := lineTransitionFrom(previous, target, 0)
+	if from.series[0].points[0].Y != 4 || from.series[0].points[1].Y != 8 {
+		t.Fatalf("LineChart update start = %#v", from.series[0].points)
+	}
+}
+
+func TestLineChartAnimationBaselineUsesVisibleYRange(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20})}).IncludeZero(false)
+	target := resolveChartData(widget, &activeTheme, testDp)
+	baseline := widget.animationBaseline(target)
+	if baseline != widget.resolveYScale(target).minimum || baseline == 0 {
+		t.Fatalf("non-zero animation baseline = %v", baseline)
 	}
 }
 

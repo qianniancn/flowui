@@ -51,6 +51,8 @@ type chartSelection struct {
 
 func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := chartStateFor(ctx, w.key)
+	restoreKey := frame.PushKey(ctx, w.key)
+	defer restoreKey()
 	enabled := gtx.Enabled() && !w.disabled
 	state.requestPointerFocus(ctx, gtx, enabled)
 
@@ -82,6 +84,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.BarChart
 	style := barChartStyleFor(activeTheme, !enabled)
+	displayData := w.animatedData(ctx, gtx, state, data)
 	left := max(gtx.Dp(tokens.PlotPaddingLeft), w.measureYAxisLabelWidth(ctx, gtx, data, max(size.X/2, 1))+max(gtx.Dp(tokens.TickLabelGap), 0)+4)
 	left = min(max(left, 0), max(size.X/2, 0))
 	right := min(max(gtx.Dp(tokens.PlotPaddingRight), 0), max(size.X-left-1, 0))
@@ -138,7 +141,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	if selected {
 		drawCategoryHighlight(gtx, geometry, selection, style)
 	}
-	drawChartSeries(ctx, gtx, data, geometry, style, tokens)
+	drawChartSeries(ctx, gtx, displayData, geometry, style, tokens)
 	w.layoutAxisLabels(ctx, gtx, geometry, style)
 	if !data.yExtent.valid {
 		w.layoutEmpty(ctx, gtx, geometry, style)

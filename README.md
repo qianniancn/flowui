@@ -127,6 +127,7 @@ text/editor internals.
 - `RadioGroup`
 - `ProgressBar`
 - `Meter`
+- `LineChart`
 - `Spinner`
 - `Slider`, `RangeSlider`
 - `ListBox`
@@ -190,6 +191,7 @@ Examples live in `examples/`:
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `meters`: HeroUI-aligned known-range measurements with labels, formatted values, colors, sizes, and accessible label-free usage.
+- `line_charts`: native Gio straight and smooth line charts with multiple series, Cartesian axes, ECharts-inspired ticks, legends, gaps, crosshairs, and tooltips.
 - `spinners`: animated loading indicators with HeroUI-aligned colors and sizes.
 - `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.

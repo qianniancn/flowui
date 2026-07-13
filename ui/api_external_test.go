@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -126,6 +127,31 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Range(0, 100).
 			Color(ui.MeterSuccess).
 			Size(ui.MeterLarge).
+			Disabled(false),
+		ui.LineChart("traffic", []ui.LineChartSeries{
+			ui.LineSeries("requests", "Requests", []float64{12, 18, 16}).
+				Smooth(true).
+				ShowPoints(true).
+				ConnectNulls(false).
+				Width(2).
+				Hidden(false),
+			ui.LineXYSeries("latency", "Latency", []ui.LineChartPoint{{X: 0, Y: 8}, {X: 1, Y: 11}}).
+				Smoothness(0.35),
+		}).
+			Categories([]string{"Mon", "Tue", "Wed"}).
+			Height(280).
+			Grid(true).
+			Legend(true).
+			Tooltip(true).
+			IncludeZero(false).
+			XAxis("Day").
+			YAxis("Requests").
+			XTicks(4).
+			YTicks(5).
+			FormatX(func(value float64) string { return fmt.Sprint(value) }).
+			FormatY(func(value float64) string { return fmt.Sprint(value) }).
+			Label("Traffic").
+			EmptyText("No samples").
 			Disabled(false),
 		ui.Menubar("application-menu", []ui.MenubarItem{
 			ui.MenubarMenu("file", "File", []ui.MenuItem{{Key: "new", Label: "New"}}).

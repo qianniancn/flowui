@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
@@ -27,6 +28,38 @@ type chartState struct {
 	keyboardIndex int
 	pointerIndex  int
 	animation     lineChartAnimation
+	legendItems   map[string]*widget.Clickable
+	legendFrame   map[string]struct{}
+	windowGesture chart.DataWindowGesture
+}
+
+func (s *chartState) beginLegendFrame() {
+	if s.legendFrame == nil {
+		s.legendFrame = make(map[string]struct{})
+	} else {
+		clear(s.legendFrame)
+	}
+}
+
+func (s *chartState) endLegendFrame() {
+	for key := range s.legendItems {
+		if _, ok := s.legendFrame[key]; !ok {
+			delete(s.legendItems, key)
+		}
+	}
+}
+
+func (s *chartState) legendItem(key string) *widget.Clickable {
+	if s.legendItems == nil {
+		s.legendItems = make(map[string]*widget.Clickable)
+	}
+	s.legendFrame[key] = struct{}{}
+	if item := s.legendItems[key]; item != nil {
+		return item
+	}
+	item := new(widget.Clickable)
+	s.legendItems[key] = item
+	return item
 }
 
 func chartStateFor(ctx *frame.Context, key string) *chartState {
@@ -36,11 +69,21 @@ func chartStateFor(ctx *frame.Context, key string) *chartState {
 	})
 }
 
-func (s *chartState) updatePointer(gtx layout.Context, enabled bool) {
+func (s *chartState) updatePointer(gtx layout.Context, enabled bool, plot image.Rectangle, window chart.DataWindow, onWindowChange func(chart.DataWindow)) {
+	activeWindow := window
+	kinds := pointer.Enter | pointer.Leave | pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Cancel
+	scrollX, scrollY := pointer.ScrollRange{}, pointer.ScrollRange{}
+	if onWindowChange != nil {
+		kinds |= pointer.Scroll
+		scrollX = pointer.ScrollRange{Min: -100000, Max: 100000}
+		scrollY = pointer.ScrollRange{Min: -100000, Max: 100000}
+	}
 	for {
 		value, ok := gtx.Event(pointer.Filter{
-			Target: &s.pointerTag,
-			Kinds:  pointer.Enter | pointer.Leave | pointer.Move | pointer.Drag | pointer.Press | pointer.Cancel,
+			Target:  &s.pointerTag,
+			Kinds:   kinds,
+			ScrollX: scrollX,
+			ScrollY: scrollY,
 		})
 		if !ok {
 			break
@@ -51,10 +94,19 @@ func (s *chartState) updatePointer(gtx layout.Context, enabled bool) {
 		}
 		if !enabled {
 			s.hovered = false
+			s.windowGesture.Cancel()
 			continue
 		}
+		if onWindowChange != nil {
+			if next, changed := s.windowGesture.Update(eventValue, plot, activeWindow, false); changed {
+				activeWindow = next
+				onWindowChange(next)
+			}
+		} else {
+			s.windowGesture.Cancel()
+		}
 		switch eventValue.Kind {
-		case pointer.Enter, pointer.Move, pointer.Drag, pointer.Press:
+		case pointer.Enter, pointer.Move, pointer.Drag, pointer.Press, pointer.Scroll:
 			s.hovered = true
 			s.pointer = eventValue.Position
 			s.keyboard = false
@@ -67,6 +119,7 @@ func (s *chartState) updatePointer(gtx layout.Context, enabled bool) {
 	}
 	if !enabled {
 		s.hovered = false
+		s.windowGesture.Cancel()
 	}
 }
 
@@ -182,11 +235,20 @@ func (s *chartState) selectedX(values []float64, scale linearScale, plot image.R
 	return values[index], true
 }
 
-func (s *chartState) requestPointerFocus(ctx *frame.Context, gtx layout.Context, enabled bool) {
+func (s *chartState) requestPointerFocus(ctx *frame.Context, gtx layout.Context, enabled bool) (bool, bool) {
 	presses := stateutil.ActivePresses(s.root.History())
-	for s.root.Clicked(gtx) {
+	activated := false
+	reset := false
+	for {
+		click, ok := s.root.Update(gtx)
+		if !ok {
+			break
+		}
+		activated = true
+		reset = reset || click.NumClicks >= 2
 	}
 	if enabled {
 		frame.FocusOnPress(ctx, &s.root, s.root.History(), presses)
 	}
+	return activated && enabled, reset && enabled
 }

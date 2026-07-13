@@ -200,8 +200,8 @@ Examples live in `examples/`:
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
 - `meters`: HeroUI-aligned known-range measurements with labels, formatted values, colors, sizes, and accessible label-free usage.
-- `line_charts`: native Gio straight and smooth line charts with multiple series, ECharts-inspired initial and update animations, Cartesian axes, legends, gaps, crosshairs, and tooltips.
-- `bar_charts`: native Gio grouped and stacked bar charts with ECharts-inspired initial and update animations, column sizing, positive and negative values, legends, category highlights, and tooltips.
+- `line_charts`: native Gio straight, smooth, stepped, dashed, dotted, and area line charts with animations, interactive legends, data windows, annotations, data activation, custom tooltips, gaps, and crosshairs.
+- `bar_charts`: native Gio vertical and horizontal grouped or stacked bar charts with animations, value labels, interactive legends, data windows, annotations, data activation, custom tooltips, positive and negative values, and category highlights.
 - `spinners`: animated loading indicators with HeroUI-aligned colors and sizes.
 - `sliders`: controlled single-value, range, vertical, disabled, stepped, and formatted sliders.
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.

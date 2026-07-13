@@ -14,6 +14,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -36,12 +37,15 @@ func TestBarChartOptionsUseValueSemantics(t *testing.T) {
 		MinHeight(2).
 		Radius(4).
 		Background(true).
+		ShowLabels(true).
+		LabelPosition(LabelInside).
+		FormatLabel(func(float64) string { return "label" }).
 		Hidden(true)
 	itemColors[0] = color.NRGBA{}
-	if baseSeries.hasColor || len(baseSeries.itemColors) != 0 || baseSeries.stack != "" || baseSeries.width != 0 || baseSeries.maxWidth != 0 || baseSeries.minHeight != 0 || baseSeries.hasRadius || baseSeries.showBackground || baseSeries.hidden {
+	if baseSeries.hasColor || len(baseSeries.itemColors) != 0 || baseSeries.stack != "" || baseSeries.width != 0 || baseSeries.maxWidth != 0 || baseSeries.minHeight != 0 || baseSeries.hasRadius || baseSeries.showBackground || baseSeries.showLabels || baseSeries.formatLabel != nil || baseSeries.hidden {
 		t.Fatalf("configuring BarChart Series mutated base: %#v", baseSeries)
 	}
-	if !configuredSeries.hasColor || len(configuredSeries.itemColors) != 2 || configuredSeries.itemColors[0].R != 2 || configuredSeries.stack != "total" || configuredSeries.width != 18 || configuredSeries.maxWidth != 24 || configuredSeries.minHeight != 2 || configuredSeries.radius != 4 || !configuredSeries.hasRadius || !configuredSeries.showBackground || !configuredSeries.hidden {
+	if !configuredSeries.hasColor || len(configuredSeries.itemColors) != 2 || configuredSeries.itemColors[0].R != 2 || configuredSeries.stack != "total" || configuredSeries.width != 18 || configuredSeries.maxWidth != 24 || configuredSeries.minHeight != 2 || configuredSeries.radius != 4 || !configuredSeries.hasRadius || !configuredSeries.showBackground || !configuredSeries.showLabels || configuredSeries.labelPosition != LabelInside || configuredSeries.formatLabel == nil || !configuredSeries.hidden {
 		t.Fatalf("configured BarChart Series = %#v", configuredSeries)
 	}
 
@@ -57,15 +61,26 @@ func TestBarChartOptionsUseValueSemantics(t *testing.T) {
 		YRange(10, 20).
 		XAxis("Day").
 		YAxis("Sales").
+		CategoryAxis("Category").
+		ValueAxis("Value").
 		YTicks(6).
 		BarGap(1.2).
 		CategoryGap(0.3).
 		FormatY(func(float64) string { return "value" }).
 		Animation(false).
-		AnimationDuration(250 * time.Millisecond).
+		AnimationDuration(250*time.Millisecond).
 		AnimationEasing(func(value float32) float32 { return value }).
-		UpdateAnimationDuration(150 * time.Millisecond).
+		UpdateAnimationDuration(150*time.Millisecond).
 		UpdateAnimationEasing(func(value float32) float32 { return value }).
+		OnLegendChange(func(string, bool) {}).
+		OnDataClick(func(chart.Selection) {}).
+		TooltipContent(func(chart.Selection) frame.Widget { return nil }).
+		DataWindow(0.25, 0.75).
+		OnDataWindowChange(func(chart.DataWindow) {}).
+		MarkLines([]chart.MarkLine{chart.NewMarkLine(chart.AxisY, 15)}).
+		MarkAreas([]chart.MarkArea{chart.NewMarkArea(chart.AxisX, 0.5, 1.5)}).
+		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(1, 15)}).
+		Orientation(Horizontal).
 		Label("Sales").
 		EmptyText("Empty").
 		Disabled(true)
@@ -73,7 +88,7 @@ func TestBarChartOptionsUseValueSemantics(t *testing.T) {
 	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring BarChart mutated base: %#v", base)
 	}
-	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
+	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || !configured.hasCategoryAxisLabel || configured.categoryAxisLabel != "Category" || !configured.hasValueAxisLabel || configured.valueAxisLabel != "Value" || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.orientation != Horizontal || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured BarChart = %#v", configured)
 	}
 }
@@ -87,6 +102,7 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 		{"series max width", func() { Values("a", "A", nil).MaxWidth(-1) }},
 		{"series min height", func() { Values("a", "A", nil).MinHeight(-1) }},
 		{"series radius", func() { Values("a", "A", nil).Radius(-1) }},
+		{"label position", func() { Values("a", "A", nil).LabelPosition(LabelPosition(9)) }},
 		{"height", func() { New("chart", nil).Height(0) }},
 		{"Y range", func() { New("chart", nil).YRange(math.NaN(), 1) }},
 		{"Y ticks", func() { New("chart", nil).YTicks(1) }},
@@ -97,6 +113,8 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 		{"update animation duration", func() { New("chart", nil).UpdateAnimationDuration(-time.Millisecond) }},
 		{"animation easing", func() { New("chart", nil).AnimationEasing(nil) }},
 		{"update animation easing", func() { New("chart", nil).UpdateAnimationEasing(nil) }},
+		{"data window", func() { New("chart", nil).DataWindow(0.8, 0.2) }},
+		{"orientation", func() { New("chart", nil).Orientation(Orientation(9)) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -107,6 +125,63 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 			}()
 			test.run()
 		})
+	}
+}
+
+func TestBarChartDataWindowConstrainsVisibleCategories(t *testing.T) {
+	start, end := visibleCategoryRange(10, chart.DataWindow{Start: 0.25, End: 0.75})
+	if start != 2 || end != 8 {
+		t.Fatalf("BarChart visible category range = %d:%d, want 2:8", start, end)
+	}
+}
+
+func TestBarChartAnnotationGeometryUsesVisibleScales(t *testing.T) {
+	geometry := chartGeometry{
+		plot:          image.Rect(10, 20, 110, 120),
+		yScale:        newLinearScale(0, 100, 5, false, true),
+		bandWidth:     25,
+		categoryStart: 2,
+		categoryEnd:   6,
+	}
+	rect, ok := barMarkAreaRect(chart.NewMarkArea(chart.AxisY, 20, 40), geometry)
+	if !ok || rect != image.Rect(10, 80, 110, 100) {
+		t.Fatalf("BarChart mark area = %v, ok %v", rect, ok)
+	}
+	from, to, ok := barMarkEndpoints(chart.NewMarkLine(chart.AxisX, 3), geometry)
+	if !ok || from != f32.Pt(47.5, 20) || to != f32.Pt(47.5, 120) {
+		t.Fatalf("BarChart mark line = %v to %v, ok %v", from, to, ok)
+	}
+}
+
+func TestHorizontalBarChartGeometryAndRectangles(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	widget := New("horizontal", []Series{Values("values", "Values", []float64{25, 50, -20, 75})}).
+		Categories([]string{"A", "B", "C", "D"}).
+		Orientation(Horizontal)
+	data := resolveChartData(widget, &activeTheme, testDp)
+	geometry := widget.resolveGeometry(data, image.Pt(120, 120), image.Rect(10, 10, 110, 110))
+	if !geometry.horizontal || geometry.bandWidth != 25 || geometry.categoryCenter(2) != 72.5 {
+		t.Fatalf("horizontal BarChart geometry = %#v", geometry)
+	}
+	column := columnLayout{offset: -5, width: 10}
+	positive := barRectangle(geometry, column, 1, data.series[0].values[1], 0)
+	negative := barRectangle(geometry, column, 2, data.series[0].values[2], 0)
+	zero := int(math.Round(float64(geometry.mapY(0))))
+	if positive.Min.X != zero || positive.Max.X <= positive.Min.X || positive.Min.Y != 43 || positive.Max.Y != 53 {
+		t.Fatalf("positive horizontal bar = %v, zero %d", positive, zero)
+	}
+	if negative.Max.X != zero || negative.Min.X >= negative.Max.X || negative.Min.Y != 68 || negative.Max.Y != 78 {
+		t.Fatalf("negative horizontal bar = %v, zero %d", negative, zero)
+	}
+}
+
+func TestBarChartAxisLabelsFollowOrientation(t *testing.T) {
+	widget := New("chart", nil).CategoryAxis("Category").ValueAxis("Value")
+	if x, y := widget.axisLabels(); x != "Category" || y != "Value" {
+		t.Fatalf("vertical axis labels = %q, %q", x, y)
+	}
+	if x, y := widget.Orientation(Horizontal).axisLabels(); x != "Value" || y != "Category" {
+		t.Fatalf("horizontal axis labels = %q, %q", x, y)
 	}
 }
 
@@ -182,7 +257,7 @@ func TestResolveChartDataIgnoresHiddenSeriesForCategoryCount(t *testing.T) {
 		Values("visible", "Visible", []float64{1, 2}),
 		Values("hidden", "Hidden", []float64{1, 2, 3, 4}).Hidden(true),
 	}), &activeTheme, testDp)
-	if data.categories != 2 || len(data.series) != 1 || len(data.columns) != 1 {
+	if data.categories != 2 || len(data.series) != 1 || len(data.legend) != 2 || !data.legend[1].hidden || len(data.columns) != 1 {
 		t.Fatalf("hidden BarChart series affected layout: %#v", data)
 	}
 }
@@ -258,7 +333,7 @@ func TestBarChartSelectionUsesCategoryIndex(t *testing.T) {
 		Values("second", "Second", []float64{12, math.NaN()}),
 	})
 	data := resolveChartData(widget, &activeTheme, testDp)
-	geometry := chartGeometry{plot: image.Rect(0, 0, 100, 100), bandWidth: 50}
+	geometry := chartGeometry{plot: image.Rect(0, 0, 100, 100), bandWidth: 50, categoryEnd: 2}
 	selection := widget.resolveSelection(data, geometry, 1, true)
 	if selection.pixelX != 75 || len(selection.entries) != 1 || selection.entries[0].bar.value != 20 {
 		t.Fatalf("BarChart selection = %#v", selection)
@@ -290,6 +365,93 @@ func TestBarChartPointerAndKeyboardSelection(t *testing.T) {
 	}
 	if !frame.FocusVisible(ctx, &state.root, router.Source().Focused(&state.root)) {
 		t.Fatal("keyboard BarChart navigation did not restore visible focus")
+	}
+}
+
+func TestHorizontalBarChartWheelRequestsControlledDataWindow(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	requested := chart.DataWindow{}
+	widget := New("chart", []Series{Values("series", "Series", []float64{1, 2, 3, 4})}).
+		Orientation(Horizontal).
+		DataWindow(0.2, 0.8).
+		OnDataWindowChange(func(window chart.DataWindow) { requested = window })
+	now := time.Unix(8, 0)
+	layoutBarChartFrame(ctx, router, widget, now)
+	router.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: f32.Pt(300, 150), Scroll: f32.Pt(0, -1)})
+	layoutBarChartFrame(ctx, router, widget, now.Add(time.Millisecond))
+	if requested.End-requested.Start >= 0.6 || requested.Start <= 0.2 || requested.End >= 0.8 {
+		t.Fatalf("horizontal BarChart wheel window request = %#v", requested)
+	}
+}
+
+func TestBarChartWithoutDataWindowDoesNotConsumeParentScroll(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	list := &layout.List{Axis: layout.Vertical}
+	widget := New("chart", []Series{Values("series", "Series", []float64{1, 2, 3})})
+	now := time.Unix(9, 0)
+	layoutBarChartListFrame(ctx, router, list, widget, now)
+
+	router.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: f32.Pt(300, 100), Scroll: f32.Pt(0, 80)})
+	layoutBarChartListFrame(ctx, router, list, widget, now.Add(time.Millisecond))
+	if list.Position.First == 0 && list.Position.Offset == 0 {
+		t.Fatal("BarChart tooltip interaction consumed the parent list scroll")
+	}
+}
+
+func TestBarChartLegendClickDataClickAndCustomTooltip(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	var legendKey string
+	var legendHidden bool
+	var clicked chart.Selection
+	tooltipLaidOut := false
+	widget := New("chart", []Series{
+		Values("visible", "Visible", []float64{10, 20}),
+		Values("hidden", "Hidden", []float64{30, 40}).Hidden(true),
+	}).Categories([]string{"A", "B"}).
+		OnLegendChange(func(key string, hidden bool) {
+			legendKey, legendHidden = key, hidden
+		}).
+		OnDataClick(func(selection chart.Selection) { clicked = selection }).
+		TooltipContent(func(chart.Selection) frame.Widget {
+			return frame.WidgetFunc(func(*frame.Context, layout.Context) layout.Dimensions {
+				tooltipLaidOut = true
+				return layout.Dimensions{Size: image.Pt(80, 24)}
+			})
+		})
+	now := time.Unix(7, 0)
+	layoutBarChartFrame(ctx, router, widget, now)
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotBarChart)
+	state.legendItems["hidden"].Click()
+	layoutBarChartFrame(ctx, router, widget, now.Add(time.Millisecond))
+	if legendKey != "hidden" || legendHidden {
+		t.Fatalf("BarChart legend request = key %q hidden %v, want hidden false", legendKey, legendHidden)
+	}
+
+	state.hovered = true
+	state.pointer = f32.Pt(300, 140)
+	state.root.Click()
+	layoutBarChartFrame(ctx, router, widget, now.Add(2*time.Millisecond))
+	if clicked.Label == "" || clicked.Index < 0 || len(clicked.Items) != 1 || clicked.Items[0].SeriesKey != "visible" {
+		t.Fatalf("BarChart click selection = %#v", clicked)
+	}
+	if !tooltipLaidOut {
+		t.Fatal("BarChart custom tooltip was not laid out")
+	}
+
+	clicked = chart.Selection{}
+	tooltipLaidOut = false
+	state.hovered = true
+	state.pointer = f32.Pt(300, 140)
+	state.root.Click()
+	layoutBarChartFrame(ctx, router, widget.Tooltip(false), now.Add(3*time.Millisecond))
+	if len(clicked.Items) != 1 {
+		t.Fatalf("BarChart data click with tooltip disabled = %#v", clicked)
+	}
+	if tooltipLaidOut {
+		t.Fatal("BarChart laid out custom tooltip while disabled")
 	}
 }
 
@@ -354,6 +516,23 @@ func layoutBarChartFrame(ctx *frame.Context, router *input.Router, widget Widget
 	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
 	frame.BeginFrameWithViewport(ctx, viewport)
 	dims := widget.Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	return dims
+}
+
+func layoutBarChartListFrame(ctx *frame.Context, router *input.Router, list *layout.List, widget Widget, now time.Time) layout.Dimensions {
+	viewport := image.Pt(520, 180)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := list.Layout(gtx, 2, func(gtx layout.Context, index int) layout.Dimensions {
+		if index == 0 {
+			return widget.Layout(ctx, gtx)
+		}
+		return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 320)}
+	})
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)

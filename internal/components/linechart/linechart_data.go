@@ -18,13 +18,20 @@ type resolvedPoint struct {
 type resolvedSeries struct {
 	key          string
 	label        string
+	hidden       bool
 	points       []resolvedPoint
 	color        color.NRGBA
 	width        float32
 	showPoints   bool
 	pointsSet    bool
+	pointSize    int
 	connectNulls bool
 	smooth       float32
+	step         StepMode
+	lineStyle    LineStyle
+	area         bool
+	areaColor    color.NRGBA
+	sampling     SamplingMode
 }
 
 type dataExtent struct {
@@ -47,6 +54,7 @@ func (e *dataExtent) include(value float64) {
 
 type chartData struct {
 	series  []resolvedSeries
+	legend  []resolvedSeries
 	xExtent dataExtent
 	yExtent dataExtent
 	xValues []float64
@@ -64,10 +72,6 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 			panic(fmt.Sprintf("flowui: duplicate line chart series key %q", source.key))
 		}
 		seen[source.key] = struct{}{}
-		if source.hidden {
-			continue
-		}
-
 		label := source.label
 		if label == "" {
 			label = source.key
@@ -83,18 +87,34 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 		}
 		width = max(width, 1)
 
-		points := source.resolvedPoints()
 		resolved := resolvedSeries{
 			key:          source.key,
 			label:        label,
-			points:       make([]resolvedPoint, len(points)),
+			hidden:       source.hidden,
 			color:        lineColor,
 			width:        width,
 			showPoints:   !source.hasShowPoints || source.showPoints,
 			pointsSet:    source.hasShowPoints,
+			pointSize:    dp(source.pointSize),
 			connectNulls: source.connectNulls,
 			smooth:       source.smooth,
+			step:         source.step,
+			lineStyle:    source.lineStyle,
+			area:         source.area,
+			areaColor:    source.areaColor,
+			sampling:     source.sampling,
 		}
+		if source.area && !source.hasAreaColor {
+			resolved.areaColor = lineColor
+			resolved.areaColor.A = 0x30
+		}
+		data.legend = append(data.legend, resolved)
+		if source.hidden {
+			continue
+		}
+
+		points := source.resolvedPoints()
+		resolved.points = make([]resolvedPoint, len(points))
 		for pointIndex, point := range points {
 			validX := finite(point.X)
 			valid := validX && finite(point.Y)

@@ -56,25 +56,30 @@ func drawChartSeries(ctx *frame.Context, gtx layout.Context, data chartData, geo
 }
 
 func drawOneChartSeries(ctx *frame.Context, gtx layout.Context, series resolvedSeries, geometry chartGeometry, tokens theme.LineChartTheme) {
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	validCount := countValidPoints(series.points)
-	if series.smooth > 0 {
-		drawSmoothChartPath(&path, series.points, series.connectNulls, series.smooth, geometry)
-	} else {
-		walkLine(series.points, series.connectNulls, func(point resolvedPoint, move bool) {
-			pixel := f32.Pt(geometry.mapX(point.X), geometry.mapY(point.Y))
-			if move {
-				path.MoveTo(pixel)
-			} else {
-				path.LineTo(pixel)
+	segments := seriesPixelSegments(series, geometry)
+	if series.area {
+		baselineValue := min(max(float64(0), geometry.yScale.minimum), geometry.yScale.maximum)
+		baseline := geometry.mapY(baselineValue)
+		for _, segment := range segments {
+			if len(segment) == 0 {
+				continue
 			}
-		})
+			var area clip.Path
+			area.Begin(gtx.Ops)
+			area.MoveTo(f32.Pt(segment[0].X, baseline))
+			for _, point := range segment {
+				area.LineTo(point)
+			}
+			area.LineTo(f32.Pt(segment[len(segment)-1].X, baseline))
+			area.Close()
+			paint.FillShape(gtx.Ops, series.areaColor, clip.Outline{Path: area.End()}.Op())
+		}
 	}
-	stroke := clip.Stroke{Path: path.End(), Width: series.width}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, series.color)
-	stroke.Pop()
+	for _, segment := range segments {
+		drawLineSeriesSegment(gtx, segment, series.width, series.color, series.lineStyle)
+	}
 
+	validCount := countValidPoints(series.points)
 	showPoints := series.showPoints
 	if showPoints && !series.pointsSet {
 		showPoints = validCount <= max(geometry.plot.Dx()/8, 24)
@@ -82,7 +87,11 @@ func drawOneChartSeries(ctx *frame.Context, gtx layout.Context, series resolvedS
 	if !showPoints {
 		return
 	}
-	pointSize := max(gtx.Dp(tokens.PointSize), 2)
+	pointSize := series.pointSize
+	if pointSize <= 0 {
+		pointSize = gtx.Dp(tokens.PointSize)
+	}
+	pointSize = max(pointSize, 2)
 	for _, point := range series.points {
 		if !point.valid {
 			continue

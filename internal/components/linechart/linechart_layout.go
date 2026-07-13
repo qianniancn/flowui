@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -42,10 +43,12 @@ type chartSelection struct {
 
 func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := chartStateFor(ctx, w.key)
+	state.beginLegendFrame()
+	defer state.endLegendFrame()
 	restoreKey := frame.PushKey(ctx, w.key)
 	defer restoreKey()
 	enabled := gtx.Enabled() && !w.disabled
-	state.requestPointerFocus(ctx, gtx, enabled)
+	activated, resetWindow := state.requestPointerFocus(ctx, gtx, enabled)
 
 	tokens := frame.ActiveTheme(ctx).Components.LineChart
 	height := tokens.Height
@@ -54,6 +57,17 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(height)))
 	data := resolveChartData(w, frame.ActiveTheme(ctx), gtx.Dp)
+	if w.handleLegendClicks(gtx, state, data, enabled) {
+		activated = false
+		resetWindow = false
+	}
+	if resetWindow && w.onDataWindowChange != nil {
+		full := chart.FullDataWindow()
+		if w.effectiveDataWindow() != full {
+			w.onDataWindowChange(full)
+		}
+		activated = false
+	}
 
 	eventGtx := gtx
 	if !enabled {
@@ -63,12 +77,12 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	return state.root.Layout(eventGtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.EnabledOp(enabled).Add(gtx.Ops)
 		semantic.DescriptionOp(w.semanticDescription(data)).Add(gtx.Ops)
-		w.layoutContent(ctx, gtx, state, data, enabled, size)
+		w.layoutContent(ctx, gtx, state, data, enabled, activated, size)
 		return layout.Dimensions{Size: size}
 	})
 }
 
-func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, enabled bool, size image.Point) {
+func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, enabled, activated bool, size image.Point) {
 	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
@@ -83,7 +97,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 
 	legend := recordedChartBlock{}
 	if w.legendVisible(data) {
-		legend = w.recordLegend(ctx, gtx, data, style, availableWidth)
+		legend = w.recordLegend(ctx, gtx, state, data, style, availableWidth, enabled)
 	}
 	yName := recordChartText(ctx, gtx, w.yAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
 	xName := recordChartText(ctx, gtx, w.xAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
@@ -110,8 +124,9 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	geometry := w.resolveGeometry(data, size, plot)
 	geometry.xTicks = w.pruneXTicks(ctx, gtx, geometry, style)
 	visibleX := visibleXValues(data.xValues, geometry.xScale)
-	state.updatePointer(gtx, enabled)
-	if w.showTooltip {
+	state.updatePointer(gtx, enabled, plot, w.effectiveDataWindow(), w.onDataWindowChange)
+	selectionEnabled := w.showTooltip || w.onDataClick != nil
+	if selectionEnabled {
 		state.updateKeyboard(ctx, gtx, visibleX, enabled)
 	} else {
 		state.clearSelection()
@@ -119,18 +134,23 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	focused := gtx.Focused(&state.root)
 	selection := chartSelection{}
 	selected := false
-	if w.showTooltip {
+	if selectionEnabled {
 		selectedX, hasSelection := state.selectedX(visibleX, geometry.xScale, plot, focused)
 		selected = hasSelection
 		selection = w.resolveSelection(data, geometry, selectedX, hasSelection)
+	}
+	if activated && selected && w.onDataClick != nil {
+		w.onDataClick(w.publicSelection(selection, geometry))
 	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
 	placeChartBlock(gtx, legend, legendPosition)
 	placeChartText(gtx, yName, yNamePosition)
 	drawChartGrid(gtx, geometry, style, w.showGrid, tokens)
+	w.drawMarkAreas(ctx, gtx, geometry, style)
 	drawChartAxes(gtx, geometry, style, tokens)
 	drawChartSeries(ctx, gtx, displayData, geometry, style, tokens)
+	w.drawMarkLinesAndPoints(ctx, gtx, geometry, style)
 	w.layoutAxisLabels(ctx, gtx, geometry, style)
 	if !data.yExtent.valid {
 		w.layoutEmpty(ctx, gtx, geometry, style)
@@ -151,7 +171,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	focusVisible := frame.FocusVisible(ctx, &state.root, focused)
 	focusOpacity := state.focus.Opacity(gtx, focusVisible && enabled)
 	drawChartFocus(gtx, size, style.focus, focusOpacity, tokens)
-	state.addPointerInput(gtx, plot, enabled && w.showTooltip)
+	state.addPointerInput(gtx, plot, enabled && (selectionEnabled || w.onDataWindowChange != nil))
 }
 
 func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rectangle) chartGeometry {
@@ -175,7 +195,14 @@ func (w Widget) resolveXScale(data chartData) linearScale {
 	if w.hasXRange {
 		minimum, maximum = w.xMin, w.xMax
 	}
-	fixed := w.hasXRange || len(w.categories) > 0
+	window := w.effectiveDataWindow()
+	if maximum > minimum && !window.IsFull() {
+		span := maximum - minimum
+		base := minimum
+		minimum = base + float64(window.Start)*span
+		maximum = base + float64(window.End)*span
+	}
+	fixed := w.hasXRange || len(w.categories) > 0 || !window.IsFull()
 	return newLinearScale(minimum, maximum, w.xTickCount, false, fixed)
 }
 
@@ -242,6 +269,32 @@ func (w Widget) resolveSelection(data chartData, geometry chartGeometry, selecte
 		}
 	}
 	return selection
+}
+
+func (w Widget) publicSelection(selection chartSelection, geometry chartGeometry) chart.Selection {
+	index := -1
+	if len(w.categories) > 0 {
+		candidate := int(math.Round(selection.x))
+		if candidate >= 0 && candidate < len(w.categories) && math.Abs(selection.x-float64(candidate)) < 1e-9 {
+			index = candidate
+		}
+	}
+	result := chart.Selection{
+		Label: w.xLabel(selection.x, geometry.xScale.interval),
+		Index: index,
+		X:     selection.x,
+		Items: make([]chart.Datum, 0, len(selection.entries)),
+	}
+	for _, entry := range selection.entries {
+		result.Items = append(result.Items, chart.Datum{
+			SeriesKey:   entry.series.key,
+			SeriesLabel: entry.series.label,
+			X:           entry.point.X,
+			Y:           entry.point.Y,
+			Color:       entry.series.color,
+		})
+	}
+	return result
 }
 
 func (w Widget) semanticDescription(data chartData) string {

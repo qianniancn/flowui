@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -27,8 +28,28 @@ type Series struct {
 	radius         unit.Dp
 	hasRadius      bool
 	showBackground bool
+	showLabels     bool
+	labelPosition  LabelPosition
+	formatLabel    func(float64) string
 	hidden         bool
 }
+
+// LabelPosition controls bar value label placement.
+type LabelPosition uint8
+
+const (
+	LabelAuto LabelPosition = iota
+	LabelInside
+	LabelOutside
+)
+
+// Orientation controls whether values grow vertically or horizontally.
+type Orientation uint8
+
+const (
+	Vertical Orientation = iota
+	Horizontal
+)
 
 // Values creates a bar series whose values correspond to category indexes.
 // A non-finite value leaves the category empty.
@@ -94,6 +115,24 @@ func (s Series) Background(show bool) Series {
 	return s
 }
 
+func (s Series) ShowLabels(show bool) Series {
+	s.showLabels = show
+	return s
+}
+
+func (s Series) LabelPosition(position LabelPosition) Series {
+	if position > LabelOutside {
+		panic("flowui: invalid bar chart label position")
+	}
+	s.labelPosition = position
+	return s
+}
+
+func (s Series) FormatLabel(format func(float64) string) Series {
+	s.formatLabel = format
+	return s
+}
+
 func (s Series) Hidden(hidden bool) Series {
 	s.hidden = hidden
 	return s
@@ -114,6 +153,10 @@ type Widget struct {
 	emptyText               string
 	xAxisLabel              string
 	yAxisLabel              string
+	categoryAxisLabel       string
+	valueAxisLabel          string
+	hasCategoryAxisLabel    bool
+	hasValueAxisLabel       bool
 	yTickCount              int
 	yMin                    float64
 	yMax                    float64
@@ -128,6 +171,16 @@ type Widget struct {
 	animationEasing         animation.Easing
 	updateAnimationDuration time.Duration
 	updateAnimationEasing   animation.Easing
+	onLegendChange          func(string, bool)
+	onDataClick             func(chart.Selection)
+	tooltipContent          func(chart.Selection) frame.Widget
+	dataWindow              chart.DataWindow
+	hasDataWindow           bool
+	onDataWindowChange      func(chart.DataWindow)
+	markLines               []chart.MarkLine
+	markAreas               []chart.MarkArea
+	markPoints              []chart.MarkPoint
+	orientation             Orientation
 }
 
 func New(key string, series []Series) Widget {
@@ -186,6 +239,11 @@ func (w Widget) YRange(minimum, maximum float64) Widget {
 	return w
 }
 
+// ValueRange sets the numeric value-axis range in either orientation.
+func (w Widget) ValueRange(minimum, maximum float64) Widget {
+	return w.YRange(minimum, maximum)
+}
+
 func (w Widget) XAxis(label string) Widget {
 	w.xAxisLabel = label
 	return w
@@ -196,12 +254,31 @@ func (w Widget) YAxis(label string) Widget {
 	return w
 }
 
+// CategoryAxis sets the category-axis label in either orientation.
+func (w Widget) CategoryAxis(label string) Widget {
+	w.categoryAxisLabel = label
+	w.hasCategoryAxisLabel = true
+	return w
+}
+
+// ValueAxis sets the numeric value-axis label in either orientation.
+func (w Widget) ValueAxis(label string) Widget {
+	w.valueAxisLabel = label
+	w.hasValueAxisLabel = true
+	return w
+}
+
 func (w Widget) YTicks(count int) Widget {
 	if count < 2 {
 		panic("flowui: bar chart Y tick count must be at least 2")
 	}
 	w.yTickCount = count
 	return w
+}
+
+// ValueTicks sets the numeric value-axis tick target in either orientation.
+func (w Widget) ValueTicks(count int) Widget {
+	return w.YTicks(count)
 }
 
 // BarGap sets the gap between adjacent columns as a ratio of their width.
@@ -221,6 +298,11 @@ func (w Widget) CategoryGap(ratio float32) Widget {
 func (w Widget) FormatY(format func(float64) string) Widget {
 	w.formatY = format
 	return w
+}
+
+// FormatValue formats numeric value-axis labels in either orientation.
+func (w Widget) FormatValue(format func(float64) string) Widget {
+	return w.FormatY(format)
 }
 
 // Animation enables initial and data-update transitions.
@@ -257,6 +339,67 @@ func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
 	return w
 }
 
+// OnLegendChange registers a controlled series visibility request. Hidden is
+// the next value to pass to Series.Hidden.
+func (w Widget) OnLegendChange(fn func(seriesKey string, hidden bool)) Widget {
+	w.onLegendChange = fn
+	return w
+}
+
+// OnDataClick registers a callback for activation of the current chart selection.
+func (w Widget) OnDataClick(fn func(chart.Selection)) Widget {
+	w.onDataClick = fn
+	return w
+}
+
+// TooltipContent replaces the default tooltip body with custom content.
+func (w Widget) TooltipContent(fn func(chart.Selection) frame.Widget) Widget {
+	w.tooltipContent = fn
+	return w
+}
+
+// DataWindow sets the controlled normalized visible category range.
+func (w Widget) DataWindow(start, end float32) Widget {
+	w.dataWindow = chart.NewDataWindow(start, end)
+	w.hasDataWindow = true
+	return w
+}
+
+// OnDataWindowChange enables wheel zoom, drag pan, and double-click reset.
+func (w Widget) OnDataWindowChange(fn func(chart.DataWindow)) Widget {
+	w.onDataWindowChange = fn
+	return w
+}
+
+// MarkLines sets controlled reference lines.
+func (w Widget) MarkLines(values []chart.MarkLine) Widget {
+	chart.ValidateAnnotations(values, nil, nil)
+	w.markLines = append([]chart.MarkLine(nil), values...)
+	return w
+}
+
+// MarkAreas sets controlled reference bands.
+func (w Widget) MarkAreas(values []chart.MarkArea) Widget {
+	chart.ValidateAnnotations(nil, values, nil)
+	w.markAreas = append([]chart.MarkArea(nil), values...)
+	return w
+}
+
+// MarkPoints sets controlled Cartesian markers. X is a category index.
+func (w Widget) MarkPoints(values []chart.MarkPoint) Widget {
+	chart.ValidateAnnotations(nil, nil, values)
+	w.markPoints = append([]chart.MarkPoint(nil), values...)
+	return w
+}
+
+func (w Widget) Orientation(value Orientation) Widget {
+	if value > Horizontal {
+		panic("flowui: invalid bar chart orientation")
+	}
+	w.orientation = value
+	return w
+}
+
 func (w Widget) Label(label string) Widget {
 	w.label = label
 	return w
@@ -280,7 +423,14 @@ func (w Widget) legendVisible(data chartData) bool {
 	if w.hasShowLegend {
 		return w.showLegend
 	}
-	return len(data.series) > 1
+	return len(data.legend) > 1
+}
+
+func (w Widget) effectiveDataWindow() chart.DataWindow {
+	if w.hasDataWindow {
+		return w.dataWindow
+	}
+	return chart.FullDataWindow()
 }
 
 func (w Widget) categoryLabel(index int) string {

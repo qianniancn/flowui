@@ -18,15 +18,19 @@ type resolvedBar struct {
 }
 
 type resolvedSeries struct {
-	key         string
-	label       string
-	columnID    string
-	columnIndex int
-	values      []resolvedBar
-	color       color.NRGBA
-	minHeight   int
-	radius      int
-	hasRadius   bool
+	key           string
+	label         string
+	hidden        bool
+	columnID      string
+	columnIndex   int
+	values        []resolvedBar
+	color         color.NRGBA
+	minHeight     int
+	radius        int
+	hasRadius     bool
+	showLabels    bool
+	labelPosition LabelPosition
+	formatLabel   func(float64) string
 }
 
 type barColumn struct {
@@ -56,6 +60,7 @@ func (e *dataExtent) include(value float64) {
 
 type chartData struct {
 	series     []resolvedSeries
+	legend     []resolvedSeries
 	columns    []barColumn
 	categories int
 	yExtent    dataExtent
@@ -79,10 +84,6 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 			panic(fmt.Sprintf("flowui: duplicate bar chart series key %q", source.key))
 		}
 		seen[source.key] = struct{}{}
-		if source.hidden {
-			continue
-		}
-
 		label := source.label
 		if label == "" {
 			label = source.key
@@ -91,6 +92,15 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 		if !source.hasColor {
 			colors := activeTheme.Components.BarChart.SeriesColors
 			barColor = colors[index%len(colors)]
+		}
+		data.legend = append(data.legend, resolvedSeries{
+			key:    source.key,
+			label:  label,
+			hidden: source.hidden,
+			color:  barColor,
+		})
+		if source.hidden {
+			continue
 		}
 		columnID := source.stack
 		if columnID == "" {
@@ -114,15 +124,18 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 		column.showBackground = column.showBackground || source.showBackground
 
 		resolved := resolvedSeries{
-			key:         source.key,
-			label:       label,
-			columnID:    columnID,
-			columnIndex: columnIndex,
-			values:      make([]resolvedBar, data.categories),
-			color:       barColor,
-			minHeight:   dp(source.minHeight),
-			radius:      dp(source.radius),
-			hasRadius:   source.hasRadius,
+			key:           source.key,
+			label:         label,
+			columnID:      columnID,
+			columnIndex:   columnIndex,
+			values:        make([]resolvedBar, data.categories),
+			color:         barColor,
+			minHeight:     dp(source.minHeight),
+			radius:        dp(source.radius),
+			hasRadius:     source.hasRadius,
+			showLabels:    source.showLabels,
+			labelPosition: source.labelPosition,
+			formatLabel:   source.formatLabel,
 		}
 		for valueIndex, value := range source.values {
 			if finite(value) {

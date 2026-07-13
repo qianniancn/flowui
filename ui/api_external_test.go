@@ -164,7 +164,13 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ui.LineSeries("requests", "Requests", []float64{12, 18, 16}).
 				Smooth(true).
 				ShowPoints(true).
+				PointSize(8).
 				ConnectNulls(false).
+				Step(ui.LineStepMiddle).
+				LineStyle(ui.LineDashed).
+				Area(true).
+				AreaColor(color.NRGBA{R: 1, A: 0x40}).
+				Sampling(ui.LineSamplingMinMax).
 				Width(2).
 				Hidden(false),
 			ui.LineXYSeries("latency", "Latency", []ui.LineChartPoint{{X: 0, Y: 8}, {X: 1, Y: 11}}).
@@ -187,6 +193,17 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			AnimationEasing(ui.EaseCubicOut).
 			UpdateAnimationDuration(500*time.Millisecond).
 			UpdateAnimationEasing(ui.EaseCubicInOut).
+			OnLegendChange(func(string, bool) {}).
+			OnDataClick(func(ui.ChartSelection) {}).
+			TooltipContent(func(selection ui.ChartSelection) ui.Widget {
+				var _ ui.ChartDatum = selection.Items[0]
+				return ui.Text(selection.Label)
+			}).
+			DataWindow(0.1, 0.9).
+			OnDataWindowChange(func(ui.ChartDataWindow) {}).
+			MarkLines([]ui.ChartMarkLine{ui.MarkLine(ui.ChartAxisY, 10).Text("Target").Width(2)}).
+			MarkAreas([]ui.ChartMarkArea{ui.MarkArea(ui.ChartAxisX, 0, 1).Text("Window")}).
+			MarkPoints([]ui.ChartMarkPoint{ui.MarkPoint(1, 10).Text("Peak").Size(10)}).
 			Label("Traffic").
 			EmptyText("No samples").
 			Disabled(false),
@@ -200,6 +217,9 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				MinHeight(1).
 				Radius(3).
 				Background(true).
+				ShowLabels(true).
+				LabelPosition(ui.BarLabelInside).
+				FormatLabel(func(value float64) string { return fmt.Sprint(value) }).
 				Hidden(false),
 		}).
 			Categories([]string{"Mon", "Tue", "Wed"}).
@@ -211,6 +231,11 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			YRange(0, 20).
 			XAxis("Day").
 			YAxis("Sales").
+			CategoryAxis("Category").
+			ValueAxis("Value").
+			ValueRange(0, 20).
+			ValueTicks(5).
+			FormatValue(func(value float64) string { return fmt.Sprint(value) }).
 			YTicks(5).
 			BarGap(0.1).
 			CategoryGap(0.25).
@@ -220,6 +245,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			AnimationEasing(ui.EaseCubicOut).
 			UpdateAnimationDuration(500*time.Millisecond).
 			UpdateAnimationEasing(ui.EaseCubicInOut).
+			OnLegendChange(func(string, bool) {}).
+			OnDataClick(func(ui.ChartSelection) {}).
+			TooltipContent(func(selection ui.ChartSelection) ui.Widget { return ui.Text(selection.Label) }).
+			DataWindow(0.1, 0.9).
+			OnDataWindowChange(func(ui.ChartDataWindow) {}).
+			MarkLines([]ui.ChartMarkLine{ui.MarkLine(ui.ChartAxisY, 10)}).
+			MarkAreas([]ui.ChartMarkArea{ui.MarkArea(ui.ChartAxisX, 0, 1)}).
+			MarkPoints([]ui.ChartMarkPoint{ui.MarkPoint(1, 10)}).
+			Orientation(ui.BarHorizontal).
 			Label("Sales").
 			EmptyText("No samples").
 			Disabled(false),

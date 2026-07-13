@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -17,6 +18,33 @@ type Point struct {
 	X float64
 	Y float64
 }
+
+// StepMode controls where a stepped line changes value.
+type StepMode uint8
+
+const (
+	StepNone StepMode = iota
+	StepStart
+	StepMiddle
+	StepEnd
+)
+
+// LineStyle controls the stroke pattern.
+type LineStyle uint8
+
+const (
+	LineSolid LineStyle = iota
+	LineDashed
+	LineDotted
+)
+
+// SamplingMode controls large-series pixel reduction.
+type SamplingMode uint8
+
+const (
+	SamplingNone SamplingMode = iota
+	SamplingMinMax
+)
 
 // Series describes one line and its data.
 type Series struct {
@@ -29,8 +57,15 @@ type Series struct {
 	width         unit.Dp
 	showPoints    bool
 	hasShowPoints bool
+	pointSize     unit.Dp
 	connectNulls  bool
 	smooth        float32
+	step          StepMode
+	lineStyle     LineStyle
+	area          bool
+	areaColor     color.NRGBA
+	hasAreaColor  bool
+	sampling      SamplingMode
 	hidden        bool
 }
 
@@ -64,6 +99,14 @@ func (s Series) ShowPoints(show bool) Series {
 	return s
 }
 
+func (s Series) PointSize(dp int) Series {
+	if dp <= 0 {
+		panic("flowui: line chart point size must be positive")
+	}
+	s.pointSize = unit.Dp(dp)
+	return s
+}
+
 func (s Series) ConnectNulls(connect bool) Series {
 	s.connectNulls = connect
 	return s
@@ -84,6 +127,43 @@ func (s Series) Smoothness(value float32) Series {
 		panic("flowui: line chart smoothness must be between 0 and 1")
 	}
 	s.smooth = value
+	return s
+}
+
+func (s Series) Step(mode StepMode) Series {
+	if mode > StepEnd {
+		panic("flowui: invalid line chart step mode")
+	}
+	s.step = mode
+	return s
+}
+
+func (s Series) LineStyle(style LineStyle) Series {
+	if style > LineDotted {
+		panic("flowui: invalid line chart line style")
+	}
+	s.lineStyle = style
+	return s
+}
+
+func (s Series) Area(show bool) Series {
+	s.area = show
+	return s
+}
+
+func (s Series) AreaColor(value color.NRGBA) Series {
+	s.area = true
+	s.areaColor = value
+	s.hasAreaColor = true
+	return s
+}
+
+// Sampling reduces large monotonic-X series while retaining local extrema.
+func (s Series) Sampling(mode SamplingMode) Series {
+	if mode > SamplingMinMax {
+		panic("flowui: invalid line chart sampling mode")
+	}
+	s.sampling = mode
 	return s
 }
 
@@ -122,6 +202,15 @@ type Widget struct {
 	animationEasing         animation.Easing
 	updateAnimationDuration time.Duration
 	updateAnimationEasing   animation.Easing
+	onLegendChange          func(string, bool)
+	onDataClick             func(chart.Selection)
+	tooltipContent          func(chart.Selection) frame.Widget
+	dataWindow              chart.DataWindow
+	hasDataWindow           bool
+	onDataWindowChange      func(chart.DataWindow)
+	markLines               []chart.MarkLine
+	markAreas               []chart.MarkArea
+	markPoints              []chart.MarkPoint
 }
 
 func New(key string, series []Series) Widget {
@@ -259,6 +348,59 @@ func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
 	return w
 }
 
+// OnLegendChange registers a controlled series visibility request. Hidden is
+// the next value to pass to Series.Hidden.
+func (w Widget) OnLegendChange(fn func(seriesKey string, hidden bool)) Widget {
+	w.onLegendChange = fn
+	return w
+}
+
+// OnDataClick registers a callback for activation of the current chart selection.
+func (w Widget) OnDataClick(fn func(chart.Selection)) Widget {
+	w.onDataClick = fn
+	return w
+}
+
+// TooltipContent replaces the default tooltip body with custom content.
+func (w Widget) TooltipContent(fn func(chart.Selection) frame.Widget) Widget {
+	w.tooltipContent = fn
+	return w
+}
+
+// DataWindow sets the controlled normalized visible X range.
+func (w Widget) DataWindow(start, end float32) Widget {
+	w.dataWindow = chart.NewDataWindow(start, end)
+	w.hasDataWindow = true
+	return w
+}
+
+// OnDataWindowChange enables wheel zoom, drag pan, and double-click reset.
+func (w Widget) OnDataWindowChange(fn func(chart.DataWindow)) Widget {
+	w.onDataWindowChange = fn
+	return w
+}
+
+// MarkLines sets controlled reference lines.
+func (w Widget) MarkLines(values []chart.MarkLine) Widget {
+	chart.ValidateAnnotations(values, nil, nil)
+	w.markLines = append([]chart.MarkLine(nil), values...)
+	return w
+}
+
+// MarkAreas sets controlled reference bands.
+func (w Widget) MarkAreas(values []chart.MarkArea) Widget {
+	chart.ValidateAnnotations(nil, values, nil)
+	w.markAreas = append([]chart.MarkArea(nil), values...)
+	return w
+}
+
+// MarkPoints sets controlled Cartesian markers.
+func (w Widget) MarkPoints(values []chart.MarkPoint) Widget {
+	chart.ValidateAnnotations(nil, nil, values)
+	w.markPoints = append([]chart.MarkPoint(nil), values...)
+	return w
+}
+
 func (w Widget) Label(label string) Widget {
 	w.label = label
 	return w
@@ -282,7 +424,14 @@ func (w Widget) legendVisible(data chartData) bool {
 	if w.hasShowLegend {
 		return w.showLegend
 	}
-	return len(data.series) > 1
+	return len(data.legend) > 1
+}
+
+func (w Widget) effectiveDataWindow() chart.DataWindow {
+	if w.hasDataWindow {
+		return w.dataWindow
+	}
+	return chart.FullDataWindow()
 }
 
 func (w Widget) xLabel(value float64, interval float64) string {

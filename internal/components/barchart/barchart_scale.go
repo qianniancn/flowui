@@ -189,3 +189,7 @@ func (s linearScale) ratio(value float64) float64 {
 	}
 	return (value/2 - s.minimum/2) / (s.maximum/2 - s.minimum/2)
 }
+
+func (s linearScale) contains(value float64) bool {
+	return value >= s.minimum && value <= s.maximum
+}

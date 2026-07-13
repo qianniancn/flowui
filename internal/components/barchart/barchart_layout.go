@@ -3,11 +3,13 @@ package barchart
 import (
 	"fmt"
 	"image"
+	"math"
 
 	"gioui.org/font"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -35,6 +37,9 @@ type chartGeometry struct {
 	yTicks        []axisTick
 	xTicks        []categoryTick
 	bandWidth     float32
+	categoryStart int
+	categoryEnd   int
+	horizontal    bool
 	columnLayouts map[string]columnLayout
 }
 
@@ -46,15 +51,18 @@ type chartSelectionEntry struct {
 type chartSelection struct {
 	index   int
 	pixelX  float32
+	pixelY  float32
 	entries []chartSelectionEntry
 }
 
 func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := chartStateFor(ctx, w.key)
+	state.beginLegendFrame()
+	defer state.endLegendFrame()
 	restoreKey := frame.PushKey(ctx, w.key)
 	defer restoreKey()
 	enabled := gtx.Enabled() && !w.disabled
-	state.requestPointerFocus(ctx, gtx, enabled)
+	activated, resetWindow := state.requestPointerFocus(ctx, gtx, enabled)
 
 	tokens := frame.ActiveTheme(ctx).Components.BarChart
 	height := tokens.Height
@@ -63,6 +71,17 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(height)))
 	data := resolveChartData(w, frame.ActiveTheme(ctx), gtx.Dp)
+	if w.handleLegendClicks(gtx, state, data, enabled) {
+		activated = false
+		resetWindow = false
+	}
+	if resetWindow && w.onDataWindowChange != nil {
+		full := chart.FullDataWindow()
+		if w.effectiveDataWindow() != full {
+			w.onDataWindowChange(full)
+		}
+		activated = false
+	}
 
 	eventGtx := gtx
 	if !enabled {
@@ -72,12 +91,12 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	return state.root.Layout(eventGtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.EnabledOp(enabled).Add(gtx.Ops)
 		semantic.DescriptionOp(w.semanticDescription(data)).Add(gtx.Ops)
-		w.layoutContent(ctx, gtx, state, data, enabled, size)
+		w.layoutContent(ctx, gtx, state, data, enabled, activated, size)
 		return layout.Dimensions{Size: size}
 	})
 }
 
-func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, enabled bool, size image.Point) {
+func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, enabled, activated bool, size image.Point) {
 	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
@@ -85,17 +104,22 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	tokens := activeTheme.Components.BarChart
 	style := barChartStyleFor(activeTheme, !enabled)
 	displayData := w.animatedData(ctx, gtx, state, data)
-	left := max(gtx.Dp(tokens.PlotPaddingLeft), w.measureYAxisLabelWidth(ctx, gtx, data, max(size.X/2, 1))+max(gtx.Dp(tokens.TickLabelGap), 0)+4)
+	leftLabelWidth := w.measureYAxisLabelWidth(ctx, gtx, data, max(size.X/2, 1))
+	if w.orientation == Horizontal {
+		leftLabelWidth = w.measureCategoryLabelWidth(ctx, gtx, data, max(size.X/2, 1))
+	}
+	left := max(gtx.Dp(tokens.PlotPaddingLeft), leftLabelWidth+max(gtx.Dp(tokens.TickLabelGap), 0)+4)
 	left = min(max(left, 0), max(size.X/2, 0))
 	right := min(max(gtx.Dp(tokens.PlotPaddingRight), 0), max(size.X-left-1, 0))
 	availableWidth := max(size.X-left-right, 0)
 
 	legend := recordedChartBlock{}
 	if w.legendVisible(data) {
-		legend = w.recordLegend(ctx, gtx, data, style, availableWidth)
+		legend = w.recordLegend(ctx, gtx, state, data, style, availableWidth, enabled)
 	}
-	yName := recordChartText(ctx, gtx, w.yAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
-	xName := recordChartText(ctx, gtx, w.xAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
+	xAxisLabel, yAxisLabel := w.axisLabels()
+	yName := recordChartText(ctx, gtx, yAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
+	xName := recordChartText(ctx, gtx, xAxisLabel, tokens.AxisTextSize, font.Medium, style.axisLabel, availableWidth)
 
 	top := max(gtx.Dp(tokens.PlotPaddingTop), 0)
 	legendPosition := image.Pt(left, top)
@@ -117,31 +141,41 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	plot := image.Rect(plotLeft, plotTop, plotRight, plotBottom)
 
 	geometry := w.resolveGeometry(data, size, plot)
-	geometry.xTicks = w.pruneXTicks(ctx, gtx, geometry, style)
-	state.updatePointer(gtx, enabled)
-	if w.showTooltip {
-		state.updateKeyboard(ctx, gtx, data.categories, enabled)
+	if geometry.horizontal {
+		geometry.xTicks = w.pruneCategoryTicks(ctx, gtx, geometry, style)
+	} else {
+		geometry.xTicks = w.pruneXTicks(ctx, gtx, geometry, style)
+	}
+	state.updatePointer(gtx, enabled, plot, w.effectiveDataWindow(), geometry.horizontal, w.onDataWindowChange)
+	selectionEnabled := w.showTooltip || w.onDataClick != nil
+	if selectionEnabled {
+		state.updateKeyboard(ctx, gtx, geometry.categoryStart, geometry.categoryEnd, geometry.horizontal, enabled)
 	} else {
 		state.clearSelection()
 	}
 	focused := gtx.Focused(&state.root)
 	selection := chartSelection{}
 	selected := false
-	if w.showTooltip {
-		selectedIndex, hasSelection := state.selectedIndex(data.categories, plot, focused)
+	if selectionEnabled {
+		selectedIndex, hasSelection := state.selectedIndex(geometry.categoryStart, geometry.categoryEnd, plot, geometry.horizontal, focused)
 		selected = hasSelection
 		selection = w.resolveSelection(data, geometry, selectedIndex, hasSelection)
+	}
+	if activated && selected && w.onDataClick != nil {
+		w.onDataClick(w.publicSelection(selection, geometry))
 	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
 	placeChartBlock(gtx, legend, legendPosition)
 	placeChartText(gtx, yName, yNamePosition)
 	drawChartGrid(gtx, geometry, style, w.showGrid, tokens)
+	w.drawMarkAreas(ctx, gtx, geometry, style)
 	drawChartAxes(gtx, geometry, style, tokens)
 	if selected {
 		drawCategoryHighlight(gtx, geometry, selection, style)
 	}
 	drawChartSeries(ctx, gtx, displayData, geometry, style, tokens)
+	w.drawMarkLinesAndPoints(ctx, gtx, geometry, style)
 	w.layoutAxisLabels(ctx, gtx, geometry, style)
 	if !data.yExtent.valid {
 		w.layoutEmpty(ctx, gtx, geometry, style)
@@ -158,20 +192,46 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	focusVisible := frame.FocusVisible(ctx, &state.root, focused)
 	focusOpacity := state.focus.Opacity(gtx, focusVisible && enabled)
 	drawChartFocus(gtx, size, style.focus, focusOpacity, tokens)
-	state.addPointerInput(gtx, plot, enabled && w.showTooltip)
+	state.addPointerInput(gtx, plot, enabled && (selectionEnabled || w.onDataWindowChange != nil))
+}
+
+func (w Widget) axisLabels() (x, y string) {
+	x, y = w.xAxisLabel, w.yAxisLabel
+	if w.orientation == Horizontal {
+		if w.hasCategoryAxisLabel {
+			y = w.categoryAxisLabel
+		}
+		if w.hasValueAxisLabel {
+			x = w.valueAxisLabel
+		}
+		return x, y
+	}
+	if w.hasCategoryAxisLabel {
+		x = w.categoryAxisLabel
+	}
+	if w.hasValueAxisLabel {
+		y = w.valueAxisLabel
+	}
+	return x, y
 }
 
 func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rectangle) chartGeometry {
 	yScale := w.resolveYScale(data)
-	geometry := chartGeometry{size: size, plot: plot, yScale: yScale}
+	geometry := chartGeometry{size: size, plot: plot, yScale: yScale, horizontal: w.orientation == Horizontal}
 	geometry.yTicks = make([]axisTick, 0, len(yScale.ticks))
 	for _, value := range yScale.ticks {
 		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, yScale.interval), pixel: geometry.mapY(value)})
 	}
 	if data.categories > 0 {
-		geometry.bandWidth = float32(plot.Dx()) / float32(data.categories)
-		geometry.xTicks = make([]categoryTick, 0, data.categories)
-		for index := 0; index < data.categories; index++ {
+		geometry.categoryStart, geometry.categoryEnd = visibleCategoryRange(data.categories, w.effectiveDataWindow())
+		visibleCount := geometry.categoryEnd - geometry.categoryStart
+		bandExtent := plot.Dx()
+		if geometry.horizontal {
+			bandExtent = plot.Dy()
+		}
+		geometry.bandWidth = float32(bandExtent) / float32(visibleCount)
+		geometry.xTicks = make([]categoryTick, 0, visibleCount)
+		for index := geometry.categoryStart; index < geometry.categoryEnd; index++ {
 			geometry.xTicks = append(geometry.xTicks, categoryTick{index: index, label: w.categoryLabel(index), pixel: geometry.categoryCenter(index)})
 		}
 	}
@@ -196,18 +256,32 @@ func (w Widget) resolveYScale(data chartData) linearScale {
 }
 
 func (g chartGeometry) categoryCenter(index int) float32 {
-	return float32(g.plot.Min.X) + (float32(index)+0.5)*g.bandWidth
+	minimum := g.plot.Min.X
+	if g.horizontal {
+		minimum = g.plot.Min.Y
+	}
+	return float32(minimum) + (float32(index-g.categoryStart)+0.5)*g.bandWidth
 }
 
 func (g chartGeometry) mapY(value float64) float32 {
+	if g.horizontal {
+		return float32(g.plot.Min.X) + float32(g.yScale.ratio(value))*float32(g.plot.Dx())
+	}
 	return float32(g.plot.Max.Y) - float32(g.yScale.ratio(value))*float32(g.plot.Dy())
 }
 
 func (w Widget) resolveSelection(data chartData, geometry chartGeometry, index int, selected bool) chartSelection {
-	if !selected || index < 0 || index >= data.categories {
+	if !selected || index < geometry.categoryStart || index >= geometry.categoryEnd || index >= data.categories {
 		return chartSelection{}
 	}
-	selection := chartSelection{index: index, pixelX: geometry.categoryCenter(index)}
+	selection := chartSelection{index: index}
+	if geometry.horizontal {
+		selection.pixelX = float32(geometry.plot.Min.X) + float32(geometry.plot.Dx())/2
+		selection.pixelY = geometry.categoryCenter(index)
+	} else {
+		selection.pixelX = geometry.categoryCenter(index)
+		selection.pixelY = float32(geometry.plot.Min.Y) + float32(geometry.plot.Dy())/2
+	}
 	for _, series := range data.series {
 		bar := series.values[index]
 		if bar.valid {
@@ -215,6 +289,36 @@ func (w Widget) resolveSelection(data chartData, geometry chartGeometry, index i
 		}
 	}
 	return selection
+}
+
+func visibleCategoryRange(count int, window chart.DataWindow) (int, int) {
+	if count <= 0 {
+		return 0, 0
+	}
+	start := int(math.Floor(float64(window.Start) * float64(count)))
+	end := int(math.Ceil(float64(window.End) * float64(count)))
+	start = min(max(start, 0), count-1)
+	end = min(max(end, start+1), count)
+	return start, end
+}
+
+func (w Widget) publicSelection(selection chartSelection, _ chartGeometry) chart.Selection {
+	result := chart.Selection{
+		Label: w.categoryLabel(selection.index),
+		Index: selection.index,
+		X:     float64(selection.index),
+		Items: make([]chart.Datum, 0, len(selection.entries)),
+	}
+	for _, entry := range selection.entries {
+		result.Items = append(result.Items, chart.Datum{
+			SeriesKey:   entry.series.key,
+			SeriesLabel: entry.series.label,
+			X:           float64(selection.index),
+			Y:           entry.bar.value,
+			Color:       entry.bar.color,
+		})
+	}
+	return result
 }
 
 func (w Widget) semanticDescription(data chartData) string {

@@ -14,6 +14,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -25,13 +26,18 @@ func TestLineChartOptionsUseValueSemantics(t *testing.T) {
 		Color(color.NRGBA{R: 1, A: 0xff}).
 		Width(3).
 		ShowPoints(false).
+		PointSize(9).
 		ConnectNulls(true).
 		Smoothness(0.35).
+		Step(StepMiddle).
+		LineStyle(LineDashed).
+		AreaColor(color.NRGBA{B: 2, A: 0x40}).
+		Sampling(SamplingMinMax).
 		Hidden(true)
-	if baseSeries.hasColor || baseSeries.width != 0 || baseSeries.hasShowPoints || baseSeries.connectNulls || baseSeries.smooth != 0 || baseSeries.hidden {
+	if baseSeries.hasColor || baseSeries.width != 0 || baseSeries.hasShowPoints || baseSeries.pointSize != 0 || baseSeries.connectNulls || baseSeries.smooth != 0 || baseSeries.step != StepNone || baseSeries.lineStyle != LineSolid || baseSeries.area || baseSeries.sampling != SamplingNone || baseSeries.hidden {
 		t.Fatalf("configuring LineChart Series mutated base: %#v", baseSeries)
 	}
-	if !configuredSeries.hasColor || configuredSeries.width != 3 || !configuredSeries.hasShowPoints || configuredSeries.showPoints || !configuredSeries.connectNulls || configuredSeries.smooth != 0.35 || !configuredSeries.hidden {
+	if !configuredSeries.hasColor || configuredSeries.width != 3 || !configuredSeries.hasShowPoints || configuredSeries.showPoints || configuredSeries.pointSize != 9 || !configuredSeries.connectNulls || configuredSeries.smooth != 0.35 || configuredSeries.step != StepMiddle || configuredSeries.lineStyle != LineDashed || !configuredSeries.area || !configuredSeries.hasAreaColor || configuredSeries.sampling != SamplingMinMax || !configuredSeries.hidden {
 		t.Fatalf("configured LineChart Series = %#v", configuredSeries)
 	}
 	if smooth := baseSeries.Smooth(true); smooth.smooth != 0.5 || baseSeries.smooth != 0 {
@@ -55,18 +61,37 @@ func TestLineChartOptionsUseValueSemantics(t *testing.T) {
 		FormatX(func(float64) string { return "x" }).
 		FormatY(func(float64) string { return "y" }).
 		Animation(false).
-		AnimationDuration(250 * time.Millisecond).
+		AnimationDuration(250*time.Millisecond).
 		AnimationEasing(func(value float32) float32 { return value }).
-		UpdateAnimationDuration(150 * time.Millisecond).
+		UpdateAnimationDuration(150*time.Millisecond).
 		UpdateAnimationEasing(func(value float32) float32 { return value }).
+		OnLegendChange(func(string, bool) {}).
+		OnDataClick(func(chart.Selection) {}).
+		TooltipContent(func(chart.Selection) frame.Widget { return nil }).
+		DataWindow(0.25, 0.75).
+		OnDataWindowChange(func(chart.DataWindow) {}).
+		MarkLines([]chart.MarkLine{chart.NewMarkLine(chart.AxisY, 15)}).
+		MarkAreas([]chart.MarkArea{chart.NewMarkArea(chart.AxisX, 0.5, 1.5)}).
+		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(1, 15)}).
 		Label("Traffic").
 		EmptyText("Empty").
 		Disabled(true)
 	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasXRange || base.hasYRange || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring LineChart mutated base: %#v", base)
 	}
-	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
+	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured LineChart = %#v", configured)
+	}
+}
+
+func TestLineChartLegendDataRetainsHiddenSeries(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	data := resolveChartData(New("chart", []Series{
+		Values("visible", "Visible", []float64{1, 2}),
+		Values("hidden", "Hidden", []float64{3, 4}).Hidden(true),
+	}), &activeTheme, testDp)
+	if len(data.series) != 1 || len(data.legend) != 2 || !data.legend[1].hidden {
+		t.Fatalf("LineChart hidden legend data = %#v", data)
 	}
 }
 
@@ -76,6 +101,10 @@ func TestLineChartRejectsInvalidConfiguration(t *testing.T) {
 		run  func()
 	}{
 		{"series width", func() { Values("a", "A", nil).Width(0) }},
+		{"point size", func() { Values("a", "A", nil).PointSize(0) }},
+		{"step mode", func() { Values("a", "A", nil).Step(StepMode(9)) }},
+		{"line style", func() { Values("a", "A", nil).LineStyle(LineStyle(9)) }},
+		{"sampling mode", func() { Values("a", "A", nil).Sampling(SamplingMode(9)) }},
 		{"height", func() { New("chart", nil).Height(0) }},
 		{"X range", func() { New("chart", nil).XRange(2, 1) }},
 		{"Y range", func() { New("chart", nil).YRange(math.NaN(), 1) }},
@@ -88,6 +117,7 @@ func TestLineChartRejectsInvalidConfiguration(t *testing.T) {
 		{"update animation duration", func() { New("chart", nil).UpdateAnimationDuration(-time.Millisecond) }},
 		{"animation easing", func() { New("chart", nil).AnimationEasing(nil) }},
 		{"update animation easing", func() { New("chart", nil).UpdateAnimationEasing(nil) }},
+		{"data window", func() { New("chart", nil).DataWindow(0.8, 0.2) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -98,6 +128,82 @@ func TestLineChartRejectsInvalidConfiguration(t *testing.T) {
 			}()
 			test.run()
 		})
+	}
+}
+
+func TestLineChartStepAndSmoothPixelSegments(t *testing.T) {
+	points := []f32.Point{f32.Pt(0, 10), f32.Pt(10, 20), f32.Pt(20, 5)}
+	middle := steppedPoints(points, StepMiddle)
+	want := []f32.Point{f32.Pt(0, 10), f32.Pt(5, 10), f32.Pt(5, 20), f32.Pt(10, 20), f32.Pt(15, 20), f32.Pt(15, 5), f32.Pt(20, 5)}
+	if len(middle) != len(want) {
+		t.Fatalf("middle step points = %v", middle)
+	}
+	for index := range want {
+		if middle[index] != want[index] {
+			t.Fatalf("middle step points = %v", middle)
+		}
+	}
+	smooth := sampledSmoothPoints(points, 0.5)
+	if len(smooth) != (len(points)-1)*smoothSamplesPerSegment+1 || smooth[0] != points[0] || smooth[len(smooth)-1] != points[len(points)-1] {
+		t.Fatalf("sampled smooth points = %v", smooth)
+	}
+}
+
+func TestLineChartVisibleMinMaxSamplingRetainsExtrema(t *testing.T) {
+	points := make([]f32.Point, 1000)
+	for index := range points {
+		y := float32(index % 7)
+		if index == 500 {
+			y = -100
+		}
+		if index == 501 {
+			y = 100
+		}
+		points[index] = f32.Pt(float32(index), y)
+	}
+	visible := visiblePixelSegment(points, 400, 600)
+	if visible[0].X != 399 || visible[len(visible)-1].X != 601 {
+		t.Fatalf("visible points = %v to %v", visible[0], visible[len(visible)-1])
+	}
+	sampled := minMaxPixelSample(visible, 50)
+	if len(sampled) > 102 || sampled[0] != visible[0] || sampled[len(sampled)-1] != visible[len(visible)-1] {
+		t.Fatalf("sampled point count/endpoints = %d, %v to %v", len(sampled), sampled[0], sampled[len(sampled)-1])
+	}
+	foundMinimum, foundMaximum := false, false
+	for _, point := range sampled {
+		foundMinimum = foundMinimum || point.Y == -100
+		foundMaximum = foundMaximum || point.Y == 100
+	}
+	if !foundMinimum || !foundMaximum {
+		t.Fatalf("sampled extrema missing: min %v max %v", foundMinimum, foundMaximum)
+	}
+}
+
+func TestLineChartDataWindowConstrainsXScale(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	widget := New("chart", []Series{Values("values", "Values", []float64{1, 2, 3, 4, 5})}).
+		Categories([]string{"A", "B", "C", "D", "E"}).
+		DataWindow(0.25, 0.75)
+	data := resolveChartData(widget, &activeTheme, testDp)
+	scale := widget.resolveXScale(data)
+	if scale.minimum != 1 || scale.maximum != 3 {
+		t.Fatalf("LineChart windowed X scale = %#v", scale)
+	}
+}
+
+func TestLineChartAnnotationGeometryUsesVisibleScales(t *testing.T) {
+	geometry := chartGeometry{
+		plot:   image.Rect(10, 20, 110, 120),
+		xScale: newLinearScale(0, 10, 5, false, true),
+		yScale: newLinearScale(0, 100, 5, false, true),
+	}
+	rect, ok := lineMarkAreaRect(chart.NewMarkArea(chart.AxisY, 20, 40), geometry)
+	if !ok || rect != image.Rect(10, 80, 110, 100) {
+		t.Fatalf("LineChart mark area = %v, ok %v", rect, ok)
+	}
+	from, to, ok := lineMarkEndpoints(chart.NewMarkLine(chart.AxisX, 5), geometry)
+	if !ok || from != f32.Pt(60, 20) || to != f32.Pt(60, 120) {
+		t.Fatalf("LineChart mark line = %v to %v, ok %v", from, to, ok)
 	}
 }
 
@@ -351,6 +457,92 @@ func TestLineChartPointerAndKeyboardSelection(t *testing.T) {
 	}
 }
 
+func TestLineChartWheelRequestsControlledDataWindow(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	requested := chart.DataWindow{}
+	widget := New("chart", []Series{Values("series", "Series", []float64{1, 2, 3, 4})}).
+		DataWindow(0.2, 0.8).
+		OnDataWindowChange(func(window chart.DataWindow) { requested = window })
+	now := time.Unix(8, 0)
+	layoutLineChartFrame(ctx, router, widget, now)
+	router.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: f32.Pt(300, 150), Scroll: f32.Pt(0, -1)})
+	layoutLineChartFrame(ctx, router, widget, now.Add(time.Millisecond))
+	if requested.End-requested.Start >= 0.6 || requested.Start <= 0.2 || requested.End >= 0.8 {
+		t.Fatalf("LineChart wheel window request = %#v", requested)
+	}
+}
+
+func TestLineChartWithoutDataWindowDoesNotConsumeParentScroll(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	list := &layout.List{Axis: layout.Vertical}
+	widget := New("chart", []Series{Values("series", "Series", []float64{1, 2, 3})})
+	now := time.Unix(9, 0)
+	layoutLineChartListFrame(ctx, router, list, widget, now)
+
+	router.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: f32.Pt(300, 100), Scroll: f32.Pt(0, 80)})
+	layoutLineChartListFrame(ctx, router, list, widget, now.Add(time.Millisecond))
+	if list.Position.First == 0 && list.Position.Offset == 0 {
+		t.Fatal("LineChart tooltip interaction consumed the parent list scroll")
+	}
+}
+
+func TestLineChartLegendClickDataClickAndCustomTooltip(t *testing.T) {
+	ctx := lineChartTestContext()
+	router := new(input.Router)
+	var legendKey string
+	var legendHidden bool
+	var clicked chart.Selection
+	tooltipLaidOut := false
+	widget := New("chart", []Series{
+		Values("visible", "Visible", []float64{10, 20}),
+		Values("hidden", "Hidden", []float64{30, 40}).Hidden(true),
+	}).Categories([]string{"A", "B"}).
+		OnLegendChange(func(key string, hidden bool) {
+			legendKey, legendHidden = key, hidden
+		}).
+		OnDataClick(func(selection chart.Selection) { clicked = selection }).
+		TooltipContent(func(chart.Selection) frame.Widget {
+			return frame.WidgetFunc(func(*frame.Context, layout.Context) layout.Dimensions {
+				tooltipLaidOut = true
+				return layout.Dimensions{Size: image.Pt(80, 24)}
+			})
+		})
+	now := time.Unix(7, 0)
+	layoutLineChartFrame(ctx, router, widget, now)
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotLineChart)
+	state.legendItems["hidden"].Click()
+	layoutLineChartFrame(ctx, router, widget, now.Add(time.Millisecond))
+	if legendKey != "hidden" || legendHidden {
+		t.Fatalf("LineChart legend request = key %q hidden %v, want hidden false", legendKey, legendHidden)
+	}
+
+	state.hovered = true
+	state.pointer = f32.Pt(300, 140)
+	state.root.Click()
+	layoutLineChartFrame(ctx, router, widget, now.Add(2*time.Millisecond))
+	if clicked.Label == "" || clicked.Index < 0 || len(clicked.Items) != 1 || clicked.Items[0].SeriesKey != "visible" {
+		t.Fatalf("LineChart click selection = %#v", clicked)
+	}
+	if !tooltipLaidOut {
+		t.Fatal("LineChart custom tooltip was not laid out")
+	}
+
+	clicked = chart.Selection{}
+	tooltipLaidOut = false
+	state.hovered = true
+	state.pointer = f32.Pt(300, 140)
+	state.root.Click()
+	layoutLineChartFrame(ctx, router, widget.Tooltip(false), now.Add(3*time.Millisecond))
+	if len(clicked.Items) != 1 {
+		t.Fatalf("LineChart data click with tooltip disabled = %#v", clicked)
+	}
+	if tooltipLaidOut {
+		t.Fatal("LineChart laid out custom tooltip while disabled")
+	}
+}
+
 func TestLineChartTooltipDisabledClearsInteraction(t *testing.T) {
 	ctx := lineChartTestContext()
 	router := new(input.Router)
@@ -426,6 +618,23 @@ func layoutLineChartFrame(ctx *frame.Context, router *input.Router, widget Widge
 	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
 	frame.BeginFrameWithViewport(ctx, viewport)
 	dims := widget.Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	return dims
+}
+
+func layoutLineChartListFrame(ctx *frame.Context, router *input.Router, list *layout.List, widget Widget, now time.Time) layout.Dimensions {
+	viewport := image.Pt(520, 180)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := list.Layout(gtx, 2, func(gtx layout.Context, index int) layout.Dimensions {
+		if index == 0 {
+			return widget.Layout(ctx, gtx)
+		}
+		return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 320)}
+	})
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)

@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/font"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -94,11 +95,12 @@ func (w Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, geometry cha
 	placeChartText(gtx, label, position)
 }
 
-func (w Widget) recordLegend(ctx *frame.Context, gtx layout.Context, data chartData, style chartStyle, maxWidth int) recordedChartBlock {
-	if maxWidth <= 0 || len(data.series) == 0 {
+func (w Widget) recordLegend(ctx *frame.Context, gtx layout.Context, state *chartState, data chartData, style chartStyle, maxWidth int, enabled bool) recordedChartBlock {
+	if maxWidth <= 0 || len(data.legend) == 0 {
 		return recordedChartBlock{}
 	}
 	tokens := frame.ActiveTheme(ctx).Components.LineChart
+	activeTheme := frame.ActiveTheme(ctx)
 	markerWidth := max(gtx.Dp(tokens.LegendMarkerWidth), 1)
 	markerSize := max(gtx.Dp(tokens.LegendMarkerSize), 2)
 	itemGap := max(gtx.Dp(tokens.LegendItemGap), 0)
@@ -106,7 +108,7 @@ func (w Widget) recordLegend(ctx *frame.Context, gtx layout.Context, data chartD
 
 	macro := op.Record(gtx.Ops)
 	x, y, rowHeight, usedWidth := 0, 0, 0, 0
-	for _, series := range data.series {
+	for _, series := range data.legend {
 		label := recordChartText(ctx, gtx, series.label, tokens.LegendTextSize, font.Normal, style.axisLabel, max(maxWidth-markerWidth, 1))
 		itemWidth := markerWidth + label.dims.Size.X
 		itemHeight := max(markerSize, label.dims.Size.Y)
@@ -114,16 +116,56 @@ func (w Widget) recordLegend(ctx *frame.Context, gtx layout.Context, data chartD
 			y += rowHeight + lineGap
 			x, rowHeight = 0, 0
 		}
-		centerY := y + itemHeight/2
-		from := f32.Pt(float32(x), float32(centerY))
-		to := f32.Pt(float32(x+markerWidth), float32(centerY))
-		drawChartLine(gtx, from, to, max(series.width, 2), series.color)
-		paint.FillShape(gtx.Ops, series.color, clip.Ellipse(chartPointRect(f32.Pt(float32(x+markerWidth/2), float32(centerY)), markerSize)).Op(gtx.Ops))
-		placeChartText(gtx, label, image.Pt(x+markerWidth, y+(itemHeight-label.dims.Size.Y)/2))
+		item := state.legendItem(series.key)
+		itemGtx := gtx
+		if !enabled || w.onLegendChange == nil {
+			itemGtx = itemGtx.Disabled()
+		}
+		itemGtx.Constraints = layout.Exact(image.Pt(itemWidth, itemHeight))
+		itemMacro := op.Record(gtx.Ops)
+		item.Layout(itemGtx, func(gtx layout.Context) layout.Dimensions {
+			if enabled && w.onLegendChange != nil {
+				pointer.CursorPointer.Add(gtx.Ops)
+				if item.Hovered() {
+					rect := image.Rectangle{Max: image.Pt(itemWidth, itemHeight)}
+					paint.FillShape(gtx.Ops, activeTheme.Palette.SurfaceHover, clip.UniformRRect(rect, min(itemHeight/2, 4)).Op(gtx.Ops))
+				}
+			}
+			opacity := float32(1)
+			if series.hidden {
+				opacity = 0.38
+			}
+			fade := paint.PushOpacity(gtx.Ops, opacity)
+			centerY := itemHeight / 2
+			from := f32.Pt(0, float32(centerY))
+			to := f32.Pt(float32(markerWidth), float32(centerY))
+			drawChartLine(gtx, from, to, max(series.width, 2), series.color)
+			paint.FillShape(gtx.Ops, series.color, clip.Ellipse(chartPointRect(f32.Pt(float32(markerWidth/2), float32(centerY)), markerSize)).Op(gtx.Ops))
+			placeChartText(gtx, label, image.Pt(markerWidth, (itemHeight-label.dims.Size.Y)/2))
+			fade.Pop()
+			return layout.Dimensions{Size: image.Pt(itemWidth, itemHeight)}
+		})
+		itemCall := itemMacro.Stop()
+		offset := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
+		itemCall.Add(gtx.Ops)
+		offset.Pop()
 		x += itemWidth + itemGap
 		usedWidth = max(usedWidth, min(x-itemGap, maxWidth))
 		rowHeight = max(rowHeight, itemHeight)
 	}
 	height := y + rowHeight
 	return recordedChartBlock{call: macro.Stop(), dims: layout.Dimensions{Size: image.Pt(usedWidth, height)}}
+}
+
+func (w Widget) handleLegendClicks(gtx layout.Context, state *chartState, data chartData, enabled bool) bool {
+	activated := false
+	for _, series := range data.legend {
+		for state.legendItem(series.key).Clicked(gtx) {
+			activated = true
+			if enabled && w.onLegendChange != nil {
+				w.onLegendChange(series.key, !series.hidden)
+			}
+		}
+	}
+	return activated
 }

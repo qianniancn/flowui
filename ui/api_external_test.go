@@ -381,6 +381,26 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			AllowEmptySelection().
 			EmptyText("No files").
 			MaxHeight(240),
+		ui.SidebarSections("primary-navigation", model.selected, []ui.SidebarSection{
+			{Title: "Workspace", Items: []ui.SidebarItem{
+				{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutDashboard).Size(18)},
+				{Key: "projects", Label: "Projects", Leading: ui.Icon(lucide.FolderKanban).Size(18), Trailing: ui.Text("8")},
+			}},
+			{Title: "Account", Items: []ui.SidebarItem{
+				{Key: "settings", Label: "Settings", Leading: ui.Icon(lucide.Settings).Size(18)},
+			}},
+		}).
+			Header(ui.Text("FlowUI")).
+			Footer(ui.Text("Signed in")).
+			Collapsed(false).
+			Width(248).
+			CollapsedWidth(64).
+			Alt("Primary navigation").
+			EmptyText("No destinations").
+			DisabledKeys([]string{"settings"}).
+			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
+			OnAction(func(string) {}).
+			Disabled(false),
 		ui.Table("members", tableColumns, tableRows).
 			Variant(ui.TableSecondary).
 			SelectionMode(ui.TableSelectionMultiple).

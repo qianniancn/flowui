@@ -23,6 +23,7 @@ const (
 	KindSlider           Kind = "slider"
 	KindListBox          Kind = "listbox"
 	KindTree             Kind = "tree"
+	KindSidebar          Kind = "sidebar"
 	KindTable            Kind = "table"
 	KindMenu             Kind = "menu"
 	KindContextMenu      Kind = "context-menu"

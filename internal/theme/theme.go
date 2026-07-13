@@ -131,6 +131,7 @@ type ComponentsTheme struct {
 	Slider           SliderTheme
 	ListBox          ListBoxTheme
 	Tree             TreeTheme
+	Sidebar          SidebarTheme
 	Table            TableTheme
 	Menu             MenuTheme
 	Dropdown         DropdownTheme
@@ -458,6 +459,24 @@ type TreeTheme struct {
 	FocusRingWidth       unit.Dp
 	PressedScale         float32
 	SurfaceRadius        unit.Dp
+}
+
+type SidebarTheme struct {
+	Width                 unit.Dp
+	CollapsedWidth        unit.Dp
+	Padding               unit.Dp
+	ContentGap            unit.Dp
+	ItemGap               unit.Dp
+	ItemHeight            unit.Dp
+	ItemRadius            unit.Dp
+	ItemPaddingX          unit.Dp
+	ItemContentGap        unit.Dp
+	ItemTextSize          unit.Sp
+	SectionTextSize       unit.Sp
+	SectionHeight         unit.Dp
+	SectionSeparatorInset unit.Dp
+	BorderWidth           unit.Dp
+	FocusRingWidth        unit.Dp
 }
 
 type TableTheme struct {
@@ -1184,6 +1203,23 @@ func DefaultTheme() Theme {
 				FocusRingWidth:       2,
 				PressedScale:         0.98,
 				SurfaceRadius:        24,
+			},
+			Sidebar: SidebarTheme{
+				Width:                 248,
+				CollapsedWidth:        64,
+				Padding:               8,
+				ContentGap:            8,
+				ItemGap:               4,
+				ItemHeight:            40,
+				ItemRadius:            8,
+				ItemPaddingX:          10,
+				ItemContentGap:        12,
+				ItemTextSize:          14,
+				SectionTextSize:       12,
+				SectionHeight:         28,
+				SectionSeparatorInset: 10,
+				BorderWidth:           1,
+				FocusRingWidth:        2,
 			},
 			Table: TableTheme{
 				RootPadding:           4,

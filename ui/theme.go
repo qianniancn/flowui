@@ -33,6 +33,7 @@ type SpinnerTheme = theme.SpinnerTheme
 type SliderTheme = theme.SliderTheme
 type ListBoxTheme = theme.ListBoxTheme
 type TreeTheme = theme.TreeTheme
+type SidebarTheme = theme.SidebarTheme
 type TableTheme = theme.TableTheme
 type MenuTheme = theme.MenuTheme
 type DropdownTheme = theme.DropdownTheme

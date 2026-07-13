@@ -124,6 +124,7 @@ type ComponentsTheme struct {
 	Table        TableTheme
 	Menu         MenuTheme
 	Dropdown     DropdownTheme
+	Menubar      MenubarTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -526,6 +527,17 @@ type DropdownTheme struct {
 	TriggerFocusRingOffset unit.Dp
 	TriggerFocusRadius     unit.Dp
 	TriggerPressedScale    float32
+	PanelGap               unit.Dp
+}
+
+type MenubarTheme struct {
+	TriggerHeight          unit.Dp
+	TriggerPaddingX        unit.Dp
+	TriggerRadius          unit.Dp
+	TriggerTextSize        unit.Sp
+	TriggerFocusRingWidth  unit.Dp
+	TriggerFocusRingOffset unit.Dp
+	Gap                    unit.Dp
 	PanelGap               unit.Dp
 }
 
@@ -1136,6 +1148,16 @@ func DefaultTheme() Theme {
 				TriggerFocusRingOffset: 2,
 				TriggerFocusRadius:     12,
 				TriggerPressedScale:    0.97,
+				PanelGap:               4,
+			},
+			Menubar: MenubarTheme{
+				TriggerHeight:          32,
+				TriggerPaddingX:        12,
+				TriggerRadius:          8,
+				TriggerTextSize:        14,
+				TriggerFocusRingWidth:  2,
+				TriggerFocusRingOffset: 1,
+				Gap:                    0,
 				PanelGap:               4,
 			},
 			Tabs: TabsTheme{

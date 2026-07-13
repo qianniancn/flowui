@@ -27,6 +27,7 @@ const (
 	KindMenu         Kind = "menu"
 	KindContextMenu  Kind = "context-menu"
 	KindDropdown     Kind = "dropdown"
+	KindMenubar      Kind = "menubar"
 	KindTabs         Kind = "tabs"
 	KindPopover      Kind = "popover"
 	KindTooltip      Kind = "tooltip"

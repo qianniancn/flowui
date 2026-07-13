@@ -1,0 +1,40 @@
+package menubar
+
+import (
+	"image"
+
+	"gioui.org/layout"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/theme"
+)
+
+func drawMenubarTrigger(gtx layout.Context, activeTheme *theme.Theme, size image.Point, style menubarTriggerStyle, focusOpacity float32) {
+	if size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	tokens := activeTheme.Components.Menubar
+	radius := min(max(gtx.Dp(tokens.TriggerRadius), 0), min(size.X, size.Y)/2)
+	rect := image.Rectangle{Max: size}
+	if style.background.A != 0 {
+		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
+	}
+	if focusOpacity <= 0 || style.focus.A == 0 {
+		return
+	}
+	width := max(gtx.Dp(tokens.TriggerFocusRingWidth), 1)
+	inset := max(gtx.Dp(tokens.TriggerFocusRingOffset), 0) + (width+1)/2
+	focusRect := rect.Inset(inset)
+	if focusRect.Empty() {
+		return
+	}
+	focusRadius := max(radius-inset, 0)
+	col := style.focus
+	col.A = byte(float32(col.A)*focusOpacity + 0.5)
+	stroke := clip.Stroke{
+		Path:  clip.UniformRRect(focusRect, focusRadius).Path(gtx.Ops),
+		Width: float32(width),
+	}.Op().Push(gtx.Ops)
+	paint.Fill(gtx.Ops, col)
+	stroke.Pop()
+}

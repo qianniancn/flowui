@@ -92,6 +92,8 @@ type Widget struct {
 	onCheckedChange      func(string, bool)
 	onRadioChange        func(string, string)
 	onRequestClose       func(bool)
+	onRootPrevious       func()
+	onRootNext           func()
 	closeOnSelect        bool
 	hasCloseOnSelect     bool
 	disabled             bool
@@ -246,6 +248,8 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.onCheckedChange = m.onCheckedChange
 	child.onRadioChange = m.onRadioChange
 	child.onRequestClose = m.onRequestClose
+	child.onRootPrevious = m.onRootPrevious
+	child.onRootNext = m.onRootNext
 	child.closeOnSelect = m.closeOnSelect
 	child.hasCloseOnSelect = m.hasCloseOnSelect
 	child.disabled = m.disabled

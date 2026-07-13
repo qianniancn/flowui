@@ -139,6 +139,7 @@ text/editor internals.
 - `Popover`
 - `Tooltip`
 - `Menu`, `ContextMenu`
+- `Menubar`
 - `Dropdown`
 - `Modal`
 
@@ -200,6 +201,7 @@ Examples live in `examples/`:
 - `popovers`: controlled popovers with placement, arrows, dismiss behavior, and interactive content.
 - `tooltips`: HeroUI-aligned hover and focus hints with delays, arrows, placement, and viewport flipping.
 - `context_menus`: right-click and long-press menus for table rows, including checkbox, radio, disabled, danger, and submenu items.
+- `menubars`: application menu bars with coordinated menus, hover switching, keyboard navigation, and nested commands.
 - `dropdowns`: HeroUI-aligned action and selection dropdowns with sections, rich items, custom content, long press, and submenus.
 - `toasts`: HeroUI-aligned controlled notifications with variants, actions, timeouts, stacking, and six placements.
 - `surfaces`: semantic surface variants, foreground context, rounded corners, and surface elevation.

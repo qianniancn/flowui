@@ -143,7 +143,7 @@ func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entr
 			key.Filter{Focus: tag, Name: key.NameEnd},
 			key.Filter{Focus: tag, Name: key.NameRightArrow},
 		)
-		if nested {
+		if nested || widget.onRootPrevious != nil {
 			s.keyFilters = append(s.keyFilters, key.Filter{Focus: tag, Name: key.NameLeftArrow})
 		}
 		if widget.itemDisabled(entry.item) {
@@ -200,12 +200,22 @@ func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entr
 				}
 			}
 		case key.NameRightArrow:
-			if event.State == key.Press && current >= 0 && itemHasSubmenu(entries[current].item) && !widget.itemDisabled(entries[current].item) {
+			if event.State != key.Press {
+				continue
+			}
+			if current >= 0 && itemHasSubmenu(entries[current].item) && !widget.itemDisabled(entries[current].item) {
 				result.openKey = entries[current].item.Key
+			} else if widget.onRootNext != nil {
+				widget.onRootNext()
 			}
 		case key.NameLeftArrow:
-			if event.State == key.Press && nested {
+			if event.State != key.Press {
+				continue
+			}
+			if nested {
 				result.close = true
+			} else if widget.onRootPrevious != nil {
+				widget.onRootPrevious()
 			}
 		case key.NameEnter, key.NameReturn, key.NameSpace:
 			s.updateActivation(event, widget, entries, current, &result)

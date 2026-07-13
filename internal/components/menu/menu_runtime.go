@@ -20,6 +20,14 @@ func (r Runtime) Layout(ctx *frame.Context, gtx layout.Context, interactive bool
 	return r.widget.layout(ctx, gtx, r.state, interactive)
 }
 
+// RootNavigation hands horizontal navigation at the root menu boundary to its
+// owner. Nested submenus retain Left Arrow for returning to their parent.
+func (r Runtime) RootNavigation(previous, next func()) Runtime {
+	r.widget.onRootPrevious = previous
+	r.widget.onRootNext = next
+	return r
+}
+
 func (r Runtime) HasActiveSubmenu() bool {
 	return r.state != nil && (r.state.openSubmenu != "" || r.state.submenuActive)
 }

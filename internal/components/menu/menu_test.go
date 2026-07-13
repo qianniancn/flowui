@@ -449,6 +449,42 @@ func TestEmptyMenuClearsStaleSubmenuActivity(t *testing.T) {
 	}
 }
 
+func TestMenuRootNavigationHandsOffOnlyAtLeafBoundary(t *testing.T) {
+	ctx := menuTestContext()
+	router := new(input.Router)
+	next := 0
+	widget := Menu("root-navigation", []Item{
+		{Key: "leaf", Label: "Leaf"},
+		{Key: "submenu", Label: "Submenu", Children: []Item{{Key: "child", Label: "Child"}}},
+	})
+	widget.onRootNext = func() { next++ }
+	start := time.Unix(9, 0)
+	layoutMenuFrame(ctx, router, widget, start)
+	state, _ := frame.PeekState[menuState](ctx, "root-navigation", stateSlotMenu)
+	if state == nil {
+		t.Fatal("Menu state is missing")
+	}
+	router.Source().Execute(key.FocusCmd{Tag: &state.item("leaf").clickable})
+	layoutMenuFrame(ctx, router, widget, start.Add(time.Millisecond))
+	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
+	layoutMenuFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	if next != 1 || state.openSubmenu != "" {
+		t.Fatalf("root leaf navigation = next %d submenu %q", next, state.openSubmenu)
+	}
+
+	router.Source().Execute(key.FocusCmd{Tag: &state.item("submenu").clickable})
+	layoutMenuFrame(ctx, router, widget, start.Add(3*time.Millisecond))
+	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
+	layoutMenuFrame(ctx, router, widget, start.Add(4*time.Millisecond))
+	if next != 1 || state.openSubmenu != "submenu" {
+		t.Fatalf("submenu navigation = next %d submenu %q", next, state.openSubmenu)
+	}
+	child := widget.submenu(state, widget.items[1])
+	if child.onRootNext == nil {
+		t.Fatal("submenu did not inherit Menubar root navigation")
+	}
+}
+
 func layoutMenuFrame(ctx *frame.Context, router *input.Router, widget Widget, now time.Time) {
 	gtx := menuTestLayoutContext(router, now)
 	frame.BeginFrame(ctx)

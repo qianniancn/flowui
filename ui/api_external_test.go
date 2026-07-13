@@ -127,6 +127,24 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Color(ui.MeterSuccess).
 			Size(ui.MeterLarge).
 			Disabled(false),
+		ui.Menubar("application-menu", []ui.MenubarItem{
+			ui.MenubarMenu("file", "File", []ui.MenuItem{{Key: "new", Label: "New"}}).
+				OnAction(func(string) {}).
+				Width(220),
+			ui.MenubarMenuContent(
+				"edit",
+				"Edit",
+				ui.Menu("edit-menu", []ui.MenuItem{{Key: "copy", Label: "Copy"}}),
+			).Disabled(false),
+		}).
+			Alt("Application menu").
+			Orientation(ui.MenubarHorizontal).
+			LoopFocus(true).
+			Modal(true).
+			DefaultOpenKey("").
+			OpenKey("").
+			OnOpenChange(func(string) {}).
+			Disabled(false),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

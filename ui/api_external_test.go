@@ -272,6 +272,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			StartAngle(90).
 			PadAngle(2).
 			MinAngle(1).
+			RoseType(ui.PieRoseRadius).
 			StillShowZeroSum(true).
 			Labels(true).
 			Legend(true).

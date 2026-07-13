@@ -19,18 +19,18 @@ import (
 
 func TestPieChartAllocatesEChartsAngles(t *testing.T) {
 	slices := []resolvedSlice{{value: 1}, {value: 3}}
-	allocateAngles(slices, 4, -math.Pi/2, 1, 0, 0, true)
+	allocateAngles(slices, 4, -math.Pi/2, 1, 0, 0, true, false)
 	assertAngle(t, slices[0].startAngle, -math.Pi/2)
 	assertAngle(t, slices[0].endAngle, 0)
 	assertAngle(t, slices[1].startAngle, 0)
 	assertAngle(t, slices[1].endAngle, 3*math.Pi/2)
 
-	zeros := []resolvedSlice{{}, {}, {}}
-	allocateAngles(zeros, 0, -math.Pi/2, 1, 0, 0, true)
+	zeros := []resolvedSlice{{radiusRatio: 1}, {radiusRatio: 1}, {radiusRatio: 1}}
+	allocateAngles(zeros, 0, -math.Pi/2, 1, 0, 0, true, false)
 	for _, slice := range zeros {
 		assertAngle(t, slice.rawAngle, 2*math.Pi/3)
 	}
-	allocateAngles(zeros, 0, -math.Pi/2, 1, 0, 0, false)
+	allocateAngles(zeros, 0, -math.Pi/2, 1, 0, 0, false, false)
 	if hasVisibleSector(zeros) {
 		t.Fatalf("zero-sum PieChart remained visible: %#v", zeros)
 	}
@@ -39,7 +39,7 @@ func TestPieChartAllocatesEChartsAngles(t *testing.T) {
 func TestPieChartMinAndPadAnglesRedistributeRemainder(t *testing.T) {
 	slices := []resolvedSlice{{value: 1}, {value: 99}}
 	degrees := float32(math.Pi / 180)
-	allocateAngles(slices, 100, 0, 1, 2*degrees, 10*degrees, true)
+	allocateAngles(slices, 100, 0, 1, 2*degrees, 10*degrees, true, false)
 	assertAngle(t, slices[0].rawAngle, 12*degrees)
 	assertAngle(t, slices[0].sweep(), 10*degrees)
 	assertAngle(t, slices[1].rawAngle, 348*degrees)
@@ -51,6 +51,37 @@ func TestPieChartPercentsUseEChartsLargestRemainder(t *testing.T) {
 	allocatePercents(slices, 3)
 	if slices[0].percent != 33.34 || slices[1].percent != 33.33 || slices[2].percent != 33.33 {
 		t.Fatalf("PieChart percentages = %#v", slices)
+	}
+}
+
+func TestPieChartRoseTypesMatchEChartsLayout(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	values := []Data{Slice("zero", "Zero", 0), Slice("half", "Half", 5), Slice("full", "Full", 10)}
+	radius := resolveChartData(New("rose-radius", values).RoseType(RoseRadius), &activeTheme)
+	if radius.slices[0].radiusRatio != 0 || radius.slices[1].radiusRatio != .5 || radius.slices[2].radiusRatio != 1 {
+		t.Fatalf("radius rose radii = %#v", radius.slices)
+	}
+	assertAngle(t, radius.slices[1].rawAngle, float32(fullCircle/3))
+	assertAngle(t, radius.slices[2].rawAngle, float32(fullCircle*2/3))
+
+	area := resolveChartData(New("rose-area", values).RoseType(RoseArea), &activeTheme)
+	for _, slice := range area.slices {
+		assertAngle(t, slice.rawAngle, float32(fullCircle/3))
+	}
+	zeros := resolveChartData(New("rose-zero", []Data{Slice("a", "A", 0), Slice("b", "B", 0)}).
+		RoseType(RoseArea).
+		StillShowZeroSum(false), &activeTheme)
+	if zeros.slices[0].radiusRatio != .5 || zeros.slices[1].radiusRatio != .5 || !hasVisibleSector(zeros.slices) {
+		t.Fatalf("zero-sum area rose = %#v", zeros.slices)
+	}
+}
+
+func TestPieChartRoseAnimationInterpolatesRadius(t *testing.T) {
+	from := chartData{slices: []resolvedSlice{{key: "rose", radiusRatio: .25}}}
+	target := chartData{slices: []resolvedSlice{{key: "rose", radiusRatio: 1}}}
+	midpoint := interpolatePieData(from, target, .5)
+	if midpoint.slices[0].radiusRatio != .625 {
+		t.Fatalf("animated rose radius = %v", midpoint.slices[0].radiusRatio)
 	}
 }
 
@@ -81,20 +112,23 @@ func TestPieChartHitTestHonorsDirectionAndDonutHole(t *testing.T) {
 	data := chartData{
 		dir: 1,
 		slices: []resolvedSlice{
-			{startAngle: -math.Pi / 2, endAngle: 0},
-			{startAngle: 0, endAngle: 3 * math.Pi / 2},
+			{startAngle: -math.Pi / 2, endAngle: 0, radiusRatio: .25},
+			{startAngle: 0, endAngle: 3 * math.Pi / 2, radiusRatio: 1},
 		},
 	}
 	geometry := chartGeometry{center: f32.Pt(50, 50), innerRadius: 10, outerRadius: 40}
-	if index := hitTestPie(data, geometry, f32.Pt(70, 30)); index != 0 {
+	if index := hitTestPie(data, geometry, f32.Pt(60, 40)); index != 0 {
 		t.Fatalf("clockwise PieChart hit index = %d", index)
+	}
+	if index := hitTestPie(data, geometry, f32.Pt(70, 30)); index != -1 {
+		t.Fatalf("PieChart hit outside rose radius = %d", index)
 	}
 	if index := hitTestPie(data, geometry, f32.Pt(50, 50)); index != -1 {
 		t.Fatalf("PieChart donut hole hit index = %d", index)
 	}
 
 	data.dir = -1
-	data.slices = []resolvedSlice{{startAngle: -math.Pi / 2, endAngle: -math.Pi}}
+	data.slices = []resolvedSlice{{startAngle: -math.Pi / 2, endAngle: -math.Pi, radiusRatio: 1}}
 	if index := hitTestPie(data, geometry, f32.Pt(30, 30)); index != 0 {
 		t.Fatalf("counter-clockwise PieChart hit index = %d", index)
 	}
@@ -147,6 +181,14 @@ func TestPieChartThemeAndValidation(t *testing.T) {
 			resolveChartData(widget, &activeTheme)
 		}()
 	}
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("invalid PieChart rose type did not panic")
+			}
+		}()
+		_ = New("pie", nil).RoseType(RoseType(99))
+	}()
 }
 
 func assertAngle(t *testing.T, got, want float32) {

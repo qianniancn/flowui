@@ -29,6 +29,7 @@ func (w Widget) drawTooltip(ctx *frame.Context, gtx layout.Context, geometry cha
 	tooltip.NewPopup(content).
 		Placement(placement).
 		Offset(max(frame.ActiveTheme(ctx).Components.BarChart.TooltipGap, 0)).
+		TransformMotion(false).
 		Progress(progress).
 		Exiting(exiting).
 		Layout(ctx, gtx, anchor)

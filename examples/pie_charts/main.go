@@ -62,6 +62,16 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		}).
 		Height(340)
 
+	rose := ui.PieChart("nightingale-rose", roseData()).
+		RoseType(ui.PieRoseArea).
+		InnerRadius(.15).
+		OuterRadius(.78).
+		PadAngle(1).
+		Legend(false).
+		Label("Nightingale rose").
+		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
+		Height(380)
+
 	selected := model.selected
 	if selected == "" {
 		selected = "No data selected"
@@ -73,9 +83,23 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				ui.Text(selected).Size(14),
 				ui.Surface(ui.Box(standard).Padding(16)).Radius(8),
 				ui.Surface(ui.Box(donut).Padding(16)).Radius(8),
+				ui.Surface(ui.Box(rose).Padding(16)).Radius(8),
 			).Gap(16),
 		).FillWidth().MaxWidth(920).Padding(24),
 	)
+}
+
+func roseData() []ui.PieChartData {
+	return []ui.PieChartData{
+		ui.PieData("rose", "Rose", 40),
+		ui.PieData("lily", "Lily", 38),
+		ui.PieData("tulip", "Tulip", 32),
+		ui.PieData("iris", "Iris", 30),
+		ui.PieData("orchid", "Orchid", 28),
+		ui.PieData("lotus", "Lotus", 26),
+		ui.PieData("daisy", "Daisy", 22),
+		ui.PieData("violet", "Violet", 18),
+	}
 }
 
 func trafficData(model Model, chart string) []ui.PieChartData {

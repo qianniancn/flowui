@@ -19,6 +19,7 @@ const (
 const (
 	tooltipEnterDuration = 150 * time.Millisecond
 	tooltipExitDuration  = 100 * time.Millisecond
+	tooltipMoveDuration  = 400 * time.Millisecond
 )
 
 type TooltipWidget struct {

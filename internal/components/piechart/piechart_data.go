@@ -11,16 +11,17 @@ import (
 const fullCircle = 2 * math.Pi
 
 type resolvedSlice struct {
-	index      int
-	key        string
-	label      string
-	value      float64
-	percent    float64
-	color      color.NRGBA
-	hidden     bool
-	startAngle float32
-	endAngle   float32
-	rawAngle   float32
+	index       int
+	key         string
+	label       string
+	value       float64
+	percent     float64
+	color       color.NRGBA
+	hidden      bool
+	startAngle  float32
+	endAngle    float32
+	rawAngle    float32
+	radiusRatio float32
 }
 
 func (s resolvedSlice) sweep() float32 {
@@ -60,7 +61,7 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme) chartData {
 			colors := activeTheme.Components.PieChart.SeriesColors
 			itemColor = colors[index%len(colors)]
 		}
-		item := resolvedSlice{index: index, key: source.key, label: label, value: source.value, color: itemColor, hidden: source.hidden}
+		item := resolvedSlice{index: index, key: source.key, label: label, value: source.value, color: itemColor, hidden: source.hidden, radiusRatio: 1}
 		result.legend = append(result.legend, item)
 		if source.hidden || !finiteNonnegative(source.value) {
 			continue
@@ -69,9 +70,27 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme) chartData {
 		result.slices = append(result.slices, item)
 	}
 
-	allocateAngles(result.slices, result.total, result.start, result.dir, widget.padAngle*math.Pi/180, widget.minAngle*math.Pi/180, widget.stillShowZeroSum)
+	allocateRoseRadii(result.slices, widget.roseType)
+	allocateAngles(result.slices, result.total, result.start, result.dir, widget.padAngle*math.Pi/180, widget.minAngle*math.Pi/180, widget.stillShowZeroSum, widget.roseType == RoseArea)
 	allocatePercents(result.slices, result.total)
 	return result
+}
+
+func allocateRoseRadii(slices []resolvedSlice, roseType RoseType) {
+	if roseType == RoseNone || len(slices) == 0 {
+		return
+	}
+	maximum := float64(0)
+	for _, slice := range slices {
+		maximum = max(maximum, slice.value)
+	}
+	for index := range slices {
+		if maximum == 0 {
+			slices[index].radiusRatio = .5
+		} else {
+			slices[index].radiusRatio = float32(slices[index].value / maximum)
+		}
+	}
 }
 
 func allocatePercents(slices []resolvedSlice, sum float64) {
@@ -105,7 +124,7 @@ func allocatePercents(slices []resolvedSlice, sum float64) {
 	}
 }
 
-func allocateAngles(slices []resolvedSlice, sum float64, start, dir, padAngle, minAngle float32, stillShowZeroSum bool) {
+func allocateAngles(slices []resolvedSlice, sum float64, start, dir, padAngle, minAngle float32, stillShowZeroSum, equalAngles bool) {
 	if len(slices) == 0 {
 		return
 	}
@@ -119,10 +138,13 @@ func allocateAngles(slices []resolvedSlice, sum float64, start, dir, padAngle, m
 	}
 	halfPad := dir * padAngle / 2
 	current := start
+	equalAngle := angleRange / float32(len(slices))
 
 	for index := range slices {
 		angle := float32(slices[index].value) * unitAngle
-		if sum == 0 && stillShowZeroSum {
+		if equalAngles {
+			angle = equalAngle
+		} else if sum == 0 && stillShowZeroSum {
 			angle = unitAngle
 		}
 		if angle < minAndPad {

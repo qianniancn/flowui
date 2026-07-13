@@ -103,6 +103,9 @@ func (p Popup) offsetPx(ctx *frame.Context, gtx layout.Context) int {
 }
 
 func (p Popup) panelAffine(ctx *frame.Context, trigger image.Rectangle, panelPos, panelSize image.Point, placement overlay.PopoverPlacement) f32.Affine2D {
+	if !p.transformMotionEnabled() {
+		return f32.AffineId()
+	}
 	origin := tooltipTransformOrigin(trigger, panelPos, panelSize, placement)
 	theme := frame.ActiveTheme(ctx).Components.Tooltip
 	scale := theme.AnimationScale
@@ -142,9 +145,13 @@ func tooltipArrowAnchor(trigger image.Rectangle, panelPos, panelSize image.Point
 }
 
 func (p Popup) slideOffset(ctx *frame.Context, gtx layout.Context, placement overlay.PopoverPlacement) image.Point {
-	if p.exiting {
+	if p.exiting || !p.transformMotionEnabled() {
 		return image.Point{}
 	}
 	distance := gtx.Dp(frame.ActiveTheme(ctx).Components.Tooltip.AnimationDistance)
 	return overlay.SlideOffset(distance, p.progress, placement.Placement())
+}
+
+func (p Popup) transformMotionEnabled() bool {
+	return !p.hasTransformMotion || p.transformMotion
 }

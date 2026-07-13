@@ -152,6 +152,10 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		state.tooltipTransition.Reset()
 		state.tooltipSelection = chartSelection{}
 	}
+	tooltipPointer := state.pointer
+	if tooltipVisible || tooltipProgress > 0 {
+		tooltipPointer = state.tooltipTransition.Position(gtx, state.pointer)
+	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
 	placeChartBlock(gtx, legend, legendPosition)
@@ -170,7 +174,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		drawChartSelection(ctx, gtx, selection, tokens)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, lineTooltipAnchor(state.pointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, lineTooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		position := image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0))

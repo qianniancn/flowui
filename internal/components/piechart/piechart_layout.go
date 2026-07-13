@@ -125,6 +125,10 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	} else {
 		state.clearTooltip()
 	}
+	tooltipPointer := state.pointer
+	if tooltipVisible || tooltipProgress > 0 {
+		tooltipPointer = state.tooltipTransition.Position(gtx, state.pointer)
+	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
 	placeBlock(gtx, legend, legendPosition)
@@ -142,7 +146,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		w.drawEmptyText(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, state.tooltipSlice, pieTooltipAnchor(state.pointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, state.tooltipSlice, pieTooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	opacity.Pop()
 
@@ -182,7 +186,7 @@ func hitTestPie(data chartData, geometry chartGeometry, point f32.Point) int {
 	}
 	angle := float32(math.Atan2(float64(delta.Y), float64(delta.X)))
 	for index, slice := range data.slices {
-		if slice.sweep() <= 1e-5 {
+		if slice.sweep() <= 1e-5 || slice.radiusRatio <= 0 || radius > sliceOuterRadius(slice, geometry) {
 			continue
 		}
 		distance := normalizeAngle((angle - slice.startAngle) * data.dir)
@@ -322,6 +326,7 @@ func (w Widget) drawTooltip(ctx *frame.Context, gtx layout.Context, slice resolv
 	tooltip.NewPopup(content).
 		Placement(overlay.PopoverRightStart).
 		Offset(max(frame.ActiveTheme(ctx).Components.PieChart.TooltipGap, 0)).
+		TransformMotion(false).
 		Progress(progress).
 		Exiting(exiting).
 		Layout(ctx, gtx, anchor)

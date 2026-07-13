@@ -17,25 +17,29 @@ import (
 func drawPieSlices(gtx layout.Context, slices []resolvedSlice, geometry chartGeometry, hoveredKey string, emphasis float32) {
 	for _, slice := range slices {
 		if slice.key != hoveredKey {
-			drawPieSlice(gtx, slice, geometry, geometry.outerRadius)
+			drawPieSlice(gtx, slice, geometry, sliceOuterRadius(slice, geometry))
 		}
 	}
 	for _, slice := range slices {
 		if slice.key == hoveredKey {
-			drawPieSlice(gtx, slice, geometry, geometry.outerRadius+max(emphasis, 0))
+			drawPieSlice(gtx, slice, geometry, sliceOuterRadius(slice, geometry)+max(emphasis, 0))
 			return
 		}
 	}
 }
 
 func drawPieSlice(gtx layout.Context, slice resolvedSlice, geometry chartGeometry, outerRadius float32) {
-	if slice.color.A == 0 || slice.sweep() <= 1e-5 || outerRadius <= 0 {
+	if slice.color.A == 0 || slice.sweep() <= 1e-5 || outerRadius <= geometry.innerRadius {
 		return
 	}
 	path := pieSectorPath(gtx, geometry.center, geometry.innerRadius, outerRadius, slice.startAngle, slice.endAngle)
 	stack := clip.Outline{Path: path}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, slice.color)
 	stack.Pop()
+}
+
+func sliceOuterRadius(slice resolvedSlice, geometry chartGeometry) float32 {
+	return geometry.innerRadius + (geometry.outerRadius-geometry.innerRadius)*slice.radiusRatio
 }
 
 func drawEmptyPie(gtx layout.Context, geometry chartGeometry, fill color.NRGBA) {
@@ -74,7 +78,7 @@ func piePoint(center f32.Point, radius, angle float32) f32.Point {
 
 func hasVisibleSector(slices []resolvedSlice) bool {
 	for _, slice := range slices {
-		if slice.sweep() > 1e-5 {
+		if slice.sweep() > 1e-5 && slice.radiusRatio > 0 {
 			return true
 		}
 	}
@@ -103,8 +107,9 @@ func (w Widget) drawLabels(ctx *frame.Context, gtx layout.Context, slices []reso
 			continue
 		}
 		mid := (slice.startAngle + slice.endAngle) / 2
-		anchor := piePoint(geometry.center, geometry.outerRadius+1, mid)
-		bend := piePoint(geometry.center, geometry.outerRadius+line1, mid)
+		outerRadius := sliceOuterRadius(slice, geometry)
+		anchor := piePoint(geometry.center, outerRadius+1, mid)
+		bend := piePoint(geometry.center, outerRadius+line1, mid)
 		right := float32(math.Cos(float64(mid))) >= 0
 		label := recordText(ctx, gtx, slice.label, tokens.LabelTextSize, font.Normal, style.text, max(geometry.area.Dx()/2, 1))
 		labels = append(labels, pieLabel{slice: slice, text: label, right: right, anchor: anchor, bend: bend, centerY: bend.Y})

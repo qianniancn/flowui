@@ -305,6 +305,48 @@ func TestPopupTransitionEnterExitAndReset(t *testing.T) {
 	}
 }
 
+func TestPopupTransitionFollowsPointerAndSnapsAfterExit(t *testing.T) {
+	start := time.Unix(2, 0)
+	transition := new(PopupTransition)
+	if got := transition.Position(testContextAt(start), f32.Pt(10, 20)); got != f32.Pt(10, 20) {
+		t.Fatalf("initial popup position = %v", got)
+	}
+	if got := transition.Position(testContextAt(start), f32.Pt(110, 60)); got != f32.Pt(10, 20) {
+		t.Fatalf("popup moved before transition started = %v", got)
+	}
+	if got := transition.Position(testContextAt(start.Add(tooltipMoveDuration/2)), f32.Pt(110, 60)); got != f32.Pt(97.5, 55) {
+		t.Fatalf("half popup position = %v", got)
+	}
+	if got := transition.Position(testContextAt(start.Add(tooltipMoveDuration)), f32.Pt(110, 60)); got != f32.Pt(110, 60) {
+		t.Fatalf("completed popup position = %v", got)
+	}
+
+	transition.Progress(testContextAt(start), true)
+	transition.Progress(testContextAt(start.Add(tooltipEnterDuration)), true)
+	exitStart := start.Add(tooltipEnterDuration + time.Millisecond)
+	transition.Progress(testContextAt(exitStart), false)
+	transition.Progress(testContextAt(exitStart.Add(tooltipExitDuration)), false)
+	if got := transition.Position(testContextAt(exitStart.Add(tooltipExitDuration)), f32.Pt(200, 100)); got != f32.Pt(200, 100) {
+		t.Fatalf("popup position after completed exit = %v", got)
+	}
+}
+
+func TestPopupCanDisableTransformMotion(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	gtx := testContextAt(time.Unix(3, 0))
+	popup := NewPopup(nil).TransformMotion(false).Progress(.5)
+	if popup.transformMotionEnabled() {
+		t.Fatal("popup transform motion remained enabled")
+	}
+	affine := popup.panelAffine(ctx, image.Rect(20, 20, 21, 21), image.Pt(30, 30), image.Pt(80, 40), overlay.PopoverRight)
+	if got := affine.Transform(f32.Pt(12, 24)); got != f32.Pt(12, 24) {
+		t.Fatalf("disabled popup transform = %v", got)
+	}
+	if got := popup.slideOffset(ctx, gtx, overlay.PopoverRight); got != (image.Point{}) {
+		t.Fatalf("disabled popup slide offset = %v", got)
+	}
+}
+
 func TestPopupWithoutAnchorOrContentHasNoLayoutSize(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	gtx := testContextAt(time.Time{})

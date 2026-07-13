@@ -23,6 +23,15 @@ type Data struct {
 	hidden   bool
 }
 
+// RoseType controls ECharts-compatible Nightingale rose layout.
+type RoseType uint8
+
+const (
+	RoseNone RoseType = iota
+	RoseRadius
+	RoseArea
+)
+
 func Slice(key, label string, value float64) Data {
 	return Data{key: key, label: label, value: value}
 }
@@ -48,6 +57,7 @@ type Widget struct {
 	startAngle              float32
 	padAngle                float32
 	minAngle                float32
+	roseType                RoseType
 	stillShowZeroSum        bool
 	showLabels              bool
 	showLegend              bool
@@ -127,6 +137,16 @@ func (w Widget) PadAngle(degrees float32) Widget {
 func (w Widget) MinAngle(degrees float32) Widget {
 	validateNonnegativeAngle("minimum angle", degrees)
 	w.minAngle = degrees
+	return w
+}
+
+// RoseType enables an ECharts-compatible Nightingale rose layout. Radius
+// keeps value-proportional angles; Area gives every slice an equal angle.
+func (w Widget) RoseType(value RoseType) Widget {
+	if value > RoseArea {
+		panic("flowui: invalid pie chart rose type")
+	}
+	w.roseType = value
 	return w
 }
 

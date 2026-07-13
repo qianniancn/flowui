@@ -85,6 +85,7 @@ func interpolatePieData(from, target chartData, progress float32) chartData {
 		}
 		result.slices[index].startAngle = animation.LerpFloat(from.slices[index].startAngle, result.slices[index].startAngle, progress)
 		result.slices[index].endAngle = animation.LerpFloat(from.slices[index].endAngle, result.slices[index].endAngle, progress)
+		result.slices[index].radiusRatio = animation.LerpFloat(from.slices[index].radiusRatio, result.slices[index].radiusRatio, progress)
 	}
 	return result
 }
@@ -102,7 +103,7 @@ func samePieGeometry(first, second chartData) bool {
 	}
 	for index := range first.slices {
 		left, right := first.slices[index], second.slices[index]
-		if left.key != right.key || left.value != right.value || left.startAngle != right.startAngle || left.endAngle != right.endAngle {
+		if left.key != right.key || left.value != right.value || left.startAngle != right.startAngle || left.endAngle != right.endAngle || left.radiusRatio != right.radiusRatio {
 			return false
 		}
 	}

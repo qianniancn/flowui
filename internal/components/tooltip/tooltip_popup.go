@@ -17,17 +17,19 @@ import (
 // Popup is the controlled presentation layer shared by triggered and
 // data-driven tooltips.
 type Popup struct {
-	content          frame.Widget
-	placement        overlay.PopoverPlacement
-	offset           unit.Dp
-	hasOffset        bool
-	shouldFlip       bool
-	hasShouldFlip    bool
-	avoidOverflow    bool
-	hasAvoidOverflow bool
-	arrow            bool
-	progress         float32
-	exiting          bool
+	content            frame.Widget
+	placement          overlay.PopoverPlacement
+	offset             unit.Dp
+	hasOffset          bool
+	shouldFlip         bool
+	hasShouldFlip      bool
+	avoidOverflow      bool
+	hasAvoidOverflow   bool
+	arrow              bool
+	transformMotion    bool
+	hasTransformMotion bool
+	progress           float32
+	exiting            bool
 }
 
 func NewPopup(content frame.Widget) Popup {
@@ -63,6 +65,14 @@ func (p Popup) AvoidOverflow(avoidOverflow bool) Popup {
 
 func (p Popup) Arrow(show bool) Popup {
 	p.arrow = show
+	return p
+}
+
+// TransformMotion controls the popup scale and slide animation. Opacity is
+// still controlled by Progress.
+func (p Popup) TransformMotion(enabled bool) Popup {
+	p.transformMotion = enabled
+	p.hasTransformMotion = true
 	return p
 }
 
@@ -146,11 +156,16 @@ func (t TooltipWidget) popup(progress float32, exiting bool) Popup {
 // PopupTransition animates a controlled tooltip without introducing show or
 // close delays.
 type PopupTransition struct {
-	value float32
-	from  float32
-	to    float32
-	at    time.Time
-	ready bool
+	value         float32
+	from          float32
+	to            float32
+	at            time.Time
+	ready         bool
+	position      f32.Point
+	positionFrom  f32.Point
+	positionTo    f32.Point
+	positionAt    time.Time
+	positionReady bool
 }
 
 func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
@@ -169,6 +184,9 @@ func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
 	}
 	if t.from == t.to {
 		t.value = t.to
+		if t.value == 0 {
+			t.positionReady = false
+		}
 		return t.value
 	}
 	duration := tooltipEnterDuration
@@ -180,7 +198,52 @@ func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
 		gtx.Execute(op.InvalidateCmd{})
 	}
 	t.value = render.Lerp(t.from, t.to, progress)
+	if t.value == 0 {
+		t.positionReady = false
+	}
 	return t.value
+}
+
+// Position follows a pointer target with ECharts-style ease-out motion. The
+// first position after a completed exit is shown immediately.
+func (t *PopupTransition) Position(gtx layout.Context, target f32.Point) f32.Point {
+	if !t.positionReady {
+		t.position = target
+		t.positionFrom = target
+		t.positionTo = target
+		t.positionAt = gtx.Now
+		t.positionReady = true
+		return target
+	}
+	t.advancePosition(gtx.Now)
+	if target != t.positionTo {
+		t.positionFrom = t.position
+		t.positionTo = target
+		t.positionAt = gtx.Now
+	}
+	if t.advancePosition(gtx.Now) {
+		gtx.Execute(op.InvalidateCmd{})
+	}
+	return t.position
+}
+
+func (t *PopupTransition) advancePosition(now time.Time) bool {
+	if t.positionFrom == t.positionTo {
+		t.position = t.positionTo
+		return false
+	}
+	progress := render.Progress(now.Sub(t.positionAt), tooltipMoveDuration)
+	remaining := 1 - progress
+	progress = 1 - remaining*remaining*remaining
+	t.position = f32.Pt(
+		render.Lerp(t.positionFrom.X, t.positionTo.X, progress),
+		render.Lerp(t.positionFrom.Y, t.positionTo.Y, progress),
+	)
+	if progress >= 1 {
+		t.positionFrom = t.positionTo
+		return false
+	}
+	return true
 }
 
 func (t *PopupTransition) Value() float32 {

@@ -3,6 +3,7 @@ package ui_test
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"reflect"
 	"testing"
 
@@ -151,6 +152,34 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			FormatX(func(value float64) string { return fmt.Sprint(value) }).
 			FormatY(func(value float64) string { return fmt.Sprint(value) }).
 			Label("Traffic").
+			EmptyText("No samples").
+			Disabled(false),
+		ui.BarChart("sales", []ui.BarChartSeries{
+			ui.BarSeries("online", "Online", []float64{12, 18, 16}).
+				Color(color.NRGBA{R: 1, A: 0xff}).
+				ItemColors([]color.NRGBA{{R: 2, A: 0xff}}).
+				Stack("total").
+				Width(18).
+				MaxWidth(24).
+				MinHeight(1).
+				Radius(3).
+				Background(true).
+				Hidden(false),
+		}).
+			Categories([]string{"Mon", "Tue", "Wed"}).
+			Height(280).
+			Grid(true).
+			Legend(true).
+			Tooltip(true).
+			IncludeZero(false).
+			YRange(0, 20).
+			XAxis("Day").
+			YAxis("Sales").
+			YTicks(5).
+			BarGap(0.1).
+			CategoryGap(0.25).
+			FormatY(func(value float64) string { return fmt.Sprint(value) }).
+			Label("Sales").
 			EmptyText("No samples").
 			Disabled(false),
 		ui.Menubar("application-menu", []ui.MenubarItem{

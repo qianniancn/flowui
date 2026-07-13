@@ -126,6 +126,7 @@ type ComponentsTheme struct {
 	Dropdown     DropdownTheme
 	Menubar      MenubarTheme
 	LineChart    LineChartTheme
+	BarChart     BarChartTheme
 	Tabs         TabsTheme
 	Select       SelectTheme
 	Popover      PopoverTheme
@@ -573,6 +574,39 @@ type LineChartTheme struct {
 	FocusRingWidth    unit.Dp
 	FocusRadius       unit.Dp
 	SeriesColors      [9]color.NRGBA
+}
+
+type BarChartTheme struct {
+	Height             unit.Dp
+	PlotPaddingTop     unit.Dp
+	PlotPaddingRight   unit.Dp
+	PlotPaddingBottom  unit.Dp
+	PlotPaddingLeft    unit.Dp
+	AxisNameGap        unit.Dp
+	TickLabelGap       unit.Dp
+	AxisTextSize       unit.Sp
+	LegendTextSize     unit.Sp
+	LegendMarkerSize   unit.Dp
+	LegendMarkerGap    unit.Dp
+	LegendMarkerRadius unit.Dp
+	LegendItemGap      unit.Dp
+	LegendLineGap      unit.Dp
+	LegendGap          unit.Dp
+	GridWidth          unit.Dp
+	AxisWidth          unit.Dp
+	BarRadius          unit.Dp
+	MinBarHeight       unit.Dp
+	BackgroundRadius   unit.Dp
+	TooltipPadding     unit.Dp
+	TooltipRadius      unit.Dp
+	TooltipGap         unit.Dp
+	TooltipRowGap      unit.Dp
+	TooltipMarkerSize  unit.Dp
+	TooltipTextSize    unit.Sp
+	TooltipMaxWidth    unit.Dp
+	FocusRingWidth     unit.Dp
+	FocusRadius        unit.Dp
+	SeriesColors       [9]color.NRGBA
 }
 
 type TabsTheme struct {
@@ -1224,6 +1258,48 @@ func DefaultTheme() Theme {
 				TooltipMaxWidth:   240,
 				FocusRingWidth:    2,
 				FocusRadius:       8,
+				SeriesColors: [9]color.NRGBA{
+					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
+					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},
+					{R: 0x50, G: 0x53, B: 0x72, A: 0xff},
+					{R: 0xff, G: 0x99, B: 0x4d, A: 0xff},
+					{R: 0x0c, G: 0xa8, B: 0xdf, A: 0xff},
+					{R: 0xff, G: 0xd1, B: 0x0a, A: 0xff},
+					{R: 0xfb, G: 0x62, B: 0x8b, A: 0xff},
+					{R: 0x78, G: 0x5d, B: 0xb0, A: 0xff},
+					{R: 0x3f, G: 0xbe, B: 0x95, A: 0xff},
+				},
+			},
+			BarChart: BarChartTheme{
+				Height:             320,
+				PlotPaddingTop:     12,
+				PlotPaddingRight:   16,
+				PlotPaddingBottom:  36,
+				PlotPaddingLeft:    56,
+				AxisNameGap:        6,
+				TickLabelGap:       8,
+				AxisTextSize:       12,
+				LegendTextSize:     12,
+				LegendMarkerSize:   10,
+				LegendMarkerGap:    7,
+				LegendMarkerRadius: 2,
+				LegendItemGap:      20,
+				LegendLineGap:      8,
+				LegendGap:          12,
+				GridWidth:          1,
+				AxisWidth:          1,
+				BarRadius:          0,
+				MinBarHeight:       0,
+				BackgroundRadius:   0,
+				TooltipPadding:     10,
+				TooltipRadius:      8,
+				TooltipGap:         12,
+				TooltipRowGap:      6,
+				TooltipMarkerSize:  8,
+				TooltipTextSize:    12,
+				TooltipMaxWidth:    240,
+				FocusRingWidth:     2,
+				FocusRadius:        8,
 				SeriesColors: [9]color.NRGBA{
 					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
 					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},

@@ -1,0 +1,333 @@
+package barchart
+
+import (
+	"image"
+	"image/color"
+	"math"
+	"testing"
+	"time"
+
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/theme"
+)
+
+func TestBarChartOptionsUseValueSemantics(t *testing.T) {
+	values := []float64{1, 2, 3}
+	baseSeries := Values("sales", "Sales", values)
+	itemColors := []color.NRGBA{{R: 2, A: 0xff}, {G: 3, A: 0xff}}
+	values[0] = 99
+	if baseSeries.values[0] != 1 {
+		t.Fatal("BarChart Series retained the caller's values slice")
+	}
+	configuredSeries := baseSeries.
+		Color(color.NRGBA{R: 1, A: 0xff}).
+		ItemColors(itemColors).
+		Stack("total").
+		Width(18).
+		MaxWidth(24).
+		MinHeight(2).
+		Radius(4).
+		Background(true).
+		Hidden(true)
+	itemColors[0] = color.NRGBA{}
+	if baseSeries.hasColor || len(baseSeries.itemColors) != 0 || baseSeries.stack != "" || baseSeries.width != 0 || baseSeries.maxWidth != 0 || baseSeries.minHeight != 0 || baseSeries.hasRadius || baseSeries.showBackground || baseSeries.hidden {
+		t.Fatalf("configuring BarChart Series mutated base: %#v", baseSeries)
+	}
+	if !configuredSeries.hasColor || len(configuredSeries.itemColors) != 2 || configuredSeries.itemColors[0].R != 2 || configuredSeries.stack != "total" || configuredSeries.width != 18 || configuredSeries.maxWidth != 24 || configuredSeries.minHeight != 2 || configuredSeries.radius != 4 || !configuredSeries.hasRadius || !configuredSeries.showBackground || !configuredSeries.hidden {
+		t.Fatalf("configured BarChart Series = %#v", configuredSeries)
+	}
+
+	categories := []string{"Mon", "Tue", "Wed"}
+	base := New("sales", []Series{baseSeries})
+	configured := base.
+		Categories(categories).
+		Height(280).
+		Grid(false).
+		Legend(true).
+		Tooltip(false).
+		IncludeZero(false).
+		YRange(10, 20).
+		XAxis("Day").
+		YAxis("Sales").
+		YTicks(6).
+		BarGap(1.2).
+		CategoryGap(0.3).
+		FormatY(func(float64) string { return "value" }).
+		Label("Sales").
+		EmptyText("Empty").
+		Disabled(true)
+	categories[0] = "Changed"
+	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || base.disabled {
+		t.Fatalf("configuring BarChart mutated base: %#v", base)
+	}
+	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
+		t.Fatalf("configured BarChart = %#v", configured)
+	}
+}
+
+func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func()
+	}{
+		{"series width", func() { Values("a", "A", nil).Width(0) }},
+		{"series max width", func() { Values("a", "A", nil).MaxWidth(-1) }},
+		{"series min height", func() { Values("a", "A", nil).MinHeight(-1) }},
+		{"series radius", func() { Values("a", "A", nil).Radius(-1) }},
+		{"height", func() { New("chart", nil).Height(0) }},
+		{"Y range", func() { New("chart", nil).YRange(math.NaN(), 1) }},
+		{"Y ticks", func() { New("chart", nil).YTicks(1) }},
+		{"negative bar gap", func() { New("chart", nil).BarGap(-0.1) }},
+		{"large category gap", func() { New("chart", nil).CategoryGap(1) }},
+		{"NaN gap", func() { New("chart", nil).BarGap(float32(math.NaN())) }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("invalid BarChart configuration did not panic")
+				}
+			}()
+			test.run()
+		})
+	}
+}
+
+func TestResolveChartDataGroupsAndStacksSameSignValues(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	data := resolveChartData(New("chart", []Series{
+		Values("desktop", "Desktop", []float64{10, -4, math.NaN()}).Stack("traffic"),
+		Values("mobile", "Mobile", []float64{5, -3, 2}).Stack("traffic"),
+		Values("direct", "Direct", []float64{7, 8}),
+	}).Categories([]string{"A", "B", "C"}), &activeTheme, testDp)
+	if data.categories != 3 || len(data.series) != 3 || len(data.columns) != 2 {
+		t.Fatalf("resolved BarChart data = %#v", data)
+	}
+	if first, second := data.series[0].values[0], data.series[1].values[0]; first.start != 0 || first.end != 10 || second.start != 10 || second.end != 15 {
+		t.Fatalf("positive stack = %#v %#v", first, second)
+	}
+	if first, second := data.series[0].values[1], data.series[1].values[1]; first.start != 0 || first.end != -4 || second.start != -4 || second.end != -7 {
+		t.Fatalf("negative stack = %#v %#v", first, second)
+	}
+	if data.series[0].values[2].valid || data.series[1].values[2].start != 0 || data.series[1].values[2].end != 2 {
+		t.Fatalf("stack with missing value = %#v", data.series)
+	}
+	if data.yExtent.minimum != -7 || data.yExtent.maximum != 15 {
+		t.Fatalf("stack extent = %#v", data.yExtent)
+	}
+}
+
+func TestResolveChartDataAppliesItemColors(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	red := color.NRGBA{R: 0xff, A: 0xff}
+	data := resolveChartData(New("chart", []Series{
+		Values("values", "Values", []float64{1, 2, 3}).ItemColors([]color.NRGBA{red}),
+	}), &activeTheme, testDp)
+	if data.series[0].values[0].color != red {
+		t.Fatalf("first item color = %#v", data.series[0].values[0].color)
+	}
+	if data.series[0].values[1].color != data.series[0].color || data.series[0].values[2].color != data.series[0].color {
+		t.Fatalf("missing item colors did not use series color: %#v", data.series[0].values)
+	}
+}
+
+func TestResolveChartDataIgnoresHiddenSeriesForCategoryCount(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	data := resolveChartData(New("chart", []Series{
+		Values("visible", "Visible", []float64{1, 2}),
+		Values("hidden", "Hidden", []float64{1, 2, 3, 4}).Hidden(true),
+	}), &activeTheme, testDp)
+	if data.categories != 2 || len(data.series) != 1 || len(data.columns) != 1 {
+		t.Fatalf("hidden BarChart series affected layout: %#v", data)
+	}
+}
+
+func TestIncludeZeroControlsAutomaticExtent(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	data := resolveChartData(New("chart", []Series{Values("values", "Values", []float64{10, 20})}).IncludeZero(false), &activeTheme, testDp)
+	if data.yExtent.minimum != 10 || data.yExtent.maximum != 20 {
+		t.Fatalf("scale extent includes zero when disabled: %#v", data.yExtent)
+	}
+	data = resolveChartData(New("chart", []Series{Values("values", "Values", []float64{10, 20})}), &activeTheme, testDp)
+	if data.yExtent.minimum != 0 || data.yExtent.maximum != 20 {
+		t.Fatalf("default scale extent excludes zero: %#v", data.yExtent)
+	}
+}
+
+func TestResolveChartDataRejectsSeriesKeys(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	for _, series := range [][]Series{
+		{Values("", "Empty", nil)},
+		{Values("same", "First", nil), Values("same", "Second", nil)},
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("invalid BarChart series keys did not panic")
+				}
+			}()
+			resolveChartData(New("chart", series), &activeTheme, testDp)
+		}()
+	}
+}
+
+func TestColumnLayoutUsesEChartsCategoryAndBarGaps(t *testing.T) {
+	columns := []barColumn{{id: "first"}, {id: "second"}}
+	layouts := resolveColumnLayouts(columns, 100, 0.1, defaultCategoryGap(len(columns)))
+	first, second := layouts["first"], layouts["second"]
+	wantWidth := float32(73.0 / 2.1)
+	if math.Abs(float64(first.width-wantWidth)) > 1e-4 || first.width != second.width {
+		t.Fatalf("automatic bar widths = %#v", layouts)
+	}
+	if math.Abs(float64(first.offset+36.5)) > 1e-4 || math.Abs(float64(second.offset-(first.offset+first.width*1.1))) > 1e-4 {
+		t.Fatalf("automatic bar offsets = %#v", layouts)
+	}
+	stacked := resolveColumnLayouts([]barColumn{{id: "stack"}}, 100, 0.1, defaultCategoryGap(1))
+	if math.Abs(float64(stacked["stack"].width-69)) > 1e-4 || math.Abs(float64(stacked["stack"].offset+34.5)) > 1e-4 {
+		t.Fatalf("stacked column layout = %#v", stacked)
+	}
+	mixed := resolveColumnLayouts([]barColumn{{id: "fixed", width: 30, maxWidth: 20}, {id: "auto"}}, 100, 0.1, 0.2)
+	if mixed["fixed"].width != 20 || math.Abs(float64(mixed["auto"].width-58)) > 1e-4 {
+		t.Fatalf("mixed explicit and automatic layout = %#v", mixed)
+	}
+}
+
+func TestBarRectangleHonorsMinimumHeight(t *testing.T) {
+	geometry := chartGeometry{
+		plot:      image.Rect(0, 0, 100, 100),
+		yScale:    newLinearScale(-10, 10, 4, false, true),
+		bandWidth: 100,
+	}
+	column := columnLayout{offset: -10, width: 20}
+	positive := barRectangle(geometry, column, 0, resolvedBar{value: 0.01, start: 0, end: 0.01, valid: true}, 4)
+	negative := barRectangle(geometry, column, 0, resolvedBar{value: -0.01, start: 0, end: -0.01, valid: true}, 4)
+	if positive.Dy() != 4 || negative.Dy() != 4 || positive.Max.Y != negative.Min.Y {
+		t.Fatalf("minimum-height bars = positive %v negative %v", positive, negative)
+	}
+}
+
+func TestBarChartSelectionUsesCategoryIndex(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	widget := New("chart", []Series{
+		Values("first", "First", []float64{10, 20}),
+		Values("second", "Second", []float64{12, math.NaN()}),
+	})
+	data := resolveChartData(widget, &activeTheme, testDp)
+	geometry := chartGeometry{plot: image.Rect(0, 0, 100, 100), bandWidth: 50}
+	selection := widget.resolveSelection(data, geometry, 1, true)
+	if selection.pixelX != 75 || len(selection.entries) != 1 || selection.entries[0].bar.value != 20 {
+		t.Fatalf("BarChart selection = %#v", selection)
+	}
+}
+
+func TestBarChartPointerAndKeyboardSelection(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20, 30})}).Categories([]string{"A", "B", "C"})
+	now := time.Unix(1, 0)
+	layoutBarChartFrame(ctx, router, widget, now)
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotBarChart)
+	if state == nil {
+		t.Fatal("BarChart state is missing")
+	}
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(300, 100)})
+	layoutBarChartFrame(ctx, router, widget, now.Add(time.Millisecond))
+	if !state.hovered || state.keyboard || state.pointerIndex < 0 {
+		t.Fatalf("pointer BarChart state = %#v", state)
+	}
+
+	router.Source().Execute(key.FocusCmd{Tag: &state.root})
+	layoutBarChartFrame(ctx, router, widget, now.Add(2*time.Millisecond))
+	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
+	layoutBarChartFrame(ctx, router, widget, now.Add(3*time.Millisecond))
+	if !state.keyboard || state.keyboardIndex != 2 {
+		t.Fatalf("keyboard BarChart state = %#v", state)
+	}
+	if !frame.FocusVisible(ctx, &state.root, router.Source().Focused(&state.root)) {
+		t.Fatal("keyboard BarChart navigation did not restore visible focus")
+	}
+}
+
+func TestBarChartTooltipDisabledClearsInteraction(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20})})
+	now := time.Unix(4, 0)
+	layoutBarChartFrame(ctx, router, widget, now)
+	state, _ := frame.PeekState[chartState](ctx, "chart", stateSlotBarChart)
+	state.hovered = true
+	state.keyboard = true
+	state.keyboardIndex = 1
+	state.pointerIndex = 1
+	layoutBarChartFrame(ctx, router, widget.Tooltip(false), now.Add(time.Millisecond))
+	if state.hovered || state.keyboard || state.keyboardIndex != -1 || state.pointerIndex != -1 {
+		t.Fatalf("disabled BarChart tooltip retained interaction state: %#v", state)
+	}
+}
+
+func TestBarChartThemeAndSemantics(t *testing.T) {
+	tokens := theme.DefaultTheme().Components.BarChart
+	if tokens.Height != 320 || tokens.BarRadius != 0 || tokens.SeriesColors[0] != (color.NRGBA{R: 0x50, G: 0x70, B: 0xdd, A: 0xff}) {
+		t.Fatalf("BarChart theme tokens = %#v", tokens)
+	}
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	layoutBarChartFrame(ctx, router, New("chart", []Series{Values("series", "Series", []float64{1})}).Label("Quarterly sales"), time.Unix(2, 0))
+	if !semanticDescriptionExists(router.AppendSemantics(nil), "Quarterly sales, 1 series, 1 categories") {
+		t.Fatal("BarChart semantic description is missing")
+	}
+}
+
+func TestBarChartHandlesSmallConstraintsAndEmptyData(t *testing.T) {
+	ctx := barChartTestContext()
+	router := new(input.Router)
+	widget := New("small", []Series{Values("series", "Series", []float64{math.NaN()})}).XAxis("X").YAxis("Y")
+	viewport := image.Pt(24, 18)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: time.Unix(3, 0)}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := widget.Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	if dims.Size != viewport {
+		t.Fatalf("small BarChart dimensions = %v, want %v", dims.Size, viewport)
+	}
+}
+
+func testDp(value unit.Dp) int {
+	return int(value)
+}
+
+func barChartTestContext() *frame.Context {
+	return frame.New(nil, nil, locale.LanguageEnglish)
+}
+
+func layoutBarChartFrame(ctx *frame.Context, router *input.Router, widget Widget, now time.Time) layout.Dimensions {
+	viewport := image.Pt(520, 320)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := widget.Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	return dims
+}
+
+func semanticDescriptionExists(nodes []input.SemanticNode, description string) bool {
+	for _, node := range nodes {
+		if node.Desc.Description == description || semanticDescriptionExists(node.Children, description) {
+			return true
+		}
+	}
+	return false
+}

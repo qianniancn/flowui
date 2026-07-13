@@ -37,6 +37,7 @@ type MenuTheme = theme.MenuTheme
 type DropdownTheme = theme.DropdownTheme
 type MenubarTheme = theme.MenubarTheme
 type LineChartTheme = theme.LineChartTheme
+type BarChartTheme = theme.BarChartTheme
 type TabsTheme = theme.TabsTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme

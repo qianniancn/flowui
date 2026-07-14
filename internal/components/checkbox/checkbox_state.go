@@ -17,21 +17,30 @@ func checkboxStateFor(ctx *frame.Context, key string) *checkboxState {
 }
 
 type checkboxState struct {
+	SelectionAnimation
+	focus        float32
+	focusFrom    float32
+	focusTo      float32
+	focusAt      time.Time
+	focusReady   bool
+	focused      bool
+	pointerFocus bool
+}
+
+// SelectionAnimation drives the shared checkbox fill and check-path progress.
+type SelectionAnimation struct {
 	selected      float32
 	selectedFrom  float32
 	selectedTo    float32
 	selectedAt    time.Time
 	selectedReady bool
-	focus         float32
-	focusFrom     float32
-	focusTo       float32
-	focusAt       time.Time
-	focusReady    bool
-	focused       bool
-	pointerFocus  bool
 }
 
 func (s *checkboxState) selection(gtx layout.Context, checked bool) float32 {
+	return s.SelectionAnimation.Progress(gtx, checked)
+}
+
+func (s *SelectionAnimation) Progress(gtx layout.Context, checked bool) float32 {
 	target := float32(0)
 	if checked {
 		target = 1

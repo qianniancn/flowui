@@ -136,6 +136,7 @@ text/editor internals.
 - `ListBox`
 - `Tree`
 - `Sidebar`
+- `StatusBar`
 - `Table`
 - `Tabs`
 - `Select`
@@ -212,6 +213,7 @@ Examples live in `examples/`:
 - `list_boxes`: single-select, multi-select, sections, disabled keys, custom indicators, and action-oriented list boxes.
 - `trees`: controlled hierarchical navigation with expansion, selection, custom content, disabled nodes, and scrolling.
 - `sidebars`: controlled desktop navigation with sections, collapsed rail, custom content, disabled destinations, and keyboard navigation.
+- `status_bars`: compact desktop application status bars with left and right content, semantic surfaces, and optional accent styling.
 - `scrollbars`: HeroUI-aligned thin vertical and horizontal scrollbars backed by Gio track and thumb interactions.
 - `split_panes`: resizable horizontal, vertical, and nested desktop panes with minimum sizes and keyboard control.
 - `tables`: HeroUI-aligned data tables with variants, controlled selection and sorting, custom cells, disabled rows, and scrolling.

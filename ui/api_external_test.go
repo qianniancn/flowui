@@ -416,6 +416,10 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Label("Resize panes").
 			OnRatioChange(func(float32) {}).
 			Disabled(false),
+		ui.StatusBar(ui.Text("Ready"), ui.Text("Ln 1, Col 1")).
+			Variant(ui.StatusBarAccent).
+			Height(30).
+			Border(true),
 		ui.Table("members", tableColumns, tableRows).
 			Variant(ui.TableSecondary).
 			SelectionMode(ui.TableSelectionMultiple).
@@ -610,6 +614,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
 	var _ ui.SplitPaneTheme
+	var _ ui.StatusBarTheme
 
 	if root := facadeView(nil, facadeModel{}, func(facadeMsg) {}); root == nil {
 		t.Fatal("public facade returned a nil widget tree")

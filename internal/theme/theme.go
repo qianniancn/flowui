@@ -134,6 +134,7 @@ type ComponentsTheme struct {
 	Sidebar          SidebarTheme
 	Scrollbar        ScrollbarTheme
 	SplitPane        SplitPaneTheme
+	StatusBar        StatusBarTheme
 	Table            TableTheme
 	Menu             MenuTheme
 	Dropdown         DropdownTheme
@@ -497,6 +498,13 @@ type SplitPaneTheme struct {
 	HitSize      unit.Dp
 	ActiveWidth  unit.Dp
 	HandleLength unit.Dp
+}
+
+type StatusBarTheme struct {
+	Height      unit.Dp
+	PaddingX    unit.Dp
+	Gap         unit.Dp
+	BorderWidth unit.Dp
 }
 
 type TableTheme struct {
@@ -1256,6 +1264,12 @@ func DefaultTheme() Theme {
 				HitSize:      12,
 				ActiveWidth:  2,
 				HandleLength: 32,
+			},
+			StatusBar: StatusBarTheme{
+				Height:      28,
+				PaddingX:    10,
+				Gap:         8,
+				BorderWidth: 1,
 			},
 			Table: TableTheme{
 				RootPadding:           4,

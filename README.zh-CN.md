@@ -131,6 +131,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `ListBox`
 - `Tree`
 - `Sidebar`
+- `StatusBar`
 - `Table`
 - `Tabs`
 - `Select`
@@ -206,6 +207,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `list_boxes`：单选、多选、分组、禁用 key、自定义 indicator 和可触发动作的列表框。
 - `trees`：受控的层级导航，包含展开、选择、自定义内容、禁用节点和滚动。
 - `sidebars`：受控桌面导航，包含分组、折叠导航轨、自定义内容、禁用目的地和键盘导航。
+- `status_bars`：紧凑的桌面应用状态栏，支持左右内容、语义化 Surface 和可选强调色样式。
 - `scrollbars`：对齐 HeroUI 的细型纵向与横向滚动条，使用 Gio 的轨道与滑块交互。
 - `split_panes`：支持最小尺寸和键盘操作的横向、纵向与嵌套桌面分栏。
 - `tables`：对齐 HeroUI 的数据表格，包含变体、受控选择与排序、自定义单元格、禁用行和滚动。

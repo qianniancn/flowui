@@ -5,6 +5,8 @@ import (
 	"image/color"
 
 	"gioui.org/font"
+	"gioui.org/io/event"
+	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -14,6 +16,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/components/spinner"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -36,7 +39,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 		padding = gtx.Dp(tokens.RootPadding)
 	}
 	viewportWidth := max(gtx.Constraints.Max.X-padding*2, 0)
-	columns := t.resolveColumns(ctx, gtx, viewportWidth)
+	columns := t.resolveColumns(ctx, gtx, stateValue, viewportWidth)
 	contentMaxHeight := gtx.Constraints.Max.Y
 	maxHeight := tokens.MaxHeight
 	if t.maxHeight > 0 {
@@ -112,7 +115,11 @@ func (t Widget) layoutHorizontal(ctx *frame.Context, gtx layout.Context, stateVa
 
 func (t Widget) layoutContent(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.Table
-	headerHeight := min(gtx.Dp(tokens.HeaderHeight), gtx.Constraints.Max.Y)
+	headerHeightToken := tokens.HeaderHeight
+	if t.headerHeight > 0 {
+		headerHeightToken = unit.Dp(t.headerHeight)
+	}
+	headerHeight := min(gtx.Dp(headerHeightToken), gtx.Constraints.Max.Y)
 	headerGtx := gtx
 	headerGtx.Constraints = layout.Exact(image.Pt(columns.width, headerHeight))
 	headerDims := t.layoutHeader(ctx, headerGtx, stateValue, columns, style)
@@ -126,13 +133,27 @@ func (t Widget) layoutContent(ctx *frame.Context, gtx layout.Context, stateValue
 	})
 	bodyOffset.Pop()
 	bodyPlacement.PlaceOffset(image.Pt(0, headerDims.Size.Y))
-	return layout.Dimensions{Size: image.Pt(columns.width, headerDims.Size.Y+bodyDims.Size.Y)}
+	size := image.Pt(columns.width, headerDims.Size.Y+bodyDims.Size.Y)
+	t.drawColumnResizeGuide(ctx, gtx, stateValue, columns, size)
+	return layout.Dimensions{Size: size}
+}
+
+func (t Widget) drawColumnResizeGuide(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, size image.Point) {
+	tokens := frame.ActiveTheme(ctx).Components.Table
+	width := max(gtx.Dp(tokens.ColumnResizerWidth), 1)
+	x := columns.selection
+	for index, column := range t.columns {
+		x += columns.widths[index]
+		if column.Resizable && stateValue.column(column.Key).resize.dragging {
+			drawTableColumnResizer(gtx, x, size.Y, size.Y, width, color.NRGBA{}, frame.ActiveTheme(ctx).Palette.Accent, true, 0)
+		}
+	}
 }
 
 func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle) layout.Dimensions {
 	size := gtx.Constraints.Max
 	radius := tableHeaderRadius(gtx, frame.ActiveTheme(ctx), size, t.variant)
-	drawTableHeader(gtx, size, radius, style.header)
+	drawTableHeader(gtx, frame.ActiveTheme(ctx), size, radius, style.header, style.headerSeparator)
 	headerBackground := style.header
 	if headerBackground.A == 0 {
 		headerBackground = ctx.BackgroundColor()
@@ -145,6 +166,7 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 		cellGtx.Constraints = layout.Exact(image.Pt(columns.selection, size.Y))
 		if t.selectionMode == SelectionMultiple {
 			all, some := t.selectionSummary()
+			selection := stateValue.selectAllSelection.Progress(gtx, all || some)
 			presses := state.ActivePresses(stateValue.selectAll.History())
 			frame.FocusOnPress(ctx, &stateValue.selectAll, stateValue.selectAll.History(), presses)
 			stateValue.selectAll.Layout(cellGtx, func(gtx layout.Context) layout.Dimensions {
@@ -154,7 +176,7 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 				focusVisible := stateValue.selectAllFocus.Visible(gtx.Focused(&stateValue.selectAll), stateValue.selectAll.History())
 				focus := stateValue.selectAllFocus.Opacity(gtx, focusVisible && !t.disabled)
 				checkbox.DrawControl(ctx, gtx, checkbox.ControlOptions{
-					Variant: checkbox.CheckboxPrimary, Selection: boolFloat(all || some),
+					Variant: checkbox.CheckboxPrimary, Selection: selection,
 					Indeterminate: some, Hovered: stateValue.selectAll.Hovered(),
 					Pressed: stateValue.selectAll.Pressed(), Focused: focus, Disabled: t.disabled,
 				})
@@ -163,7 +185,7 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 		}
 		x += columns.selection
 		if len(t.columns) > 0 {
-			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.separator)
+			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator)
 		}
 	}
 	for index, column := range t.columns {
@@ -174,22 +196,58 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 		t.layoutHeaderCell(ctx, cellGtx, stateValue, column, style)
 		offset.Pop()
 		x += width
-		if index < len(t.columns)-1 {
-			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.separator)
+		if index < len(t.columns)-1 && !column.Resizable {
+			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator)
 		}
 	}
+	t.layoutColumnResizers(ctx, gtx, stateValue, columns, style, size)
 	return layout.Dimensions{Size: size}
+}
+
+func (t Widget) layoutColumnResizers(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle, size image.Point) {
+	tokens := frame.ActiveTheme(ctx).Components.Table
+	hitSize := max(gtx.Dp(tokens.ColumnResizerHitSize), 1)
+	activeWidth := max(gtx.Dp(tokens.ColumnResizerWidth), 1)
+	baseHeight := max(gtx.Dp(tokens.ColumnSeparatorHeight), 1)
+	enabled := gtx.Enabled() && !t.disabled
+	x := columns.selection
+	for index, column := range t.columns {
+		x += columns.widths[index]
+		if !column.Resizable {
+			continue
+		}
+		resize := &stateValue.column(column.Key).resize
+		focusVisible := resize.focus.Visible(gtx.Focused(resize), nil)
+		focus := resize.focus.Opacity(gtx, focusVisible && enabled)
+		drawTableColumnResizer(gtx, x, size.Y, baseHeight, activeWidth, style.columnSeparator, frame.ActiveTheme(ctx).Palette.Accent, false, focus)
+
+		hit := image.Rect(max(x-hitSize/2, 0), 0, min(x+(hitSize+1)/2, size.X), size.Y)
+		if hit.Empty() {
+			continue
+		}
+		clipped := clip.Rect(hit).Push(gtx.Ops)
+		semantic.LabelOp("Resize " + column.Label + " column").Add(gtx.Ops)
+		semantic.EnabledOp(enabled).Add(gtx.Ops)
+		if enabled {
+			pointer.CursorColResize.Add(gtx.Ops)
+			event.Op(gtx.Ops, resize)
+		}
+		clipped.Pop()
+	}
 }
 
 func (t Widget) layoutHeaderCell(ctx *frame.Context, gtx layout.Context, stateValue *tableState, column Column, style tableStyle) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.Table
-	content := func(gtx layout.Context) layout.Dimensions {
-		return layout.Inset{Left: tokens.CellPaddingX, Right: tokens.CellPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return t.layoutHeaderContent(ctx, gtx, column, style)
+	content := func(gtx layout.Context, child layout.Widget) layout.Dimensions {
+		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min.Y = 0
+			return layout.Inset{Left: tokens.CellPaddingX, Right: tokens.CellPaddingX}.Layout(gtx, child)
 		})
 	}
 	if !column.Sortable {
-		return content(gtx)
+		return content(gtx, func(gtx layout.Context) layout.Dimensions {
+			return t.layoutHeaderContent(ctx, gtx, column, style)
+		})
 	}
 	columnState := stateValue.column(column.Key)
 	presses := state.ActivePresses(columnState.clickable.History())
@@ -205,7 +263,7 @@ func (t Widget) layoutHeaderCell(ctx *frame.Context, gtx layout.Context, stateVa
 		focused := columnState.focus.Visible(gtx.Focused(&columnState.clickable), columnState.clickable.History())
 		focus := columnState.focus.Opacity(gtx, focused && !t.disabled)
 		drawTableCellFocus(gtx, frame.ActiveTheme(ctx), gtx.Constraints.Max, focus, style.focus)
-		return layout.Inset{Left: tokens.CellPaddingX, Right: tokens.CellPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return content(gtx, func(gtx layout.Context) layout.Dimensions {
 			return t.layoutSortableHeaderContent(ctx, gtx, column, foreground)
 		})
 	})
@@ -252,16 +310,27 @@ func (t Widget) layoutBody(ctx *frame.Context, gtx layout.Context, stateValue *t
 	defer restore()
 	macro := op.Record(gtx.Ops)
 	var contentDims layout.Dimensions
-	if len(t.rows) == 0 {
+	rowCount := t.count()
+	showLoader := t.hasMore || t.loadingMore
+	if rowCount == 0 && !showLoader {
 		contentDims = t.layoutEmpty(ctx, gtx, columns.width, style)
 	} else {
 		stateValue.vertical.Axis = layout.Vertical
 		stateValue.vertical.Gap = 0
 		stateValue.vertical.Alignment = layout.Start
 		stateValue.vertical.ScrollAnyAxis = false
-		contentDims = layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.vertical, &stateValue.verticalBar, len(t.rows), t.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
-			return t.layoutRow(ctx, gtx, stateValue, columns, style, t.rows[index], index == len(t.rows)-1)
+		itemCount := rowCount
+		if showLoader {
+			itemCount++
+		}
+		contentDims = layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.vertical, &stateValue.verticalBar, itemCount, t.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
+			if index == rowCount {
+				return t.layoutLoadMore(ctx, gtx, columns.width)
+			}
+			row := t.row(index)
+			return t.layoutRow(ctx, gtx, stateValue, columns, style, row, index, index == rowCount-1 && !showLoader)
 		})
+		stateValue.updateLoadMore(rowCount, t.hasMore, t.loadingMore, stateValue.vertical.Position.First+stateValue.vertical.Position.Count >= itemCount, t.onLoadMore)
 	}
 	call := macro.Stop()
 	contentDims.Size.X = columns.width
@@ -271,6 +340,25 @@ func (t Widget) layoutBody(ctx *frame.Context, gtx layout.Context, stateValue *t
 	call.Add(gtx.Ops)
 	bodyClip.Pop()
 	return contentDims
+}
+
+func (t Widget) layoutLoadMore(ctx *frame.Context, gtx layout.Context, width int) layout.Dimensions {
+	height := 1
+	if t.loadingMore {
+		height = max(gtx.Dp(frame.ActiveTheme(ctx).Components.Table.LoadMoreHeight), 1)
+	}
+	size := image.Pt(width, min(height, gtx.Constraints.Max.Y))
+	loaderGtx := gtx
+	loaderGtx.Constraints = layout.Exact(size)
+	return layout.Center.Layout(loaderGtx, func(gtx layout.Context) layout.Dimensions {
+		if !t.loadingMore {
+			return layout.Dimensions{}
+		}
+		if t.loadMoreContent != nil {
+			return t.loadMoreContent.Layout(ctx, gtx)
+		}
+		return spinner.Spinner().Size(spinner.SpinnerMedium).Label("Loading more rows").Layout(ctx, gtx)
+	})
 }
 
 func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, width int, style tableStyle) layout.Dimensions {
@@ -293,8 +381,8 @@ type recordedCell struct {
 	placement frame.OverlayPlacement
 }
 
-func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle, row Row, last bool) layout.Dimensions {
-	rowState := stateValue.row(row.Key)
+func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle, row Row, index int, last bool) layout.Dimensions {
+	rowState := stateValue.rowAt(row.Key, index)
 	disabled := t.rowDisabled(row)
 	selected := t.isSelected(row.Key)
 	animGtx := gtx
@@ -323,9 +411,10 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 		defer restore()
 
 		recorded := make([]recordedCell, 0, len(row.Cells)+1)
-		rowHeight := gtx.Dp(frame.ActiveTheme(ctx).Components.Table.RowMinHeight)
+		rowHeight := t.rowMinHeight(gtx, ctx)
 		if columns.selection > 0 {
-			recorded = append(recorded, t.recordSelectionCell(ctx, gtx, columns.selection, selected))
+			selection := rowState.selection.Progress(animGtx, selected)
+			recorded = append(recorded, t.recordSelectionCell(ctx, gtx, columns.selection, selection))
 			rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
 		}
 		for index, cell := range row.Cells {
@@ -338,7 +427,7 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 		focus := rowState.focus.Opacity(animGtx, focused && !disabled)
 		opacity := paint.PushOpacity(gtx.Ops, rowStyle.opacity)
 		showSeparator := t.variant == VariantSecondary || !last
-		drawTableRow(gtx, frame.ActiveTheme(ctx), size, rowStyle, style.separator, showSeparator, focus)
+		drawTableRow(gtx, frame.ActiveTheme(ctx), size, rowStyle, style.rowSeparator, showSeparator, focus)
 		x := 0
 		for _, cell := range recorded {
 			y := max((rowHeight-cell.dims.Size.Y)/2, 0)
@@ -353,21 +442,22 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 	})
 }
 
-func (t Widget) recordSelectionCell(ctx *frame.Context, gtx layout.Context, width int, selected bool) recordedCell {
+func (t Widget) recordSelectionCell(ctx *frame.Context, gtx layout.Context, width int, selection float32) recordedCell {
 	macro := op.Record(gtx.Ops)
 	cellGtx := gtx
-	cellGtx.Constraints = layout.Exact(image.Pt(width, gtx.Dp(frame.ActiveTheme(ctx).Components.Table.RowMinHeight)))
+	cellGtx.Constraints = layout.Exact(image.Pt(width, t.rowMinHeight(gtx, ctx)))
 	checkbox.DrawControl(ctx, cellGtx, checkbox.ControlOptions{
-		Variant: checkbox.CheckboxSecondary, Selection: boolFloat(selected),
+		Variant: checkbox.CheckboxSecondary, Selection: selection,
 	})
 	return recordedCell{call: macro.Stop(), dims: layout.Dimensions{Size: cellGtx.Constraints.Max}}
 }
 
-func boolFloat(value bool) float32 {
-	if value {
-		return 1
+func (t Widget) rowMinHeight(gtx layout.Context, ctx *frame.Context) int {
+	height := frame.ActiveTheme(ctx).Components.Table.RowMinHeight
+	if t.rowHeight > 0 {
+		height = unit.Dp(t.rowHeight)
 	}
-	return 0
+	return gtx.Dp(height)
 }
 
 func (t Widget) recordCell(ctx *frame.Context, gtx layout.Context, width int, column Column, cell Cell, style tableRowStyle) recordedCell {
@@ -422,29 +512,59 @@ func (t tableCellText) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	return label.Layout(gtx)
 }
 
-func (t Widget) resolveColumns(ctx *frame.Context, gtx layout.Context, available int) tableColumns {
+func (t Widget) resolveColumns(ctx *frame.Context, gtx layout.Context, stateValue *tableState, available int) tableColumns {
 	tokens := frame.ActiveTheme(ctx).Components.Table
 	result := tableColumns{widths: make([]int, len(t.columns))}
+	fixed := make([]bool, len(t.columns))
+	maxWidths := make([]int, len(t.columns))
+	if stateValue != nil {
+		defer func() {
+			for index, column := range t.columns {
+				if !column.Resizable {
+					continue
+				}
+				configuredWidth := 0
+				if column.Width > 0 {
+					configuredWidth = gtx.Dp(unit.Dp(column.Width))
+				}
+				stateValue.column(column.Key).resize.sync(configuredWidth, result.widths[index])
+			}
+		}()
+	}
 	if t.showsSelectionIndicator() {
 		result.selection = max(gtx.Dp(tokens.SelectionColumnWidth), 0)
 	}
 	minimum := result.selection
-	flexWeight := float32(0)
 	lastFlex := -1
 	for index, column := range t.columns {
 		minWidth := max(gtx.Dp(tokens.MinColumnWidth), 1)
 		if column.MinWidth > 0 {
 			minWidth = max(gtx.Dp(unit.Dp(column.MinWidth)), 1)
 		}
+		configuredWidth := 0
 		if column.Width > 0 {
-			result.widths[index] = max(gtx.Dp(unit.Dp(column.Width)), minWidth)
+			configuredWidth = gtx.Dp(unit.Dp(column.Width))
+		}
+		width := configuredWidth
+		hasWidth := width > 0
+		if column.Resizable && stateValue != nil {
+			if resized, ok := stateValue.column(column.Key).resize.resolvedWidth(configuredWidth); ok {
+				width, hasWidth = resized, true
+			}
+		}
+		maxWidth := 0
+		if column.MaxWidth > 0 {
+			maxWidth = max(gtx.Dp(unit.Dp(column.MaxWidth)), minWidth)
+		}
+		maxWidths[index] = maxWidth
+		if hasWidth {
+			result.widths[index] = max(width, minWidth)
+			if maxWidth > 0 {
+				result.widths[index] = min(result.widths[index], maxWidth)
+			}
+			fixed[index] = true
 		} else {
 			result.widths[index] = minWidth
-			weight := column.Weight
-			if weight <= 0 {
-				weight = 1
-			}
-			flexWeight += weight
 			lastFlex = index
 		}
 		minimum += result.widths[index]
@@ -457,25 +577,50 @@ func (t Widget) resolveColumns(ctx *frame.Context, gtx layout.Context, available
 	if extra <= 0 {
 		return result
 	}
-	if lastFlex < 0 {
-		result.widths[len(result.widths)-1] += extra
-		return result
-	}
 	remaining := extra
-	for index, column := range t.columns {
-		if column.Width > 0 {
-			continue
+	for remaining > 0 && lastFlex >= 0 {
+		weightRemaining := float32(0)
+		lastCandidate := -1
+		for index, column := range t.columns {
+			if fixed[index] || maxWidths[index] > 0 && result.widths[index] >= maxWidths[index] {
+				continue
+			}
+			weight := column.Weight
+			if weight <= 0 {
+				weight = 1
+			}
+			weightRemaining += weight
+			lastCandidate = index
 		}
-		weight := column.Weight
-		if weight <= 0 {
-			weight = 1
+		if lastCandidate < 0 {
+			break
 		}
-		share := int(float32(extra) * weight / flexWeight)
-		if index == lastFlex {
-			share = remaining
+		passRemaining := remaining
+		distributed := 0
+		for index, column := range t.columns {
+			if fixed[index] || maxWidths[index] > 0 && result.widths[index] >= maxWidths[index] {
+				continue
+			}
+			weight := column.Weight
+			if weight <= 0 {
+				weight = 1
+			}
+			share := passRemaining
+			if index != lastCandidate {
+				share = int(float32(passRemaining) * weight / weightRemaining)
+			}
+			if maxWidths[index] > 0 {
+				share = min(share, maxWidths[index]-result.widths[index])
+			}
+			result.widths[index] += share
+			passRemaining -= share
+			remaining -= share
+			distributed += share
+			weightRemaining -= weight
 		}
-		result.widths[index] += share
-		remaining -= share
+		if distributed == 0 {
+			break
+		}
 	}
 	return result
 }

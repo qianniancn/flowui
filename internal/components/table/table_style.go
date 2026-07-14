@@ -8,27 +8,35 @@ import (
 )
 
 type tableStyle struct {
-	root       color.NRGBA
-	header     color.NRGBA
-	body       color.NRGBA
-	foreground color.NRGBA
-	muted      color.NRGBA
-	separator  color.NRGBA
-	focus      color.NRGBA
+	root            color.NRGBA
+	header          color.NRGBA
+	body            color.NRGBA
+	foreground      color.NRGBA
+	muted           color.NRGBA
+	columnSeparator color.NRGBA
+	headerSeparator color.NRGBA
+	rowSeparator    color.NRGBA
+	focus           color.NRGBA
 }
 
 func tableStyleFor(activeTheme *theme.Theme, variant Variant) tableStyle {
-	separator := activeTheme.Palette.Border
-	separator.A = byte(float32(separator.A)*0.55 + 0.5)
+	columnSeparator := activeTheme.Palette.SeparatorColor()
+	headerSeparator := columnSeparator
+	headerSeparator.A = byte(float32(headerSeparator.A)*0.5 + 0.5)
+	rowSeparator := render.LerpColor(activeTheme.Palette.Surface, activeTheme.Palette.Foreground, 0.19)
+	rowSeparator.A = byte(float32(rowSeparator.A)*0.5 + 0.5)
+	headerSurface := activeTheme.Palette.SurfaceTertiary
 	style := tableStyle{
-		header:     activeTheme.Palette.SurfaceSecondary,
-		foreground: activeTheme.Palette.Foreground,
-		muted:      activeTheme.Palette.MutedForeground,
-		separator:  separator,
-		focus:      activeTheme.Palette.Focus,
+		header:          headerSurface,
+		foreground:      activeTheme.Palette.Foreground,
+		muted:           activeTheme.Palette.MutedForeground,
+		columnSeparator: columnSeparator,
+		headerSeparator: headerSeparator,
+		rowSeparator:    rowSeparator,
+		focus:           activeTheme.Palette.Focus,
 	}
 	if variant == VariantPrimary {
-		style.root = activeTheme.Palette.SurfaceSecondary
+		style.root = headerSurface
 		style.body = activeTheme.Palette.Surface
 	}
 	return style
@@ -48,20 +56,17 @@ func tableRowStyleFor(activeTheme *theme.Theme, variant Variant, selected, hover
 		opacity:    1,
 	}
 	base := activeTheme.Palette.Background
+	hoverBackground := render.LerpColor(base, activeTheme.Palette.DefaultColor(), 0.5)
+	selectedBackground := render.LerpColor(base, activeTheme.Palette.Surface, 0.1)
 	if variant == VariantPrimary {
-		base = activeTheme.Palette.Surface
+		hoverBackground = render.LerpColor(activeTheme.Palette.SurfaceSecondary, activeTheme.Palette.Surface, 0.4)
+		selectedBackground = render.LerpColor(activeTheme.Palette.SurfaceSecondary, activeTheme.Palette.Surface, 0.1)
+	}
+	if hovered || pressed {
+		style.background = hoverBackground
 	}
 	if selected {
-		style.background = render.LerpColor(base, activeTheme.Palette.SurfaceTertiary, 0.62)
-	}
-	if hovered {
-		style.background = render.LerpColor(base, activeTheme.Palette.SurfaceHover, 0.8)
-		if selected {
-			style.background = render.LerpColor(base, activeTheme.Palette.SurfaceTertiary, 0.78)
-		}
-	}
-	if pressed {
-		style.background = render.LerpColor(base, activeTheme.Palette.SurfacePressed, 0.72)
+		style.background = selectedBackground
 	}
 	if disabled {
 		style.focus = color.NRGBA{}

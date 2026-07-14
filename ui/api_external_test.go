@@ -117,7 +117,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	items := []ui.SelectItem{{Key: "one", Label: "One"}}
 	treeItems := []ui.TreeItem{{Key: "folder", Label: "Folder", Children: []ui.TreeItem{{Key: "file", Label: "File"}}}}
 	tableColumns := []ui.TableColumn{
-		{Key: "name", Label: "Name", Sortable: true, RowHeader: true, Weight: 2},
+		{Key: "name", Label: "Name", Sortable: true, Resizable: true, RowHeader: true, MinWidth: 120, MaxWidth: 320, Weight: 2},
 		{Key: "status", Label: "Status", Width: 120, Align: ui.TableAlignEnd},
 	}
 	tableRows := []ui.TableRow{{
@@ -434,10 +434,26 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Footer(ui.Text("Footer")).
 			MinWidth(640).
 			MaxHeight(280).
+			HeaderHeight(36).
+			RowHeight(44).
+			LoadMore(true, false, func() {}).
+			LoadMoreContent(ui.Spinner()).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnSelectionChange(func(keys []string) { send(facadeMsg{tableSelected: keys}) }).
 			OnSortChange(func(sort ui.TableSortDescriptor) { send(facadeMsg{tableSort: &sort}) }).
 			OnAction(func(string) {}).
+			OnColumnResize(func(string, int) {}).
+			Disabled(false),
+		ui.VirtualTable("virtual-members", tableColumns, 1000, func(int) ui.TableRow { return tableRows[0] }).
+			MaxHeight(280),
+		ui.Pagination("members-pages", 2, 12).
+			Size(ui.PaginationSmall).
+			Summary(ui.Text("11 to 20 of 120 results")).
+			Siblings(1).
+			Boundaries(1).
+			ShowControls(true).
+			Labels("Previous", "Next").
+			OnChange(func(int) {}).
 			Disabled(false),
 		ui.ContextMenu(
 			"member-actions",
@@ -615,6 +631,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
 	var _ ui.SplitPaneTheme
 	var _ ui.StatusBarTheme
+	var _ ui.PaginationTheme
 
 	if root := facadeView(nil, facadeModel{}, func(facadeMsg) {}); root == nil {
 		t.Fatal("public facade returned a nil widget tree")

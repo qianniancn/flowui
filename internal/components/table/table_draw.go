@@ -22,11 +22,17 @@ func drawTableRoot(gtx layout.Context, size image.Point, radius int, col color.N
 	paint.FillShape(gtx.Ops, col, clip.UniformRRect(image.Rectangle{Max: size}, radius).Op(gtx.Ops))
 }
 
-func drawTableHeader(gtx layout.Context, size image.Point, radius int, col color.NRGBA) {
+func drawTableHeader(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, col, separator color.NRGBA) {
 	if size.X <= 0 || size.Y <= 0 || col.A == 0 {
 		return
 	}
-	paint.FillShape(gtx.Ops, col, clip.UniformRRect(image.Rectangle{Max: size}, radius).Op(gtx.Ops))
+	headerClip := clip.UniformRRect(image.Rectangle{Max: size}, radius).Push(gtx.Ops)
+	paint.Fill(gtx.Ops, col)
+	if separator.A != 0 {
+		height := max(gtx.Dp(activeTheme.Components.Table.SeparatorWidth), 1)
+		paint.FillShape(gtx.Ops, separator, clip.Rect(image.Rect(0, max(size.Y-height, 0), size.X, size.Y)).Op())
+	}
+	headerClip.Pop()
 }
 
 func drawTableBody(gtx layout.Context, size image.Point, radius int, col color.NRGBA) {
@@ -67,6 +73,27 @@ func drawTableHeaderSeparator(gtx layout.Context, activeTheme *theme.Theme, x, h
 	width := max(gtx.Dp(activeTheme.Components.Table.SeparatorWidth), 1)
 	y := max((height-lineHeight)/2, 0)
 	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, y, x+width, y+lineHeight)).Op())
+}
+
+func drawTableColumnResizer(gtx layout.Context, x, height, baseHeight, activeWidth int, base, accent color.NRGBA, active bool, focus float32) {
+	if height <= 0 {
+		return
+	}
+	width := 1
+	lineHeight := height
+	colorValue := accent
+	if !active && focus <= 0 {
+		colorValue = base
+		lineHeight = min(height, baseHeight)
+	} else {
+		width = activeWidth
+		if !active {
+			colorValue.A = byte(float32(colorValue.A)*focus + 0.5)
+		}
+	}
+	y := max((height-lineHeight)/2, 0)
+	left := x - width/2
+	paint.FillShape(gtx.Ops, colorValue, clip.Rect(image.Rect(left, y, left+width, y+lineHeight)).Op())
 }
 
 func drawTableCellFocus(gtx layout.Context, activeTheme *theme.Theme, size image.Point, opacity float32, col color.NRGBA) {

@@ -5,6 +5,7 @@ import "github.com/qianniancn/FlowUI/internal/components/table"
 type TableWidget = table.Widget
 type TableColumn = table.Column
 type TableRow = table.Row
+type TableRowProvider = table.RowProvider
 type TableCell = table.Cell
 type TableVariant = table.Variant
 type TableSelectionMode = table.SelectionMode
@@ -30,4 +31,8 @@ const (
 
 func Table(key string, columns []TableColumn, rows []TableRow) TableWidget {
 	return table.New(key, columns, rows)
+}
+
+func VirtualTable(key string, columns []TableColumn, count int, provider TableRowProvider) TableWidget {
+	return table.NewVirtual(key, columns, count, provider)
 }

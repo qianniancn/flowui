@@ -22,9 +22,9 @@ func comboBoxItemDescriptionColor(theme *theme.Theme, disabled bool) color.NRGBA
 	return col
 }
 
-func comboBoxItemStyleFor(theme *theme.Theme, hovered, pressed, selected, disabled bool) comboBoxItemStyle {
+func comboBoxItemStyleFor(theme *theme.Theme, hovered, pressed, disabled bool) comboBoxItemStyle {
 	style := comboBoxItemStyle{}
-	if hovered || selected {
+	if hovered {
 		style.bg = theme.Palette.SurfaceRaised
 	}
 	if pressed {

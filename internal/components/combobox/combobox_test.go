@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func newContext(_ any) *frame.Context {
@@ -217,6 +218,10 @@ func TestComboBoxClickSelectsItem(t *testing.T) {
 	}
 	if text := state.editor.Text(); text != "Dog" {
 		t.Fatalf("editor text = %q, want Dog", text)
+	}
+	start, end := state.editor.Selection()
+	if want := len([]rune(state.editor.Text())); start != want || end != want {
+		t.Fatalf("editor selection = (%d, %d), want caret at %d", start, end, want)
 	}
 }
 
@@ -424,6 +429,108 @@ func TestComboBoxFullWidth(t *testing.T) {
 
 	if dims.Size.X != 300 {
 		t.Fatalf("combobox width = %d, want 300", dims.Size.X)
+	}
+}
+
+func TestComboBoxTriggerUsesPointerCursor(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	combo := ComboBox("animal", "", comboBoxTestItems()).FullWidth()
+	layoutComboBoxFrame(ctx, router, combo)
+
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(20, 20)})
+	layoutComboBoxFrame(ctx, router, combo)
+	if got := router.Cursor(); got != pointer.CursorText {
+		t.Fatalf("input cursor = %v, want %v", got, pointer.CursorText)
+	}
+
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(280, 20)})
+	layoutComboBoxFrame(ctx, router, combo)
+	if got := router.Cursor(); got != pointer.CursorPointer {
+		t.Fatalf("trigger cursor = %v, want %v", got, pointer.CursorPointer)
+	}
+}
+
+func TestComboBoxFirstTriggerClickStaysOpen(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	combo := ComboBox("animal", "dog", comboBoxTestItems()).FullWidth()
+	layoutComboBoxFrame(ctx, router, combo)
+
+	position := f32.Pt(280, 20)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  position,
+	})
+	layoutComboBoxFrame(ctx, router, combo)
+	layoutComboBoxFrame(ctx, router, combo)
+
+	state := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  position,
+	})
+	layoutComboBoxFrame(ctx, router, combo)
+	if !state.open {
+		t.Fatal("first trigger click closed combobox on release")
+	}
+	if state.highlight != -1 {
+		t.Fatalf("highlight = %d, want no keyboard highlight", state.highlight)
+	}
+}
+
+func TestComboBoxItemHeightFollowsContent(t *testing.T) {
+	ctx := newContext(nil)
+	state := new(comboBoxState)
+	state.beginFrame()
+	var editor widget.Editor
+	gtx := testLayoutContext()
+	gtx.Constraints = layout.Constraints{Max: image.Pt(400, 300)}
+	combo := ComboBox("animal", "dog", comboBoxTestItems())
+	want := gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.ItemHeight)
+
+	singleLine := combo.layoutItem(ctx, gtx, state, &editor, ComboBoxItem{Key: "dog", Label: "Dog"}, true, false)
+	if singleLine.Size.Y != want {
+		t.Fatalf("single-line item height = %d, want %d", singleLine.Size.Y, want)
+	}
+	described := combo.layoutItem(ctx, gtx, state, &editor, ComboBoxItem{Key: "panda", Label: "Panda", Description: "Black and white"}, false, false)
+	if described.Size.Y <= want {
+		t.Fatalf("described item height = %d, want greater than %d", described.Size.Y, want)
+	}
+}
+
+func TestComboBoxSelectedItemHasNoBackground(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	style := comboBoxItemStyleFor(&activeTheme, false, false, false)
+	if style.bg.A != 0 {
+		t.Fatalf("selected item background = %#v, want transparent", style.bg)
+	}
+}
+
+func TestComboBoxSelectionAnimation(t *testing.T) {
+	state := new(comboBoxItemState)
+	start := time.Unix(1, 0)
+	gtx := testLayoutContext()
+	gtx.Now = start
+
+	if got := state.selection(gtx, false); got != 0 {
+		t.Fatalf("initial selection = %v, want 0", got)
+	}
+	if got := state.selection(gtx, true); got != 0 {
+		t.Fatalf("selection start = %v, want 0", got)
+	}
+	gtx.Now = start.Add(comboBoxItemSelectDuration / 2)
+	if got := state.selection(gtx, true); got <= 0 || got >= 1 {
+		t.Fatalf("selection midpoint = %v, want between 0 and 1", got)
+	}
+	gtx.Now = start.Add(comboBoxItemSelectDuration)
+	if got := state.selection(gtx, true); got != 1 {
+		t.Fatalf("selection end = %v, want 1", got)
 	}
 }
 

@@ -10,6 +10,7 @@ type Model struct {
 	Language string
 	Editor   string
 	Runtime  string
+	Animal   string
 	Last     string
 }
 
@@ -19,6 +20,7 @@ const (
 	fieldLanguage Field = "language"
 	fieldEditor   Field = "editor"
 	fieldRuntime  Field = "runtime"
+	fieldAnimal   Field = "animal"
 )
 
 type Msg struct {
@@ -35,6 +37,8 @@ func Update(m *Model, msg Msg) {
 		m.Editor = msg.Key
 	case fieldRuntime:
 		m.Runtime = msg.Key
+	case fieldAnimal:
+		m.Animal = msg.Key
 	}
 	if msg.Key != "" {
 		m.Last = fmt.Sprintf("%s selected %s", msg.Field, msg.Key)
@@ -72,11 +76,15 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							ui.Box(combo("runtime", fieldRuntime, m.Runtime, "Required runtime", runtimes, send).
 								Invalid(m.Runtime == "")).
 								Width(320),
-							ui.Box(ui.ComboBox("disabled", "go", languages).
+							ui.Box(ui.ComboBox("disabled", "", languages).
 								Hint("Disabled").
 								Disabled(true)).
 								Width(320),
 						).Gap(12),
+					),
+					section("Default selection",
+						ui.Box(combo("animal", fieldAnimal, m.Animal, "Search animal", animals, send)).
+							Width(320),
 					),
 					section("Full width",
 						combo("full-width", fieldLanguage, m.Language, "Full width", languages, send).
@@ -136,8 +144,16 @@ var runtimes = []ui.ComboBoxItem{
 	{Key: "mobile", Label: "Mobile", Disabled: true},
 }
 
+var animals = []ui.ComboBoxItem{
+	{Key: "cat", Label: "Cat"},
+	{Key: "dog", Label: "Dog"},
+	{Key: "fox", Label: "Fox"},
+	{Key: "panda", Label: "Panda"},
+	{Key: "rabbit", Label: "Rabbit"},
+}
+
 func main() {
-	ui.Run(Model{}, Update, View,
+	ui.Run(Model{Animal: "dog"}, Update, View,
 		ui.Title("FlowUI ComboBox"),
 		ui.Size(900, 680),
 	)

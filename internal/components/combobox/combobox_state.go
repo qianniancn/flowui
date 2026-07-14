@@ -246,6 +246,9 @@ func (s *comboBoxState) clampHighlight(items []ComboBoxItem, visible []int) {
 		s.highlight = -1
 		return
 	}
+	if s.highlight < 0 {
+		return
+	}
 	if s.highlight >= 0 && s.highlight < len(visible) && !items[visible[s.highlight]].Disabled {
 		return
 	}
@@ -257,7 +260,7 @@ func (s *comboBoxState) popoverProgress(gtx layout.Context, open bool) float32 {
 	if open {
 		target = 1
 	}
-	return comboBoxProgress(gtx, target, &s.popover, &s.popoverFrom, &s.popoverTo, &s.popoverAt, &s.popoverReady)
+	return comboBoxProgress(gtx, target, &s.popover, &s.popoverFrom, &s.popoverTo, &s.popoverAt, &s.popoverReady, comboBoxAnimationDuration)
 }
 
 func (s *comboBoxState) iconProgress(gtx layout.Context, open bool) float32 {
@@ -265,10 +268,10 @@ func (s *comboBoxState) iconProgress(gtx layout.Context, open bool) float32 {
 	if open {
 		target = 1
 	}
-	return comboBoxProgress(gtx, target, &s.icon, &s.iconFrom, &s.iconTo, &s.iconAt, &s.iconReady)
+	return comboBoxProgress(gtx, target, &s.icon, &s.iconFrom, &s.iconTo, &s.iconAt, &s.iconReady, comboBoxAnimationDuration)
 }
 
-func comboBoxProgress(gtx layout.Context, target float32, value, from, to *float32, at *time.Time, ready *bool) float32 {
+func comboBoxProgress(gtx layout.Context, target float32, value, from, to *float32, at *time.Time, ready *bool, duration time.Duration) float32 {
 	if !*ready {
 		*value = target
 		*from = target
@@ -286,7 +289,7 @@ func comboBoxProgress(gtx layout.Context, target float32, value, from, to *float
 		*value = *to
 		return *value
 	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), comboBoxAnimationDuration))
+	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), duration))
 	if progress < 1 {
 		gtx.Execute(op.InvalidateCmd{})
 	}
@@ -315,16 +318,29 @@ func comboBoxItemScale(gtx layout.Context, history []widget.Press, disabled bool
 }
 
 type comboBoxItemState struct {
-	clickable widget.Clickable
-	bg        color.NRGBA
-	bgFrom    color.NRGBA
-	bgTo      color.NRGBA
-	bgAt      time.Time
-	bgReady   bool
+	clickable     widget.Clickable
+	bg            color.NRGBA
+	bgFrom        color.NRGBA
+	bgTo          color.NRGBA
+	bgAt          time.Time
+	bgReady       bool
+	selected      float32
+	selectedFrom  float32
+	selectedTo    float32
+	selectedAt    time.Time
+	selectedReady bool
 }
 
 func (s *comboBoxItemState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
 	return comboBoxItemColor(gtx, target, &s.bg, &s.bgFrom, &s.bgTo, &s.bgAt, &s.bgReady)
+}
+
+func (s *comboBoxItemState) selection(gtx layout.Context, selected bool) float32 {
+	target := float32(0)
+	if selected {
+		target = 1
+	}
+	return comboBoxProgress(gtx, target, &s.selected, &s.selectedFrom, &s.selectedTo, &s.selectedAt, &s.selectedReady, comboBoxItemSelectDuration)
 }
 
 func comboBoxItemColor(gtx layout.Context, target color.NRGBA, value, from, to *color.NRGBA, at *time.Time, ready *bool) color.NRGBA {

@@ -36,6 +36,7 @@ type ComboBoxWidget struct {
 const (
 	comboBoxAnimationDuration   = 150 * time.Millisecond
 	comboBoxItemColorDuration   = 100 * time.Millisecond
+	comboBoxItemSelectDuration  = 250 * time.Millisecond
 	comboBoxItemPressInDuration = 80 * time.Millisecond
 	comboBoxItemPressDuration   = 140 * time.Millisecond
 )
@@ -124,7 +125,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	processMainEvents := !state.open
 	state.updateFocus(gtx.Focused(editor), c.disabled)
 	if !c.disabled && processMainEvents {
-		state.clampHighlight(c.items, visible)
+		state.highlight = -1
 		if index, ok := state.updateKeys(gtx, editor, c.items, visible); ok {
 			c.selectItem(editor, state, c.items[visible[index]])
 		}

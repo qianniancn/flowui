@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/font"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -51,20 +52,18 @@ func (c ComboBoxWidget) layoutInput(ctx *frame.Context, gtx layout.Context, stat
 	call.Add(gtx.Ops)
 	stack.Pop()
 
-	c.layoutTrigger(ctx, gtx, state, editor, size, style)
 	state.input.AddPointer(gtx, size, c.disabled)
+	c.layoutTrigger(ctx, gtx, state, editor, size, style)
 	return layout.Dimensions{Size: size}
 }
 
 func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, size image.Point, style field.Style) {
 	triggerSize := image.Pt(min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.TriggerWidth), size.X), size.Y)
-	presses := state.ActivePresses(comboState.trigger.History())
 	if !c.disabled {
 		for comboState.trigger.Clicked(gtx) {
 			comboState.open = !comboState.open
 			frame.RequestFocus(ctx, editor)
 		}
-		frame.FocusOnPress(ctx, editor, comboState.trigger.History(), presses)
 	}
 
 	triggerGtx := gtx
@@ -74,6 +73,9 @@ func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, co
 	}
 	stack := op.Offset(image.Pt(size.X-triggerSize.X, 0)).Push(gtx.Ops)
 	comboState.trigger.Layout(triggerGtx, func(gtx layout.Context) layout.Dimensions {
+		if !c.disabled {
+			pointer.CursorPointer.Add(gtx.Ops)
+		}
 		drawComboBoxChevron(gtx, frame.ActiveTheme(ctx), triggerSize, comboState.iconProgress(gtx, comboState.open), style.Placeholder)
 		return layout.Dimensions{Size: triggerSize}
 	})
@@ -230,10 +232,12 @@ func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, combo
 		height := min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.ItemHeight), gtx.Constraints.Max.Y)
 		gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 		macro := op.Record(gtx.Ops)
-		dims := c.layoutItemContent(ctx, gtx, item, selected)
+		contentGtx := gtx
+		contentGtx.Constraints.Min.Y = 0
+		dims := c.layoutItemContent(ctx, contentGtx, item, itemState.selection(gtx, selected))
 		call := macro.Stop()
 		dims.Size = gtx.Constraints.Constrain(dims.Size)
-		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.clickable.Hovered() || highlighted, itemState.clickable.Pressed(), selected, item.Disabled)
+		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.clickable.Hovered() || highlighted, itemState.clickable.Pressed(), item.Disabled)
 		style.bg = itemState.background(gtx, style.bg)
 		scale := comboBoxItemScale(gtx, itemState.clickable.History(), item.Disabled)
 		stack := comboBoxItemTransform(dims.Size, scale).Push(gtx.Ops)
@@ -244,7 +248,7 @@ func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, combo
 	})
 }
 
-func (c ComboBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context, item ComboBoxItem, selected bool) layout.Dimensions {
+func (c ComboBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context, item ComboBoxItem, selection float32) layout.Dimensions {
 	theme := frame.ActiveTheme(ctx).Components.ComboBox
 	return layout.Inset{
 		Top:    theme.ItemPaddingY,
@@ -284,9 +288,7 @@ func (c ComboBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				size := image.Pt(gtx.Dp(theme.ItemCheckSize), gtx.Dp(theme.ItemCheckSize))
-				if selected {
-					drawComboBoxCheck(gtx, frame.ActiveTheme(ctx), size)
-				}
+				drawComboBoxCheck(gtx, frame.ActiveTheme(ctx), size, selection)
 				return layout.Dimensions{Size: size}
 			}),
 		)

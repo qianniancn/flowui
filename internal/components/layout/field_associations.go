@@ -80,6 +80,12 @@ func prepareFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 			if widget != nil {
 				prepareFieldAssociations(ctx, widget.child)
 			}
+		case SplitPaneWidget:
+			prepareFieldAssociations(ctx, widget.first, widget.second)
+		case *SplitPaneWidget:
+			if widget != nil {
+				prepareFieldAssociations(ctx, widget.first, widget.second)
+			}
 		case StackWidget:
 			prepareStackFieldAssociations(ctx, widget.layers)
 		case *StackWidget:

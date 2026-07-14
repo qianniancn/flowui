@@ -20,6 +20,8 @@ type KeyWidget = layoutui.KeyWidget
 type ListWidget = layoutui.ListWidget
 type ScrollWidget = layoutui.ScrollWidget
 type ScrollbarWidget = layoutui.ScrollbarWidget
+type SplitPaneWidget = layoutui.SplitPaneWidget
+type SplitPaneOrientation = layoutui.SplitPaneOrientation
 type StackWidget = layoutui.StackWidget
 type StackLayer = layoutui.StackLayer
 type WrapWidget = layoutui.WrapWidget
@@ -37,6 +39,9 @@ const (
 	AlignBottomStart = layoutui.AlignBottomStart
 	AlignBottom      = layoutui.AlignBottom
 	AlignBottomEnd   = layoutui.AlignBottomEnd
+
+	SplitPaneHorizontal = layoutui.SplitPaneHorizontal
+	SplitPaneVertical   = layoutui.SplitPaneVertical
 )
 
 func Adaptive(view func(ViewSize) Widget) AdaptiveWidget {
@@ -105,6 +110,10 @@ func Scroll(key string, child Widget) ScrollWidget {
 
 func Scrollbar(key string, child Widget) ScrollbarWidget {
 	return layoutui.Scrollbar(key, child)
+}
+
+func SplitPane(key string, first, second Widget) SplitPaneWidget {
+	return layoutui.SplitPane(key, first, second)
 }
 
 func Stack(layers ...StackLayer) StackWidget {

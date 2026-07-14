@@ -159,6 +159,7 @@ text/editor internals.
 - `Adaptive`
 - `Wrap`
 - `Scroll`, `Scrollbar`, `List`
+- `SplitPane`
 - `Stack`, `Stacked`, `Overlay`
 - `AspectRatio`
 - `Grid`, `AutoGrid`
@@ -212,6 +213,7 @@ Examples live in `examples/`:
 - `trees`: controlled hierarchical navigation with expansion, selection, custom content, disabled nodes, and scrolling.
 - `sidebars`: controlled desktop navigation with sections, collapsed rail, custom content, disabled destinations, and keyboard navigation.
 - `scrollbars`: HeroUI-aligned thin vertical and horizontal scrollbars backed by Gio track and thumb interactions.
+- `split_panes`: resizable horizontal, vertical, and nested desktop panes with minimum sizes and keyboard control.
 - `tables`: HeroUI-aligned data tables with variants, controlled selection and sorting, custom cells, disabled rows, and scrolling.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.

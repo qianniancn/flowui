@@ -133,6 +133,7 @@ type ComponentsTheme struct {
 	Tree             TreeTheme
 	Sidebar          SidebarTheme
 	Scrollbar        ScrollbarTheme
+	SplitPane        SplitPaneTheme
 	Table            TableTheme
 	Menu             MenuTheme
 	Dropdown         DropdownTheme
@@ -489,6 +490,13 @@ type ScrollbarTheme struct {
 	Radius         unit.Dp
 	ThumbOpacity   float32
 	HoverOpacity   float32
+}
+
+type SplitPaneTheme struct {
+	DividerWidth unit.Dp
+	HitSize      unit.Dp
+	ActiveWidth  unit.Dp
+	HandleLength unit.Dp
 }
 
 type TableTheme struct {
@@ -1242,6 +1250,12 @@ func DefaultTheme() Theme {
 				Radius:         3,
 				ThumbOpacity:   0.15,
 				HoverOpacity:   0.28,
+			},
+			SplitPane: SplitPaneTheme{
+				DividerWidth: 1,
+				HitSize:      12,
+				ActiveWidth:  2,
+				HandleLength: 32,
 			},
 			Table: TableTheme{
 				RootPadding:           4,

@@ -56,26 +56,64 @@ func TestScrollbarThemeMatchesHeroUIThinStyle(t *testing.T) {
 	}
 }
 
-func TestScrollbarReservesContentGapOutsideOverlayMode(t *testing.T) {
+func TestScrollbarOnlyReservesSpaceWhenScrollable(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	probe := &scrollbarConstraintWidget{height: 20}
+	value := Scrollbar("standard", probe)
+	start := time.Unix(1, 0)
+
+	layoutScrollbarFrame(ctx, router, value, start)
+	if probe.constraints.Max.X != 100 {
+		t.Fatalf("non-scrollable content max width = %d, want 100", probe.constraints.Max.X)
+	}
+
+	probe.height = 300
+	layoutScrollbarFrame(ctx, router, value, start.Add(time.Millisecond))
+	layoutScrollbarFrame(ctx, router, value, start.Add(2*time.Millisecond))
+	if probe.constraints.Max.X != 86 {
+		t.Fatalf("scrollable content max width = %d, want 86", probe.constraints.Max.X)
+	}
+
+	probe.height = 20
+	layoutScrollbarFrame(ctx, router, value, start.Add(3*time.Millisecond))
+	layoutScrollbarFrame(ctx, router, value, start.Add(4*time.Millisecond))
+	if probe.constraints.Max.X != 100 {
+		t.Fatalf("content max width after overflow = %d, want 100", probe.constraints.Max.X)
+	}
+}
+
+func TestOverlayScrollbarNeverReservesSpace(t *testing.T) {
 	for _, test := range []struct {
 		name string
 		bar  ScrollbarWidget
 		want int
 	}{
-		{name: "standard", bar: Scrollbar("standard", new(constraintWidget)), want: 86},
-		{name: "overlay", bar: Scrollbar("overlay", new(constraintWidget)).Overlay(), want: 100},
+		{name: "short", bar: Scrollbar("short", &scrollbarConstraintWidget{height: 20}).Overlay(), want: 100},
+		{name: "long", bar: Scrollbar("long", &scrollbarConstraintWidget{height: 300}).Overlay(), want: 100},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			probe := test.bar.child.(*constraintWidget)
-			test.bar.Layout(newContext(nil), layout.Context{
-				Constraints: layout.Exact(image.Pt(100, 100)),
-				Ops:         new(op.Ops),
-			})
+			probe := test.bar.child.(*scrollbarConstraintWidget)
+			ctx := newContext(nil)
+			router := new(input.Router)
+			start := time.Unix(1, 0)
+			layoutScrollbarFrame(ctx, router, test.bar, start)
+			layoutScrollbarFrame(ctx, router, test.bar, start.Add(time.Millisecond))
 			if probe.constraints.Max.X != test.want {
 				t.Fatalf("content max width = %d, want %d", probe.constraints.Max.X, test.want)
 			}
 		})
 	}
+}
+
+type scrollbarConstraintWidget struct {
+	height      int
+	constraints layout.Constraints
+}
+
+func (w *scrollbarConstraintWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	w.constraints = gtx.Constraints
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, w.height))}
 }
 
 func TestScrollbarViewportUsesListPosition(t *testing.T) {
@@ -110,6 +148,28 @@ func TestScrollbarTrackClickScrollsContent(t *testing.T) {
 	state := testComponentState[scrollbarState](ctx, "body", stateSlotScrollbar)
 	if state.list.Position.Offset <= 0 {
 		t.Fatalf("scroll offset = %d, want positive after track click", state.list.Position.Offset)
+	}
+}
+
+func TestScrollbarDoesNotReuseDistanceAfterContentShrinks(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	probe := &scrollbarConstraintWidget{height: 300}
+	value := Scrollbar("body", probe)
+	start := time.Unix(1, 0)
+	layoutScrollbarFrame(ctx, router, value, start)
+	layoutScrollbarFrame(ctx, router, value, start.Add(time.Millisecond))
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(95, 80)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(95, 80)},
+	)
+	layoutScrollbarFrame(ctx, router, value, start.Add(2*time.Millisecond))
+
+	probe.height = 20
+	layoutScrollbarFrame(ctx, router, value, start.Add(3*time.Millisecond))
+	state := testComponentState[scrollbarState](ctx, "body", stateSlotScrollbar)
+	if state.list.Position.First != 0 || state.list.Position.Offset != 0 {
+		t.Fatalf("short content position = %#v, want start", state.list.Position)
 	}
 }
 

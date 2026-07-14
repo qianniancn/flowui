@@ -4,6 +4,7 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -113,7 +114,10 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.Li
 	originalConstraints := gtx.Constraints
 	barWidth := gtx.Dp(style.Width())
 	reservedWidth := barWidth + gtx.Dp(max(activeTheme.Components.Scrollbar.ContentGap, 0))
-	if !overlay {
+	majorAxisLimit := axis.Convert(originalConstraints.Max).X
+	// ponytail: overflow changes settle on the next frame to avoid laying out interactive children twice.
+	reserveScrollbar := !overlay && count > 0 && list.Position.Length > majorAxisLimit
+	if reserveScrollbar {
 		maxConstraints := axis.Convert(gtx.Constraints.Max)
 		minConstraints := axis.Convert(gtx.Constraints.Min)
 		maxConstraints.Y = max(maxConstraints.Y-reservedWidth, 0)
@@ -126,9 +130,13 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.Li
 	gtx.Constraints = originalConstraints
 	majorAxisSize := axis.Convert(listDims.Size).X
 	start, end := scrollbarViewport(list.Position, count, majorAxisSize)
+	scrollable := start != 0 || end != 1
+	if !overlay && reserveScrollbar != scrollable {
+		gtx.Execute(op.InvalidateCmd{})
+	}
 
 	gtx.Constraints.Min = listDims.Size
-	if !overlay {
+	if reserveScrollbar {
 		minor := axis.Convert(gtx.Constraints.Min)
 		minor.Y += reservedWidth
 		gtx.Constraints.Min = axis.Convert(minor)
@@ -141,10 +149,12 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.Li
 		return style.Layout(gtx, axis, start, end)
 	})
 
-	if distance := bar.ScrollDistance(); distance != 0 {
-		list.ScrollBy(distance * float32(count))
+	if scrollable {
+		if distance := bar.ScrollDistance(); distance != 0 {
+			list.ScrollBy(distance * float32(count))
+		}
 	}
-	if !overlay {
+	if reserveScrollbar {
 		minor := axis.Convert(listDims.Size)
 		minor.Y += reservedWidth
 		listDims.Size = axis.Convert(minor)

@@ -574,6 +574,14 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Disabled(false).
 			FullWidth(),
 		ui.ProgressBar("progress", 50).ShowValue(),
+		ui.ProgressCircle("progress-circle", 60).
+			Label("Upload").
+			ValueText("60 percent").
+			Range(0, 100).
+			Indeterminate().
+			Color(ui.ProgressCircleSuccess).
+			Size(ui.ProgressCircleLarge).
+			Disabled(false),
 		ui.CloseButton("close").Label("Dismiss"),
 		ui.Chip("Completed").
 			Color(ui.ChipSuccess).
@@ -632,6 +640,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.SplitPaneTheme
 	var _ ui.StatusBarTheme
 	var _ ui.PaginationTheme
+	var _ ui.ProgressCircleTheme
 
 	if root := facadeView(nil, facadeModel{}, func(facadeMsg) {}); root == nil {
 		t.Fatal("public facade returned a nil widget tree")

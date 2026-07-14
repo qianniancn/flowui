@@ -126,6 +126,7 @@ text/editor internals.
 - `SwitchGroup`
 - `RadioGroup`
 - `ProgressBar`
+- `ProgressCircle`
 - `Meter`
 - `LineChart`
 - `BarChart`
@@ -205,6 +206,7 @@ Examples live in `examples/`:
 - `switches`: switch states, sizes, descriptions, label position, thumb content, and switch groups.
 - `radio_groups`: mutually exclusive option selection.
 - `progress_bars`: determinate and indeterminate progress indicators.
+- `progress_circles`: HeroUI-aligned circular determinate and indeterminate progress indicators with sizes and semantic colors.
 - `meters`: HeroUI-aligned known-range measurements with labels, formatted values, colors, sizes, and accessible label-free usage.
 - `line_charts`: native Gio straight, smooth, stepped, dashed, dotted, and area line charts with animations, interactive legends, data windows, annotations, data activation, custom tooltips, gaps, and crosshairs.
 - `bar_charts`: native Gio vertical and horizontal grouped or stacked bar charts with animations, value labels, interactive legends, data windows, annotations, data activation, custom tooltips, positive and negative values, and category highlights.

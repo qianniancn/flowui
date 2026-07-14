@@ -126,6 +126,7 @@ type ComponentsTheme struct {
 	SwitchGroup      SwitchGroupTheme
 	RadioGroup       RadioGroupTheme
 	ProgressBar      ProgressBarTheme
+	ProgressCircle   ProgressCircleTheme
 	Meter            MeterTheme
 	Spinner          SpinnerTheme
 	Slider           SliderTheme
@@ -386,6 +387,13 @@ type ProgressBarTheme struct {
 	LargeRadius  unit.Dp
 	HeaderGap    unit.Dp
 	TextSize     unit.Sp
+}
+
+type ProgressCircleTheme struct {
+	SmallSize   unit.Dp
+	MediumSize  unit.Dp
+	LargeSize   unit.Dp
+	StrokeRatio float32
 }
 
 type MeterTheme struct {
@@ -1181,6 +1189,12 @@ func DefaultTheme() Theme {
 				LargeRadius:  6,
 				HeaderGap:    4,
 				TextSize:     14,
+			},
+			ProgressCircle: ProgressCircleTheme{
+				SmallSize:   20,
+				MediumSize:  28,
+				LargeSize:   36,
+				StrokeRatio: 4.0 / 36.0,
 			},
 			Meter: MeterTheme{
 				SmallHeight:  4,

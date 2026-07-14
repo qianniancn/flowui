@@ -120,10 +120,14 @@ func (p ProgressBarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 }
 
 func (p ProgressBarWidget) ratio() float32 {
-	if p.indeterminate || p.maxValue <= p.minValue {
+	return progressRatio(p.value, p.minValue, p.maxValue, p.indeterminate)
+}
+
+func progressRatio(value, minValue, maxValue float64, indeterminate bool) float32 {
+	if indeterminate || maxValue <= minValue {
 		return 0
 	}
-	ratio := (p.value - p.minValue) / (p.maxValue - p.minValue)
+	ratio := (value - minValue) / (maxValue - minValue)
 	if math.IsNaN(ratio) || math.IsInf(ratio, 0) {
 		return 0
 	}

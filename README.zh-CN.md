@@ -121,6 +121,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `SwitchGroup`
 - `RadioGroup`
 - `ProgressBar`
+- `ProgressCircle`
 - `Meter`
 - `LineChart`
 - `BarChart`
@@ -199,6 +200,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `switches`：开关状态、尺寸、描述、label 位置、thumb 内容和开关组。
 - `radio_groups`：互斥单选选项。
 - `progress_bars`：确定态和不定态进度指示器。
+- `progress_circles`：对齐 HeroUI 的圆形确定态与不定态进度指示器，支持尺寸和语义颜色。
 - `meters`：对齐 HeroUI 的已知范围测量组件，包含标签、格式化数值、颜色、尺寸和无可见标签用法。
 - `line_charts`：原生 Gio 直线、平滑、阶梯、虚线、点线和面积折线图，包含动画、交互式图例、数据窗口、标注、数据激活、自定义提示框、断点和十字准线。
 - `bar_charts`：原生 Gio 纵向与横向分组或堆叠柱状图，包含动画、数值标签、交互式图例、数据窗口、标注、数据激活、自定义提示框、正负值和分类高亮。

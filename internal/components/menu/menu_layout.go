@@ -123,10 +123,9 @@ func (m Widget) layoutContent(ctx *frame.Context, gtx layout.Context, menuState 
 	entrySizes := make([]image.Point, len(entries))
 	entryTopGaps := make([]int, len(entries))
 	contentOffset := op.Offset(image.Pt(padding, padding)).Push(gtx.Ops)
-	content := menuState.list.Layout(innerGtx, len(entries), func(gtx layout.Context, index int) layout.Dimensions {
+	content := layoutui.LayoutTrackedScrollbar(ctx, innerGtx, &menuState.list, &menuState.bar, len(entries), m.disabled || !interactive, false, func(gtx layout.Context, index int) layout.Dimensions {
 		entry := entries[index]
-		gtx.Constraints.Min.X = innerGtx.Constraints.Min.X
-		gtx.Constraints.Max.X = innerGtx.Constraints.Max.X
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		topGap := m.entryTopGap(ctx, gtx, entries, index)
 		entryTopGaps[index] = topGap
 		if topGap > 0 {

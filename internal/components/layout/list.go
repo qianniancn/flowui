@@ -62,6 +62,7 @@ func (l ListWidget) ScrollAnyAxis() ListWidget {
 
 func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := ctx.ListState(l.key)
+	bar := derivedScrollbarState(ctx, l.key)
 	state.Axis = layout.Vertical
 	state.Gap = gtx.Dp(l.gap)
 	state.Alignment = l.align
@@ -70,7 +71,7 @@ func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if l.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutTrackedList(ctx, gtx, state, l.count, func(gtx layout.Context, index int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, state, bar, l.count, l.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
 		item := l.item(index)
 		prepareFieldAssociations(ctx, item)
 		return item.Layout(ctx, gtx)

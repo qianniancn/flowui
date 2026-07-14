@@ -26,7 +26,9 @@ const (
 
 type tableState struct {
 	vertical       layout.List
+	verticalBar    widget.Scrollbar
 	horizontal     layout.List
+	horizontalBar  widget.Scrollbar
 	rows           map[string]*tableRowState
 	columns        map[string]*tableColumnState
 	frameRows      map[string]struct{}

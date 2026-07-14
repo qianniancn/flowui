@@ -12,6 +12,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -370,7 +371,7 @@ func (m ModalWidget) layoutDialogContent(ctx *frame.Context, gtx layout.Context,
 	if m.scroll == ModalScrollOutside {
 		state.outsideList.Axis = layout.Vertical
 		state.outsideList.ScrollAnyAxis = false
-		return layoutModalTrackedList(ctx, &state.outsideList, gtx, func(gtx layout.Context) layout.Dimensions {
+		return layoutui.LayoutTrackedList(ctx, gtx, &state.outsideList, 1, func(gtx layout.Context, _ int) layout.Dimensions {
 			return m.layoutDialogSections(ctx, gtx, state)
 		})
 	}
@@ -513,7 +514,7 @@ func (m ModalWidget) layoutBody(ctx *frame.Context, gtx layout.Context, state *m
 	}
 	state.bodyList.Axis = layout.Vertical
 	state.bodyList.ScrollAnyAxis = false
-	return layoutModalTrackedList(ctx, &state.bodyList, gtx, func(gtx layout.Context) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.bodyList, &state.bodyBar, 1, !gtx.Enabled(), false, func(gtx layout.Context, _ int) layout.Dimensions {
 		return body.Layout(ctx, gtx)
 	})
 }
@@ -534,24 +535,6 @@ func (m ModalWidget) recordFooter(ctx *frame.Context, gtx layout.Context) (op.Ca
 		return m.layoutFooter(ctx, gtx)
 	})
 	return macro.Stop(), dims, placement
-}
-
-func layoutModalTrackedList(ctx *frame.Context, list *layout.List, gtx layout.Context, child layout.Widget) layout.Dimensions {
-	var childDims layout.Dimensions
-	var placement frame.OverlayPlacement
-	dims := list.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
-		childDims, placement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-			return child(gtx)
-		})
-		return childDims
-	})
-	mainOffset := -list.Position.Offset
-	if list.Position.First > 0 {
-		mainOffset -= childDims.Size.Y + list.Gap
-	}
-	placement.PlaceOffset(image.Pt(0, mainOffset))
-	placement.ClipTo(image.Rectangle{Max: dims.Size})
-	return dims
 }
 
 func (m ModalWidget) layoutFooter(ctx *frame.Context, gtx layout.Context) layout.Dimensions {

@@ -483,6 +483,7 @@ type SidebarTheme struct {
 type ScrollbarTheme struct {
 	TrackWidth     unit.Dp
 	ThumbWidth     unit.Dp
+	ContentGap     unit.Dp
 	MinThumbLength unit.Dp
 	MajorPadding   unit.Dp
 	Radius         unit.Dp
@@ -1235,6 +1236,7 @@ func DefaultTheme() Theme {
 			Scrollbar: ScrollbarTheme{
 				TrackWidth:     10,
 				ThumbWidth:     6,
+				ContentGap:     4,
 				MinThumbLength: 32,
 				MajorPadding:   2,
 				Radius:         3,

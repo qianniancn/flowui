@@ -103,7 +103,7 @@ func (t Widget) layoutHorizontal(ctx *frame.Context, gtx layout.Context, stateVa
 	stateValue.horizontal.Gap = 0
 	stateValue.horizontal.Alignment = layout.Start
 	stateValue.horizontal.ScrollAnyAxis = false
-	return layoutui.LayoutTrackedList(ctx, gtx, &stateValue.horizontal, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.horizontal, &stateValue.horizontalBar, 1, t.disabled, false, func(gtx layout.Context, _ int) layout.Dimensions {
 		gtx.Constraints.Min.X = columns.width
 		gtx.Constraints.Max.X = columns.width
 		return t.layoutContent(ctx, gtx, stateValue, columns, style)
@@ -259,7 +259,7 @@ func (t Widget) layoutBody(ctx *frame.Context, gtx layout.Context, stateValue *t
 		stateValue.vertical.Gap = 0
 		stateValue.vertical.Alignment = layout.Start
 		stateValue.vertical.ScrollAnyAxis = false
-		contentDims = layoutui.LayoutTrackedList(ctx, gtx, &stateValue.vertical, len(t.rows), func(gtx layout.Context, index int) layout.Dimensions {
+		contentDims = layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.vertical, &stateValue.verticalBar, len(t.rows), t.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
 			return t.layoutRow(ctx, gtx, stateValue, columns, style, t.rows[index], index == len(t.rows)-1)
 		})
 	}

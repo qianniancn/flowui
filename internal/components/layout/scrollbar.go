@@ -11,7 +11,10 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-const stateSlotScrollbar = "scrollbar"
+const (
+	stateSlotScrollbar    = "scrollbar"
+	stateSlotScrollbarBar = "bar"
+)
 
 type ScrollbarWidget struct {
 	key           string
@@ -90,49 +93,68 @@ func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	if s.disabled {
 		gtx = gtx.Disabled()
 	}
-
-	style := scrollbarStyleFor(frame.ActiveTheme(ctx), &state.bar, s.disabled)
-	originalConstraints := gtx.Constraints
-	barWidth := gtx.Dp(style.Width())
-	if !s.overlay {
-		maxConstraints := s.axis.Convert(gtx.Constraints.Max)
-		minConstraints := s.axis.Convert(gtx.Constraints.Min)
-		maxConstraints.Y = max(maxConstraints.Y-barWidth, 0)
-		minConstraints.Y = max(minConstraints.Y-barWidth, 0)
-		gtx.Constraints.Max = s.axis.Convert(maxConstraints)
-		gtx.Constraints.Min = s.axis.Convert(minConstraints)
-	}
-
-	listDims := layoutTrackedList(ctx, gtx, &state.list, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, &state.list, &state.bar, 1, s.disabled, s.overlay, func(gtx layout.Context, _ int) layout.Dimensions {
 		return s.child.Layout(ctx, gtx)
 	})
+}
+
+func derivedScrollbarState(ctx *frame.Context, owner string) *widget.Scrollbar {
+	key := frame.ClaimDerivedKey(ctx, stateutil.KindScrollbar, owner, "bar")
+	return frame.UseState[widget.Scrollbar](ctx, key, stateSlotScrollbarBar)
+}
+
+func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
+	if disabled {
+		gtx = gtx.Disabled()
+	}
+	activeTheme := frame.ActiveTheme(ctx)
+	style := scrollbarStyleFor(activeTheme, bar, disabled)
+	axis := list.Axis
+	originalConstraints := gtx.Constraints
+	barWidth := gtx.Dp(style.Width())
+	reservedWidth := barWidth + gtx.Dp(max(activeTheme.Components.Scrollbar.ContentGap, 0))
+	if !overlay {
+		maxConstraints := axis.Convert(gtx.Constraints.Max)
+		minConstraints := axis.Convert(gtx.Constraints.Min)
+		maxConstraints.Y = max(maxConstraints.Y-reservedWidth, 0)
+		minConstraints.Y = max(minConstraints.Y-reservedWidth, 0)
+		gtx.Constraints.Max = axis.Convert(maxConstraints)
+		gtx.Constraints.Min = axis.Convert(minConstraints)
+	}
+
+	listDims := layoutTrackedList(ctx, gtx, list, count, item)
 	gtx.Constraints = originalConstraints
-	majorAxisSize := s.axis.Convert(listDims.Size).X
-	start, end := scrollbarViewport(state.list.Position, 1, majorAxisSize)
+	majorAxisSize := axis.Convert(listDims.Size).X
+	start, end := scrollbarViewport(list.Position, count, majorAxisSize)
 
 	gtx.Constraints.Min = listDims.Size
-	if !s.overlay {
-		minor := s.axis.Convert(gtx.Constraints.Min)
-		minor.Y += barWidth
-		gtx.Constraints.Min = s.axis.Convert(minor)
+	if !overlay {
+		minor := axis.Convert(gtx.Constraints.Min)
+		minor.Y += reservedWidth
+		gtx.Constraints.Min = axis.Convert(minor)
 	}
 	anchor := layout.E
-	if s.axis == layout.Horizontal {
+	if axis == layout.Horizontal {
 		anchor = layout.S
 	}
 	anchor.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return style.Layout(gtx, s.axis, start, end)
+		return style.Layout(gtx, axis, start, end)
 	})
 
-	if distance := state.bar.ScrollDistance(); distance != 0 {
-		state.list.ScrollBy(distance)
+	if distance := bar.ScrollDistance(); distance != 0 {
+		list.ScrollBy(distance * float32(count))
 	}
-	if !s.overlay {
-		minor := s.axis.Convert(listDims.Size)
-		minor.Y += barWidth
-		listDims.Size = s.axis.Convert(minor)
+	if !overlay {
+		minor := axis.Convert(listDims.Size)
+		minor.Y += reservedWidth
+		listDims.Size = axis.Convert(minor)
 	}
 	return listDims
+}
+
+// LayoutTrackedScrollbar lays out a Gio list with FlowUI's scrollbar style.
+func LayoutTrackedScrollbar(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, list, bar, count, disabled, overlay, item)
 }
 
 func scrollbarStyleFor(activeTheme *theme.Theme, state *widget.Scrollbar, disabled bool) material.ScrollbarStyle {

@@ -47,12 +47,34 @@ func TestScrollbarPassesDisabledContext(t *testing.T) {
 func TestScrollbarThemeMatchesHeroUIThinStyle(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	tokens := activeTheme.Components.Scrollbar
-	if tokens.TrackWidth != 10 || tokens.ThumbWidth != 6 || tokens.MinThumbLength != 32 || tokens.Radius != 3 || tokens.ThumbOpacity != .15 {
+	if tokens.TrackWidth != 10 || tokens.ThumbWidth != 6 || tokens.ContentGap != 4 || tokens.MinThumbLength != 32 || tokens.Radius != 3 || tokens.ThumbOpacity != .15 {
 		t.Fatalf("scrollbar theme = %#v", tokens)
 	}
 	style := scrollbarStyleFor(&activeTheme, new(widget.Scrollbar), false)
 	if style.Width() != 10 || style.Indicator.Color.A != 38 || style.Track.Color.A != 0 {
 		t.Fatalf("scrollbar style width/color = %v/%#v", style.Width(), style.Indicator.Color)
+	}
+}
+
+func TestScrollbarReservesContentGapOutsideOverlayMode(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		bar  ScrollbarWidget
+		want int
+	}{
+		{name: "standard", bar: Scrollbar("standard", new(constraintWidget)), want: 86},
+		{name: "overlay", bar: Scrollbar("overlay", new(constraintWidget)).Overlay(), want: 100},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			probe := test.bar.child.(*constraintWidget)
+			test.bar.Layout(newContext(nil), layout.Context{
+				Constraints: layout.Exact(image.Pt(100, 100)),
+				Ops:         new(op.Ops),
+			})
+			if probe.constraints.Max.X != test.want {
+				t.Fatalf("content max width = %d, want %d", probe.constraints.Max.X, test.want)
+			}
+		})
 	}
 }
 

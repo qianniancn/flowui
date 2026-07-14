@@ -22,6 +22,7 @@ const menuTypeaheadTimeout = 500 * time.Millisecond
 type menuState struct {
 	key                   string
 	list                  layout.List
+	bar                   widget.Scrollbar
 	items                 map[string]*menuItemState
 	frameItems            map[string]struct{}
 	itemKeys              map[string]struct{}

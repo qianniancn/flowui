@@ -32,6 +32,7 @@ type comboBoxState struct {
 	trigger            widget.Clickable
 	dialog             overlay.ClickArea
 	list               layout.List
+	bar                widget.Scrollbar
 	open               bool
 	wasFocused         bool
 	highlight          int

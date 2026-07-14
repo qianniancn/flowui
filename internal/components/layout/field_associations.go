@@ -74,6 +74,12 @@ func prepareFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 			if widget != nil {
 				prepareFieldAssociations(ctx, widget.child)
 			}
+		case ScrollbarWidget:
+			prepareFieldAssociations(ctx, widget.child)
+		case *ScrollbarWidget:
+			if widget != nil {
+				prepareFieldAssociations(ctx, widget.child)
+			}
 		case StackWidget:
 			prepareStackFieldAssociations(ctx, widget.layers)
 		case *StackWidget:

@@ -12,6 +12,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
@@ -48,7 +49,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *t
 			treeStateValue.list.Gap = gtx.Dp(tokens.Gap)
 			treeStateValue.list.Alignment = layout.Start
 			treeStateValue.list.ScrollAnyAxis = false
-			return treeStateValue.list.Layout(gtx, len(visible), func(gtx layout.Context, index int) layout.Dimensions {
+			return layoutui.LayoutTrackedScrollbar(ctx, gtx, &treeStateValue.list, &treeStateValue.bar, len(visible), t.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
 				return t.layoutItem(ctx, gtx, treeStateValue, visible[index])
 			})
 		})

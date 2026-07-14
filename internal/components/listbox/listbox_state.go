@@ -37,6 +37,7 @@ func (l ListBoxWidget) stateFor(ctx *frame.Context) *listBoxState {
 
 type listBoxState struct {
 	list             layout.List
+	bar              widget.Scrollbar
 	items            map[string]*listBoxItemState
 	frameItems       map[string]struct{}
 	itemKeys         map[string]struct{}

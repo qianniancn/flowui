@@ -52,6 +52,7 @@ type datePickerState struct {
 	nextBgAt        time.Time
 	nextBgReady     bool
 	yearList        layout.List
+	yearBar         widget.Scrollbar
 	yearScrollYear  int
 	yearScrollReady bool
 	days            map[string]*datePickerCellState

@@ -36,6 +36,7 @@ type modalState struct {
 	close        widget.Clickable
 	closeFocus   state.FocusAnimation
 	bodyList     layout.List
+	bodyBar      widget.Scrollbar
 	outsideList  layout.List
 	focusStart   modalFocusTag
 	focusTarget  modalFocusTag

@@ -50,6 +50,7 @@ func flattenVisibleItems(items []Item, expanded map[string]struct{}) []flatItem 
 
 type treeState struct {
 	list             layout.List
+	bar              widget.Scrollbar
 	items            map[string]*treeItemState
 	frameItems       map[string]struct{}
 	itemKeys         map[string]struct{}

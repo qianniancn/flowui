@@ -3,7 +3,11 @@ package layoutui
 import (
 	"image"
 	"testing"
+	"time"
 
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -60,6 +64,36 @@ func TestScrollOptions(t *testing.T) {
 	if !state.ScrollAnyAxis {
 		t.Fatal("scroll-any-axis was not enabled")
 	}
+}
+
+func TestScrollTrackClickUpdatesExistingListState(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	value := Scroll("body", Spacer(100, 300))
+	start := time.Unix(1, 0)
+	layoutScrollFrame(ctx, router, value, start)
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(95, 80)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(95, 80)},
+	)
+	layoutScrollFrame(ctx, router, value, start.Add(time.Millisecond))
+	layoutScrollFrame(ctx, router, value, start.Add(2*time.Millisecond))
+
+	state := testComponentState[layout.List](ctx, "body", stateSlotScroll)
+	if state.Position.Offset <= 0 {
+		t.Fatalf("scroll offset = %d, want positive after track click", state.Position.Offset)
+	}
+}
+
+func layoutScrollFrame(ctx *frame.Context, router *input.Router, value ScrollWidget, now time.Time) layout.Dimensions {
+	viewport := image.Pt(100, 100)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := value.Layout(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	return dims
 }
 
 func TestScrollPropagatesContentOffset(t *testing.T) {

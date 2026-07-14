@@ -13,6 +13,7 @@ const stateSlotSidebar = "sidebar"
 
 type sidebarState struct {
 	list             layout.List
+	bar              widget.Scrollbar
 	items            map[string]*sidebarItemState
 	frameItems       map[string]struct{}
 	keyFilters       []event.Filter

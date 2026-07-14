@@ -3,7 +3,11 @@ package layoutui
 import (
 	"image"
 	"testing"
+	"time"
 
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/text"
@@ -76,6 +80,36 @@ func TestListScrollOptions(t *testing.T) {
 	if !state.ScrollAnyAxis {
 		t.Fatal("scroll-any-axis was not enabled")
 	}
+}
+
+func TestListTrackClickUpdatesExistingListState(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	value := List("items", 12, func(int) frame.Widget { return Spacer(100, 30) })
+	start := time.Unix(1, 0)
+	layoutListFrame(ctx, router, value, start)
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(95, 80)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(95, 80)},
+	)
+	layoutListFrame(ctx, router, value, start.Add(time.Millisecond))
+	layoutListFrame(ctx, router, value, start.Add(2*time.Millisecond))
+
+	state := testComponentState[layout.List](ctx, "items", stateSlotList)
+	if state.Position.First == 0 {
+		t.Fatalf("list position = %#v, want scrolled after track click", state.Position)
+	}
+}
+
+func layoutListFrame(ctx *frame.Context, router *input.Router, value ListWidget, now time.Time) layout.Dimensions {
+	viewport := image.Pt(100, 100)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	dims := value.Layout(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	return dims
 }
 
 func TestListPropagatesScrollAndCrossAxisAlignment(t *testing.T) {

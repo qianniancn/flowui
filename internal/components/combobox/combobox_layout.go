@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -184,7 +185,7 @@ func (c ComboBoxWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, stat
 			return c.layoutEmpty(ctx, gtx)
 		}
 		state.list.Axis = layout.Vertical
-		return state.list.Layout(gtx, len(visible), func(gtx layout.Context, index int) layout.Dimensions {
+		return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.list, &state.bar, len(visible), !gtx.Enabled(), false, func(gtx layout.Context, index int) layout.Dimensions {
 			item := c.items[visible[index]]
 			return c.layoutItem(ctx, gtx, state, editor, item, item.Key == c.selectedKey, index == state.highlight)
 		})

@@ -95,7 +95,7 @@ func (w Widget) layoutEntries(ctx *frame.Context, gtx layout.Context, state *sid
 	state.list.Alignment = layout.Start
 	state.list.ScrollToEnd = false
 	state.list.ScrollAnyAxis = false
-	return layoutui.LayoutTrackedList(ctx, gtx, &state.list, len(entries), func(gtx layout.Context, index int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.list, &state.bar, len(entries), w.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
 		entry := entries[index]
 		if entry.section {
 			return w.layoutSection(ctx, gtx, entry.title, expansion)

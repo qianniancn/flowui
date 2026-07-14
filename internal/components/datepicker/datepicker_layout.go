@@ -13,6 +13,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -435,7 +436,6 @@ func (d DatePickerWidget) layoutYears(ctx *frame.Context, gtx layout.Context, st
 
 	theme := frame.ActiveTheme(ctx).Components.DatePicker
 	rows := (count + 2) / 3
-	cellWidth := gtx.Dp(theme.CalendarWidth) / 3
 	cellHeight := gtx.Dp(theme.YearCellHeight)
 	if cellHeight == 0 {
 		cellHeight = gtx.Dp(theme.MonthCellHeight)
@@ -450,7 +450,8 @@ func (d DatePickerWidget) layoutYears(ctx *frame.Context, gtx layout.Context, st
 		state.yearList.ScrollTo((target - minYear) / 3)
 		state.yearScrollReady = false
 	}
-	return state.yearList.Layout(gtx, rows, func(gtx layout.Context, row int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.yearList, &state.yearBar, rows, !gtx.Enabled(), false, func(gtx layout.Context, row int) layout.Dimensions {
+		cellWidth := gtx.Constraints.Max.X / 3
 		yearStart := minYear + row*3
 		return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {

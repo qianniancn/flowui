@@ -569,11 +569,12 @@ func TestModalDialogConstraintsUsesTheme(t *testing.T) {
 	}
 }
 
-func TestModalScrollOutsideUsesDialogScrollContainer(t *testing.T) {
+func TestModalScrollOutsideKeepsScrollingWithoutScrollbarGutter(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	gtx := testLayoutContext()
 	gtx.Constraints = layout.Constraints{Max: image.Pt(260, 160)}
-	modal := Modal("settings", true, "Settings", fixedModalWidget{size: image.Pt(120, 500)}).
+	body := &constraintProbeWidget{size: image.Pt(120, 500)}
+	modal := Modal("settings", true, "Settings", body).
 		Scroll(ModalScrollOutside)
 
 	dims := modal.layoutDialogFrame(ctx, gtx, state)
@@ -583,6 +584,10 @@ func TestModalScrollOutsideUsesDialogScrollContainer(t *testing.T) {
 	}
 	if state.outsideList.Position.Length <= dims.Size.Y {
 		t.Fatalf("outside scroll content length = %d, want greater than viewport %d", state.outsideList.Position.Length, dims.Size.Y)
+	}
+	wantWidth := gtx.Constraints.Max.X - gtx.Dp(frame.ActiveTheme(ctx).Components.Modal.Padding)*2
+	if body.constraints.Max.X != wantWidth {
+		t.Fatalf("outside scroll body width = %d, want %d without scrollbar gutter", body.constraints.Max.X, wantWidth)
 	}
 }
 

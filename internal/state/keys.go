@@ -25,6 +25,7 @@ const (
 	KindTree             Kind = "tree"
 	KindSidebar          Kind = "sidebar"
 	KindTable            Kind = "table"
+	KindPagination       Kind = "pagination"
 	KindMenu             Kind = "menu"
 	KindContextMenu      Kind = "context-menu"
 	KindDropdown         Kind = "dropdown"

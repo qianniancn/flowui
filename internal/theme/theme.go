@@ -136,6 +136,7 @@ type ComponentsTheme struct {
 	SplitPane        SplitPaneTheme
 	StatusBar        StatusBarTheme
 	Table            TableTheme
+	Pagination       PaginationTheme
 	Menu             MenuTheme
 	Dropdown         DropdownTheme
 	Menubar          MenubarTheme
@@ -523,6 +524,9 @@ type TableTheme struct {
 	CellTextSize          unit.Sp
 	SeparatorWidth        unit.Dp
 	ColumnSeparatorHeight unit.Dp
+	ColumnResizerHitSize  unit.Dp
+	ColumnResizerWidth    unit.Dp
+	ColumnResizeStep      unit.Dp
 	FocusRingWidth        unit.Dp
 	FocusRadius           unit.Dp
 	SelectionColumnWidth  unit.Dp
@@ -530,6 +534,24 @@ type TableTheme struct {
 	SortGap               unit.Dp
 	FooterPaddingX        unit.Dp
 	FooterPaddingY        unit.Dp
+	LoadMoreHeight        unit.Dp
+}
+
+type PaginationTheme struct {
+	SmallSize      unit.Dp
+	MediumSize     unit.Dp
+	LargeSize      unit.Dp
+	SmallTextSize  unit.Sp
+	MediumTextSize unit.Sp
+	LargeTextSize  unit.Sp
+	SmallPaddingX  unit.Dp
+	MediumPaddingX unit.Dp
+	LargePaddingX  unit.Dp
+	IconSize       unit.Dp
+	ItemGap        unit.Dp
+	ContentGap     unit.Dp
+	FocusRingWidth unit.Dp
+	CompactWidth   unit.Dp
 }
 
 type MenuTheme struct {
@@ -1273,11 +1295,11 @@ func DefaultTheme() Theme {
 			},
 			Table: TableTheme{
 				RootPadding:           4,
-				RootRadius:            28,
-				HeaderRadius:          20,
-				BodyRadius:            20,
-				HeaderHeight:          40,
-				RowMinHeight:          48,
+				RootRadius:            20,
+				HeaderRadius:          16,
+				BodyRadius:            16,
+				HeaderHeight:          36,
+				RowMinHeight:          44,
 				EmptyHeight:           144,
 				MaxHeight:             360,
 				MinColumnWidth:        96,
@@ -1287,6 +1309,9 @@ func DefaultTheme() Theme {
 				CellTextSize:          14,
 				SeparatorWidth:        1,
 				ColumnSeparatorHeight: 16,
+				ColumnResizerHitSize:  16,
+				ColumnResizerWidth:    2,
+				ColumnResizeStep:      8,
 				FocusRingWidth:        2,
 				FocusRadius:           8,
 				SelectionColumnWidth:  40,
@@ -1294,6 +1319,23 @@ func DefaultTheme() Theme {
 				SortGap:               8,
 				FooterPaddingX:        16,
 				FooterPaddingY:        10,
+				LoadMoreHeight:        48,
+			},
+			Pagination: PaginationTheme{
+				SmallSize:      28,
+				MediumSize:     32,
+				LargeSize:      36,
+				SmallTextSize:  12,
+				MediumTextSize: 14,
+				LargeTextSize:  16,
+				SmallPaddingX:  8,
+				MediumPaddingX: 10,
+				LargePaddingX:  12,
+				IconSize:       14,
+				ItemGap:        4,
+				ContentGap:     16,
+				FocusRingWidth: 2,
+				CompactWidth:   520,
 			},
 			Menu: MenuTheme{
 				BackgroundColor:            color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},

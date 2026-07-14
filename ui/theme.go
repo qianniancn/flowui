@@ -38,6 +38,7 @@ type ScrollbarTheme = theme.ScrollbarTheme
 type SplitPaneTheme = theme.SplitPaneTheme
 type StatusBarTheme = theme.StatusBarTheme
 type TableTheme = theme.TableTheme
+type PaginationTheme = theme.PaginationTheme
 type MenuTheme = theme.MenuTheme
 type DropdownTheme = theme.DropdownTheme
 type MenubarTheme = theme.MenubarTheme

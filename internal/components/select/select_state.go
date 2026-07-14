@@ -232,6 +232,7 @@ func (s *selectState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context
 		for s.dismiss[i].Clicked(gtx) {
 			dismissed = true
 		}
+		dismissed = s.dismiss[i].TakePressed() || dismissed
 	}
 	if !open {
 		return open
@@ -262,7 +263,9 @@ func (s *selectState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context
 	} else {
 		s.skipRestore = true
 	}
-	return s.requestOpen(ctx, widget, false)
+	open = s.requestOpen(ctx, widget, false)
+	gtx.Execute(op.InvalidateCmd{})
+	return open
 }
 
 func (s *selectState) observeOpen(ctx *frame.Context, open, restoreFocus bool) {

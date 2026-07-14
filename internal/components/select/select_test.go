@@ -519,6 +519,9 @@ func TestSelectDismissClosesWithoutForcingTriggerFocus(t *testing.T) {
 	})
 	frame.ApplyFrameCommands(ctx, gtx)
 	router.Frame(gtx.Ops)
+	if _, wake := router.WakeupTime(); !wake {
+		t.Fatal("dismiss did not request a redraw")
+	}
 
 	if open || state.open {
 		t.Fatal("dismiss click did not close select")
@@ -531,7 +534,7 @@ func TestSelectDismissClosesWithoutForcingTriggerFocus(t *testing.T) {
 func TestSelectPointerClickOutsideCloses(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
-	selectWidget := Select("language", "go", selectTestItems()).DefaultOpen(true)
+	selectWidget := SelectMultiple("language", []string{"go"}, selectTestItems()).DefaultOpen(true)
 	start := time.Unix(1, 0)
 	var background widget.Clickable
 	backgroundClicked := false
@@ -546,6 +549,15 @@ func TestSelectPointerClickOutsideCloses(t *testing.T) {
 		Position:  f32.Pt(290, 500),
 	})
 	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start.Add(selectEnterDuration+time.Millisecond))
+	if testComponentState[selectState](ctx, "language", stateSlotSelect).open {
+		t.Fatal("pointer press outside the select popover did not close it immediately")
+	}
+	closeStart := start.Add(selectEnterDuration + 2*time.Millisecond)
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, closeStart)
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, closeStart.Add(selectExitDuration))
+	if progress := testComponentState[selectState](ctx, "language", stateSlotSelect).progressValue; progress != 0 {
+		t.Fatalf("held pointer left exit progress at %v, want 0", progress)
+	}
 	router.Queue(
 		pointer.Event{
 			Kind:      pointer.Release,
@@ -554,7 +566,7 @@ func TestSelectPointerClickOutsideCloses(t *testing.T) {
 			Position:  f32.Pt(290, 500),
 		},
 	)
-	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, start.Add(selectEnterDuration+2*time.Millisecond))
+	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, closeStart.Add(selectExitDuration+time.Millisecond))
 
 	if testComponentState[selectState](ctx, "language", stateSlotSelect).open {
 		t.Fatal("pointer click outside the select popover did not close it")

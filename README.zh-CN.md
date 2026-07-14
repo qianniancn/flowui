@@ -217,7 +217,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `context_menus`：用于表格行的右键和长按菜单，包含勾选、单选、禁用、危险操作和子菜单项。
 - `menubars`：支持菜单协同、悬停切换、键盘导航和嵌套命令的应用菜单栏。
 - `dropdowns`：对齐 HeroUI 的动作与选择下拉菜单，包含分组、丰富内容、定制内容、长按和子菜单。
-- `toasts`：对齐 HeroUI 的受控通知，包含变体、操作、超时、堆叠和六种位置。
+- `toasts`：对齐 HeroUI 的受控通知，包含变体、操作、超时、可展开堆叠和六种位置。
 - `surfaces`：语义化 Surface 层级、前景色上下文、圆角和 Surface 阴影。
 - `cards`：对齐 HeroUI 的卡片变体、语义分区和组合操作。
 - `selects`：单选、多选、分组、禁用选项、校验、受控打开状态和 Surface 样式。

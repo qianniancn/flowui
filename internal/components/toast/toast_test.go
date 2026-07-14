@@ -58,6 +58,7 @@ func TestToastProviderOptions(t *testing.T) {
 	base := ToastProvider("toasts", nil)
 	configured := base.
 		Placement(ToastTopEnd).
+		Offset(24).
 		Gap(8).
 		MaxVisible(5).
 		ScaleFactor(0.1).
@@ -66,10 +67,10 @@ func TestToastProviderOptions(t *testing.T) {
 		OnAction(func(string) {}).
 		OnClose(func(string) {})
 
-	if base.placement != ToastBottom || base.hasGap || base.hasMaxVisible || base.hasScale || base.hasWidth || base.paused {
+	if base.placement != ToastBottom || base.hasOffset || base.hasGap || base.hasMaxVisible || base.hasScale || base.hasWidth || base.paused {
 		t.Fatalf("base provider was mutated: %#v", base)
 	}
-	if configured.placement != ToastTopEnd || configured.gap != 8 || configured.maxVisible != 5 || configured.scaleFactor != 0.1 || configured.width != 360 || !configured.paused {
+	if configured.placement != ToastTopEnd || configured.offset != 24 || configured.gap != 8 || configured.maxVisible != 5 || configured.scaleFactor != 0.1 || configured.width != 360 || !configured.paused {
 		t.Fatalf("configured provider = %#v", configured)
 	}
 	if configured.onAction == nil || configured.onClose == nil {
@@ -108,6 +109,31 @@ func TestToastStateSyncUsesDefaultAndExplicitTimeouts(t *testing.T) {
 	}
 	if got := state.entry("persistent"); got.remaining != 0 || got.timerRunning {
 		t.Fatalf("persistent timer = %#v", got)
+	}
+}
+
+func TestToastStateSameKeyLoadingUpdateRestartsTimerOnce(t *testing.T) {
+	start := time.Unix(1, 0)
+	var state toastProviderState
+	state.sync(toastTestContextAt(start), []ToastItem{
+		Toast("upload", "Uploading").Loading(true).Timeout(0),
+	}, 4*time.Second)
+	entry := state.entry("upload")
+	if entry.remaining != 0 || entry.timerRunning {
+		t.Fatalf("loading timer = remaining %v running %v", entry.remaining, entry.timerRunning)
+	}
+
+	updatedAt := start.Add(2 * time.Second)
+	done := Toast("upload", "Uploaded").Variant(ToastSuccess)
+	state.sync(toastTestContextAt(updatedAt), []ToastItem{done}, 4*time.Second)
+	wantDeadline := updatedAt.Add(4 * time.Second)
+	if entry.item.title != "Uploaded" || entry.configuredTimeout != 4*time.Second || entry.remaining != 4*time.Second || entry.deadline != wantDeadline || !entry.timerRunning {
+		t.Fatalf("updated timer = %#v", entry)
+	}
+
+	state.sync(toastTestContextAt(updatedAt.Add(time.Second)), []ToastItem{done}, 4*time.Second)
+	if entry.deadline != wantDeadline {
+		t.Fatalf("unchanged toast reset deadline = %v, want %v", entry.deadline, wantDeadline)
 	}
 }
 
@@ -304,6 +330,118 @@ func TestToastProviderUsesThemeWidth(t *testing.T) {
 	node, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Saved")
 	if !ok || node.Desc.Bounds.Dx() != 320 {
 		t.Fatalf("theme-controlled toast bounds = %v, found=%v; want width 320", node.Desc.Bounds, ok)
+	}
+}
+
+func TestToastProviderUsesPlacementOffset(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	router := new(input.Router)
+	start := time.Unix(1, 0)
+	provider := ToastProvider("toasts", []ToastItem{Toast("saved", "Saved").Timeout(0)}).
+		Placement(ToastBottomEnd).
+		Offset(44)
+	viewport := image.Pt(600, 400)
+	layoutToastFrame(ctx, router, provider, start, viewport)
+	layoutToastFrame(ctx, router, provider, start.Add(activeTheme.Components.Toast.AnimationDuration), viewport)
+	node, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Saved")
+	if !ok || node.Desc.Bounds.Max.Y != viewport.Y-44 {
+		t.Fatalf("offset toast bounds = %v, found=%v", node.Desc.Bounds, ok)
+	}
+}
+
+func TestToastStackExpandsOnHover(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		placement ToastPlacement
+		expandsUp bool
+	}{
+		{name: "bottom", placement: ToastBottomEnd, expandsUp: true},
+		{name: "top", placement: ToastTopEnd},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			activeTheme := theme.DefaultTheme()
+			ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+			router := new(input.Router)
+			frontIndicator := new(toastProbe)
+			backIndicator := new(toastProbe)
+			provider := ToastProvider("toasts", []ToastItem{
+				Toast("front", "Front").Indicator(frontIndicator).Timeout(0),
+				Toast("back", "Back").Description("A taller toast behind the front notification.").Indicator(backIndicator).Timeout(0),
+			}).Placement(test.placement)
+			viewport := image.Pt(900, 600)
+			start := time.Unix(1, 0)
+			duration := activeTheme.Components.Toast.AnimationDuration
+			layoutToastFrame(ctx, router, provider, start, viewport)
+			layoutToastFrame(ctx, router, provider, start.Add(duration), viewport)
+
+			front, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Front")
+			if !ok {
+				t.Fatal("front toast semantic node is missing")
+			}
+			center := f32.Pt(
+				float32(front.Desc.Bounds.Min.X+front.Desc.Bounds.Max.X)/2,
+				float32(front.Desc.Bounds.Min.Y+front.Desc.Bounds.Max.Y)/2,
+			)
+			router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: center})
+			layoutToastFrame(ctx, router, provider, start.Add(duration+time.Millisecond), viewport)
+			layoutToastFrame(ctx, router, provider, start.Add(2*duration+time.Millisecond), viewport)
+
+			stateValue := frame.UseState[toastProviderState](ctx, "toasts", stateSlotToast)
+			if !stateValue.regionHovered || stateValue.expansionValue != 1 {
+				t.Fatalf("toast region expansion = hovered %v progress %v", stateValue.regionHovered, stateValue.expansionValue)
+			}
+			if !frontIndicator.enabled || !backIndicator.enabled {
+				t.Fatalf("expanded indicator enabled states = front %v back %v", frontIndicator.enabled, backIndicator.enabled)
+			}
+			front, frontOK := semanticNodeWithLabel(router.AppendSemantics(nil), "Front")
+			back, backOK := semanticNodeWithLabel(router.AppendSemantics(nil), "Back")
+			separated := front.Desc.Bounds.Max.Y <= back.Desc.Bounds.Min.Y
+			if test.expandsUp {
+				separated = back.Desc.Bounds.Max.Y <= front.Desc.Bounds.Min.Y
+			}
+			if !frontOK || !backOK || !separated {
+				t.Fatalf("expanded toast bounds = front %v back %v", front.Desc.Bounds, back.Desc.Bounds)
+			}
+
+			router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(1, float32(viewport.Y)/2)})
+			layoutToastFrame(ctx, router, provider, start.Add(2*duration+2*time.Millisecond), viewport)
+			layoutToastFrame(ctx, router, provider, start.Add(3*duration+2*time.Millisecond), viewport)
+			if stateValue.regionHovered || stateValue.expansionValue != 0 || backIndicator.enabled {
+				t.Fatalf("toast region remained expanded = hovered %v progress %v back enabled %v", stateValue.regionHovered, stateValue.expansionValue, backIndicator.enabled)
+			}
+		})
+	}
+}
+
+func TestToastTouchModeShowsCloseButtonOnWideViewport(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	provider := ToastProvider("toasts", []ToastItem{Toast("saved", "Saved").Timeout(0)})
+	viewport := image.Pt(900, 500)
+	start := time.Unix(1, 0)
+	layoutToastFrame(ctx, router, provider, start, viewport)
+	layoutToastFrame(ctx, router, provider, start.Add(350*time.Millisecond), viewport)
+	if _, ok := semanticButtonWithExactLabel(router.AppendSemantics(nil), "Close"); ok {
+		t.Fatal("desktop close button was visible before interaction")
+	}
+	root, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Saved")
+	if !ok {
+		t.Fatal("toast semantic node is missing")
+	}
+	center := f32.Pt(
+		float32(root.Desc.Bounds.Min.X+root.Desc.Bounds.Max.X)/2,
+		float32(root.Desc.Bounds.Min.Y+root.Desc.Bounds.Max.Y)/2,
+	)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Touch, PointerID: 1, Position: center})
+	layoutToastFrame(ctx, router, provider, start.Add(360*time.Millisecond), viewport)
+
+	stateValue := frame.UseState[toastProviderState](ctx, "toasts", stateSlotToast)
+	if !stateValue.touchMode {
+		t.Fatal("touch input did not enable toast touch mode")
+	}
+	if _, ok := semanticButtonWithExactLabel(router.AppendSemantics(nil), "Close"); !ok {
+		t.Fatal("touch mode close button is missing")
 	}
 }
 

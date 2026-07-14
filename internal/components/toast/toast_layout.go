@@ -40,13 +40,18 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 	gtx.Constraints = layout.Exact(viewport)
 
 	p.handleEvents(gtx, providerState)
-	providerState.updateTimers(gtx, p.paused || providerState.paused(gtx), func(entry *toastEntryState) {
+	providerState.updateRegionEvents(gtx)
+	expanded := providerState.regionHovered || providerState.paused(gtx)
+	expansion := providerState.expansionProgress(gtx, expanded, frame.ActiveTheme(ctx).Components.Toast.AnimationDuration)
+	providerState.updateTimers(gtx, p.paused || expanded || expansion > 0, func(entry *toastEntryState) {
 		entry.requestClose(p.onClose)
 	})
 
 	tokens := frame.ActiveTheme(ctx).Components.Toast
 	maxVisible := p.resolvedMaxVisible(ctx)
-	width := min(gtx.Dp(p.resolvedWidth(ctx)), max(viewport.X-2*gtx.Dp(tokens.Inset), 0))
+	inset := gtx.Dp(tokens.Inset)
+	offset := gtx.Dp(p.resolvedOffset(ctx))
+	width := min(gtx.Dp(p.resolvedWidth(ctx)), max(viewport.X-2*inset, 0))
 	if width <= 0 {
 		return layout.Dimensions{Size: viewport}
 	}
@@ -80,16 +85,17 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 
 		toastGtx := gtx
 		toastGtx.Constraints.Min = image.Pt(width, 0)
-		toastGtx.Constraints.Max = image.Pt(width, max(viewport.Y-2*gtx.Dp(tokens.Inset), 0))
-		interactive := targetIndex == 0 && !exiting && gtx.Enabled()
-		if !interactive && frontHeight > 0 {
+		toastGtx.Constraints.Max = image.Pt(width, max(viewport.Y-inset-offset, 0))
+		expandedLayout := expanded || expansion > 0
+		interactive := !exiting && gtx.Enabled() && (targetIndex == 0 || expanded)
+		if !expandedLayout && targetIndex != 0 && frontHeight > 0 {
 			height := min(frontHeight, toastGtx.Constraints.Max.Y)
 			toastGtx.Constraints.Min.Y = height
 			toastGtx.Constraints.Max.Y = height
 		}
 		restoreItem := frame.PushKey(ctx, entry.item.key)
 		macro := op.Record(gtx.Ops)
-		dims := p.layoutToast(ctx, toastGtx, entry, interactive, mobile)
+		dims := p.layoutToast(ctx, toastGtx, entry, interactive, mobile, expandedLayout || providerState.touchMode)
 		call := macro.Stop()
 		restoreItem()
 		if targetIndex == 0 && !exiting {
@@ -106,7 +112,8 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 		})
 	}
 
-	p.paintRecords(ctx, gtx, viewport, records)
+	bounds := p.paintRecords(ctx, gtx, viewport, records, expansion)
+	providerState.addRegionInput(gtx, bounds)
 	return layout.Dimensions{Size: viewport}
 }
 
@@ -138,14 +145,17 @@ func (p ToastProviderWidget) handleEvents(gtx layout.Context, providerState *toa
 	}
 }
 
-func (p ToastProviderWidget) paintRecords(ctx *frame.Context, gtx layout.Context, viewport image.Point, records []toastRecord) {
+func (p ToastProviderWidget) paintRecords(ctx *frame.Context, gtx layout.Context, viewport image.Point, records []toastRecord, expansion float32) image.Rectangle {
 	if len(records) == 0 {
-		return
+		return image.Rectangle{}
 	}
 	tokens := frame.ActiveTheme(ctx).Components.Toast
 	inset := gtx.Dp(tokens.Inset)
+	offset := gtx.Dp(p.resolvedOffset(ctx))
 	gap := gtx.Dp(p.resolvedGap(ctx))
 	scaleFactor := p.resolvedScaleFactor(ctx)
+	frontHeight := toastFrontHeight(records)
+	expandedOffsets := toastExpandedOffsets(records, gap)
 	paintOrder := append([]toastRecord(nil), records...)
 	sort.SliceStable(paintOrder, func(i, j int) bool {
 		if paintOrder[i].stack != paintOrder[j].stack {
@@ -154,28 +164,97 @@ func (p ToastProviderWidget) paintRecords(ctx *frame.Context, gtx layout.Context
 		return !paintOrder[i].exiting && paintOrder[j].exiting
 	})
 
+	var bounds image.Rectangle
 	for _, record := range paintOrder {
-		scale := max(1-record.stack*scaleFactor, 0.5)
+		height := record.dims.Size.Y
+		if frontHeight > 0 {
+			height = int(render.Lerp(float32(frontHeight), float32(height), expansion) + 0.5)
+		}
+		visibleSize := image.Pt(record.dims.Size.X, height)
+		collapsedScale := max(1-record.stack*scaleFactor, 0.5)
+		scale := render.Lerp(collapsedScale, 1, expansion)
 		x := toastRegionX(viewport.X, record.dims.Size.X, inset, p.placement)
-		y := inset + int(record.stack*float32(gap)+0.5)
-		enterOffset := -int(float32(record.dims.Size.Y) * (1 - record.progress))
+		collapsedOffset := record.stack * float32(gap)
+		expandedOffset := toastExpandedOffset(expandedOffsets, record.stack)
+		stackOffset := int(render.Lerp(collapsedOffset, expandedOffset, expansion) + 0.5)
+		y := offset + stackOffset
+		enterOffset := -int(float32(height) * (1 - record.progress))
 		if p.bottomPlacement() {
-			y = viewport.Y - inset - record.dims.Size.Y - int(record.stack*float32(gap)+0.5)
+			y = viewport.Y - offset - height - stackOffset
 			enterOffset = -enterOffset
 		}
 		y += enterOffset
+		rect := image.Rectangle{Min: image.Pt(x, y), Max: image.Pt(x, y).Add(visibleSize)}
+		if bounds.Empty() {
+			bounds = rect
+		} else {
+			bounds = bounds.Union(rect)
+		}
 
 		offset := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
-		transform := render.Scale(record.dims.Size, scale).Push(gtx.Ops)
+		transform := render.Scale(visibleSize, scale).Push(gtx.Ops)
 		opacity := paint.PushOpacity(gtx.Ops, record.progress)
-		record.call.Add(gtx.Ops)
+		style := toastStyleFor(frame.ActiveTheme(ctx), record.entry.item.variant)
+		visibleRect := image.Rectangle{Max: visibleSize}
+		drawToastSurface(gtx, frame.ActiveTheme(ctx), visibleRect, toastRadius(gtx, tokens.Radius, visibleSize), style.surface)
+		if record.index > 0 && expansion < 1 {
+			visible := clip.Rect(visibleRect).Push(gtx.Ops)
+			record.call.Add(gtx.Ops)
+			visible.Pop()
+		} else {
+			record.call.Add(gtx.Ops)
+		}
 		opacity.Pop()
 		transform.Pop()
 		offset.Pop()
 	}
+	return bounds
 }
 
-func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, interactive, mobile bool) layout.Dimensions {
+func toastFrontHeight(records []toastRecord) int {
+	for _, record := range records {
+		if record.index == 0 && !record.exiting {
+			return record.dims.Size.Y
+		}
+	}
+	return 0
+}
+
+func toastExpandedOffsets(records []toastRecord, gap int) []float32 {
+	maxIndex := 0
+	for _, record := range records {
+		maxIndex = max(maxIndex, record.index)
+	}
+	heights := make([]int, maxIndex+1)
+	for _, record := range records {
+		if record.index < 0 || record.index >= len(heights) {
+			continue
+		}
+		if heights[record.index] == 0 || !record.exiting {
+			heights[record.index] = record.dims.Size.Y
+		}
+	}
+	offsets := make([]float32, len(heights))
+	for index := 1; index < len(offsets); index++ {
+		offsets[index] = offsets[index-1] + float32(heights[index-1]+gap)
+	}
+	return offsets
+}
+
+func toastExpandedOffset(offsets []float32, stack float32) float32 {
+	if len(offsets) == 0 || stack <= 0 {
+		return 0
+	}
+	last := len(offsets) - 1
+	if stack >= float32(last) {
+		return offsets[last]
+	}
+	lower := int(stack)
+	progress := stack - float32(lower)
+	return render.Lerp(offsets[lower], offsets[lower+1], progress)
+}
+
+func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, interactive, mobile, expanded bool) layout.Dimensions {
 	style := toastStyleFor(frame.ActiveTheme(ctx), entry.item.variant)
 	contentGtx := gtx
 	if !interactive {
@@ -187,7 +266,6 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 	size := gtx.Constraints.Constrain(contentDims.Size)
 	rect := image.Rectangle{Max: size}
 	radius := toastRadius(gtx, frame.ActiveTheme(ctx).Components.Toast.Radius, size)
-	drawToastSurface(gtx, frame.ActiveTheme(ctx), rect, radius, style.surface)
 
 	if !interactive {
 		clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
@@ -209,7 +287,7 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 	focusVisible := entry.rootFocus.Visible(gtx.Focused(&entry.root), nil)
 	focusOpacity := entry.rootFocus.Opacity(gtx, focusVisible)
 	drawToastFocus(gtx, rect, radius, style.focus, frame.ActiveTheme(ctx).Components.Toast.FocusRingWidth, focusOpacity)
-	p.layoutToastClose(ctx, gtx, entry, size, style)
+	p.layoutToastClose(ctx, gtx, entry, size, style, mobile || expanded)
 	return layout.Dimensions{Size: size}
 }
 
@@ -308,9 +386,9 @@ func (p ToastProviderWidget) layoutToastAction(ctx *frame.Context, gtx layout.Co
 	return button.LayoutWithClickable(action, ctx, gtx, &entry.action)
 }
 
-func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, toastSize image.Point, style toastStyle) {
+func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, toastSize image.Point, style toastStyle, alwaysVisible bool) {
 	tokens := frame.ActiveTheme(ctx).Components.Toast
-	show := entry.hovered || entry.close.Hovered() || gtx.Focused(&entry.root) || gtx.Focused(&entry.close)
+	show := alwaysVisible || entry.hovered || entry.close.Hovered() || gtx.Focused(&entry.root) || gtx.Focused(&entry.close)
 	if !show {
 		entry.closeFocus.Visible(false, entry.close.History())
 		return
@@ -344,6 +422,13 @@ func (p ToastProviderWidget) resolvedGap(ctx *frame.Context) unit.Dp {
 		return p.gap
 	}
 	return frame.ActiveTheme(ctx).Components.Toast.Gap
+}
+
+func (p ToastProviderWidget) resolvedOffset(ctx *frame.Context) unit.Dp {
+	if p.hasOffset {
+		return p.offset
+	}
+	return frame.ActiveTheme(ctx).Components.Toast.Inset
 }
 
 func (p ToastProviderWidget) resolvedMaxVisible(ctx *frame.Context) int {

@@ -102,6 +102,8 @@ type ToastProviderWidget struct {
 	onClose       func(string)
 	onAction      func(string)
 	placement     ToastPlacement
+	offset        unit.Dp
+	hasOffset     bool
 	gap           unit.Dp
 	hasGap        bool
 	maxVisible    int
@@ -129,6 +131,13 @@ func (p ToastProviderWidget) OnAction(onAction func(string)) ToastProviderWidget
 
 func (p ToastProviderWidget) Placement(placement ToastPlacement) ToastProviderWidget {
 	p.placement = placement
+	return p
+}
+
+// Offset sets the distance from the top or bottom viewport edge.
+func (p ToastProviderWidget) Offset(dp int) ToastProviderWidget {
+	p.offset = unit.Dp(max(dp, 0))
+	p.hasOffset = true
 	return p
 }
 
@@ -166,6 +175,7 @@ func (p ToastProviderWidget) Layout(ctx *frame.Context, gtx layout.Context) layo
 	providerState.sync(gtx, p.items, p.defaultTimeout(ctx))
 	providerState.cleanup()
 	if !providerState.visible() {
+		providerState.resetRegion()
 		return layout.Dimensions{}
 	}
 

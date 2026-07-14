@@ -24,36 +24,46 @@ func toastStateFor(ctx *frame.Context, key string) (string, *toastProviderState)
 }
 
 type toastProviderState struct {
-	entries map[string]*toastEntryState
-	order   []string
+	entries        map[string]*toastEntryState
+	order          []string
+	region         toastRegionTag
+	regionHovered  bool
+	touchMode      bool
+	expansionValue float32
+	expansionFrom  float32
+	expansionTo    float32
+	expansionAt    time.Time
+	expansionReady bool
 }
 
 type toastEntryState struct {
-	item           ToastItem
-	present        bool
-	closeRequested bool
-	root           toastRootTag
-	hovered        bool
-	close          widget.Clickable
-	action         widget.Clickable
-	rootFocus      state.FocusAnimation
-	closeFocus     state.FocusAnimation
-	remaining      time.Duration
-	deadline       time.Time
-	timerRunning   bool
-	value          float32
-	from           float32
-	to             float32
-	at             time.Time
-	ready          bool
-	stackValue     float32
-	stackFrom      float32
-	stackTo        float32
-	stackAt        time.Time
-	stackReady     bool
+	item              ToastItem
+	present           bool
+	closeRequested    bool
+	root              toastRootTag
+	hovered           bool
+	close             widget.Clickable
+	action            widget.Clickable
+	rootFocus         state.FocusAnimation
+	closeFocus        state.FocusAnimation
+	remaining         time.Duration
+	configuredTimeout time.Duration
+	deadline          time.Time
+	timerRunning      bool
+	value             float32
+	from              float32
+	to                float32
+	at                time.Time
+	ready             bool
+	stackValue        float32
+	stackFrom         float32
+	stackTo           float32
+	stackAt           time.Time
+	stackReady        bool
 }
 
 type toastRootTag struct{ _ byte }
+type toastRegionTag struct{ _ byte }
 
 func (s *toastProviderState) sync(gtx layout.Context, items []ToastItem, defaultTimeout time.Duration) {
 	if s.entries == nil {
@@ -71,15 +81,17 @@ func (s *toastProviderState) sync(gtx layout.Context, items []ToastItem, default
 		seen[item.key] = struct{}{}
 		nextOrder = append(nextOrder, item.key)
 		entry := s.entries[item.key]
+		timeout := defaultTimeout
+		if item.hasTimeout {
+			timeout = item.timeout
+		}
+		timeout = max(timeout, 0)
 		if entry == nil {
-			timeout := defaultTimeout
-			if item.hasTimeout {
-				timeout = item.timeout
-			}
 			entry = &toastEntryState{
-				item:      item,
-				present:   true,
-				remaining: max(timeout, 0),
+				item:              item,
+				present:           true,
+				remaining:         timeout,
+				configuredTimeout: timeout,
 			}
 			if timeout > 0 {
 				entry.deadline = gtx.Now.Add(timeout)
@@ -88,8 +100,17 @@ func (s *toastProviderState) sync(gtx layout.Context, items []ToastItem, default
 			s.entries[item.key] = entry
 			continue
 		}
+		restartTimer := !entry.present || entry.configuredTimeout != timeout || entry.item.loading != item.loading
 		entry.item = item
 		entry.present = true
+		if restartTimer && !entry.closeRequested {
+			entry.configuredTimeout = timeout
+			entry.remaining = timeout
+			entry.timerRunning = timeout > 0
+			if entry.timerRunning {
+				entry.deadline = gtx.Now.Add(timeout)
+			}
+		}
 	}
 
 	for _, key := range s.order {
@@ -114,6 +135,14 @@ func (s *toastProviderState) visible() bool {
 		}
 	}
 	return false
+}
+
+func (s *toastProviderState) resetRegion() {
+	s.regionHovered = false
+	s.expansionValue = 0
+	s.expansionFrom = 0
+	s.expansionTo = 0
+	s.expansionReady = false
 }
 
 func (s *toastProviderState) cleanup() {
@@ -147,6 +176,71 @@ func (s *toastProviderState) paused(gtx layout.Context) bool {
 		}
 	}
 	return false
+}
+
+func (s *toastProviderState) updateRegionEvents(gtx layout.Context) {
+	for {
+		eventValue, ok := gtx.Event(pointer.Filter{
+			Target: &s.region,
+			Kinds:  pointer.Enter | pointer.Leave | pointer.Press | pointer.Cancel,
+		})
+		if !ok {
+			return
+		}
+		if pointerEvent, ok := eventValue.(pointer.Event); ok {
+			switch pointerEvent.Kind {
+			case pointer.Enter:
+				s.regionHovered = true
+			case pointer.Leave, pointer.Cancel:
+				s.regionHovered = false
+			case pointer.Press:
+				if pointerEvent.Source == pointer.Touch {
+					s.touchMode = true
+				}
+			}
+		}
+	}
+}
+
+func (s *toastProviderState) addRegionInput(gtx layout.Context, bounds image.Rectangle) {
+	if bounds.Empty() {
+		return
+	}
+	area := clip.Rect(bounds).Push(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	event.Op(gtx.Ops, &s.region)
+	pass.Pop()
+	area.Pop()
+}
+
+func (s *toastProviderState) expansionProgress(gtx layout.Context, expanded bool, duration time.Duration) float32 {
+	target := float32(0)
+	if expanded {
+		target = 1
+	}
+	if !s.expansionReady {
+		s.expansionValue = target
+		s.expansionFrom = target
+		s.expansionTo = target
+		s.expansionAt = gtx.Now
+		s.expansionReady = true
+		return target
+	}
+	if target != s.expansionTo {
+		s.expansionFrom = s.expansionValue
+		s.expansionTo = target
+		s.expansionAt = gtx.Now
+	}
+	if s.expansionFrom == s.expansionTo {
+		s.expansionValue = s.expansionTo
+		return s.expansionValue
+	}
+	progress := render.Ease(render.Progress(gtx.Now.Sub(s.expansionAt), max(duration, time.Millisecond)))
+	if progress < 1 {
+		gtx.Execute(op.InvalidateCmd{})
+	}
+	s.expansionValue = render.Lerp(s.expansionFrom, s.expansionTo, progress)
+	return s.expansionValue
 }
 
 func (e *toastEntryState) updateRootEvents(gtx layout.Context) {

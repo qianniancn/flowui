@@ -573,7 +573,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Delay(0),
 		ui.ToastProvider("toasts", []ui.ToastItem{
 			ui.Toast("saved", "Saved").Variant(ui.ToastSuccess).Description("Changes saved"),
-		}).OnClose(func(string) {}),
+		}).Offset(24).OnClose(func(string) {}),
 		ui.Modal("dialog", model.open, "Settings", ui.Text("Body")).
 			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }),
 		ui.AlertDialog("confirm", model.open, "Delete project?", "This action cannot be undone.").

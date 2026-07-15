@@ -46,15 +46,16 @@ func TestMenubarOptionsUseValueSemantics(t *testing.T) {
 		Orientation(Vertical).
 		LoopFocus(false).
 		Modal(false).
+		Compact(true).
 		Disabled(true).
 		Alt("Application menu").
 		DefaultOpenKey("file").
 		OpenKey("edit").
 		OnOpenChange(func(string) {})
-	if base.orientation != Horizontal || !base.loopFocus || !base.modal || base.disabled || base.hasOpenKey || base.hasDefaultOpenKey || base.alt != "" {
+	if base.orientation != Horizontal || !base.loopFocus || !base.modal || base.compact || base.disabled || base.hasOpenKey || base.hasDefaultOpenKey || base.alt != "" {
 		t.Fatalf("configuring Menubar mutated base: %#v", base)
 	}
-	if configured.orientation != Vertical || configured.loopFocus || configured.modal || !configured.disabled || configured.alt != "Application menu" || configured.openKey != "edit" || configured.defaultOpenKey != "file" || configured.onOpenChange == nil {
+	if configured.orientation != Vertical || configured.loopFocus || configured.modal || !configured.compact || !configured.disabled || configured.alt != "Application menu" || configured.openKey != "edit" || configured.defaultOpenKey != "file" || configured.onOpenChange == nil {
 		t.Fatalf("configured Menubar = %#v", configured)
 	}
 }
@@ -359,8 +360,13 @@ func TestMenubarOutsidePressClosesImmediately(t *testing.T) {
 
 func TestMenubarThemeAndSemantics(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.Menubar
-	if tokens.TriggerHeight != 32 || tokens.TriggerPaddingX != 12 || tokens.TriggerTextSize != 14 || tokens.PanelGap != 4 {
+	if tokens.TriggerHeight != 32 || tokens.TriggerPaddingX != 12 || tokens.TriggerRadius != 8 || tokens.TriggerTextSize != 14 || tokens.PanelGap != 4 {
 		t.Fatalf("Menubar theme tokens = %#v", tokens)
+	}
+	activeTheme := theme.DefaultTheme()
+	compact := menubarTestWidget().Compact(true).themeTokens(&activeTheme)
+	if compact.TriggerHeight != 28 || compact.TriggerPaddingX != 8 || compact.TriggerRadius != 4 || compact.TriggerTextSize != 13 {
+		t.Fatalf("compact Menubar theme tokens = %#v", compact)
 	}
 	ctx := menubarTestContext()
 	router := new(input.Router)

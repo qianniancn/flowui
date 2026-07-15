@@ -135,6 +135,7 @@ type ComponentsTheme struct {
 	Sidebar          SidebarTheme
 	Scrollbar        ScrollbarTheme
 	SplitPane        SplitPaneTheme
+	TitleBar         TitleBarTheme
 	StatusBar        StatusBarTheme
 	Toolbar          ToolbarTheme
 	Table            TableTheme
@@ -508,6 +509,18 @@ type SplitPaneTheme struct {
 	HitSize      unit.Dp
 	ActiveWidth  unit.Dp
 	HandleLength unit.Dp
+}
+
+type TitleBarTheme struct {
+	Height         unit.Dp
+	PaddingX       unit.Dp
+	ControlWidth   unit.Dp
+	IconSize       unit.Dp
+	TitleTextSize  unit.Sp
+	BorderWidth    unit.Dp
+	FocusRingWidth unit.Dp
+	CloseHover     color.NRGBA
+	ClosePressed   color.NRGBA
 }
 
 type StatusBarTheme struct {
@@ -1309,6 +1322,17 @@ func DefaultTheme() Theme {
 				HitSize:      12,
 				ActiveWidth:  2,
 				HandleLength: 32,
+			},
+			TitleBar: TitleBarTheme{
+				Height:         35,
+				PaddingX:       4,
+				ControlWidth:   46,
+				IconSize:       12,
+				TitleTextSize:  12,
+				BorderWidth:    1,
+				FocusRingWidth: 2,
+				CloseHover:     color.NRGBA{R: 0xc4, G: 0x2b, B: 0x1c, A: 0xff},
+				ClosePressed:   color.NRGBA{R: 0xa3, G: 0x21, B: 0x16, A: 0xff},
 			},
 			StatusBar: StatusBarTheme{
 				Height:      28,

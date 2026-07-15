@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type Orientation uint8
@@ -100,6 +101,7 @@ type Widget struct {
 	orientation       Orientation
 	loopFocus         bool
 	modal             bool
+	compact           bool
 	disabled          bool
 	alt               string
 	openKey           string
@@ -125,6 +127,12 @@ func (m Widget) LoopFocus(loop bool) Widget {
 
 func (m Widget) Modal(modal bool) Widget {
 	m.modal = modal
+	return m
+}
+
+// Compact uses desktop title-bar density for triggers and popup menus.
+func (m Widget) Compact(compact bool) Widget {
+	m.compact = compact
 	return m
 }
 
@@ -154,6 +162,18 @@ func (m Widget) DefaultOpenKey(key string) Widget {
 func (m Widget) OnOpenChange(fn func(string)) Widget {
 	m.onOpenChange = fn
 	return m
+}
+
+func (m Widget) themeTokens(activeTheme *theme.Theme) theme.MenubarTheme {
+	tokens := activeTheme.Components.Menubar
+	if !m.compact {
+		return tokens
+	}
+	tokens.TriggerHeight = min(tokens.TriggerHeight, 28)
+	tokens.TriggerPaddingX = min(tokens.TriggerPaddingX, 8)
+	tokens.TriggerRadius = min(tokens.TriggerRadius, 4)
+	tokens.TriggerTextSize = min(tokens.TriggerTextSize, 13)
+	return tokens
 }
 
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {

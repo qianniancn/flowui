@@ -141,7 +141,7 @@ func (m Widget) layoutSubmenuOverlay(ctx *frame.Context, gtx layout.Context, sta
 	})
 	panelCall := macro.Stop()
 
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	result := overlay.ResolvePosition(overlay.PositionConfig{
 		Trigger:          anchor.Size(),
 		TriggerOrigin:    anchor.Min,

@@ -47,6 +47,7 @@ const (
 	KindScroll           Kind = "scroll"
 	KindScrollbar        Kind = "scrollbar"
 	KindSplitPane        Kind = "split-pane"
+	KindTitleBar         Kind = "title-bar"
 )
 
 type Keys struct {

@@ -71,6 +71,9 @@ func (m Widget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *men
 	panelGtx := gtx
 	panelGtx.Constraints = layout.Constraints{Max: bounds}
 	content := item.menu
+	if m.compact {
+		content = content.Compact(true)
+	}
 	if m.disabled || item.disabled {
 		content = content.Disabled(true)
 	}

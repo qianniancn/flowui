@@ -42,7 +42,7 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuSt
 	call := macro.Stop()
 	contentDims.Size = gtx.Constraints.Constrain(contentDims.Size)
 	rect := image.Rectangle{Max: contentDims.Size}
-	radius := min(max(gtx.Dp(frame.ActiveTheme(ctx).Components.Menu.Radius), 1), min(rect.Dx(), rect.Dy())/2)
+	radius := min(max(gtx.Dp(m.themeTokens(ctx).Radius), 1), min(rect.Dx(), rect.Dy())/2)
 	drawMenuPanel(gtx, frame.ActiveTheme(ctx), rect, radius, style)
 	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
 	call.Add(gtx.Ops)
@@ -51,7 +51,7 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuSt
 }
 
 func (m Widget) applyConstraints(ctx *frame.Context, gtx *layout.Context) {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	width := tokens.Width
 	if m.width > 0 {
 		width = m.width
@@ -103,7 +103,7 @@ func (m Widget) layoutContent(ctx *frame.Context, gtx layout.Context, menuState 
 		}
 	}
 
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	padding := gtx.Dp(tokens.Padding)
 	innerGtx := gtx
 	innerGtx.Constraints.Min = image.Pt(max(gtx.Constraints.Min.X-padding*2, 0), 0)
@@ -171,7 +171,7 @@ func (m Widget) entryTopGap(ctx *frame.Context, gtx layout.Context, entries []en
 	if !m.entryNeedsGap(entries, index) {
 		return 0
 	}
-	return max(gtx.Dp(frame.ActiveTheme(ctx).Components.Menu.ItemGap), 0)
+	return max(gtx.Dp(m.themeTokens(ctx).ItemGap), 0)
 }
 
 func (m Widget) entryNeedsGap(entries []entry, index int) bool {
@@ -187,7 +187,7 @@ func (m Widget) entryNeedsGap(entries []entry, index int) bool {
 }
 
 func (m Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	height := min(gtx.Dp(tokens.ItemMinHeight), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -196,14 +196,14 @@ func (m Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layout.Dimen
 }
 
 func (m Widget) layoutSectionTitle(ctx *frame.Context, gtx layout.Context, title string) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	return layout.Inset{Top: tokens.SectionPaddingTop, Right: tokens.SectionPaddingX, Bottom: tokens.SectionPaddingBottom, Left: tokens.SectionPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return text.New(title).Size(float32(tokens.SectionTextSize)).Weight(font.Medium).Color(menuMutedColor(frame.ActiveTheme(ctx))).Layout(ctx, gtx)
 	})
 }
 
 func (m Widget) layoutSeparator(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	marginX := gtx.Dp(tokens.SeparatorMarginX)
 	marginY := gtx.Dp(tokens.SeparatorMarginY)
 	width := max(gtx.Constraints.Min.X-marginX*2, 0)
@@ -258,7 +258,7 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		semantic.SelectedOp(m.selected(entry)).Add(gtx.Ops)
 		semantic.EnabledOp(!disabled).Add(gtx.Ops)
 
-		tokens := frame.ActiveTheme(ctx).Components.Menu
+		tokens := m.themeTokens(ctx)
 		minHeight := min(gtx.Dp(tokens.ItemMinHeight), gtx.Constraints.Max.Y)
 		focusVisible := menuItemFocusVisible(ctx, itemState, gtx.Focused(&itemState.clickable))
 		style := menuItemStyle(frame.ActiveTheme(ctx), item.Variant, itemState.clickable.Hovered(), disabled)
@@ -292,7 +292,7 @@ func menuItemFocusVisible(ctx *frame.Context, itemState *menuItemState, focused 
 }
 
 func (m Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, entry entry, style itemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	item := entry.item
 	return layout.Inset{Top: tokens.ItemPaddingY, Right: tokens.ItemPaddingX, Bottom: tokens.ItemPaddingY, Left: tokens.ItemPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		children := make([]layout.FlexChild, 0, 11)
@@ -341,7 +341,7 @@ func (m Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, entry 
 }
 
 func (m Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, item Item, style itemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	if item.Description == "" {
 		return text.New(item.Label).Size(float32(tokens.ItemTextSize)).Weight(font.Medium).Color(style.foreground).Layout(ctx, gtx)
 	}
@@ -365,7 +365,7 @@ func (m Widget) layoutLeading(ctx *frame.Context, gtx layout.Context, item Item,
 	if item.Description == "" {
 		return item.Leading.Layout(ctx, gtx)
 	}
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	height := min(gtx.Dp(tokens.DescriptionLeadingHeight), gtx.Constraints.Max.Y)
 	top := min(gtx.Dp(tokens.DescriptionLeadingInsetTop), height)
 	childGtx := gtx
@@ -381,7 +381,7 @@ func (m Widget) layoutLeading(ctx *frame.Context, gtx layout.Context, item Item,
 }
 
 func (m Widget) layoutShortcut(ctx *frame.Context, gtx layout.Context, shortcut string, style itemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	height := min(gtx.Dp(tokens.ShortcutHeight), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = height
 	return layout.Inset{Left: tokens.ShortcutPaddingX, Right: tokens.ShortcutPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -392,7 +392,7 @@ func (m Widget) layoutShortcut(ctx *frame.Context, gtx layout.Context, shortcut 
 }
 
 func (m Widget) layoutIndicator(ctx *frame.Context, gtx layout.Context, entry entry, style itemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Menu
+	tokens := m.themeTokens(ctx)
 	restore := frame.PushColors(ctx, style.indicator, ctx.BackgroundColor())
 	defer restore()
 	sizePx := gtx.Dp(tokens.IndicatorSize)

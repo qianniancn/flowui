@@ -63,15 +63,30 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 		OnRadioChange(func(string, string) {}).
 		CloseOnSelect(false).
 		Disabled(true).
+		Compact(true).
 		Width(260)
-	if configured.emptyText != "Nothing here" || configured.onAction == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
+	if configured.emptyText != "Nothing here" || configured.onAction == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || !configured.compact || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
 		t.Fatalf("configured menu = %#v", configured)
 	}
-	if base.emptyText != "No actions" || base.onAction != nil || base.disabled || base.width != 0 || len(base.sections) != 0 {
+	if base.emptyText != "No actions" || base.onAction != nil || base.disabled || base.compact || base.width != 0 || len(base.sections) != 0 {
 		t.Fatalf("base menu was mutated: %#v", base)
 	}
 	if MenuSeparator().Kind != ItemSeparator || MenuGroupLabel("Edit").Kind != ItemGroupLabel {
 		t.Fatal("menu structural item constructors returned wrong kinds")
+	}
+}
+
+func TestMenuCompactTokensAndSubmenu(t *testing.T) {
+	ctx := menuTestContext()
+	base := Menu("actions", nil)
+	tokens := base.Compact(true).themeTokens(ctx)
+	if tokens.Padding != 4 || tokens.Radius != 8 || tokens.ItemGap != 1 || tokens.ItemMinHeight != 28 || tokens.ItemRadius != 4 || tokens.ItemPaddingX != 8 || tokens.ItemPaddingY != 3 || tokens.ItemTextSize != 13 {
+		t.Fatalf("compact menu tokens = %#v", tokens)
+	}
+	state := &menuState{key: "actions"}
+	child := base.Compact(true).submenu(state, Item{Key: "more"})
+	if !child.compact {
+		t.Fatal("submenu did not inherit compact mode")
 	}
 }
 

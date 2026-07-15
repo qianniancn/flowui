@@ -375,6 +375,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			).Disabled(false),
 		}).
 			Alt("Application menu").
+			Compact(true).
 			Orientation(ui.MenubarHorizontal).
 			LoopFocus(true).
 			Modal(true).
@@ -382,6 +383,13 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OpenKey("").
 			OnOpenChange(func(string) {}).
 			Disabled(false),
+		ui.WindowTitleBar(
+			"workspace-title-bar",
+			"FlowUI Workspace",
+			ui.Menubar("workspace-title-menu", []ui.MenubarItem{
+				ui.MenubarMenu("workspace-file", "File", []ui.MenuItem{{Key: "open", Label: "Open"}}),
+			}),
+		),
 		ui.Toolbar(
 			ui.Button("save", ui.Icon(lucide.Save).Size(16)).IconOnly(),
 			ui.ToolbarSeparator(),
@@ -723,6 +731,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
 	var _ ui.SplitPaneTheme
+	var _ ui.TitleBarTheme
 	var _ ui.StatusBarTheme
 	var _ ui.PaginationTheme
 	var _ ui.ProgressCircleTheme

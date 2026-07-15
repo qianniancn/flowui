@@ -7,6 +7,7 @@ import (
 	"gioui.org/app"
 	"gioui.org/io/event"
 	"gioui.org/io/semantic"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -153,6 +154,12 @@ func ActiveLanguage(ctx *Context) locale.Language {
 func (ctx *Context) Invalidate() {
 	if ctx.window != nil {
 		ctx.window.Invalidate()
+	}
+}
+
+func PerformWindowActions(ctx *Context, actions system.Action) {
+	if ctx != nil && ctx.window != nil && actions != 0 {
+		ctx.window.Perform(actions)
 	}
 }
 

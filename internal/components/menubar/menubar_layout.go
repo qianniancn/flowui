@@ -80,7 +80,7 @@ func (m Widget) layoutTriggers(ctx *frame.Context, gtx layout.Context, state *me
 			return dims
 		}))
 	}
-	gap := max(gtx.Dp(frame.ActiveTheme(ctx).Components.Menubar.Gap), 0)
+	gap := max(gtx.Dp(m.themeTokens(frame.ActiveTheme(ctx)).Gap), 0)
 	dims := layout.Flex{Axis: axis, Alignment: layout.Middle, Gap: gap}.Layout(gtx, children...)
 
 	maxCross := menubarCrossMinimum(gtx.Constraints, axis)
@@ -118,7 +118,7 @@ func (m Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *men
 		eventGtx = eventGtx.Disabled()
 	}
 	animGtx := gtx
-	tokens := frame.ActiveTheme(ctx).Components.Menubar
+	tokens := m.themeTokens(frame.ActiveTheme(ctx))
 	height := min(gtx.Dp(tokens.TriggerHeight), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 
@@ -161,7 +161,7 @@ func (m Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *men
 		contentCall := macro.Stop()
 		size := gtx.Constraints.Constrain(image.Pt(contentDims.Size.X+padding*2, max(height, contentDims.Size.Y)))
 		opacity := paint.PushOpacity(gtx.Ops, style.opacity)
-		drawMenubarTrigger(gtx, frame.ActiveTheme(ctx), size, style, focus)
+		drawMenubarTrigger(gtx, tokens, size, style, focus)
 		position := image.Pt(max((size.X-contentDims.Size.X)/2, 0), max((size.Y-contentDims.Size.Y)/2, 0))
 		offset := op.Offset(position).Push(gtx.Ops)
 		contentCall.Add(gtx.Ops)

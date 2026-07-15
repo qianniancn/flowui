@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ItemKind uint8
@@ -98,6 +99,7 @@ type Widget struct {
 	closeOnSelect        bool
 	hasCloseOnSelect     bool
 	disabled             bool
+	compact              bool
 	width                unit.Dp
 	nested               bool
 	parentState          *menuState
@@ -202,6 +204,12 @@ func (m Widget) Disabled(disabled bool) Widget {
 	return m
 }
 
+// Compact uses desktop menu density without changing the default HeroUI menu.
+func (m Widget) Compact(compact bool) Widget {
+	m.compact = compact
+	return m
+}
+
 func (m Widget) Width(dp int) Widget {
 	m.width = unit.Dp(max(dp, 0))
 	return m
@@ -254,10 +262,40 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.closeOnSelect = m.closeOnSelect
 	child.hasCloseOnSelect = m.hasCloseOnSelect
 	child.disabled = m.disabled
+	child.compact = m.compact
 	child.width = m.width
 	return child.
 		withDerivedIdentity(state.key, "submenu:"+item.Key).
 		withParent(state, item.Key)
+}
+
+func (m Widget) themeTokens(ctx *frame.Context) theme.MenuTheme {
+	tokens := frame.ActiveTheme(ctx).Components.Menu
+	if !m.compact {
+		return tokens
+	}
+	tokens.Padding = min(tokens.Padding, 4)
+	tokens.Radius = min(tokens.Radius, 8)
+	tokens.ItemGap = min(tokens.ItemGap, 1)
+	tokens.ItemMinHeight = min(tokens.ItemMinHeight, 28)
+	tokens.ItemRadius = min(tokens.ItemRadius, 4)
+	tokens.ItemPaddingX = min(tokens.ItemPaddingX, 8)
+	tokens.ItemPaddingY = min(tokens.ItemPaddingY, 3)
+	tokens.ItemContentGap = min(tokens.ItemContentGap, 8)
+	tokens.ItemTextSize = min(tokens.ItemTextSize, 13)
+	tokens.ItemDescriptionSize = min(tokens.ItemDescriptionSize, 11)
+	tokens.ShortcutTextSize = min(tokens.ShortcutTextSize, 12)
+	tokens.ShortcutHeight = min(tokens.ShortcutHeight, 20)
+	tokens.ShortcutPaddingX = min(tokens.ShortcutPaddingX, 4)
+	tokens.IndicatorSize = min(tokens.IndicatorSize, 14)
+	tokens.CheckmarkSize = min(tokens.CheckmarkSize, 9)
+	tokens.RadioDotSize = min(tokens.RadioDotSize, 6)
+	tokens.SubmenuIndicatorSize = min(tokens.SubmenuIndicatorSize, 12)
+	tokens.SectionTextSize = min(tokens.SectionTextSize, 11)
+	tokens.SectionPaddingX = min(tokens.SectionPaddingX, 6)
+	tokens.SectionPaddingTop = min(tokens.SectionPaddingTop, 4)
+	tokens.SectionPaddingBottom = min(tokens.SectionPaddingBottom, 3)
+	return tokens
 }
 
 func (m Widget) closeToParent(ctx *frame.Context) {

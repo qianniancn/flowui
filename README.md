@@ -140,6 +140,7 @@ text/editor internals.
 - `ListBox`
 - `Tree`
 - `Sidebar`
+- `WindowTitleBar`
 - `StatusBar`
 - `Table`
 - `Pagination`
@@ -195,6 +196,7 @@ Examples live in `examples/`:
 - `async`: asynchronous messages with commands.
 - `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
 - `texts`: text typography, alignment, truncation, wrapping, and selectable clipboard content.
+- `title_bars`: VS Code-style menu and window controls for undecorated desktop windows.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.

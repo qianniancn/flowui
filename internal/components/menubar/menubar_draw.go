@@ -9,11 +9,10 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func drawMenubarTrigger(gtx layout.Context, activeTheme *theme.Theme, size image.Point, style menubarTriggerStyle, focusOpacity float32) {
+func drawMenubarTrigger(gtx layout.Context, tokens theme.MenubarTheme, size image.Point, style menubarTriggerStyle, focusOpacity float32) {
 	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
-	tokens := activeTheme.Components.Menubar
 	radius := min(max(gtx.Dp(tokens.TriggerRadius), 0), min(size.X, size.Y)/2)
 	rect := image.Rectangle{Max: size}
 	if style.background.A != 0 {

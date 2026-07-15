@@ -37,6 +37,7 @@ type TreeTheme = theme.TreeTheme
 type SidebarTheme = theme.SidebarTheme
 type ScrollbarTheme = theme.ScrollbarTheme
 type SplitPaneTheme = theme.SplitPaneTheme
+type TitleBarTheme = theme.TitleBarTheme
 type StatusBarTheme = theme.StatusBarTheme
 type TableTheme = theme.TableTheme
 type PaginationTheme = theme.PaginationTheme

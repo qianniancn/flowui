@@ -383,10 +383,11 @@ func TestMenuActivatesActionCheckboxAndRadioItems(t *testing.T) {
 	checked := false
 	radioGroup := ""
 	radioValue := ""
+	itemActions := map[string]int{}
 	widget := Menu("actions", []Item{
-		{Key: "copy", Label: "Copy"},
-		{Key: "favorite", Label: "Favorite", Kind: ItemCheckbox, Checked: false, KeepOpen: true},
-		{Key: "compact", Label: "Compact", Kind: ItemRadio, RadioGroup: "density", Value: "compact", KeepOpen: true},
+		{Key: "copy", Label: "Copy", OnAction: func() { itemActions["copy"]++ }},
+		{Key: "favorite", Label: "Favorite", Kind: ItemCheckbox, Checked: false, KeepOpen: true, OnAction: func() { itemActions["favorite"]++ }},
+		{Key: "compact", Label: "Compact", Kind: ItemRadio, RadioGroup: "density", Value: "compact", KeepOpen: true, OnAction: func() { itemActions["compact"]++ }},
 	}).
 		OnAction(func(key string) { action = key }).
 		OnCheckedChange(func(key string, value bool) { checkedKey, checked = key, value }).
@@ -399,8 +400,8 @@ func TestMenuActivatesActionCheckboxAndRadioItems(t *testing.T) {
 	state.item("compact").clickable.Click()
 	widget.layout(ctx, gtx, state, true)
 	frame.EndFrame(ctx)
-	if action != "copy" || checkedKey != "favorite" || !checked || radioGroup != "density" || radioValue != "compact" {
-		t.Fatalf("callbacks = action %q checkbox %q/%v radio %q/%q", action, checkedKey, checked, radioGroup, radioValue)
+	if action != "copy" || checkedKey != "favorite" || !checked || radioGroup != "density" || radioValue != "compact" || itemActions["copy"] != 1 || itemActions["favorite"] != 1 || itemActions["compact"] != 1 {
+		t.Fatalf("callbacks = action %q checkbox %q/%v radio %q/%q item actions %v", action, checkedKey, checked, radioGroup, radioValue, itemActions)
 	}
 }
 

@@ -18,6 +18,7 @@ widget state is managed by `Context` with explicit keys.
 - MVU architecture: `Model`, `Msg`, `Update`, and `View`.
 - Typed message dispatch through `ui.Send[Msg]`.
 - Optional command effects with `RunCmd`, `Cmd`, and `Do`.
+- Reusable application commands shared by shortcuts, menus, dropdowns, and toolbars.
 - Gio widget state managed by `Context`.
 - Key-scoped local state with automatic cleanup after each frame.
 - HeroUI-inspired controls with variants, sizes, disabled states, validation
@@ -96,6 +97,7 @@ text/editor internals.
 - `Run`, `RunCmd`
 - `Send`, `Update`, `UpdateCmd`, `View`
 - `Cmd`, `Do`
+- `Command`, `Shortcut`, `CommandScope`
 - `Context`
 - `Widget`
 - `Key`
@@ -190,6 +192,7 @@ Examples live in `examples/`:
 - `animations`: reusable easing, tween state, value interpolation, direction changes, and custom Gio drawing.
 - `counter`: basic MVU state updates.
 - `async`: asynchronous messages with commands.
+- `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.

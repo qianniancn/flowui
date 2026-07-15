@@ -61,6 +61,7 @@ type Item struct {
 	Children         []Item
 	Sections         []Section
 	KeepOpen         bool
+	OnAction         func()
 }
 
 type Section struct {
@@ -374,6 +375,9 @@ func (m Widget) selected(entry entry) bool {
 
 func (m Widget) activate(entry entry) bool {
 	item := entry.item
+	if item.OnAction != nil {
+		item.OnAction()
+	}
 	switch item.Kind {
 	case ItemCheckbox:
 		if m.onCheckedChange != nil {

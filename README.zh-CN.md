@@ -16,6 +16,7 @@ FlowUI 是一个基于 Gio 构建的小型 MVU UI 框架。
 - MVU 架构：`Model`、`Msg`、`Update`、`View`。
 - 通过 `ui.Send[Msg]` 发送强类型消息。
 - 通过 `RunCmd`、`Cmd`、`Do` 支持异步副作用。
+- 应用命令可复用于全局快捷键、菜单、下拉菜单和工具栏。
 - Gio 控件状态由 `Context` 统一管理。
 - 基于 key 的局部状态隔离，并在每帧结束后自动清理不再使用的状态。
 - HeroUI 风格控件，支持变体、尺寸、禁用、校验、加载、焦点和基础动画状态。
@@ -91,6 +92,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Run`、`RunCmd`
 - `Send`、`Update`、`UpdateCmd`、`View`
 - `Cmd`、`Do`
+- `Command`、`Shortcut`、`CommandScope`
 - `Context`
 - `Widget`
 - `Key`
@@ -184,6 +186,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `animations`：可复用缓动、Tween 状态、数值插值、方向切换和自定义 Gio 绘制。
 - `counter`：基础 MVU 状态更新。
 - `async`：基于 command 的异步消息。
+- `commands`：复用于全局快捷键、菜单栏、下拉菜单和工具栏的应用命令。
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。

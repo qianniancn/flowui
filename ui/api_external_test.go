@@ -127,6 +127,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		Cells: []ui.TableCell{{Text: "Member"}, {Content: ui.Chip("Active").Color(ui.ChipSuccess)}},
 	}}
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
+	saveCommand := ui.NewCommand("save-command", "Save").
+		Icon(ui.Icon(lucide.Save).Size(16)).
+		Shortcut(ui.KeyShortcut("S", ui.ShortcutPrimary)).
+		OnExecute(func() {})
+	boldCommand := ui.NewCommand("bold-command", "Bold").
+		Icon(ui.Icon(lucide.Bold).Size(16)).
+		Shortcut(ui.KeyShortcut("B", ui.ShortcutPrimary|ui.ShortcutShift)).
+		Toggle(model.open).
+		OnExecute(func() {})
 
 	return ui.Column(
 		ui.Image(paint.ImageOp{}).
@@ -367,6 +376,22 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			LoopFocus(true).
 			Alt("Editor tools").
 			Disabled(false),
+		ui.CommandScope(
+			[]ui.Command{saveCommand, boldCommand},
+			ui.Toolbar(
+				ui.CommandButton("command-save", saveCommand),
+				ui.CommandButton("command-bold", boldCommand),
+			),
+		),
+		ui.Menu("command-menu", []ui.MenuItem{
+			ui.CommandMenuItem(saveCommand),
+			ui.CommandMenuItem(boldCommand),
+		}),
+		ui.Dropdown(
+			"command-dropdown",
+			ui.Button("command-dropdown-trigger", ui.Text("Commands")),
+			[]ui.DropdownItem{ui.CommandMenuItem(saveCommand)},
+		),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

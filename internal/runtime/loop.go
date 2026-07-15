@@ -71,9 +71,10 @@ func Loop[M any, Msg any](
 	update Update[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
+	onDestroy func(),
 	frame Frame[M, Msg],
 ) error {
-	return loop(w, initial, update, subscriptions, onError, frame)
+	return loop(w, initial, update, subscriptions, onError, onDestroy, frame)
 }
 
 func loop[M any, Msg any](
@@ -82,6 +83,7 @@ func loop[M any, Msg any](
 	update Update[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
+	onDestroy func(),
 	frame Frame[M, Msg],
 ) error {
 	core := newLoopCore(initial, update)
@@ -130,6 +132,9 @@ func loop[M any, Msg any](
 	for {
 		switch e := w.Event().(type) {
 		case app.DestroyEvent:
+			if onDestroy != nil {
+				onDestroy()
+			}
 			cancel()
 			return e.Err
 		case app.FrameEvent:

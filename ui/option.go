@@ -6,7 +6,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-// Option configures Run, RunCmd, and RunWithSubscriptions.
+// Option configures a FlowUI window.
 type Option interface {
 	apply(*runOptions)
 }
@@ -102,8 +102,9 @@ func Locale(language Language) Option {
 	})
 }
 
-// OnError handles command and subscription errors on the application event
-// thread. Panics are recovered and reported as *EffectError values too.
+// OnError handles command, subscription, and window lifecycle errors on the
+// window event thread. Panics are recovered and reported as *EffectError values
+// too.
 func OnError(handler func(error)) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.errorHandler = handler

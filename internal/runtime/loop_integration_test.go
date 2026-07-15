@@ -40,6 +40,7 @@ func (w *runtimeTestWindow) Invalidate() {
 func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
 	window := newRuntimeTestWindow()
 	started := make(chan struct{})
+	destroyed := make(chan struct{})
 	canceled := make(chan struct{})
 	result := make(chan error, 1)
 	go func() {
@@ -57,12 +58,13 @@ func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
 					},
 				},
 			}
-		}, nil, func(layout.Context, struct{}, func(struct{})) {})
+		}, nil, func() { close(destroyed) }, func(layout.Context, struct{}, func(struct{})) {})
 	}()
 
 	window.events <- runtimeFrameEvent()
 	receiveRuntimeTestValue(t, started)
 	window.events <- app.DestroyEvent{}
+	receiveRuntimeTestValue(t, destroyed)
 	if err := receiveRuntimeTestValue(t, result); err != nil {
 		t.Fatalf("loop returned error: %v", err)
 	}
@@ -94,7 +96,7 @@ func TestLoopDeliversEffectErrorsBeforeNextFrame(t *testing.T) {
 				t.Errorf("error handler ran after frame %d, want before frame 2", frames.Load()+1)
 			}
 			reported <- err
-		}, func(layout.Context, struct{}, func(struct{})) {
+		}, nil, func(layout.Context, struct{}, func(struct{})) {
 			frames.Add(1)
 		})
 	}()

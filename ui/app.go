@@ -17,17 +17,14 @@ import (
 
 // Run opens a Gio window and runs an MVU application in it.
 func Run[M any, Msg any](initial M, update Update[M, Msg], view View[M, Msg], opts ...Option) {
-	RunCmd(initial, func(m *M, msg Msg) Cmd[Msg] {
-		update(m, msg)
-		return nil
-	}, view, opts...)
+	RunWindows(NewWindow("main", initial, update, view, opts...))
 }
 
 // RunCmd opens a Gio window and runs an MVU application with commands. Update
 // runs serially on the event loop, while each returned Cmd runs concurrently;
 // see Cmd for the required capture and message-passing rules.
 func RunCmd[M any, Msg any](initial M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) {
-	run(initial, update, nil, view, opts...)
+	RunWindows(NewWindowCmd("main", initial, update, view, opts...))
 }
 
 // RunWithSubscriptions opens a Gio window and runs an MVU application with
@@ -39,23 +36,7 @@ func RunWithSubscriptions[M any, Msg any](
 	view View[M, Msg],
 	opts ...Option,
 ) {
-	run(initial, update, subscriptions, view, opts...)
-}
-
-func run[M any, Msg any](initial M, update UpdateCmd[M, Msg], subscriptions Subscriptions[M, Msg], view View[M, Msg], opts ...Option) {
-	cfg := newRunOptions(opts)
-	w := new(app.Window)
-	w.Option(cfg.window...)
-
-	go func() {
-		err := runWindowCmd(w, cfg.newTheme(), cfg.language, initial, update, subscriptions, view, cfg.errorHandler)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}()
-	app.Main()
+	RunWindows(NewWindowWithSubscriptions("main", initial, update, subscriptions, view, opts...))
 }
 
 func runWindowCmd[M any, Msg any](
@@ -67,6 +48,7 @@ func runWindowCmd[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
 	onError func(error),
+	onDestroy func(),
 ) error {
 	ctx := frame.New(w, theme, language)
 	if onError == nil {
@@ -99,7 +81,7 @@ func runWindowCmd[M any, Msg any](
 		return func(effectCtx context.Context, send func(Msg)) error {
 			return cmd(effectCtx, Send[Msg](send))
 		}
-	}, runtimeSubscriptions, onError, func(gtx layout.Context, model M, send func(Msg)) {
+	}, runtimeSubscriptions, onError, onDestroy, func(gtx layout.Context, model M, send func(Msg)) {
 		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
 		paint.FillShape(
 			gtx.Ops,

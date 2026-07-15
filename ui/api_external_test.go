@@ -628,6 +628,18 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 
 func TestPublicFacadeImportContract(t *testing.T) {
 	_ = ui.RunWithSubscriptions[facadeModel, facadeMsg]
+	window := ui.NewWindow("secondary", facadeModel{}, facadeUpdate, facadeView, ui.Title("Secondary"))
+	_ = ui.NewWindowCmd("commands", facadeModel{}, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, facadeView)
+	_ = ui.NewWindowWithSubscriptions("subscriptions", facadeModel{}, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, nil, facadeView)
+	application := ui.NewApplication()
+	_ = application.Open
+	_ = application.Close
+	_ = application.CloseAll
+	_ = application.IsOpen
+	var _ func(...ui.WindowSpec) = ui.RunWindows
+	if window.Key() != "secondary" {
+		t.Fatalf("window key = %q", window.Key())
+	}
 	var _ ui.Widget = externalWidget{}
 	var _ ui.Update[facadeModel, facadeMsg] = facadeUpdate
 	var _ ui.View[facadeModel, facadeMsg] = facadeView

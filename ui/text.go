@@ -1,9 +1,29 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/text"
+import (
+	giotext "gioui.org/text"
+	textui "github.com/qianniancn/FlowUI/internal/components/text"
+)
 
-type TextWidget = text.Widget
+type TextWidget = textui.Widget
+type SelectableTextWidget = textui.Widget
+type TextAlignment = giotext.Alignment
+type TextWrapPolicy = giotext.WrapPolicy
+
+const (
+	TextAlignStart  = giotext.Start
+	TextAlignEnd    = giotext.End
+	TextAlignCenter = giotext.Middle
+
+	TextWrapHeuristically = giotext.WrapHeuristically
+	TextWrapWords         = giotext.WrapWords
+	TextWrapGraphemes     = giotext.WrapGraphemes
+)
 
 func Text(value string) TextWidget {
-	return text.New(value)
+	return textui.New(value)
+}
+
+func SelectableText(key, value string) SelectableTextWidget {
+	return textui.Selectable(key, value)
 }

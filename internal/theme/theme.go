@@ -954,7 +954,7 @@ func DefaultTheme() Theme {
 			DangerSoftHover:            color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x33},
 			DangerSoftForeground:       color.NRGBA{R: 0xba, G: 0x0f, B: 0x49, A: 0xff},
 			Focus:                      color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
-			Selection:                  color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x40},
+			Selection:                  color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x50},
 			SurfaceShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x34},
 			OverlayShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
 			Shadow:                     color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
@@ -1771,6 +1771,7 @@ func DarkTheme() Theme {
 	theme.Palette.SuccessSoft.A = 0x1f
 	theme.Palette.WarningSoftForeground = color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff}
 	theme.Palette.WarningSoft.A = 0x1f
+	theme.Palette.Selection = color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x58}
 	theme.Palette.SurfaceShadow = color.NRGBA{}
 	theme.Palette.OverlayShadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}
 	theme.Palette.Shadow = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x90}

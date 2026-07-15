@@ -87,3 +87,14 @@ func TestDarkThemeDefinesThemedSurfaceAndShadow(t *testing.T) {
 		t.Fatal("dark theme did not override shadow")
 	}
 }
+
+func TestSelectionColorsMatchTheme(t *testing.T) {
+	light := color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x50}
+	dark := color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x58}
+	if got := theme.DefaultTheme().Palette.Selection; got != light {
+		t.Fatalf("light selection = %#v, want %#v", got, light)
+	}
+	if got := theme.DarkTheme().Palette.Selection; got != dark {
+		t.Fatalf("dark selection = %#v, want %#v", got, dark)
+	}
+}

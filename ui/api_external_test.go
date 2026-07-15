@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/ui"
@@ -138,6 +139,21 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		OnExecute(func() {})
 
 	return ui.Column(
+		ui.Text("Formatted text").
+			Font(font.Font{Typeface: "serif", Style: font.Italic, Weight: font.Medium}).
+			Align(ui.TextAlignCenter).
+			MaxLines(2).
+			Truncator("...").
+			Wrap(ui.TextWrapWords).
+			LineHeight(20).
+			LineHeightScale(1.1),
+		ui.SelectableText("selectable-text", "Selectable text").
+			Typeface("monospace").
+			Style(font.Italic).
+			Weight(font.SemiBold).
+			Align(ui.TextAlignEnd).
+			MaxLines(1).
+			Wrap(ui.TextWrapGraphemes),
 		ui.Image(paint.ImageOp{}).
 			Fit(ui.ImageCover).
 			Position(ui.AlignCenter).

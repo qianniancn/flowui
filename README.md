@@ -114,6 +114,7 @@ text/editor internals.
 ### Controls
 
 - `Text`
+- `SelectableText`
 - `Label`
 - `Description`
 - `Image`
@@ -193,6 +194,7 @@ Examples live in `examples/`:
 - `counter`: basic MVU state updates.
 - `async`: asynchronous messages with commands.
 - `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
+- `texts`: text typography, alignment, truncation, wrapping, and selectable clipboard content.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.

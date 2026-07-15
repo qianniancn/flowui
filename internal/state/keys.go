@@ -11,6 +11,7 @@ const (
 	KindClickable        Kind = "clickable"
 	KindDraggable        Kind = "draggable"
 	KindEditor           Kind = "editor"
+	KindSelectableText   Kind = "selectable-text"
 	KindInput            Kind = "input"
 	KindComboBox         Kind = "combobox"
 	KindSelect           Kind = "select"

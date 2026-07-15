@@ -109,6 +109,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 ### 基础控件
 
 - `Text`
+- `SelectableText`
 - `Label`
 - `Description`
 - `Image`
@@ -187,6 +188,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `counter`：基础 MVU 状态更新。
 - `async`：基于 command 的异步消息。
 - `commands`：复用于全局快捷键、菜单栏、下拉菜单和工具栏的应用命令。
+- `texts`：文本字体、对齐、截断、换行和可选择复制内容。
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。

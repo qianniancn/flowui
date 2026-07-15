@@ -12,7 +12,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"gioui.org/widget/material"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -218,26 +218,10 @@ func (w Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, geometry cha
 }
 
 func recordChartText(ctx *frame.Context, gtx layout.Context, value string, size unit.Sp, weight font.Weight, textColor color.NRGBA, maxWidth int) recordedChartText {
-	if value == "" || maxWidth <= 0 {
-		return recordedChartText{}
-	}
-	textGtx := gtx
-	textGtx.Constraints.Min = image.Point{}
-	textGtx.Constraints.Max.X = min(maxWidth, textGtx.Constraints.Max.X)
-	macro := op.Record(gtx.Ops)
-	label := material.Label(frame.ActiveTheme(ctx).Material, size, value)
-	label.Color = textColor
-	label.Font.Weight = weight
-	label.MaxLines = 1
-	dims := label.Layout(textGtx)
-	return recordedChartText{call: macro.Stop(), dims: dims}
+	call, dims := chart.RecordText(ctx, gtx, value, size, weight, textColor, maxWidth)
+	return recordedChartText{call: call, dims: dims}
 }
 
 func placeChartText(gtx layout.Context, value recordedChartText, position image.Point) {
-	if value.dims.Size.X <= 0 || value.dims.Size.Y <= 0 {
-		return
-	}
-	offset := op.Offset(position).Push(gtx.Ops)
-	value.call.Add(gtx.Ops)
-	offset.Pop()
+	chart.PlaceRecorded(gtx, value.call, value.dims, position)
 }

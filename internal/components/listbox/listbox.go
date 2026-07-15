@@ -193,7 +193,7 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	if !l.disabled {
 		result := state.updateKeys(gtx, items, l.disabledKeys, l.keyboardActiveKey(items))
 		if result.focusKey != "" {
-			frame.RequestFocus(ctx, &state.item(result.focusKey).clickable)
+			frame.RequestFocus(ctx, &state.item(result.focusKey).Clickable)
 		}
 		if result.actionKey != "" {
 			l.activate(result.actionKey)

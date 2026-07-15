@@ -8,9 +8,8 @@ import (
 	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/components/icon"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
@@ -21,12 +20,7 @@ func drawComboBoxPanel(gtx layout.Context, theme *theme.Theme, rect image.Rectan
 }
 
 func drawComboBoxItem(gtx layout.Context, theme *theme.Theme, size image.Point, style comboBoxItemStyle) {
-	if style.bg.A == 0 {
-		return
-	}
-	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(theme.Components.ComboBox.ItemRadius), 1), min(size.X, size.Y)/2)
-	paint.FillShape(gtx.Ops, style.bg, clip.UniformRRect(rect, radius).Op(gtx.Ops))
+	optionrow.DrawBackground(gtx, size, theme.Components.ComboBox.ItemRadius, style.bg)
 }
 
 func drawComboBoxChevron(gtx layout.Context, theme *theme.Theme, size image.Point, progress float32, col color.NRGBA) {
@@ -44,30 +38,5 @@ func drawComboBoxChevron(gtx layout.Context, theme *theme.Theme, size image.Poin
 }
 
 func drawComboBoxCheck(gtx layout.Context, theme *theme.Theme, size image.Point, progress float32) {
-	progress = min(max(progress, 0), 1)
-	if progress == 0 {
-		return
-	}
-	rect := image.Rectangle{Max: size}.Inset(max(gtx.Dp(theme.Components.ComboBox.ItemCheckInset), 0))
-	if rect.Empty() {
-		return
-	}
-	x := float32(rect.Min.X)
-	y := float32(rect.Min.Y)
-	width := float32(rect.Dx())
-	height := float32(rect.Dy())
-	points := [3]f32.Point{
-		f32.Pt(x+width*0.05, y+height*0.56),
-		f32.Pt(x+width*0.40, y+height*0.86),
-		f32.Pt(x+width*0.95, y+height*0.14),
-	}
-	path := render.CheckPath(gtx.Ops, points, progress)
-	col := theme.Palette.Foreground
-	col.A = byte(float32(col.A)*progress + 0.5)
-	stroke := clip.Stroke{
-		Path:  path,
-		Width: max(render.DpFloat(gtx, theme.Components.ComboBox.ItemCheckStroke), 1),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	optionrow.DrawCheck(gtx, size, progress, theme.Components.ComboBox.ItemCheckInset, theme.Components.ComboBox.ItemCheckStroke, theme.Palette.Foreground)
 }

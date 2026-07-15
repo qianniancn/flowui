@@ -2,17 +2,16 @@ package selects
 
 import (
 	"image"
-	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -52,16 +51,8 @@ type selectState struct {
 	focusIntent        selectFocusIntent
 	focusVisibleIntent bool
 	triggerRect        image.Rectangle
-	progressValue      float32
-	progressFrom       float32
-	progressTo         float32
-	progressAt         time.Time
-	progressReady      bool
-	icon               float32
-	iconFrom           float32
-	iconTo             float32
-	iconAt             time.Time
-	iconReady          bool
+	transition         animation.FloatTransition
+	iconTransition     animation.FloatTransition
 	binding            selectOpenBinding
 	skipRestore        bool
 	peerClosePending   bool
@@ -293,7 +284,8 @@ func (s *selectState) progress(gtx layout.Context, open bool) float32 {
 	if !open {
 		duration = selectExitDuration
 	}
-	return selectProgress(gtx, target, duration, &s.progressValue, &s.progressFrom, &s.progressTo, &s.progressAt, &s.progressReady)
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func (s *selectState) iconProgress(gtx layout.Context, open bool) float32 {
@@ -301,30 +293,6 @@ func (s *selectState) iconProgress(gtx layout.Context, open bool) float32 {
 	if open {
 		target = 1
 	}
-	return selectProgress(gtx, target, selectIndicatorDuration, &s.icon, &s.iconFrom, &s.iconTo, &s.iconAt, &s.iconReady)
-}
-
-func selectProgress(gtx layout.Context, target float32, duration time.Duration, value, from, to *float32, at *time.Time, ready *bool) float32 {
-	if !*ready {
-		*value = 0
-		*from = 0
-		*to = 0
-		*at = gtx.Now
-		*ready = true
-	}
-	if target != *to {
-		*from = *value
-		*to = target
-		*at = gtx.Now
-	}
-	if *from == *to {
-		*value = *to
-		return *value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	*value = render.Lerp(*from, *to, progress)
-	return *value
+	s.iconTransition.Initialize(0, gtx.Now)
+	return s.iconTransition.Value(gtx, target, selectIndicatorDuration, animation.EaseSmoothstep)
 }

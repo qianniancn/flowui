@@ -85,32 +85,15 @@ func treeStateFor(ctx *frame.Context, key string) *treeState {
 }
 
 func (s *treeState) beginFrame() {
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	} else {
-		clear(s.frameItems)
-	}
+	state.BeginFrameMap(&s.frameItems)
 }
 
 func (s *treeState) endFrame() {
-	for key := range s.items {
-		if _, ok := s.frameItems[key]; !ok {
-			delete(s.items, key)
-		}
-	}
+	state.SweepFrameMap(s.items, s.frameItems)
 }
 
 func (s *treeState) item(key string) *treeItemState {
-	if s.items == nil {
-		s.items = make(map[string]*treeItemState)
-	}
-	s.frameItems[key] = struct{}{}
-	if item := s.items[key]; item != nil {
-		return item
-	}
-	item := new(treeItemState)
-	s.items[key] = item
-	return item
+	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
 func (s *treeState) checkItems(items []Item) {

@@ -3,13 +3,10 @@ package linechart
 import (
 	"fmt"
 	"image"
-	"image/color"
 
 	"gioui.org/f32"
-	"gioui.org/font"
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
@@ -47,61 +44,19 @@ func (w Widget) layoutTooltipContent(ctx *frame.Context, gtx layout.Context, geo
 	textColor := activeTheme.Palette.OverlayForegroundColor()
 	markerSize := max(gtx.Dp(chartTokens.TooltipMarkerSize), 2)
 	rowGap := max(gtx.Dp(chartTokens.TooltipRowGap), 0)
-	contentWidth := max(gtx.Constraints.Max.X, 1)
-	title := recordChartText(ctx, gtx, w.xLabel(selection.x, geometry.xScale.interval), tooltipTokens.TextSize, font.Medium, textColor, contentWidth)
-
 	limit := min(len(selection.entries), maxTooltipSeries)
-	rows := make([]recordedChartText, 0, limit+1)
-	colors := make([]color.NRGBA, 0, limit+1)
+	rows := make([]chart.TooltipRow, 0, limit+1)
 	for index := 0; index < limit; index++ {
 		entry := selection.entries[index]
 		value := fmt.Sprintf("%s  %s", entry.series.label, w.yLabel(entry.point.rawY, geometry.yScale.interval))
-		rows = append(rows, recordChartText(ctx, gtx, value, tooltipTokens.TextSize, font.Normal, textColor, max(contentWidth-markerSize-rowGap, 1)))
-		colors = append(colors, entry.series.color)
+		rows = append(rows, chart.TooltipRow{Text: value, Color: entry.series.color})
 	}
 	if len(selection.entries) > limit {
-		rows = append(rows, recordChartText(ctx, gtx, fmt.Sprintf("+%d series", len(selection.entries)-limit), tooltipTokens.TextSize, font.Normal, textColor, contentWidth))
-		colors = append(colors, color.NRGBA{})
+		rows = append(rows, chart.TooltipRow{Text: fmt.Sprintf("+%d series", len(selection.entries)-limit)})
 	}
-
-	width := title.dims.Size.X
-	height := title.dims.Size.Y
-	if height > 0 && len(rows) > 0 {
-		height += rowGap
-	}
-	for index, row := range rows {
-		rowWidth := row.dims.Size.X
-		if colors[index].A != 0 {
-			rowWidth += markerSize + rowGap
-		}
-		width = max(width, rowWidth)
-		height += row.dims.Size.Y
-		if index < len(rows)-1 {
-			height += rowGap
-		}
-	}
-	size := gtx.Constraints.Constrain(image.Pt(width, height))
-
-	y := 0
-	placeChartText(gtx, title, image.Pt(0, y))
-	y += title.dims.Size.Y
-	if title.dims.Size.Y > 0 && len(rows) > 0 {
-		y += rowGap
-	}
-	for index, row := range rows {
-		x := 0
-		if colors[index].A != 0 {
-			center := f32.Pt(float32(markerSize/2), float32(y+row.dims.Size.Y/2))
-			paint.FillShape(gtx.Ops, colors[index], clip.Ellipse(chartPointRect(center, markerSize)).Op(gtx.Ops))
-			x += markerSize + rowGap
-		}
-		placeChartText(gtx, row, image.Pt(x, y))
-		y += row.dims.Size.Y + rowGap
-	}
-	return layout.Dimensions{Size: size}
+	return chart.LayoutTooltipRows(ctx, gtx, w.xLabel(selection.x, geometry.xScale.interval), rows, tooltipTokens.TextSize, textColor, markerSize, rowGap, chart.TooltipMarkerCircle)
 }
 
 func lineTooltipAnchor(pointer f32.Point) image.Rectangle {
-	position := pointer.Round()
-	return image.Rectangle{Min: position, Max: position.Add(image.Pt(1, 1))}
+	return chart.TooltipAnchor(pointer)
 }

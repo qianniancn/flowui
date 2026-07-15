@@ -3,6 +3,7 @@ package candlestick
 import (
 	"image/color"
 
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -12,23 +13,7 @@ const (
 	signUp   = 1
 )
 
-type dataExtent struct {
-	minimum float64
-	maximum float64
-	valid   bool
-}
-
-func (e *dataExtent) include(value float64) {
-	if !finite(value) {
-		return
-	}
-	if !e.valid {
-		e.minimum, e.maximum, e.valid = value, value, true
-		return
-	}
-	e.minimum = min(e.minimum, value)
-	e.maximum = max(e.maximum, value)
-}
+type dataExtent = chart.Extent
 
 type resolvedCandle struct {
 	index int
@@ -79,10 +64,10 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme) chartData {
 		default:
 			candle.color = upColor
 		}
-		result.extent.include(candle.open)
-		result.extent.include(candle.close)
-		result.extent.include(candle.low)
-		result.extent.include(candle.high)
+		result.extent.Include(candle.open)
+		result.extent.Include(candle.close)
+		result.extent.Include(candle.low)
+		result.extent.Include(candle.high)
 		result.candles[index] = candle
 	}
 	return result

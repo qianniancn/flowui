@@ -2,13 +2,13 @@ package radiogroup
 
 import (
 	"fmt"
-	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -30,32 +30,15 @@ type radioGroupState struct {
 }
 
 func (s *radioGroupState) beginFrame() {
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	} else {
-		clear(s.frameItems)
-	}
+	state.BeginFrameMap(&s.frameItems)
 }
 
 func (s *radioGroupState) endFrame() {
-	for key := range s.items {
-		if _, ok := s.frameItems[key]; !ok {
-			delete(s.items, key)
-		}
-	}
+	state.SweepFrameMap(s.items, s.frameItems)
 }
 
 func (s *radioGroupState) item(key string) *radioItemState {
-	if s.items == nil {
-		s.items = make(map[string]*radioItemState)
-	}
-	s.frameItems[key] = struct{}{}
-	if item := s.items[key]; item != nil {
-		return item
-	}
-	item := new(radioItemState)
-	s.items[key] = item
-	return item
+	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
 func (s *radioGroupState) checkItems(items []RadioItem) {
@@ -201,19 +184,9 @@ func radioLastEnabled(items []RadioItem) (int, bool) {
 }
 
 type radioItemState struct {
-	clickable     widget.Clickable
-	selected      float32
-	selectedFrom  float32
-	selectedTo    float32
-	selectedAt    time.Time
-	selectedReady bool
-	focus         float32
-	focusFrom     float32
-	focusTo       float32
-	focusAt       time.Time
-	focusReady    bool
-	focused       bool
-	pointerFocus  bool
+	clickable widget.Clickable
+	selected  animation.FloatTransition
+	focus     state.FocusAnimation
 }
 
 func (s *radioItemState) selection(gtx layout.Context, selected bool) float32 {
@@ -221,72 +194,15 @@ func (s *radioItemState) selection(gtx layout.Context, selected bool) float32 {
 	if selected {
 		target = 1
 	}
-	if !s.selectedReady {
-		s.selected = target
-		s.selectedFrom = target
-		s.selectedTo = target
-		s.selectedAt = gtx.Now
-		s.selectedReady = true
-		return target
-	}
-	if target != s.selectedTo {
-		s.selectedFrom = s.selected
-		s.selectedTo = target
-		s.selectedAt = gtx.Now
-	}
-	if s.selectedFrom == s.selectedTo {
-		s.selected = s.selectedTo
-		return s.selected
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.selectedAt), radioSelectDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.selected = render.Lerp(s.selectedFrom, s.selectedTo, progress)
-	return s.selected
+	return s.selected.Value(gtx, target, radioSelectDuration, animation.EaseSmoothstep)
 }
 
 func (s *radioItemState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	target := float32(0)
-	if focused {
-		target = 1
-	}
-	if !s.focusReady {
-		s.focus = target
-		s.focusFrom = target
-		s.focusTo = target
-		s.focusAt = gtx.Now
-		s.focusReady = true
-		return target
-	}
-	if target != s.focusTo {
-		s.focusFrom = s.focus
-		s.focusTo = target
-		s.focusAt = gtx.Now
-	}
-	if s.focusFrom == s.focusTo {
-		s.focus = s.focusTo
-		return s.focus
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.focusAt), radioFocusDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.focus = render.Lerp(s.focusFrom, s.focusTo, progress)
-	return s.focus
+	return s.focus.Opacity(gtx, focused)
 }
 
 func (s *radioItemState) focusVisible(focused bool, history []widget.Press) bool {
-	if !focused {
-		s.focused = false
-		s.pointerFocus = false
-		return false
-	}
-	if !s.focused {
-		s.focused = true
-		s.pointerFocus = len(history) > 0
-	}
-	return !s.pointerFocus
+	return s.focus.Visible(focused, history)
 }
 
 func radioPressScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, disabled bool) float32 {

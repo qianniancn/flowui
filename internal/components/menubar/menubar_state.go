@@ -9,11 +9,10 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -44,11 +43,7 @@ type menubarState struct {
 	typeaheadReady bool
 	dismiss        [16]overlay.ClickArea
 	dialog         overlay.ClickArea
-	progressValue  float32
-	progressFrom   float32
-	progressTo     float32
-	progressAt     time.Time
-	progressReady  bool
+	transition     animation.FloatTransition
 	binding        menubarBinding
 }
 
@@ -81,11 +76,7 @@ func (s *menubarState) bind(widget Widget) {
 }
 
 func (s *menubarState) beginFrame(items []Item) {
-	if s.frameTriggers == nil {
-		s.frameTriggers = make(map[string]struct{}, len(items))
-	} else {
-		clear(s.frameTriggers)
-	}
+	stateutil.BeginFrameMap(&s.frameTriggers)
 	if s.itemKeys == nil {
 		s.itemKeys = make(map[string]struct{}, len(items))
 	} else {
@@ -107,27 +98,11 @@ func (s *menubarState) beginFrame(items []Item) {
 }
 
 func (s *menubarState) endFrame() {
-	for key := range s.triggers {
-		if _, exists := s.frameTriggers[key]; !exists {
-			delete(s.triggers, key)
-		}
-	}
+	stateutil.SweepFrameMap(s.triggers, s.frameTriggers)
 }
 
 func (s *menubarState) trigger(key string) *menubarTriggerState {
-	if s.triggers == nil {
-		s.triggers = make(map[string]*menubarTriggerState)
-	}
-	if s.frameTriggers == nil {
-		s.frameTriggers = make(map[string]struct{})
-	}
-	s.frameTriggers[key] = struct{}{}
-	if trigger := s.triggers[key]; trigger != nil {
-		return trigger
-	}
-	trigger := new(menubarTriggerState)
-	s.triggers[key] = trigger
-	return trigger
+	return stateutil.UseFrameMap(&s.triggers, &s.frameTriggers, key)
 }
 
 func (s *menubarState) current(widget Widget) string {
@@ -211,25 +186,8 @@ func (s *menubarState) progress(gtx layout.Context, open bool) float32 {
 		target = 1
 		duration = menubarEnter
 	}
-	if !s.progressReady {
-		s.progressAt = gtx.Now
-		s.progressReady = true
-	}
-	if target != s.progressTo {
-		s.progressFrom = s.progressValue
-		s.progressTo = target
-		s.progressAt = gtx.Now
-	}
-	if s.progressFrom == s.progressTo {
-		s.progressValue = s.progressTo
-		return s.progressValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.progressAt), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.progressValue = render.Lerp(s.progressFrom, s.progressTo, progress)
-	return s.progressValue
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func (s *menubarState) updateInteractions(ctx *frame.Context, gtx layout.Context, widget Widget) {

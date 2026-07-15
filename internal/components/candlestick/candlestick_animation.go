@@ -42,7 +42,7 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 		Revision(transition.revision).
 		Duration(transition.duration).
 		Easing(transition.easing).
-		Disabled(!w.animation || !target.extent.valid).
+		Disabled(!w.animation || !target.extent.Valid).
 		Sample(ctx, gtx)
 	if !running && progress == 1 {
 		transition.from = chartData{}

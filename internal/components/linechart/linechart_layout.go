@@ -166,7 +166,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	drawChartSeries(ctx, gtx, displayData, geometry, style, tokens)
 	w.drawMarkLinesAndPoints(ctx, gtx, geometry, style)
 	w.layoutAxisLabels(ctx, gtx, geometry, style)
-	if !data.yExtent.valid {
+	if !data.yExtent.Valid {
 		w.layoutEmpty(ctx, gtx, geometry, style)
 	}
 	if w.showTooltip {
@@ -201,7 +201,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 }
 
 func (w Widget) resolveXScale(data chartData) linearScale {
-	minimum, maximum := data.xExtent.minimum, data.xExtent.maximum
+	minimum, maximum := data.xExtent.Minimum, data.xExtent.Maximum
 	if w.hasXRange {
 		minimum, maximum = w.xMin, w.xMax
 	}
@@ -217,7 +217,7 @@ func (w Widget) resolveXScale(data chartData) linearScale {
 }
 
 func (w Widget) resolveYScale(data chartData) linearScale {
-	yMinimum, yMaximum := data.yExtent.minimum, data.yExtent.maximum
+	yMinimum, yMaximum := data.yExtent.Minimum, data.yExtent.Maximum
 	if w.hasYRange {
 		yMinimum, yMaximum = w.yMin, w.yMax
 	}

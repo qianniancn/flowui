@@ -3,6 +3,7 @@ package listbox
 import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
 
 type ItemFocusState struct {
@@ -24,9 +25,9 @@ func item(ctx *frame.Context, stateKey, itemKey string) (*widget.Clickable, Item
 		return nil, ItemFocusState{}, false
 	}
 	item := state.items[itemKey]
-	return &item.clickable, ItemFocusState{
-		PointerOrigin: item.pointerFocus,
-		TargetOpacity: item.focusTo,
+	return &item.Clickable, ItemFocusState{
+		PointerOrigin: item.FocusPointerOrigin(),
+		TargetOpacity: item.FocusTargetOpacity(),
 	}, true
 }
 
@@ -42,13 +43,7 @@ func ensureItem(ctx *frame.Context, stateKey, itemKey string) *widget.Clickable 
 	state := frame.UseStateWith(ctx, stateKey, stateSlotListBox, func() *listBoxState {
 		return new(listBoxState)
 	})
-	if state.items == nil {
-		state.items = make(map[string]*listBoxItemState)
-	}
-	if state.items[itemKey] == nil {
-		state.items[itemKey] = new(listBoxItemState)
-	}
-	return &state.items[itemKey].clickable
+	return &stateutil.EnsureFrameMap(&state.items, itemKey).Clickable
 }
 
 func HasState(ctx *frame.Context, key string) bool {

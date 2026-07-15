@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
@@ -24,79 +25,42 @@ func datePickerStateFor(ctx *frame.Context, key string) *datePickerState {
 }
 
 type datePickerState struct {
-	input           field.State
-	trigger         widget.Clickable
-	dialog          overlay.ClickArea
-	header          widget.Clickable
-	prev            widget.Clickable
-	next            widget.Clickable
-	open            bool
-	viewMode        datePickerViewMode
-	viewMonth       time.Time
-	syncedValue     time.Time
-	monthReady      bool
-	popover         float32
-	popoverFrom     float32
-	popoverTo       float32
-	popoverAt       time.Time
-	popoverDuration time.Duration
-	popoverReady    bool
-	prevBg          color.NRGBA
-	prevBgFrom      color.NRGBA
-	prevBgTo        color.NRGBA
-	prevBgAt        time.Time
-	prevBgReady     bool
-	nextBg          color.NRGBA
-	nextBgFrom      color.NRGBA
-	nextBgTo        color.NRGBA
-	nextBgAt        time.Time
-	nextBgReady     bool
-	yearList        layout.List
-	yearBar         widget.Scrollbar
-	yearScrollYear  int
-	yearScrollReady bool
-	days            map[string]*datePickerCellState
-	months          map[string]*datePickerCellState
-	years           map[string]*datePickerCellState
-	frameDays       map[string]struct{}
-	frameMonths     map[string]struct{}
-	frameYears      map[string]struct{}
+	input             field.State
+	trigger           widget.Clickable
+	dialog            overlay.ClickArea
+	header            widget.Clickable
+	prev              widget.Clickable
+	next              widget.Clickable
+	open              bool
+	viewMode          datePickerViewMode
+	viewMonth         time.Time
+	syncedValue       time.Time
+	monthReady        bool
+	popoverTransition animation.FloatTransition
+	prevBackground    animation.ColorTransition
+	nextBackground    animation.ColorTransition
+	yearList          layout.List
+	yearBar           widget.Scrollbar
+	yearScrollYear    int
+	yearScrollReady   bool
+	days              map[string]*datePickerCellState
+	months            map[string]*datePickerCellState
+	years             map[string]*datePickerCellState
+	frameDays         map[string]struct{}
+	frameMonths       map[string]struct{}
+	frameYears        map[string]struct{}
 }
 
 func (s *datePickerState) beginFrame() {
-	if s.frameDays == nil {
-		s.frameDays = make(map[string]struct{})
-	} else {
-		clear(s.frameDays)
-	}
-	if s.frameMonths == nil {
-		s.frameMonths = make(map[string]struct{})
-	} else {
-		clear(s.frameMonths)
-	}
-	if s.frameYears == nil {
-		s.frameYears = make(map[string]struct{})
-	} else {
-		clear(s.frameYears)
-	}
+	state.BeginFrameMap(&s.frameDays)
+	state.BeginFrameMap(&s.frameMonths)
+	state.BeginFrameMap(&s.frameYears)
 }
 
 func (s *datePickerState) endFrame() {
-	for key := range s.days {
-		if _, ok := s.frameDays[key]; !ok {
-			delete(s.days, key)
-		}
-	}
-	for key := range s.months {
-		if _, ok := s.frameMonths[key]; !ok {
-			delete(s.months, key)
-		}
-	}
-	for key := range s.years {
-		if _, ok := s.frameYears[key]; !ok {
-			delete(s.years, key)
-		}
-	}
+	state.SweepFrameMap(s.days, s.frameDays)
+	state.SweepFrameMap(s.months, s.frameMonths)
+	state.SweepFrameMap(s.years, s.frameYears)
 }
 
 func (s *datePickerState) sync(value, initialMonth time.Time) {
@@ -182,42 +146,15 @@ func (s *datePickerState) updateKeys(gtx layout.Context, focus event.Tag) {
 }
 
 func (s *datePickerState) day(key string) *datePickerCellState {
-	if s.days == nil {
-		s.days = make(map[string]*datePickerCellState)
-	}
-	s.frameDays[key] = struct{}{}
-	if day := s.days[key]; day != nil {
-		return day
-	}
-	day := new(datePickerCellState)
-	s.days[key] = day
-	return day
+	return state.UseFrameMap(&s.days, &s.frameDays, key)
 }
 
 func (s *datePickerState) month(key string) *datePickerCellState {
-	if s.months == nil {
-		s.months = make(map[string]*datePickerCellState)
-	}
-	s.frameMonths[key] = struct{}{}
-	if month := s.months[key]; month != nil {
-		return month
-	}
-	month := new(datePickerCellState)
-	s.months[key] = month
-	return month
+	return state.UseFrameMap(&s.months, &s.frameMonths, key)
 }
 
 func (s *datePickerState) year(key string) *datePickerCellState {
-	if s.years == nil {
-		s.years = make(map[string]*datePickerCellState)
-	}
-	s.frameYears[key] = struct{}{}
-	if year := s.years[key]; year != nil {
-		return year
-	}
-	year := new(datePickerCellState)
-	s.years[key] = year
-	return year
+	return state.UseFrameMap(&s.years, &s.frameYears, key)
 }
 
 func (s *datePickerState) popoverProgress(gtx layout.Context, open bool) float32 {
@@ -227,77 +164,23 @@ func (s *datePickerState) popoverProgress(gtx layout.Context, open bool) float32
 		target = 1
 		duration = datePickerPopoverInDuration
 	}
-	if !s.popoverReady {
-		s.popover = target
-		s.popoverFrom = target
-		s.popoverTo = target
-		s.popoverAt = gtx.Now
-		s.popoverDuration = duration
-		s.popoverReady = true
-		return target
-	}
-	if target != s.popoverTo {
-		s.popoverFrom = s.popover
-		s.popoverTo = target
-		s.popoverAt = gtx.Now
-		s.popoverDuration = duration
-	}
-	if s.popoverFrom == s.popoverTo {
-		s.popover = s.popoverTo
-		return s.popover
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.popoverAt), s.popoverDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.popover = render.Lerp(s.popoverFrom, s.popoverTo, progress)
-	return s.popover
+	return s.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func (s *datePickerState) navBackground(gtx layout.Context, delta int, target color.NRGBA) color.NRGBA {
 	if delta < 0 {
-		return datePickerColor(gtx, target, &s.prevBg, &s.prevBgFrom, &s.prevBgTo, &s.prevBgAt, &s.prevBgReady)
+		return s.prevBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
 	}
-	return datePickerColor(gtx, target, &s.nextBg, &s.nextBgFrom, &s.nextBgTo, &s.nextBgAt, &s.nextBgReady)
+	return s.nextBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
 }
 
 type datePickerCellState struct {
-	clickable widget.Clickable
-	bg        color.NRGBA
-	bgFrom    color.NRGBA
-	bgTo      color.NRGBA
-	bgAt      time.Time
-	bgReady   bool
+	clickable            widget.Clickable
+	backgroundTransition animation.ColorTransition
 }
 
 func (s *datePickerCellState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return datePickerColor(gtx, target, &s.bg, &s.bgFrom, &s.bgTo, &s.bgAt, &s.bgReady)
-}
-
-func datePickerColor(gtx layout.Context, target color.NRGBA, value, from, to *color.NRGBA, at *time.Time, ready *bool) color.NRGBA {
-	if !*ready {
-		*value = target
-		*from = target
-		*to = target
-		*at = gtx.Now
-		*ready = true
-		return target
-	}
-	if target != *to {
-		*from = *value
-		*to = target
-		*at = gtx.Now
-	}
-	if *from == *to {
-		*value = *to
-		return *value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), datePickerCellColorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	*value = render.LerpColor(*from, *to, progress)
-	return *value
+	return s.backgroundTransition.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
 }
 
 func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool) float32 {

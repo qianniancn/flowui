@@ -32,32 +32,15 @@ func sidebarStateFor(ctx *frame.Context, key string) *sidebarState {
 }
 
 func (s *sidebarState) beginFrame() {
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	} else {
-		clear(s.frameItems)
-	}
+	stateutil.BeginFrameMap(&s.frameItems)
 }
 
 func (s *sidebarState) endFrame() {
-	for key := range s.items {
-		if _, ok := s.frameItems[key]; !ok {
-			delete(s.items, key)
-		}
-	}
+	stateutil.SweepFrameMap(s.items, s.frameItems)
 }
 
 func (s *sidebarState) item(key string) *sidebarItemState {
-	if s.items == nil {
-		s.items = make(map[string]*sidebarItemState)
-	}
-	s.frameItems[key] = struct{}{}
-	if item := s.items[key]; item != nil {
-		return item
-	}
-	item := new(sidebarItemState)
-	s.items[key] = item
-	return item
+	return stateutil.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
 func (s *sidebarState) checkItems(items []Item) {

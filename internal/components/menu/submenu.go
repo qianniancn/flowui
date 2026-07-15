@@ -10,9 +10,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 )
 
 const menuSubmenuOpenDelay = 100 * time.Millisecond
@@ -77,25 +77,8 @@ func (s *menuState) submenuProgress(gtx layout.Context, open bool) float32 {
 		target = 1
 		duration = contextMenuEnterDuration
 	}
-	if !s.progressReady {
-		s.progressAt = gtx.Now
-		s.progressReady = true
-	}
-	if target != s.progressTo {
-		s.progressFrom = s.progressValue
-		s.progressTo = target
-		s.progressAt = gtx.Now
-	}
-	if s.progressFrom == s.progressTo {
-		s.progressValue = s.progressTo
-		return s.progressValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.progressAt), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.progressValue = render.Lerp(s.progressFrom, s.progressTo, progress)
-	return s.progressValue
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func (m Widget) registerSubmenuOverlay(ctx *frame.Context, gtx layout.Context, state *menuState, anchor image.Rectangle, open bool, progress float32) {

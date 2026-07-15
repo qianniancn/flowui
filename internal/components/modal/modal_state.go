@@ -1,16 +1,13 @@
 package modal
 
 import (
-	"time"
-
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -41,11 +38,7 @@ type modalState struct {
 	focusStart   modalFocusTag
 	focusTarget  modalFocusTag
 	focusEnd     modalFocusTag
-	value        float32
-	from         float32
-	to           float32
-	at           time.Time
-	ready        bool
+	transition   animation.FloatTransition
 	focusPending bool
 }
 
@@ -58,37 +51,19 @@ func (s *modalState) progress(gtx layout.Context, open bool) float32 {
 	if open {
 		target = 1
 	}
-	if !s.ready {
-		s.value = 0
-		s.from = 0
-		s.to = 0
-		s.at = gtx.Now
-		s.ready = true
-	}
-	if target != s.to {
-		s.from = s.value
-		s.to = target
-		s.at = gtx.Now
+	s.transition.Initialize(0, gtx.Now)
+	if target != s.transition.Target() {
 		s.focusPending = open
 	}
-	if s.from == s.to {
-		s.value = s.to
-		return s.value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), modalEnterDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.value = render.Lerp(s.from, s.to, progress)
-	return s.value
+	return s.transition.Value(gtx, target, modalEnterDuration, animation.EaseSmoothstep)
 }
 
 func (s *modalState) visible() bool {
-	return s.ready && s.value > 0
+	return s.transition.Ready() && s.transition.Current() > 0
 }
 
 func (s *modalState) opening() bool {
-	return s.to >= s.from
+	return s.transition.Increasing()
 }
 
 func (s *modalState) initialFocusTag() event.Tag {

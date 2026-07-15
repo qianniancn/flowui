@@ -555,7 +555,7 @@ func TestSelectPointerClickOutsideCloses(t *testing.T) {
 	closeStart := start.Add(selectEnterDuration + 2*time.Millisecond)
 	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, closeStart)
 	layoutNestedSelectTestFrame(ctx, router, selectWidget, &background, &backgroundClicked, closeStart.Add(selectExitDuration))
-	if progress := testComponentState[selectState](ctx, "language", stateSlotSelect).progressValue; progress != 0 {
+	if progress := testComponentState[selectState](ctx, "language", stateSlotSelect).transition.Current(); progress != 0 {
 		t.Fatalf("held pointer left exit progress at %v, want 0", progress)
 	}
 	router.Queue(

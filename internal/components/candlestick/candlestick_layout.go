@@ -155,7 +155,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	if selected && w.showTooltip && w.showCrosshair {
 		w.drawCrosshair(ctx, gtx, geometry, selection, state.pointer, style, tokens)
 	}
-	if !data.extent.valid {
+	if !data.extent.Valid {
 		w.layoutEmpty(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
@@ -187,7 +187,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 }
 
 func (w Widget) resolveYScale(data chartData) linearScale {
-	minimum, maximum := data.extent.minimum, data.extent.maximum
+	minimum, maximum := data.extent.Minimum, data.extent.Maximum
 	if !w.hasYRange && !w.effectiveDataWindow().IsFull() {
 		start, end := visibleCategoryRange(len(data.candles), w.effectiveDataWindow())
 		visible := dataExtent{}
@@ -196,13 +196,13 @@ func (w Widget) resolveYScale(data chartData) linearScale {
 			if !candle.valid {
 				continue
 			}
-			visible.include(candle.open)
-			visible.include(candle.close)
-			visible.include(candle.low)
-			visible.include(candle.high)
+			visible.Include(candle.open)
+			visible.Include(candle.close)
+			visible.Include(candle.low)
+			visible.Include(candle.high)
 		}
-		if visible.valid {
-			minimum, maximum = visible.minimum, visible.maximum
+		if visible.Valid {
+			minimum, maximum = visible.Minimum, visible.Maximum
 		}
 	}
 	if w.hasYRange {

@@ -457,19 +457,16 @@ func TestDisabledButtonAnimationInvalidates(t *testing.T) {
 	now := time.Unix(1, 0)
 	theme := DefaultTheme()
 	normal := buttonColors(&theme, ButtonPrimary).bg
-	ctx := newContext(nil)
-	testSetComponentState(ctx, "save", stateSlotButton, &buttonState{
-		bg:      normal,
-		bgFrom:  normal,
-		bgTo:    normal,
-		bgReady: true,
-	})
 	gtx := layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Source:      router.Source(),
 		Ops:         &ops,
 		Now:         now,
 	}
+	ctx := newContext(nil)
+	state := new(buttonState)
+	state.background(gtx, normal)
+	testSetComponentState(ctx, "save", stateSlotButton, state)
 
 	Button("save", text.New("Save")).Disabled(true).Layout(ctx, gtx)
 	router.Frame(&ops)

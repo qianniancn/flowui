@@ -329,11 +329,7 @@ func TestModalCloseFocusRingHiddenForPointerFocus(t *testing.T) {
 func TestModalClosedKeepsVisibleStateForExitAnimation(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 1
-	state.at = start
+	state.transition.Set(1, 1, start)
 
 	gtx := testLayoutContext()
 	gtx.Now = start
@@ -342,19 +338,15 @@ func TestModalClosedKeepsVisibleStateForExitAnimation(t *testing.T) {
 	if testComponentState[modalState](ctx, "settings", stateSlotModal) == nil {
 		t.Fatal("closing modal state was removed before exit animation")
 	}
-	if state.to != 0 || state.value != 1 {
-		t.Fatalf("closing modal animation state = from %v to %v value %v, want closing from visible", state.from, state.to, state.value)
+	if state.transition.Target() != 0 || state.transition.Current() != 1 {
+		t.Fatalf("closing modal animation state = target %v value %v, want closing from visible", state.transition.Target(), state.transition.Current())
 	}
 }
 
 func TestModalClosedRemovesStateWhenExitAnimationFinishes(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 0
-	state.at = start
+	state.transition.Set(1, 0, start)
 
 	gtx := testLayoutContext()
 	gtx.Now = start.Add(modalEnterDuration)
@@ -431,10 +423,7 @@ func TestModalDialogBlocksBackgroundClicks(t *testing.T) {
 
 func TestModalExitDialogStillBlocksBackgroundClicks(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 1
+	state.transition.Set(1, 1, time.Time{})
 	router := new(input.Router)
 	background := new(widget.Clickable)
 	backgroundClicked := false

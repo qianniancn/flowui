@@ -112,11 +112,7 @@ func TestPopoverOpenKeepsState(t *testing.T) {
 func TestPopoverClosedKeepsVisibleStateForExitAnimation(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 1
-	state.at = start
+	state.transition.Set(1, 1, start)
 
 	gtx := testLayoutContext()
 	gtx.Now = start
@@ -126,19 +122,15 @@ func TestPopoverClosedKeepsVisibleStateForExitAnimation(t *testing.T) {
 	if testComponentState[popoverState](ctx, "help", stateSlotPopover) == nil {
 		t.Fatal("closing popover state was removed before exit animation")
 	}
-	if state.to != 0 || state.value != 1 {
-		t.Fatalf("closing popover animation state = from %v to %v value %v, want closing from visible", state.from, state.to, state.value)
+	if state.transition.Target() != 0 || state.transition.Current() != 1 {
+		t.Fatalf("closing popover animation state = target %v value %v, want closing from visible", state.transition.Target(), state.transition.Current())
 	}
 }
 
 func TestPopoverClosedRemovesStateWhenExitAnimationFinishes(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 0
-	state.at = start
+	state.transition.Set(1, 0, start)
 
 	gtx := testLayoutContext()
 	gtx.Now = start.Add(popoverExitDuration)
@@ -284,12 +276,8 @@ func TestPopoverFlipLaysOutNestedContentOnce(t *testing.T) {
 
 func TestPopoverArrowBlocksPointerWithoutDismissing(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 1
 	start := time.Unix(1, 0)
-	state.at = start
+	state.transition.Set(1, 1, start)
 	router := new(input.Router)
 	background := new(widget.Clickable)
 	backgroundClicked := false
@@ -327,11 +315,7 @@ func TestPopoverArrowBlocksPointerWithoutDismissing(t *testing.T) {
 func TestPopoverAnimatedPanelEdgeHasNoPointerHole(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = .5
-	state.from = .5
-	state.to = 1
-	state.at = start
+	state.transition.Set(.5, 1, start)
 	router := new(input.Router)
 	background := new(widget.Clickable)
 	backgroundClicked := false
@@ -370,11 +354,7 @@ func TestPopoverAnimatedPanelEdgeHasNoPointerHole(t *testing.T) {
 func TestPopoverExitPanelStillBlocksBackground(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
 	start := time.Unix(1, 0)
-	state.ready = true
-	state.value = 1
-	state.from = 1
-	state.to = 1
-	state.at = start
+	state.transition.Set(1, 1, start)
 	router := new(input.Router)
 	background := new(widget.Clickable)
 	backgroundClicked := false

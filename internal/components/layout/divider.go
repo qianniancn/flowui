@@ -15,6 +15,7 @@ type DividerWidget struct {
 	thickness unit.Dp
 	color     color.NRGBA
 	hasColor  bool
+	axis      layout.Axis
 }
 
 func Divider() DividerWidget {
@@ -34,37 +35,19 @@ func (d DividerWidget) Color(c color.NRGBA) DividerWidget {
 
 func (d DividerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	thickness := lineThickness(gtx, d.thickness)
-	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, thickness))
+	size := image.Pt(gtx.Constraints.Max.X, thickness)
+	if d.axis == layout.Vertical {
+		size = image.Pt(thickness, gtx.Constraints.Max.Y)
+	}
+	size = gtx.Constraints.Constrain(size)
 	drawLine(ctx, gtx, size, d.color, d.hasColor)
 	return layout.Dimensions{Size: size}
 }
 
-type SeparatorWidget struct {
-	thickness unit.Dp
-	color     color.NRGBA
-	hasColor  bool
-}
+type SeparatorWidget = DividerWidget
 
 func Separator() SeparatorWidget {
-	return SeparatorWidget{}
-}
-
-func (s SeparatorWidget) Thickness(dp int) SeparatorWidget {
-	s.thickness = unit.Dp(dp)
-	return s
-}
-
-func (s SeparatorWidget) Color(c color.NRGBA) SeparatorWidget {
-	s.color = c
-	s.hasColor = true
-	return s
-}
-
-func (s SeparatorWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	thickness := lineThickness(gtx, s.thickness)
-	size := gtx.Constraints.Constrain(image.Pt(thickness, gtx.Constraints.Max.Y))
-	drawLine(ctx, gtx, size, s.color, s.hasColor)
-	return layout.Dimensions{Size: size}
+	return DividerWidget{axis: layout.Vertical}
 }
 
 func lineThickness(gtx layout.Context, thickness unit.Dp) int {

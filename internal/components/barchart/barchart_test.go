@@ -232,7 +232,7 @@ func TestResolveChartDataGroupsAndStacksSameSignValues(t *testing.T) {
 	if data.series[0].values[2].valid || data.series[1].values[2].start != 0 || data.series[1].values[2].end != 2 {
 		t.Fatalf("stack with missing value = %#v", data.series)
 	}
-	if data.yExtent.minimum != -7 || data.yExtent.maximum != 15 {
+	if data.yExtent.Minimum != -7 || data.yExtent.Maximum != 15 {
 		t.Fatalf("stack extent = %#v", data.yExtent)
 	}
 }
@@ -265,11 +265,11 @@ func TestResolveChartDataIgnoresHiddenSeriesForCategoryCount(t *testing.T) {
 func TestIncludeZeroControlsAutomaticExtent(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	data := resolveChartData(New("chart", []Series{Values("values", "Values", []float64{10, 20})}).IncludeZero(false), &activeTheme, testDp)
-	if data.yExtent.minimum != 10 || data.yExtent.maximum != 20 {
+	if data.yExtent.Minimum != 10 || data.yExtent.Maximum != 20 {
 		t.Fatalf("scale extent includes zero when disabled: %#v", data.yExtent)
 	}
 	data = resolveChartData(New("chart", []Series{Values("values", "Values", []float64{10, 20})}), &activeTheme, testDp)
-	if data.yExtent.minimum != 0 || data.yExtent.maximum != 20 {
+	if data.yExtent.Minimum != 0 || data.yExtent.Maximum != 20 {
 		t.Fatalf("default scale extent excludes zero: %#v", data.yExtent)
 	}
 }

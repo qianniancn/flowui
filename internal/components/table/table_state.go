@@ -81,26 +81,13 @@ func tableStateFor(ctx *frame.Context, key string) *tableState {
 }
 
 func (s *tableState) beginFrame() {
-	if s.frameRows == nil {
-		s.frameRows = make(map[string]struct{})
-		s.frameColumns = make(map[string]struct{})
-	} else {
-		clear(s.frameRows)
-		clear(s.frameColumns)
-	}
+	state.BeginFrameMap(&s.frameRows)
+	state.BeginFrameMap(&s.frameColumns)
 }
 
 func (s *tableState) endFrame() {
-	for key := range s.rows {
-		if _, ok := s.frameRows[key]; !ok {
-			delete(s.rows, key)
-		}
-	}
-	for key := range s.columns {
-		if _, ok := s.frameColumns[key]; !ok {
-			delete(s.columns, key)
-		}
-	}
+	state.SweepFrameMap(s.rows, s.frameRows)
+	state.SweepFrameMap(s.columns, s.frameColumns)
 }
 
 func (s *tableState) row(key string) *tableRowState {
@@ -128,16 +115,7 @@ func (s *tableState) rowAt(key string, index int) *tableRowState {
 }
 
 func (s *tableState) column(key string) *tableColumnState {
-	if s.columns == nil {
-		s.columns = make(map[string]*tableColumnState)
-	}
-	s.frameColumns[key] = struct{}{}
-	if value := s.columns[key]; value != nil {
-		return value
-	}
-	value := new(tableColumnState)
-	s.columns[key] = value
-	return value
+	return state.UseFrameMap(&s.columns, &s.frameColumns, key)
 }
 
 func (s *tableState) check(columns []Column, rows []Row) {

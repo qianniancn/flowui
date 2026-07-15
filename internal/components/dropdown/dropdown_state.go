@@ -7,11 +7,10 @@ import (
 	"gioui.org/f32"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -44,11 +43,7 @@ type dropdownState struct {
 	focusLast          bool
 	focusVisible       bool
 	skipRestore        bool
-	progressValue      float32
-	progressFrom       float32
-	progressTo         float32
-	progressAt         time.Time
-	progressReady      bool
+	transition         animation.FloatTransition
 	binding            dropdownBinding
 }
 
@@ -157,23 +152,6 @@ func (s *dropdownState) progress(gtx layout.Context, open bool) float32 {
 		target = 1
 		duration = dropdownEnterDuration
 	}
-	if !s.progressReady {
-		s.progressAt = gtx.Now
-		s.progressReady = true
-	}
-	if target != s.progressTo {
-		s.progressFrom = s.progressValue
-		s.progressTo = target
-		s.progressAt = gtx.Now
-	}
-	if s.progressFrom == s.progressTo {
-		s.progressValue = s.progressTo
-		return s.progressValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.progressAt), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.progressValue = render.Lerp(s.progressFrom, s.progressTo, progress)
-	return s.progressValue
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }

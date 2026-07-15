@@ -10,6 +10,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/unit"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -108,18 +109,18 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 	disabled := l.itemDisabled(item)
 	selected := l.isSelected(item.Key)
 	animGtx := gtx
-	presses := state.ActivePresses(itemState.clickable.History())
+	presses := state.ActivePresses(itemState.Clickable.History())
 	if disabled {
 		gtx = gtx.Disabled()
 	} else {
-		for itemState.clickable.Clicked(gtx) {
+		for itemState.Clickable.Clicked(gtx) {
 			l.activate(item.Key)
-			frame.RequestFocus(ctx, &itemState.clickable)
+			frame.RequestFocus(ctx, &itemState.Clickable)
 		}
-		frame.FocusOnPress(ctx, &itemState.clickable, itemState.clickable.History(), presses)
+		frame.FocusOnPress(ctx, &itemState.Clickable, itemState.Clickable.History(), presses)
 	}
 
-	return itemState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return itemState.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.LabelOp(item.Label).Add(gtx.Ops)
 		if item.Description != "" {
 			semantic.DescriptionOp(item.Description).Add(gtx.Ops)
@@ -130,12 +131,17 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 		theme := frame.ActiveTheme(ctx).Components.ListBox
 		minHeight := min(gtx.Dp(theme.ItemMinHeight), gtx.Constraints.Max.Y)
 
-		focusVisible := itemState.focusVisible(gtx.Focused(&itemState.clickable), itemState.clickable.History())
-		style := listBoxItemStyleFor(frame.ActiveTheme(ctx), item.Variant, itemState.clickable.Hovered(), itemState.clickable.Pressed(), disabled)
-		style.bg = itemState.background(animGtx, style.bg)
-		style.selected = itemState.selection(animGtx, selected)
-		style.focus = itemState.focusOpacity(animGtx, focusVisible && !disabled)
-		scale := listBoxItemScale(animGtx, itemState.clickable.History(), frame.ActiveTheme(ctx), disabled)
+		focusVisible := itemState.FocusVisible(gtx.Focused(&itemState.Clickable), itemState.Clickable.History())
+		activeTheme := frame.ActiveTheme(ctx)
+		style := listBoxItemStyleFor(activeTheme, item.Variant, itemState.Clickable.Hovered(), itemState.Clickable.Pressed(), disabled)
+		style.bg = itemState.Background(animGtx, style.bg, listBoxItemColorDuration)
+		style.selected = itemState.Selection(animGtx, selected, listBoxItemSelectDuration)
+		style.focus = itemState.FocusOpacity(animGtx, focusVisible && !disabled)
+		pressedScale := activeTheme.Components.ListBox.PressedScale
+		if pressedScale <= 0 || pressedScale > 1 {
+			pressedScale = 0.98
+		}
+		scale := optionrow.PressScale(animGtx, itemState.Clickable.History(), disabled, pressedScale, listBoxItemPressInDuration, listBoxItemPressOutDuration)
 
 		macro := op.Record(gtx.Ops)
 		contentGtx := gtx
@@ -147,7 +153,7 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 		dims.Size = size
 		dims.Baseline += max(size.Y-contentOffset.Y-contentDims.Size.Y, 0)
 
-		stack := listBoxItemTransform(dims.Size, scale).Push(gtx.Ops)
+		stack := optionrow.Transform(dims.Size, scale).Push(gtx.Ops)
 		drawListBoxItem(gtx, frame.ActiveTheme(ctx), dims.Size, style)
 		offset := op.Offset(contentOffset).Push(gtx.Ops)
 		call.Add(gtx.Ops)
@@ -158,9 +164,7 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 }
 
 func listBoxItemFrame(constraints layout.Constraints, minHeight int, content image.Point) (size, offset image.Point) {
-	size = constraints.Constrain(image.Pt(content.X, max(minHeight, content.Y)))
-	offset.Y = max((size.Y-content.Y)/2, 0)
-	return size, offset
+	return optionrow.Frame(constraints, minHeight, content)
 }
 
 func (l ListBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context, item ListBoxItem, style listBoxItemStyle, selected bool) layout.Dimensions {
@@ -225,28 +229,9 @@ func (l ListBoxWidget) layoutIndicator(ctx *frame.Context, gtx layout.Context, i
 
 func (l ListBoxWidget) layoutItemText(ctx *frame.Context, gtx layout.Context, item ListBoxItem, style listBoxItemStyle) layout.Dimensions {
 	theme := frame.ActiveTheme(ctx).Components.ListBox
-	if item.Description == "" {
-		return text.New(item.Label).
-			Size(float32(theme.ItemTextSize)).
-			Weight(font.Medium).
-			Color(style.fg).
-			Layout(ctx, gtx)
-	}
-	return layout.Flex{
-		Axis: layout.Vertical,
-	}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return text.New(item.Label).
-				Size(float32(theme.ItemTextSize)).
-				Weight(font.Medium).
-				Color(style.fg).
-				Layout(ctx, gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return text.New(item.Description).
-				Size(float32(theme.ItemDescriptionSize)).
-				Color(style.description).
-				Layout(ctx, gtx)
-		}),
+	return optionrow.LayoutText(
+		ctx, gtx, item.Label, item.Description,
+		float32(theme.ItemTextSize), float32(theme.ItemDescriptionSize),
+		style.fg, style.description,
 	)
 }

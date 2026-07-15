@@ -118,3 +118,11 @@ func (s *FocusAnimation) Opacity(gtx layout.Context, visible bool) float32 {
 	s.value = render.Lerp(s.from, s.to, progress)
 	return s.value
 }
+
+func (s *FocusAnimation) PointerOrigin() bool {
+	return s.pointerFocus
+}
+
+func (s *FocusAnimation) TargetOpacity() float32 {
+	return s.to
+}

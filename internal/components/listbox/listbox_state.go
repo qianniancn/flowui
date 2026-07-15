@@ -2,22 +2,17 @@ package listbox
 
 import (
 	"fmt"
-	"image"
-	"image/color"
 	"strings"
 	"time"
 	"unicode"
 
-	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotListBox = "listbox"
@@ -57,32 +52,15 @@ type listBoxKeyResult struct {
 }
 
 func (s *listBoxState) beginFrame() {
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	} else {
-		clear(s.frameItems)
-	}
+	state.BeginFrameMap(&s.frameItems)
 }
 
 func (s *listBoxState) endFrame() {
-	for key := range s.items {
-		if _, ok := s.frameItems[key]; !ok {
-			delete(s.items, key)
-		}
-	}
+	state.SweepFrameMap(s.items, s.frameItems)
 }
 
 func (s *listBoxState) item(key string) *listBoxItemState {
-	if s.items == nil {
-		s.items = make(map[string]*listBoxItemState)
-	}
-	s.frameItems[key] = struct{}{}
-	if item := s.items[key]; item != nil {
-		return item
-	}
-	item := new(listBoxItemState)
-	s.items[key] = item
-	return item
+	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
 func (s *listBoxState) checkItems(items []ListBoxItem) {
@@ -105,7 +83,7 @@ func (s *listBoxState) checkItems(items []ListBoxItem) {
 func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disabledKeys []string, selectedKey string) listBoxKeyResult {
 	s.keyFilters = s.keyFilters[:0]
 	for _, item := range items {
-		tag := &s.item(item.Key).clickable
+		tag := &s.item(item.Key).Clickable
 		s.keyFilters = append(s.keyFilters,
 			key.Filter{Focus: tag, Name: key.NameDownArrow},
 			key.Filter{Focus: tag, Name: key.NameUpArrow},
@@ -254,7 +232,7 @@ func listBoxTypeaheadIndex(items []ListBoxItem, disabledKeys []string, current i
 
 func (s *listBoxState) focusedIndex(gtx layout.Context, items []ListBoxItem) int {
 	for i, item := range items {
-		if gtx.Focused(&s.item(item.Key).clickable) {
+		if gtx.Focused(&s.item(item.Key).Clickable) {
 			return i
 		}
 	}
@@ -367,146 +345,9 @@ func focusItem(ctx *frame.Context, stateKey, itemKey string, visible bool) bool 
 	}
 	state, _ := frame.PeekState[listBoxState](ctx, stateKey, stateSlotListBox)
 	item := state.items[itemKey]
-	item.prepareFocus(visible)
+	item.PrepareFocus(visible)
 	frame.RequestFocus(ctx, clickable)
 	return true
 }
 
-type listBoxItemState struct {
-	clickable     widget.Clickable
-	bg            color.NRGBA
-	bgFrom        color.NRGBA
-	bgTo          color.NRGBA
-	bgAt          time.Time
-	bgReady       bool
-	selected      float32
-	selectedFrom  float32
-	selectedTo    float32
-	selectedAt    time.Time
-	selectedReady bool
-	focus         float32
-	focusFrom     float32
-	focusTo       float32
-	focusAt       time.Time
-	focusReady    bool
-	focused       bool
-	pointerFocus  bool
-}
-
-func (s *listBoxItemState) prepareFocus(visible bool) {
-	s.focused = true
-	s.pointerFocus = !visible
-}
-
-func (s *listBoxItemState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return listBoxAnimateColor(gtx, target, &s.bg, &s.bgFrom, &s.bgTo, &s.bgAt, &s.bgReady)
-}
-
-func (s *listBoxItemState) selection(gtx layout.Context, selected bool) float32 {
-	target := float32(0)
-	if selected {
-		target = 1
-	}
-	return listBoxAnimateFloat(gtx, target, &s.selected, &s.selectedFrom, &s.selectedTo, &s.selectedAt, &s.selectedReady, listBoxItemSelectDuration)
-}
-
-func (s *listBoxItemState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	target := float32(0)
-	if focused {
-		target = 1
-	}
-	return listBoxAnimateFloat(gtx, target, &s.focus, &s.focusFrom, &s.focusTo, &s.focusAt, &s.focusReady, listBoxItemFocusDuration)
-}
-
-func (s *listBoxItemState) focusVisible(focused bool, history []widget.Press) bool {
-	if !focused {
-		s.focused = false
-		s.pointerFocus = false
-		return false
-	}
-	if !s.focused {
-		s.focused = true
-		s.pointerFocus = len(history) > 0
-	}
-	return !s.pointerFocus
-}
-
-func listBoxAnimateColor(gtx layout.Context, target color.NRGBA, value, from, to *color.NRGBA, at *time.Time, ready *bool) color.NRGBA {
-	if !*ready {
-		*value = target
-		*from = target
-		*to = target
-		*at = gtx.Now
-		*ready = true
-		return target
-	}
-	if target != *to {
-		*from = *value
-		*to = target
-		*at = gtx.Now
-	}
-	if *from == *to {
-		*value = *to
-		return *value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), listBoxItemColorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	*value = render.LerpColor(*from, *to, progress)
-	return *value
-}
-
-func listBoxAnimateFloat(gtx layout.Context, target float32, value, from, to *float32, at *time.Time, ready *bool, duration time.Duration) float32 {
-	if !*ready {
-		*value = target
-		*from = target
-		*to = target
-		*at = gtx.Now
-		*ready = true
-		return target
-	}
-	if target != *to {
-		*from = *value
-		*to = target
-		*at = gtx.Now
-	}
-	if *from == *to {
-		*value = *to
-		return *value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	*value = render.Lerp(*from, *to, progress)
-	return *value
-}
-
-func listBoxItemScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, disabled bool) float32 {
-	if disabled || len(history) == 0 {
-		return 1
-	}
-	target := theme.Components.ListBox.PressedScale
-	if target <= 0 || target > 1 {
-		target = 0.98
-	}
-	press := history[len(history)-1]
-	if press.End.IsZero() {
-		progress := render.Ease(render.Progress(gtx.Now.Sub(press.Start), listBoxItemPressInDuration))
-		if progress < 1 {
-			gtx.Execute(op.InvalidateCmd{})
-		}
-		return render.Lerp(1, target, progress)
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(press.End), listBoxItemPressOutDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	return render.Lerp(target, 1, progress)
-}
-
-func listBoxItemTransform(size image.Point, scale float32) op.TransformOp {
-	origin := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	return op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale)))
-}
+type listBoxItemState = optionrow.FocusableState

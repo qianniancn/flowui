@@ -4,13 +4,13 @@ import (
 	"image"
 
 	"gioui.org/f32"
-	"gioui.org/font"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -216,36 +216,44 @@ func (c ComboBoxWidget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layo
 
 func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, item ComboBoxItem, selected, highlighted bool) layout.Dimensions {
 	itemState := comboState.item(item.Key)
-	presses := state.ActivePresses(itemState.clickable.History())
+	presses := state.ActivePresses(itemState.Clickable.History())
 	if !item.Disabled {
-		for itemState.clickable.Clicked(gtx) {
+		for itemState.Clickable.Clicked(gtx) {
 			c.selectItem(editor, comboState, item)
 			frame.RequestFocus(ctx, editor)
 		}
-		frame.FocusOnPress(ctx, editor, itemState.clickable.History(), presses)
+		frame.FocusOnPress(ctx, editor, itemState.Clickable.History(), presses)
 	}
 	if item.Disabled {
 		gtx = gtx.Disabled()
 	}
 
-	return itemState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		height := min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.ItemHeight), gtx.Constraints.Max.Y)
-		gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
+	return itemState.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		minHeight := min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.ItemHeight), gtx.Constraints.Max.Y)
 		macro := op.Record(gtx.Ops)
 		contentGtx := gtx
 		contentGtx.Constraints.Min.Y = 0
-		dims := c.layoutItemContent(ctx, contentGtx, item, itemState.selection(gtx, selected))
+		contentDims := c.layoutItemContent(ctx, contentGtx, item, itemState.Selection(gtx, selected, comboBoxItemSelectDuration))
 		call := macro.Stop()
-		dims.Size = gtx.Constraints.Constrain(dims.Size)
-		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.clickable.Hovered() || highlighted, itemState.clickable.Pressed(), item.Disabled)
-		style.bg = itemState.background(gtx, style.bg)
-		scale := comboBoxItemScale(gtx, itemState.clickable.History(), item.Disabled)
-		stack := comboBoxItemTransform(dims.Size, scale).Push(gtx.Ops)
+		size, contentOffset := comboBoxItemFrame(gtx.Constraints, minHeight, contentDims.Size)
+		dims := contentDims
+		dims.Size = size
+		dims.Baseline += max(size.Y-contentOffset.Y-contentDims.Size.Y, 0)
+		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.Clickable.Hovered() || highlighted, itemState.Clickable.Pressed(), item.Disabled)
+		style.bg = itemState.Background(gtx, style.bg, comboBoxItemColorDuration)
+		scale := optionrow.PressScale(gtx, itemState.Clickable.History(), item.Disabled, 0.98, comboBoxItemPressInDuration, comboBoxItemPressDuration)
+		stack := optionrow.Transform(dims.Size, scale).Push(gtx.Ops)
 		drawComboBoxItem(gtx, frame.ActiveTheme(ctx), dims.Size, style)
+		offset := op.Offset(contentOffset).Push(gtx.Ops)
 		call.Add(gtx.Ops)
+		offset.Pop()
 		stack.Pop()
 		return dims
 	})
+}
+
+func comboBoxItemFrame(constraints layout.Constraints, minHeight int, content image.Point) (size, offset image.Point) {
+	return optionrow.Frame(constraints, minHeight, content)
 }
 
 func (c ComboBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context, item ComboBoxItem, selection float32) layout.Dimensions {
@@ -261,29 +269,11 @@ func (c ComboBoxWidget) layoutItemContent(ctx *frame.Context, gtx layout.Context
 			Alignment: layout.Middle,
 		}.Layout(gtx,
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				if item.Description == "" {
-					return text.New(item.Label).
-						Size(float32(theme.ItemTextSize)).
-						Weight(font.Medium).
-						Color(comboBoxItemTextColor(frame.ActiveTheme(ctx), item.Disabled)).
-						Layout(ctx, gtx)
-				}
-				return layout.Flex{
-					Axis: layout.Vertical,
-				}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return text.New(item.Label).
-							Size(float32(theme.ItemTextSize)).
-							Weight(font.Medium).
-							Color(comboBoxItemTextColor(frame.ActiveTheme(ctx), item.Disabled)).
-							Layout(ctx, gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return text.New(item.Description).
-							Size(float32(theme.ItemDescriptionSize)).
-							Color(comboBoxItemDescriptionColor(frame.ActiveTheme(ctx), item.Disabled)).
-							Layout(ctx, gtx)
-					}),
+				return optionrow.LayoutText(
+					ctx, gtx, item.Label, item.Description,
+					float32(theme.ItemTextSize), float32(theme.ItemDescriptionSize),
+					comboBoxItemTextColor(frame.ActiveTheme(ctx), item.Disabled),
+					comboBoxItemDescriptionColor(frame.ActiveTheme(ctx), item.Disabled),
 				)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {

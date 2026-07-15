@@ -135,7 +135,7 @@ func TestListBoxRejectsEmptyItemKey(t *testing.T) {
 
 func TestListBoxClickActivatesItem(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"rust": itemState,
@@ -164,7 +164,7 @@ func TestListBoxClickActivatesItem(t *testing.T) {
 
 func TestListBoxClickSelectedItemOnlyRunsAction(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"go": itemState,
@@ -193,7 +193,7 @@ func TestListBoxClickSelectedItemOnlyRunsAction(t *testing.T) {
 
 func TestListBoxClickSelectedItemCanClearSelection(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"go": itemState,
@@ -217,7 +217,7 @@ func TestListBoxClickSelectedItemCanClearSelection(t *testing.T) {
 
 func TestListBoxSelectionModeNoneOnlyRunsAction(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"rust": itemState,
@@ -247,7 +247,7 @@ func TestListBoxSelectionModeNoneOnlyRunsAction(t *testing.T) {
 
 func TestListBoxMultipleClickAddsSelection(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"rust": itemState,
@@ -270,7 +270,7 @@ func TestListBoxMultipleClickAddsSelection(t *testing.T) {
 
 func TestListBoxMultipleClickRemovesSelection(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"go": itemState,
@@ -305,7 +305,7 @@ func TestListBoxMultipleDoesNotMutateSelectedKeys(t *testing.T) {
 
 func TestListBoxMultipleDoesNotCallSingleChange(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"rust": itemState,
@@ -329,7 +329,7 @@ func TestListBoxMultipleDoesNotCallSingleChange(t *testing.T) {
 
 func TestListBoxDisabledItemIgnoresClick(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"swift": itemState,
@@ -352,7 +352,7 @@ func TestListBoxDisabledItemIgnoresClick(t *testing.T) {
 
 func TestListBoxDisabledKeysIgnoreClick(t *testing.T) {
 	itemState := new(listBoxItemState)
-	itemState.clickable.Click()
+	itemState.Clickable.Click()
 	state := &listBoxState{
 		items: map[string]*listBoxItemState{
 			"rust": itemState,
@@ -578,21 +578,21 @@ func TestListBoxSelectionAnimation(t *testing.T) {
 	gtx := testLayoutContext()
 	gtx.Now = start
 
-	if got := state.selection(gtx, false); got != 0 {
+	if got := state.Selection(gtx, false, listBoxItemSelectDuration); got != 0 {
 		t.Fatalf("initial selection = %v, want 0", got)
 	}
-	if got := state.selection(gtx, true); got != 0 {
+	if got := state.Selection(gtx, true, listBoxItemSelectDuration); got != 0 {
 		t.Fatalf("selection start = %v, want 0", got)
 	}
 
 	gtx.Now = start.Add(listBoxItemSelectDuration / 2)
-	mid := state.selection(gtx, true)
+	mid := state.Selection(gtx, true, listBoxItemSelectDuration)
 	if mid <= 0 || mid >= 1 {
 		t.Fatalf("selection midpoint = %v, want between 0 and 1", mid)
 	}
 
 	gtx.Now = start.Add(listBoxItemSelectDuration)
-	if got := state.selection(gtx, true); got != 1 {
+	if got := state.Selection(gtx, true, listBoxItemSelectDuration); got != 1 {
 		t.Fatalf("selection end = %v, want 1", got)
 	}
 }

@@ -255,7 +255,7 @@ func TestResolveChartDataHandlesCategoryValuesAndInvalidPoints(t *testing.T) {
 	if len(data.series) != 2 || len(data.series[0].points) != 3 || data.series[0].points[1].valid {
 		t.Fatalf("resolved LineChart data = %#v", data)
 	}
-	if !data.xExtent.valid || data.xExtent.minimum != -2 || data.xExtent.maximum != 2 || data.yExtent.minimum != 3 || data.yExtent.maximum != 8 {
+	if !data.xExtent.Valid || data.xExtent.Minimum != -2 || data.xExtent.Maximum != 2 || data.yExtent.Minimum != 3 || data.yExtent.Maximum != 8 {
 		t.Fatalf("resolved extents = X %#v Y %#v", data.xExtent, data.yExtent)
 	}
 	wantX := []float64{-2, 0, 2}

@@ -197,17 +197,14 @@ func TestComboBoxClickSelectsItem(t *testing.T) {
 		t.Fatal("missing combobox state")
 	}
 	router.Source().Execute(key.FocusCmd{Tag: &state.editor})
-	state.popover = 1
-	state.popoverFrom = 1
-	state.popoverTo = 1
-	state.popoverReady = true
+	state.popoverTransition.Set(1, 1, time.Time{})
 	layoutComboBoxFrame(ctx, router, combo)
 
 	item := state.items["dog"]
 	if item == nil {
 		t.Fatal("missing dog item state")
 	}
-	item.clickable.Click()
+	item.Clickable.Click()
 	layoutComboBoxFrame(ctx, router, combo)
 
 	if got != "dog" {
@@ -232,10 +229,7 @@ func TestComboBoxIgnoresEscapeWhileAnotherOverlayIsTopmost(t *testing.T) {
 	layoutComboBoxFrame(ctx, router, combo)
 	state := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
 	router.Source().Execute(key.FocusCmd{Tag: &state.editor})
-	state.popover = 1
-	state.popoverFrom = 1
-	state.popoverTo = 1
-	state.popoverReady = true
+	state.popoverTransition.Set(1, 1, time.Time{})
 	layoutComboBoxBelowOverlayFrame(ctx, router, combo)
 	layoutComboBoxBelowOverlayFrame(ctx, router, combo)
 	if !state.open {
@@ -334,8 +328,8 @@ func TestComboBoxExitingPanelPaddingBlocksBackground(t *testing.T) {
 	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, closeStart)
 	midExit := closeStart.Add(comboBoxAnimationDuration / 2)
 	layoutComboBoxOverBackgroundFrame(ctx, router, combo, &background, &backgroundClicked, midExit)
-	if comboState.popover <= 0 || comboState.popover >= 1 {
-		t.Fatalf("exit progress = %v, want between 0 and 1", comboState.popover)
+	if progress := comboState.popoverTransition.Current(); progress <= 0 || progress >= 1 {
+		t.Fatalf("exit progress = %v, want between 0 and 1", progress)
 	}
 
 	position := f32.Pt(200, 49)
@@ -351,7 +345,7 @@ func TestComboBoxExitingPanelPaddingBlocksBackground(t *testing.T) {
 	if comboState.open {
 		t.Fatal("exiting panel padding press reopened the combobox")
 	}
-	if comboState.popover <= 0 {
+	if comboState.popoverTransition.Current() <= 0 {
 		t.Fatal("panel finished exiting before the padding press was processed")
 	}
 	if state.ActivePresses(background.History()) != 0 || backgroundClicked {
@@ -372,7 +366,7 @@ func TestComboBoxExitingPanelPaddingBlocksBackground(t *testing.T) {
 	if comboState.open {
 		t.Fatal("exiting panel padding release reopened the combobox")
 	}
-	if comboState.popover <= 0 {
+	if comboState.popoverTransition.Current() <= 0 {
 		t.Fatal("panel finished exiting before the padding release was processed")
 	}
 	if backgroundClicked {
@@ -401,13 +395,10 @@ func TestComboBoxSelectionDoesNotDispatchInputChange(t *testing.T) {
 	layoutComboBoxFrame(ctx, router, combo(""))
 	state := testComponentState[comboBoxState](ctx, "animal", stateSlotComboBox)
 	router.Source().Execute(key.FocusCmd{Tag: &state.editor})
-	state.popover = 1
-	state.popoverFrom = 1
-	state.popoverTo = 1
-	state.popoverReady = true
+	state.popoverTransition.Set(1, 1, time.Time{})
 	layoutComboBoxFrame(ctx, router, combo(""))
 
-	state.items["dog"].clickable.Click()
+	state.items["dog"].Clickable.Click()
 	layoutComboBoxFrame(ctx, router, combo(""))
 	layoutComboBoxFrame(ctx, router, combo(selected))
 
@@ -504,6 +495,17 @@ func TestComboBoxItemHeightFollowsContent(t *testing.T) {
 	}
 }
 
+func TestComboBoxSingleLineItemContentIsVerticallyCentered(t *testing.T) {
+	size, offset := comboBoxItemFrame(
+		layout.Constraints{Max: image.Pt(400, 300)},
+		36,
+		image.Pt(120, 20),
+	)
+	if size.Y != 36 || offset.Y != 8 {
+		t.Fatalf("single-line frame = size %v, offset %v, want height 36 and Y offset 8", size, offset)
+	}
+}
+
 func TestComboBoxSelectedItemHasNoBackground(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	style := comboBoxItemStyleFor(&activeTheme, false, false, false)
@@ -518,18 +520,18 @@ func TestComboBoxSelectionAnimation(t *testing.T) {
 	gtx := testLayoutContext()
 	gtx.Now = start
 
-	if got := state.selection(gtx, false); got != 0 {
+	if got := state.Selection(gtx, false, comboBoxItemSelectDuration); got != 0 {
 		t.Fatalf("initial selection = %v, want 0", got)
 	}
-	if got := state.selection(gtx, true); got != 0 {
+	if got := state.Selection(gtx, true, comboBoxItemSelectDuration); got != 0 {
 		t.Fatalf("selection start = %v, want 0", got)
 	}
 	gtx.Now = start.Add(comboBoxItemSelectDuration / 2)
-	if got := state.selection(gtx, true); got <= 0 || got >= 1 {
+	if got := state.Selection(gtx, true, comboBoxItemSelectDuration); got <= 0 || got >= 1 {
 		t.Fatalf("selection midpoint = %v, want between 0 and 1", got)
 	}
 	gtx.Now = start.Add(comboBoxItemSelectDuration)
-	if got := state.selection(gtx, true); got != 1 {
+	if got := state.Selection(gtx, true, comboBoxItemSelectDuration); got != 1 {
 		t.Fatalf("selection end = %v, want 1", got)
 	}
 }

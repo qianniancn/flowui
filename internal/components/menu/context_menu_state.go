@@ -9,10 +9,9 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -20,24 +19,20 @@ const stateSlotContextMenu = "context-menu"
 const contextMenuLongPressDelay = 500 * time.Millisecond
 
 type contextMenuState struct {
-	key           string
-	trigger       contextMenuTrigger
-	dismiss       [16]overlay.ClickArea
-	dialog        overlay.ClickArea
-	open          bool
-	initialized   bool
-	wasOpen       bool
-	anchor        image.Rectangle
-	hasAnchor     bool
-	triggerSize   image.Point
-	progressValue float32
-	progressFrom  float32
-	progressTo    float32
-	progressAt    time.Time
-	progressReady bool
-	skipRestore   bool
-	focusVisible  bool
-	binding       contextMenuBinding
+	key          string
+	trigger      contextMenuTrigger
+	dismiss      [16]overlay.ClickArea
+	dialog       overlay.ClickArea
+	open         bool
+	initialized  bool
+	wasOpen      bool
+	anchor       image.Rectangle
+	hasAnchor    bool
+	triggerSize  image.Point
+	transition   animation.FloatTransition
+	skipRestore  bool
+	focusVisible bool
+	binding      contextMenuBinding
 }
 
 type contextMenuTrigger struct {
@@ -150,25 +145,8 @@ func (s *contextMenuState) progress(gtx layout.Context, open bool) float32 {
 		target = 1
 		duration = contextMenuEnterDuration
 	}
-	if !s.progressReady {
-		s.progressAt = gtx.Now
-		s.progressReady = true
-	}
-	if target != s.progressTo {
-		s.progressFrom = s.progressValue
-		s.progressTo = target
-		s.progressAt = gtx.Now
-	}
-	if s.progressFrom == s.progressTo {
-		s.progressValue = s.progressTo
-		return s.progressValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.progressAt), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.progressValue = render.Lerp(s.progressFrom, s.progressTo, progress)
-	return s.progressValue
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func contextMenuPointRect(point f32.Point, size int) image.Rectangle {

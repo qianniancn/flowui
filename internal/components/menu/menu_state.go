@@ -11,6 +11,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -40,11 +41,7 @@ type menuState struct {
 	hoverAt               time.Time
 	dismiss               [16]overlay.ClickArea
 	dialog                overlay.ClickArea
-	progressValue         float32
-	progressFrom          float32
-	progressTo            float32
-	progressAt            time.Time
-	progressReady         bool
+	transition            animation.FloatTransition
 	submenuWasOpen        bool
 	focusPending          bool
 	requestedFocusVisible bool
@@ -75,11 +72,7 @@ func (m Widget) stateFor(ctx *frame.Context) *menuState {
 }
 
 func (s *menuState) beginFrame() {
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	} else {
-		clear(s.frameItems)
-	}
+	state.BeginFrameMap(&s.frameItems)
 	if s.anchors == nil {
 		s.anchors = make(map[string]image.Rectangle)
 	} else {
@@ -88,11 +81,7 @@ func (s *menuState) beginFrame() {
 }
 
 func (s *menuState) endFrame() {
-	for key := range s.items {
-		if _, ok := s.frameItems[key]; !ok {
-			delete(s.items, key)
-		}
-	}
+	state.SweepFrameMap(s.items, s.frameItems)
 	if s.openSubmenu != "" {
 		if _, ok := s.frameItems[s.openSubmenu]; !ok {
 			s.openSubmenu = ""
@@ -101,19 +90,7 @@ func (s *menuState) endFrame() {
 }
 
 func (s *menuState) item(key string) *menuItemState {
-	if s.items == nil {
-		s.items = make(map[string]*menuItemState)
-	}
-	if s.frameItems == nil {
-		s.frameItems = make(map[string]struct{})
-	}
-	s.frameItems[key] = struct{}{}
-	if item := s.items[key]; item != nil {
-		return item
-	}
-	item := new(menuItemState)
-	s.items[key] = item
-	return item
+	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
 func (s *menuState) checkEntries(entries []entry) {

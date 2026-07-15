@@ -5,10 +5,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/gesture"
-	"gioui.org/io/event"
-	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -31,32 +28,15 @@ type chartState struct {
 }
 
 func (s *chartState) beginLegendFrame() {
-	if s.legendFrame == nil {
-		s.legendFrame = make(map[string]struct{})
-	} else {
-		clear(s.legendFrame)
-	}
+	stateutil.BeginFrameMap(&s.legendFrame)
 }
 
 func (s *chartState) endLegendFrame() {
-	for key := range s.legendItems {
-		if _, ok := s.legendFrame[key]; !ok {
-			delete(s.legendItems, key)
-		}
-	}
+	stateutil.SweepFrameMap(s.legendItems, s.legendFrame)
 }
 
 func (s *chartState) legendItem(key string) *chart.LegendItem {
-	if s.legendItems == nil {
-		s.legendItems = make(map[string]*chart.LegendItem)
-	}
-	s.legendFrame[key] = struct{}{}
-	if item := s.legendItems[key]; item != nil {
-		return item
-	}
-	item := new(chart.LegendItem)
-	s.legendItems[key] = item
-	return item
+	return stateutil.UseFrameMap(&s.legendItems, &s.legendFrame, key)
 }
 
 func chartStateFor(ctx *frame.Context, key string) *chartState {
@@ -65,78 +45,15 @@ func chartStateFor(ctx *frame.Context, key string) *chartState {
 }
 
 func (s *chartState) updatePointer(gtx layout.Context, enabled bool, plot image.Rectangle, window chart.DataWindow, verticalWindow bool, onWindowChange func(chart.DataWindow)) {
-	activeWindow := window
-	kinds := pointer.Enter | pointer.Leave | pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Cancel
-	scrollX, scrollY := pointer.ScrollRange{}, pointer.ScrollRange{}
-	if onWindowChange != nil {
-		kinds |= pointer.Scroll
-		scrollX = pointer.ScrollRange{Min: -100000, Max: 100000}
-		scrollY = pointer.ScrollRange{Min: -100000, Max: 100000}
-	}
-	for {
-		value, ok := gtx.Event(pointer.Filter{
-			Target:  &s.pointerTag,
-			Kinds:   kinds,
-			ScrollX: scrollX,
-			ScrollY: scrollY,
-		})
-		if !ok {
-			break
-		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok {
-			continue
-		}
-		if !enabled {
-			s.hovered = false
-			s.windowGesture.Cancel()
-			continue
-		}
-		if onWindowChange != nil {
-			if next, changed := s.windowGesture.Update(eventValue, plot, activeWindow, verticalWindow); changed {
-				activeWindow = next
-				onWindowChange(next)
-			}
-		} else {
-			s.windowGesture.Cancel()
-		}
-		switch eventValue.Kind {
-		case pointer.Enter, pointer.Move, pointer.Drag, pointer.Press, pointer.Scroll:
-			s.hovered = true
-			s.pointer = eventValue.Position
-		case pointer.Leave, pointer.Cancel:
-			s.hovered = false
-		}
-	}
-	if !enabled {
-		s.hovered = false
-		s.windowGesture.Cancel()
-	}
+	chart.UpdatePointer(gtx, enabled, plot, window, verticalWindow, onWindowChange, &s.pointerTag, &s.hovered, &s.pointer, &s.windowGesture)
 }
 
 func (s *chartState) selectedIndex(start, end int, plot image.Rectangle, horizontal bool) (int, bool) {
-	if !s.hovered || end <= start || plot.Empty() {
-		return 0, false
-	}
-	ratio := (float64(s.pointer.X) - float64(plot.Min.X)) / float64(plot.Dx())
-	if horizontal {
-		ratio = (float64(s.pointer.Y) - float64(plot.Min.Y)) / float64(plot.Dy())
-	}
-	index := start + int(ratio*float64(end-start))
-	index = min(max(index, start), end-1)
-	return index, true
+	return chart.SelectedIndex(s.pointer, s.hovered, start, end, plot, horizontal)
 }
 
 func (s *chartState) addPointerInput(gtx layout.Context, plot image.Rectangle, enabled bool) {
-	if !enabled || plot.Empty() {
-		return
-	}
-	area := clip.Rect(plot).Push(gtx.Ops)
-	pass := pointer.PassOp{}.Push(gtx.Ops)
-	pointer.CursorCrosshair.Add(gtx.Ops)
-	event.Op(gtx.Ops, &s.pointerTag)
-	pass.Pop()
-	area.Pop()
+	chart.AddPointerInput(gtx, plot, enabled, &s.pointerTag)
 }
 
 func (s *chartState) clearSelection() {
@@ -146,28 +63,9 @@ func (s *chartState) clearSelection() {
 }
 
 func (s *chartState) updateClicks(gtx layout.Context, enabled bool) (bool, bool) {
-	activated := false
-	reset := false
-	for {
-		click, ok := s.click.Update(gtx.Source)
-		if !ok {
-			break
-		}
-		if click.Kind == gesture.KindClick {
-			activated = true
-			reset = reset || click.NumClicks >= 2
-		}
-	}
-	return activated && enabled, reset && enabled
+	return chart.UpdateClicks(gtx, enabled, &s.click)
 }
 
 func (s *chartState) addClickInput(gtx layout.Context, size image.Point, enabled bool) {
-	if !enabled || size.X <= 0 || size.Y <= 0 {
-		return
-	}
-	area := clip.Rect{Max: size}.Push(gtx.Ops)
-	pass := pointer.PassOp{}.Push(gtx.Ops)
-	s.click.Add(gtx.Ops)
-	pass.Pop()
-	area.Pop()
+	chart.AddClickInput(gtx, size, enabled, &s.click)
 }

@@ -362,8 +362,8 @@ func TestDatePickerExitingPanelPaddingBlocksBackground(t *testing.T) {
 	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, closeStart)
 	midExit := closeStart.Add(datePickerPopoverOutDuration / 2)
 	layoutDatePickerOverBackgroundFrame(ctx, router, picker, &background, &backgroundClicked, midExit)
-	if pickerState.popover <= 0 || pickerState.popover >= 1 {
-		t.Fatalf("exit progress = %v, want between 0 and 1", pickerState.popover)
+	if progress := pickerState.popoverTransition.Current(); progress <= 0 || progress >= 1 {
+		t.Fatalf("exit progress = %v, want between 0 and 1", progress)
 	}
 
 	position := f32.Pt(200, 47)
@@ -379,7 +379,7 @@ func TestDatePickerExitingPanelPaddingBlocksBackground(t *testing.T) {
 	if pickerState.open {
 		t.Fatal("exiting panel padding press reopened the date picker")
 	}
-	if pickerState.popover <= 0 {
+	if pickerState.popoverTransition.Current() <= 0 {
 		t.Fatal("panel finished exiting before the padding press was processed")
 	}
 	if pickerState.viewMode != datePickerViewDays || changed {
@@ -400,7 +400,7 @@ func TestDatePickerExitingPanelPaddingBlocksBackground(t *testing.T) {
 	if pickerState.open {
 		t.Fatal("exiting panel padding release reopened the date picker")
 	}
-	if pickerState.popover <= 0 {
+	if pickerState.popoverTransition.Current() <= 0 {
 		t.Fatal("panel finished exiting before the padding release was processed")
 	}
 	if pickerState.viewMode != datePickerViewDays || changed {
@@ -445,9 +445,6 @@ func TestDatePickerPopoverProgressAnimatesInAndOut(t *testing.T) {
 	if got := state.popoverProgress(gtx, true); got != 0 {
 		t.Fatalf("opening progress = %v, want 0", got)
 	}
-	if state.popoverDuration != datePickerPopoverInDuration {
-		t.Fatalf("open duration = %v, want %v", state.popoverDuration, datePickerPopoverInDuration)
-	}
 
 	gtx.Now = start.Add(datePickerPopoverInDuration / 2)
 	if got := state.popoverProgress(gtx, true); got <= 0 || got >= 1 {
@@ -463,9 +460,6 @@ func TestDatePickerPopoverProgressAnimatesInAndOut(t *testing.T) {
 	gtx.Now = closeStart
 	if got := state.popoverProgress(gtx, false); got != 1 {
 		t.Fatalf("closing progress = %v, want 1", got)
-	}
-	if state.popoverDuration != datePickerPopoverOutDuration {
-		t.Fatalf("close duration = %v, want %v", state.popoverDuration, datePickerPopoverOutDuration)
 	}
 
 	gtx.Now = closeStart.Add(datePickerPopoverOutDuration / 2)
@@ -542,8 +536,8 @@ func TestDatePickerTodayUsesFrameTimeForDays(t *testing.T) {
 	if day == nil {
 		t.Fatal("missing today state")
 	}
-	if day.bg != theme.Palette.AccentSoft {
-		t.Fatalf("today background = %#v, want %#v", day.bg, theme.Palette.AccentSoft)
+	if background := day.backgroundTransition.Current(); background != theme.Palette.AccentSoft {
+		t.Fatalf("today background = %#v, want %#v", background, theme.Palette.AccentSoft)
 	}
 }
 
@@ -566,8 +560,8 @@ func TestDatePickerTodayUsesFrameTimeForMonthsAndYears(t *testing.T) {
 	if month == nil {
 		t.Fatal("missing today month state")
 	}
-	if month.bg != theme.Palette.AccentSoft {
-		t.Fatalf("today month background = %#v, want %#v", month.bg, theme.Palette.AccentSoft)
+	if background := month.backgroundTransition.Current(); background != theme.Palette.AccentSoft {
+		t.Fatalf("today month background = %#v, want %#v", background, theme.Palette.AccentSoft)
 	}
 
 	state.open = true
@@ -579,8 +573,8 @@ func TestDatePickerTodayUsesFrameTimeForMonthsAndYears(t *testing.T) {
 	if year == nil {
 		t.Fatal("missing today year state")
 	}
-	if year.bg != theme.Palette.AccentSoft {
-		t.Fatalf("today year background = %#v, want %#v", year.bg, theme.Palette.AccentSoft)
+	if background := year.backgroundTransition.Current(); background != theme.Palette.AccentSoft {
+		t.Fatalf("today year background = %#v, want %#v", background, theme.Palette.AccentSoft)
 	}
 }
 

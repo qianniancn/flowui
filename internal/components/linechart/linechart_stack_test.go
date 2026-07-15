@@ -55,7 +55,7 @@ func TestLineChartDefaultStackSeparatesPositiveAndNegativeValues(t *testing.T) {
 	if data.series[2].points[0].hasStackBase || data.series[2].points[1].hasStackBase || data.series[2].points[2].stackBase != 1 {
 		t.Fatalf("third same-sign stack bases = %#v", data.series[2].points)
 	}
-	if data.series[1].points[0].rawY != 1 || data.series[1].points[1].rawY != -1 || data.yExtent.minimum != -4 || data.yExtent.maximum != 4 {
+	if data.series[1].points[0].rawY != 1 || data.series[1].points[1].rawY != -1 || data.yExtent.Minimum != -4 || data.yExtent.Maximum != 4 {
 		t.Fatalf("stacked raw values or extent = points %#v extent %#v", data.series[1].points, data.yExtent)
 	}
 }

@@ -5,8 +5,8 @@ import (
 	"image"
 
 	"gioui.org/f32"
-	"gioui.org/font"
 	"gioui.org/layout"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
@@ -41,32 +41,12 @@ func (w Widget) layoutTooltipContent(ctx *frame.Context, gtx layout.Context, sel
 	tooltipTokens := activeTheme.Components.Tooltip
 	textColor := activeTheme.Palette.OverlayForegroundColor()
 	gap := max(gtx.Dp(chartTokens.TooltipRowGap), 0)
-	contentWidth := max(gtx.Constraints.Max.X, 1)
-	title := recordChartText(ctx, gtx, w.categoryLabel(selection.index), tooltipTokens.TextSize, font.Medium, textColor, contentWidth)
 	values := w.candlestickTooltipRows(selection, interval)
-	rows := make([]recordedChartText, len(values))
-	width, height := title.dims.Size.X, title.dims.Size.Y
-	if title.dims.Size.Y > 0 && len(rows) > 0 {
-		height += gap
-	}
+	rows := make([]chart.TooltipRow, len(values))
 	for index, value := range values {
-		rows[index] = recordChartText(ctx, gtx, value, tooltipTokens.TextSize, font.Normal, textColor, contentWidth)
-		width = max(width, rows[index].dims.Size.X)
-		height += rows[index].dims.Size.Y
-		if index < len(rows)-1 {
-			height += gap
-		}
+		rows[index].Text = value
 	}
-	placeChartText(gtx, title, image.Point{})
-	y := title.dims.Size.Y
-	if title.dims.Size.Y > 0 && len(rows) > 0 {
-		y += gap
-	}
-	for _, row := range rows {
-		placeChartText(gtx, row, image.Pt(0, y))
-		y += row.dims.Size.Y + gap
-	}
-	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(width, height))}
+	return chart.LayoutTooltipRows(ctx, gtx, w.categoryLabel(selection.index), rows, tooltipTokens.TextSize, textColor, 0, gap, chart.TooltipMarkerNone)
 }
 
 func (w Widget) candlestickTooltipRows(selection chartSelection, interval float64) []string {
@@ -79,6 +59,5 @@ func (w Widget) candlestickTooltipRows(selection chartSelection, interval float6
 }
 
 func tooltipAnchor(pointerPosition f32.Point) image.Rectangle {
-	position := pointerPosition.Round()
-	return image.Rectangle{Min: position, Max: position.Add(image.Pt(1, 1))}
+	return chart.TooltipAnchor(pointerPosition)
 }

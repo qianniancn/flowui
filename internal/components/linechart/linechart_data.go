@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -41,23 +42,7 @@ type resolvedSeries struct {
 	stackedOnSmooth float32
 }
 
-type dataExtent struct {
-	minimum float64
-	maximum float64
-	valid   bool
-}
-
-func (e *dataExtent) include(value float64) {
-	if !finite(value) {
-		return
-	}
-	if !e.valid {
-		e.minimum, e.maximum, e.valid = value, value, true
-		return
-	}
-	e.minimum = min(e.minimum, value)
-	e.maximum = max(e.maximum, value)
-}
+type dataExtent = chart.Extent
 
 type chartData struct {
 	series  []resolvedSeries
@@ -132,7 +117,7 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 			if !valid {
 				continue
 			}
-			data.xExtent.include(point.X)
+			data.xExtent.Include(point.X)
 			bits := math.Float64bits(point.X)
 			if point.X == 0 {
 				bits = 0
@@ -149,14 +134,14 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 	for _, series := range data.series {
 		for _, point := range series.points {
 			if point.valid {
-				data.yExtent.include(point.Y)
+				data.yExtent.Include(point.Y)
 			}
 		}
 	}
 
 	if len(widget.categories) > 0 {
-		data.xExtent.include(0)
-		data.xExtent.include(float64(len(widget.categories) - 1))
+		data.xExtent.Include(0)
+		data.xExtent.Include(float64(len(widget.categories) - 1))
 	}
 	sort.Float64s(data.xValues)
 	return data

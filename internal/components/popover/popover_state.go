@@ -1,14 +1,11 @@
 package popover
 
 import (
-	"time"
-
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -29,14 +26,10 @@ func deletePopoverState(ctx *frame.Context, key string) {
 }
 
 type popoverState struct {
-	dismiss [16]overlay.ClickArea
-	dialog  overlay.ClickArea
-	arrow   overlay.ClickArea
-	value   float32
-	from    float32
-	to      float32
-	at      time.Time
-	ready   bool
+	dismiss    [16]overlay.ClickArea
+	dialog     overlay.ClickArea
+	arrow      overlay.ClickArea
+	transition animation.FloatTransition
 }
 
 func (s *popoverState) progress(gtx layout.Context, open bool) float32 {
@@ -44,36 +37,16 @@ func (s *popoverState) progress(gtx layout.Context, open bool) float32 {
 	if open {
 		target = 1
 	}
-	if !s.ready {
-		s.value = 0
-		s.from = 0
-		s.to = 0
-		s.at = gtx.Now
-		s.ready = true
-	}
-	if target != s.to {
-		s.from = s.value
-		s.to = target
-		s.at = gtx.Now
-	}
-	if s.from == s.to {
-		s.value = s.to
-		return s.value
-	}
 	duration := popoverEnterDuration
-	if s.to == 0 {
+	if !open {
 		duration = popoverExitDuration
 	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.value = render.Lerp(s.from, s.to, progress)
-	return s.value
+	s.transition.Initialize(0, gtx.Now)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
 func (s *popoverState) visible() bool {
-	return s.ready && s.value > 0
+	return s.transition.Ready() && s.transition.Current() > 0
 }
 
 func (s *popoverState) escapePressed(gtx layout.Context) bool {

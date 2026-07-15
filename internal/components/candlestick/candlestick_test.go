@@ -122,7 +122,7 @@ func TestCandlestickChartMatchesEChartsSignsAndExtent(t *testing.T) {
 		OHLC(math.NaN(), 1, 0, 2),
 	}
 	data := resolveChartData(New("market", values), &activeTheme)
-	if data.extent.minimum != 8 || data.extent.maximum != 14 || !data.extent.valid {
+	if data.extent.Minimum != 8 || data.extent.Maximum != 14 || !data.extent.Valid {
 		t.Fatalf("CandlestickChart extent = %#v", data.extent)
 	}
 	wantSigns := []int{signUp, signDown, signUp, signDown}

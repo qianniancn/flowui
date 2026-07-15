@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -40,23 +41,7 @@ type barColumn struct {
 	showBackground bool
 }
 
-type dataExtent struct {
-	minimum float64
-	maximum float64
-	valid   bool
-}
-
-func (e *dataExtent) include(value float64) {
-	if !finite(value) {
-		return
-	}
-	if !e.valid {
-		e.minimum, e.maximum, e.valid = value, value, true
-		return
-	}
-	e.minimum = min(e.minimum, value)
-	e.maximum = max(e.maximum, value)
-}
+type dataExtent = chart.Extent
 
 type chartData struct {
 	series     []resolvedSeries
@@ -170,9 +155,9 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 				negative[columnIndex] = bar.end
 			}
 			if widget.includeZero || bar.start != 0 {
-				data.yExtent.include(bar.start)
+				data.yExtent.Include(bar.start)
 			}
-			data.yExtent.include(bar.end)
+			data.yExtent.Include(bar.end)
 		}
 	}
 	return data

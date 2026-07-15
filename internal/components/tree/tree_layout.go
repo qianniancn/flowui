@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"gioui.org/font"
+	"gioui.org/io/event"
+	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -15,12 +17,12 @@ import (
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *treeState, visible []flatItem) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	maxHeight := tokens.MaxHeight
 	if t.maxHeight > 0 {
@@ -57,8 +59,8 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *t
 	content := macro.Stop()
 
 	size := gtx.Constraints.Constrain(contentDims.Size)
-	radius := treeRootRadius(gtx, frame.ActiveTheme(ctx), t.variant, size)
-	drawTreeRoot(gtx, frame.ActiveTheme(ctx), size, radius, rootStyle)
+	radius := treeRootRadius(gtx, tokens, t.variant, size)
+	drawTreeRoot(gtx, frame.ActiveTheme(ctx), tokens, size, radius, rootStyle)
 	if t.variant == VariantSurface {
 		root := clip.UniformRRect(image.Rectangle{Max: size}, radius).Push(gtx.Ops)
 		content.Add(gtx.Ops)
@@ -72,7 +74,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *t
 }
 
 func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	height := min(gtx.Dp(tokens.RowHeight), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -96,12 +98,8 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 		frame.FocusOnPress(ctx, &itemState.clickable, itemState.clickable.History(), presses)
 	}
 
-	tokens := frame.ActiveTheme(ctx).Components.Tree
-	rowHeight := tokens.RowHeight
-	if entry.item.Description != "" {
-		rowHeight = tokens.DescriptionRowHeight
-	}
-	height := min(max(gtx.Dp(rowHeight), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
+	height := min(max(treeItemHeight(gtx, tokens, entry.item), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
 	width := gtx.Constraints.Max.X
 	size := image.Pt(width, height)
 	rowGtx := gtx
@@ -109,21 +107,16 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 
 	focusVisible := itemState.focus.Visible(rowGtx.Focused(&itemState.clickable), itemState.clickable.History())
 	focus := itemState.focus.Opacity(animGtx, focusVisible && !disabled)
-	style := treeItemStyleFor(frame.ActiveTheme(ctx), selected, itemState.clickable.Hovered() && !disabled, itemState.clickable.Pressed() && !disabled, disabled)
-	style.background = itemState.background.update(animGtx, style.background)
+	hovered := (itemState.clickable.Hovered() || itemState.toggle.Hovered()) && !disabled
+	style := treeItemStyleFor(frame.ActiveTheme(ctx), selected, hovered, disabled)
+	if treeStateValue.dragSource == entry.item.Key {
+		style.opacity *= 0.6
+	}
 	expansionTarget := float32(0)
 	if expanded {
 		expansionTarget = 1
 	}
 	expansion := itemState.expansion.update(animGtx, expansionTarget, treeExpandDuration)
-	scaleTarget := float32(1)
-	if itemState.clickable.Pressed() && !disabled {
-		scaleTarget = tokens.PressedScale
-		if scaleTarget <= 0 || scaleTarget > 1 {
-			scaleTarget = 0.98
-		}
-	}
-	scale := itemState.scale.update(animGtx, scaleTarget, treeScaleDuration)
 
 	macro := op.Record(gtx.Ops)
 	func() {
@@ -133,21 +126,65 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 		}
 		restore := frame.PushColors(ctx, style.foreground, background)
 		defer restore()
+		if t.guides {
+			drawTreeGuides(rowGtx, entry, tokens, expanded, t.guideConnectors, t.guideStyle, frame.ActiveTheme(ctx).Palette.MutedForeground)
+		}
 		t.layoutItemContent(ctx, rowGtx, itemState, entry, style, selected, expanded, expansion, disabled)
 	}()
 	content := macro.Stop()
 
-	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
-	transform := render.Scale(size, scale).Push(gtx.Ops)
-	drawTreeRow(gtx, frame.ActiveTheme(ctx), size, style, focus)
-	content.Add(gtx.Ops)
-	transform.Pop()
-	opacity.Pop()
-	return layout.Dimensions{Size: size}
+	row := func(gtx layout.Context) layout.Dimensions {
+		opacity := paint.PushOpacity(gtx.Ops, style.opacity)
+		drawTreeRow(gtx, tokens, size, style, focus)
+		content.Add(gtx.Ops)
+		opacity.Pop()
+		if treeStateValue.dropTarget.drawKey == entry.item.Key {
+			drawTreeDropIndicator(gtx, size, treeStateValue.dropTarget.position, treeStateValue.dropTarget.depth, tokens, frame.ActiveTheme(ctx).Palette.Accent)
+		}
+		return layout.Dimensions{Size: size}
+	}
+	if t.onDrop == nil || disabled {
+		return row(rowGtx)
+	}
+	dims := row(rowGtx)
+	pass := pointer.PassOp{}.Push(rowGtx.Ops)
+	itemState.drag.Layout(rowGtx, func(layout.Context) layout.Dimensions { return dims }, nil)
+	pass.Pop()
+	registerTreeDragAreas(rowGtx, itemState, dims.Size)
+	return dims
+}
+
+func treeItemHeight(gtx layout.Context, tokens theme.TreeTheme, item Item) int {
+	height := tokens.RowHeight
+	if item.Description != "" {
+		height = tokens.DescriptionRowHeight
+	}
+	return gtx.Dp(height)
+}
+
+func registerTreeDragAreas(gtx layout.Context, state *treeItemState, size image.Point) {
+	if size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	edge := max(size.Y/4, 1)
+	breaks := [4]int{0, edge, size.Y - edge, size.Y}
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	for index := range state.dropTags {
+		if breaks[index] >= breaks[index+1] {
+			continue
+		}
+		area := clip.Rect(image.Rect(0, breaks[index], size.X, breaks[index+1])).Push(gtx.Ops)
+		event.Op(gtx.Ops, &state.dropTags[index])
+		area.Pop()
+	}
+	area := clip.Rect{Max: size}.Push(gtx.Ops)
+	event.Op(gtx.Ops, &state.dragTag)
+	area.Pop()
+	pass.Pop()
 }
 
 func (t Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, itemState *treeItemState, entry flatItem, style treeItemStyle, selected, expanded bool, expansion float32, disabled bool) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	left := tokens.RowPaddingX + unit.Dp(entry.depth)*tokens.Indent
 	return layout.Inset{
 		Top:    tokens.RowPaddingY,
@@ -180,7 +217,7 @@ func (t Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, itemSt
 }
 
 func (t Widget) layoutToggle(ctx *frame.Context, gtx layout.Context, itemState *treeItemState, item Item, style treeItemStyle, expansion float32, disabled bool) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	slot := min(gtx.Dp(tokens.ChevronSlotSize), min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y))
 	size := image.Pt(max(slot, 0), max(slot, 0))
 	gtx.Constraints = layout.Exact(size)
@@ -191,13 +228,21 @@ func (t Widget) layoutToggle(ctx *frame.Context, gtx layout.Context, itemState *
 		gtx = gtx.Disabled()
 	}
 	return itemState.toggle.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		drawTreeChevron(gtx, frame.ActiveTheme(ctx), size, expansion, style.chevron)
+		drawTreeToggleIcon(
+			gtx,
+			tokens,
+			size,
+			expansion,
+			t.guides && t.guideConnectors,
+			style.chevron,
+			frame.ActiveTheme(ctx).Palette.SurfaceTertiary,
+		)
 		return layout.Dimensions{Size: size}
 	})
 }
 
 func (t Widget) layoutMainContent(ctx *frame.Context, gtx layout.Context, item Item, style treeItemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	children := make([]layout.FlexChild, 0, 3)
 	if item.Leading != nil {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -220,7 +265,7 @@ func (t Widget) layoutMainContent(ctx *frame.Context, gtx layout.Context, item I
 }
 
 func (t Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, item Item, style treeItemStyle) layout.Dimensions {
-	tokens := frame.ActiveTheme(ctx).Components.Tree
+	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	labelWidget := func(gtx layout.Context) layout.Dimensions {
 		label := material.Label(frame.ActiveTheme(ctx).Material, tokens.ItemTextSize, item.Label)
 		label.Color = style.foreground

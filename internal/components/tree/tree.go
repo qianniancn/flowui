@@ -32,6 +32,38 @@ const (
 	SelectionNone
 )
 
+// Size selects the Tree density preset.
+type Size uint8
+
+const (
+	SizeMedium Size = iota
+	SizeSmall
+)
+
+// GuideStyle selects the indentation guide stroke pattern.
+type GuideStyle uint8
+
+const (
+	GuideSolid GuideStyle = iota
+	GuideDashed
+)
+
+// DropPosition describes where a dragged item was dropped relative to its target.
+type DropPosition uint8
+
+const (
+	DropBefore DropPosition = iota
+	DropInside
+	DropAfter
+)
+
+// DropEvent describes a requested move within one Tree.
+type DropEvent struct {
+	SourceKey string
+	TargetKey string
+	Position  DropPosition
+}
+
 // Widget presents hierarchical, expandable data with controlled selection and expansion.
 type Widget struct {
 	key              string
@@ -43,10 +75,15 @@ type Widget struct {
 	onChange         func(string)
 	onExpandedChange func([]string)
 	onAction         func(string)
+	onDrop           func(DropEvent)
 	variant          Variant
+	size             Size
 	selectionMode    SelectionMode
 	disabled         bool
 	allowEmpty       bool
+	guides           bool
+	guideConnectors  bool
+	guideStyle       GuideStyle
 	maxHeight        int
 }
 
@@ -84,9 +121,21 @@ func (t Widget) OnAction(fn func(string)) Widget {
 	return t
 }
 
+// OnDrop enables item dragging and reports a requested move.
+func (t Widget) OnDrop(fn func(DropEvent)) Widget {
+	t.onDrop = fn
+	return t
+}
+
 // Variant sets the container treatment.
 func (t Widget) Variant(variant Variant) Widget {
 	t.variant = variant
+	return t
+}
+
+// Size sets the Tree density preset.
+func (t Widget) Size(size Size) Widget {
+	t.size = size
 	return t
 }
 
@@ -114,6 +163,24 @@ func (t Widget) AllowEmptySelection() Widget {
 	return t
 }
 
+// Guides controls whether expanded branches draw indentation guides.
+func (t Widget) Guides(enabled bool) Widget {
+	t.guides = enabled
+	return t
+}
+
+// GuideConnectors controls whether indentation guides connect horizontally to child content.
+func (t Widget) GuideConnectors(enabled bool) Widget {
+	t.guideConnectors = enabled
+	return t
+}
+
+// GuideStyle sets the indentation guide stroke pattern.
+func (t Widget) GuideStyle(style GuideStyle) Widget {
+	t.guideStyle = style
+	return t
+}
+
 // EmptyText sets the message displayed when the Tree has no nodes.
 func (t Widget) EmptyText(value string) Widget {
 	t.emptyText = value
@@ -132,9 +199,12 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	defer state.endFrame()
 	state.checkItems(t.items)
 	visible := flattenVisibleItems(t.items, treeKeySet(t.expandedKeys))
+	state.dragSource = ""
+	state.dropTarget = treeDropTarget{}
 
 	if !t.disabled {
-		for _, entry := range visible {
+		dragIndex := -1
+		for index, entry := range visible {
 			itemState := state.item(entry.item.Key)
 			disabled := t.itemDisabled(entry.item)
 			for itemState.toggle.Clicked(gtx) {
@@ -146,6 +216,26 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 				if !disabled {
 					t.activate(entry.item.Key)
 				}
+			}
+			if t.onDrop != nil && !disabled {
+				t.updateDropEvents(gtx, state, visible, entry)
+				if itemState.updateDrag(gtx, state.dragMIME, entry.item.Key) && dragIndex < 0 {
+					state.dragSource = entry.item.Key
+					dragIndex = index
+				}
+			}
+		}
+		if dragIndex >= 0 {
+			tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
+			heights := make([]int, len(visible))
+			for index, entry := range visible {
+				heights[index] = treeItemHeight(gtx, tokens, entry.item)
+			}
+			sourceState := state.item(state.dragSource)
+			pointerY := sourceState.dragPress.Y + sourceState.drag.Pos().Y
+			target := treeDropTargetAt(visible, dragIndex, pointerY, heights, gtx.Dp(tokens.Gap))
+			if treeDropAllowed(t, visible, state.dragSource, target.key) {
+				state.dropTarget = treeDropIndicatorTarget(visible, target)
 			}
 		}
 		result := state.updateKeys(gtx, t, visible)

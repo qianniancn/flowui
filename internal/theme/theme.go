@@ -469,7 +469,7 @@ type TreeTheme struct {
 	ItemTextSize         unit.Sp
 	ItemDescriptionSize  unit.Sp
 	FocusRingWidth       unit.Dp
-	PressedScale         float32
+	PressedScale         float32 // Deprecated: Tree rows no longer scale when pressed.
 	SurfaceRadius        unit.Dp
 }
 

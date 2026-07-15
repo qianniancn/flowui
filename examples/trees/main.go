@@ -8,18 +8,26 @@ import (
 )
 
 type Model struct {
+	Items           []ui.TreeItem
 	Selected        string
 	Expanded        []string
 	SurfaceSelected string
 	SurfaceExpanded []string
 	LastAction      string
+	Connectors      bool
+	Dashed          bool
 }
 
 type Msg struct {
-	Tree     string
-	Selected string
-	Expanded []string
-	Action   string
+	Tree          string
+	Selected      string
+	Expanded      []string
+	Action        string
+	Connectors    bool
+	SetConnectors bool
+	Dashed        bool
+	SetDashed     bool
+	Drop          ui.TreeDropEvent
 }
 
 func Update(model *Model, msg Msg) {
@@ -38,14 +46,34 @@ func Update(model *Model, msg Msg) {
 		}
 	}
 	if msg.Action != "" {
-		model.LastAction = msg.Action
+		model.LastAction = fmt.Sprintf("Activated: %s", msg.Action)
+	}
+	if msg.SetConnectors {
+		model.Connectors = msg.Connectors
+	}
+	if msg.SetDashed {
+		model.Dashed = msg.Dashed
+	}
+	if msg.Drop.SourceKey != "" && moveTreeItem(&model.Items, msg.Drop) {
+		model.LastAction = fmt.Sprintf("Moved: %s", msg.Drop.SourceKey)
+		if msg.Drop.Position == ui.TreeDropInside && !containsKey(model.Expanded, msg.Drop.TargetKey) {
+			model.Expanded = append(model.Expanded, msg.Drop.TargetKey)
+		}
 	}
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	status := "Select a file or folder"
 	if model.LastAction != "" {
-		status = fmt.Sprintf("Activated: %s", model.LastAction)
+		status = model.LastAction
+	}
+	guideStyle := ui.TreeGuideSolid
+	if model.Dashed {
+		guideStyle = ui.TreeGuideDashed
+	}
+	items := model.Items
+	if len(items) == 0 {
+		items = fileItems()
 	}
 
 	return ui.Center(
@@ -56,8 +84,27 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Text(status).Size(14),
 					ui.Divider(),
 					section("File browser",
-						ui.Box(controlledTree("files", model.Selected, model.Expanded, fileItems(), send)).
+						ui.Box(controlledTree("files", model.Selected, model.Expanded, items, send)).
 							Width(520),
+					),
+					section("Compact file tree",
+						ui.Column(
+							ui.SwitchGroup(
+								ui.Switch("tree-connectors", model.Connectors, "Branch connectors").
+									Size(ui.SwitchSmall).
+									OnChange(func(value bool) { send(Msg{Connectors: value, SetConnectors: true}) }),
+								ui.Switch("tree-dashed", model.Dashed, "Dashed guides").
+									Size(ui.SwitchSmall).
+									OnChange(func(value bool) { send(Msg{Dashed: value, SetDashed: true}) }),
+							).Horizontal(),
+							ui.Box(controlledTree("compact", model.Selected, model.Expanded, items, send).
+								Size(ui.TreeSmall).
+								Guides(true).
+								GuideConnectors(model.Connectors).
+								GuideStyle(guideStyle).
+								OnDrop(func(event ui.TreeDropEvent) { send(Msg{Drop: event}) })).
+								Width(520),
+						).Gap(8),
 					),
 					section("Surface",
 						ui.Box(controlledTree("surface", model.SurfaceSelected, model.SurfaceExpanded, workspaceItems(), send).
@@ -103,6 +150,80 @@ func section(title string, child ui.Widget) ui.Widget {
 
 func treeIcon(data lucide.Data) ui.Widget {
 	return ui.Icon(data).Size(16)
+}
+
+func moveTreeItem(items *[]ui.TreeItem, event ui.TreeDropEvent) bool {
+	source, sourceOK := findTreeItem(*items, event.SourceKey)
+	_, targetOK := findTreeItem(*items, event.TargetKey)
+	validPosition := event.Position == ui.TreeDropBefore || event.Position == ui.TreeDropInside || event.Position == ui.TreeDropAfter
+	if !sourceOK || !targetOK || !validPosition || event.SourceKey == event.TargetKey {
+		return false
+	}
+	if _, descendant := findTreeItem(source.Children, event.TargetKey); descendant {
+		return false
+	}
+	item, ok := takeTreeItem(items, event.SourceKey)
+	return ok && insertTreeItem(items, event.TargetKey, event.Position, item)
+}
+
+func findTreeItem(items []ui.TreeItem, key string) (ui.TreeItem, bool) {
+	for _, item := range items {
+		if item.Key == key {
+			return item, true
+		}
+		if found, ok := findTreeItem(item.Children, key); ok {
+			return found, true
+		}
+	}
+	return ui.TreeItem{}, false
+}
+
+func takeTreeItem(items *[]ui.TreeItem, key string) (ui.TreeItem, bool) {
+	for index := range *items {
+		if (*items)[index].Key == key {
+			item := (*items)[index]
+			*items = append((*items)[:index], (*items)[index+1:]...)
+			return item, true
+		}
+		if item, ok := takeTreeItem(&(*items)[index].Children, key); ok {
+			return item, true
+		}
+	}
+	return ui.TreeItem{}, false
+}
+
+func insertTreeItem(items *[]ui.TreeItem, target string, position ui.TreeDropPosition, item ui.TreeItem) bool {
+	for index := range *items {
+		if (*items)[index].Key == target {
+			switch position {
+			case ui.TreeDropInside:
+				(*items)[index].Children = append((*items)[index].Children, item)
+			case ui.TreeDropBefore:
+				*items = append(*items, ui.TreeItem{})
+				copy((*items)[index+1:], (*items)[index:])
+				(*items)[index] = item
+			case ui.TreeDropAfter:
+				index++
+				*items = append(*items, ui.TreeItem{})
+				copy((*items)[index+1:], (*items)[index:])
+				(*items)[index] = item
+			}
+			return true
+		}
+		if insertTreeItem(&(*items)[index].Children, target, position, item) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsKey(keys []string, key string) bool {
+	for _, current := range keys {
+		if current == key {
+			return true
+		}
+	}
+	return false
 }
 
 func fileItems() []ui.TreeItem {
@@ -166,6 +287,7 @@ func packageItems() []ui.TreeItem {
 func main() {
 	ui.Run(
 		Model{
+			Items:           fileItems(),
 			Selected:        "tree",
 			Expanded:        []string{"flowui", "components"},
 			SurfaceSelected: "main",

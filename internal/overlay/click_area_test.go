@@ -28,6 +28,18 @@ func TestClickAreaTracksPointerWithoutEnteringFocusOrder(t *testing.T) {
 	}
 
 	router.Queue(pointer.Event{
+		Kind:     pointer.Move,
+		Source:   pointer.Mouse,
+		Position: f32.Pt(10, 10),
+	})
+	if area.Clicked(clickAreaTestContext(router, new(op.Ops))) {
+		t.Fatal("pointer move was reported as a completed click")
+	}
+	if !area.Hovered() {
+		t.Fatal("pointer hover was not reported")
+	}
+
+	router.Queue(pointer.Event{
 		Kind:      pointer.Press,
 		Source:    pointer.Mouse,
 		PointerID: 1,

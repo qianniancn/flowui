@@ -376,10 +376,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnExpandedChange(func(keys []string) { send(facadeMsg{expanded: keys}) }).
 			OnAction(func(string) {}).
+			OnDrop(func(ui.TreeDropEvent) {}).
 			Variant(ui.TreeSurface).
+			Size(ui.TreeSmall).
 			SelectionMode(ui.TreeSelectionSingle).
 			DisabledKeys([]string{"file"}).
 			AllowEmptySelection().
+			Guides(true).
+			GuideConnectors(true).
+			GuideStyle(ui.TreeGuideDashed).
 			EmptyText("No files").
 			MaxHeight(240),
 		ui.SidebarSections("primary-navigation", model.selected, []ui.SidebarSection{

@@ -47,6 +47,11 @@ func (a *ClickArea) TakePressed() bool {
 	return pressed
 }
 
+// Hovered reports whether the pointer is over the click area.
+func (a *ClickArea) Hovered() bool {
+	return a.click.Hovered()
+}
+
 // Layout registers a pointer-only click region around child.
 func (a *ClickArea) Layout(gtx layout.Context, child layout.Widget) layout.Dimensions {
 	for {

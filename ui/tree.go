@@ -5,11 +5,22 @@ import "github.com/qianniancn/FlowUI/internal/components/tree"
 type TreeWidget = tree.Widget
 type TreeItem = tree.Item
 type TreeVariant = tree.Variant
+type TreeSize = tree.Size
+type TreeGuideStyle = tree.GuideStyle
+type TreeDropPosition = tree.DropPosition
+type TreeDropEvent = tree.DropEvent
 type TreeSelectionMode = tree.SelectionMode
 
 const (
-	TreeDefault = tree.VariantDefault
-	TreeSurface = tree.VariantSurface
+	TreeDefault     = tree.VariantDefault
+	TreeSurface     = tree.VariantSurface
+	TreeMedium      = tree.SizeMedium
+	TreeSmall       = tree.SizeSmall
+	TreeGuideSolid  = tree.GuideSolid
+	TreeGuideDashed = tree.GuideDashed
+	TreeDropBefore  = tree.DropBefore
+	TreeDropInside  = tree.DropInside
+	TreeDropAfter   = tree.DropAfter
 
 	TreeSelectionSingle = tree.SelectionSingle
 	TreeSelectionNone   = tree.SelectionNone

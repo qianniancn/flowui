@@ -2,13 +2,16 @@ package tree
 
 import (
 	"fmt"
-	"image/color"
+	"io"
 	"strings"
 	"time"
 	"unicode"
 
+	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
@@ -20,31 +23,40 @@ import (
 
 const stateSlotTree = "tree"
 
+const treeDragMIMEPrefix = "application/x-flowui-tree-item/"
+
 const (
 	treeTypeaheadTimeout = 500 * time.Millisecond
-	treeColorDuration    = 100 * time.Millisecond
 	treeExpandDuration   = 200 * time.Millisecond
-	treeScaleDuration    = 140 * time.Millisecond
 )
 
 type flatItem struct {
-	item      Item
-	depth     int
-	parentKey string
+	item          Item
+	depth         int
+	parentKey     string
+	isLast        bool
+	ancestorsLast []bool
 }
 
 func flattenVisibleItems(items []Item, expanded map[string]struct{}) []flatItem {
 	result := make([]flatItem, 0)
-	var walk func([]Item, int, string)
-	walk = func(children []Item, depth int, parent string) {
-		for _, item := range children {
-			result = append(result, flatItem{item: item, depth: depth, parentKey: parent})
+	var walk func([]Item, int, string, []bool)
+	walk = func(children []Item, depth int, parent string, ancestorsLast []bool) {
+		for index, item := range children {
+			isLast := index == len(children)-1
+			result = append(result, flatItem{
+				item:          item,
+				depth:         depth,
+				parentKey:     parent,
+				isLast:        isLast,
+				ancestorsLast: append([]bool(nil), ancestorsLast...),
+			})
 			if _, ok := expanded[item.Key]; ok && len(item.Children) > 0 {
-				walk(item.Children, depth+1, item.Key)
+				walk(item.Children, depth+1, item.Key, append(append([]bool(nil), ancestorsLast...), isLast))
 			}
 		}
 	}
-	walk(items, 0, "")
+	walk(items, 0, "", nil)
 	return result
 }
 
@@ -60,11 +72,16 @@ type treeState struct {
 	typeahead        string
 	typeaheadAt      time.Time
 	typeaheadReady   bool
+	dragMIME         string
+	dragSource       string
+	dropTarget       treeDropTarget
 }
 
 func treeStateFor(ctx *frame.Context, key string) *treeState {
 	key = frame.ClaimKey(ctx, state.KindTree, key)
-	return frame.UseState[treeState](ctx, key, stateSlotTree)
+	value := frame.UseState[treeState](ctx, key, stateSlotTree)
+	value.dragMIME = treeDragMIMEPrefix + key
+	return value
 }
 
 func (s *treeState) beginFrame() {
@@ -307,40 +324,135 @@ func treeTypeaheadText(name key.Name) string {
 }
 
 type treeItemState struct {
-	clickable  widget.Clickable
-	toggle     overlay.ClickArea
-	focus      state.FocusAnimation
-	background treeColorAnimation
-	expansion  treeFloatAnimation
-	scale      treeFloatAnimation
+	clickable widget.Clickable
+	toggle    overlay.ClickArea
+	focus     state.FocusAnimation
+	expansion treeFloatAnimation
+	drag      widget.Draggable
+	dragPress f32.Point
+	dragTag   byte
+	dropTags  [3]byte
 }
 
-type treeColorAnimation struct {
-	value color.NRGBA
-	from  color.NRGBA
-	to    color.NRGBA
-	at    time.Time
-	ready bool
+type treeDropTarget struct {
+	key      string
+	drawKey  string
+	depth    int
+	position DropPosition
 }
 
-func (a *treeColorAnimation) update(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	if !a.ready {
-		a.value, a.from, a.to, a.at, a.ready = target, target, target, gtx.Now, true
+func (s *treeItemState) updateDrag(gtx layout.Context, mime, sourceKey string) bool {
+	for {
+		raw, ok := gtx.Event(pointer.Filter{Target: &s.dragTag, Kinds: pointer.Press})
+		if !ok {
+			break
+		}
+		if event, ok := raw.(pointer.Event); ok && (event.Source == pointer.Touch || event.Buttons.Contain(pointer.ButtonPrimary)) {
+			s.dragPress = event.Position
+		}
+	}
+	s.drag.Type = mime
+	if requestedMIME, requested := s.drag.Update(gtx); requested {
+		s.drag.Offer(gtx, requestedMIME, io.NopCloser(strings.NewReader(sourceKey)))
+	}
+	position := s.drag.Pos()
+	slop := float32(gtx.Dp(3))
+	return s.drag.Dragging() && position.X*position.X+position.Y*position.Y > slop*slop
+}
+
+func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, visible []flatItem, entry flatItem) {
+	itemState := state.item(entry.item.Key)
+	for index := range itemState.dropTags {
+		for {
+			raw, ok := gtx.Event(transfer.TargetFilter{Target: &itemState.dropTags[index], Type: state.dragMIME})
+			if !ok {
+				break
+			}
+			event, ok := raw.(transfer.DataEvent)
+			if !ok {
+				continue
+			}
+			sourceKey, ok := treeDropSource(event)
+			if ok && treeDropAllowed(t, visible, sourceKey, entry.item.Key) {
+				t.onDrop(DropEvent{SourceKey: sourceKey, TargetKey: entry.item.Key, Position: DropPosition(index)})
+			}
+		}
+	}
+}
+
+func treeDropSource(event transfer.DataEvent) (string, bool) {
+	reader := event.Open()
+	if reader == nil {
+		return "", false
+	}
+	data, err := io.ReadAll(io.LimitReader(reader, 4097))
+	_ = reader.Close()
+	return string(data), err == nil && len(data) > 0 && len(data) <= 4096
+}
+
+func treeDropAllowed(tree Widget, visible []flatItem, sourceKey, targetKey string) bool {
+	sourceIndex := treeVisibleIndex(visible, sourceKey)
+	targetIndex := treeVisibleIndex(visible, targetKey)
+	if sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex {
+		return false
+	}
+	if tree.itemDisabled(visible[sourceIndex].item) || tree.itemDisabled(visible[targetIndex].item) {
+		return false
+	}
+	if targetIndex > sourceIndex {
+		sourceDepth := visible[sourceIndex].depth
+		for index := sourceIndex + 1; index <= targetIndex; index++ {
+			if visible[index].depth <= sourceDepth {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
+func treeDropTargetAt(visible []flatItem, sourceIndex int, pointerY float32, heights []int, gap int) treeDropTarget {
+	if sourceIndex < 0 || sourceIndex >= len(visible) || len(heights) != len(visible) {
+		return treeDropTarget{}
+	}
+	top := float32(0)
+	for index := sourceIndex - 1; index >= 0; index-- {
+		top -= float32(heights[index] + gap)
+	}
+	for index, entry := range visible {
+		height := heights[index]
+		bottom := top + float32(height)
+		if pointerY >= top && pointerY < bottom {
+			return treeDropTarget{key: entry.item.Key, drawKey: entry.item.Key, depth: entry.depth, position: treeDropPositionAt(pointerY-top, height)}
+		}
+		top = bottom + float32(gap)
+	}
+	return treeDropTarget{}
+}
+
+func treeDropIndicatorTarget(visible []flatItem, target treeDropTarget) treeDropTarget {
+	if target.position != DropAfter {
 		return target
 	}
-	if target != a.to {
-		a.from, a.to, a.at = a.value, target, gtx.Now
+	index := treeVisibleIndex(visible, target.key)
+	if index < 0 {
+		return treeDropTarget{}
 	}
-	if a.from == a.to {
-		a.value = a.to
-		return a.value
+	for next := index + 1; next < len(visible) && visible[next].depth > target.depth; next++ {
+		target.drawKey = visible[next].item.Key
 	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(a.at), treeColorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
+	return target
+}
+
+func treeDropPositionAt(localY float32, height int) DropPosition {
+	edge := float32(max(height/4, 1))
+	if localY < edge {
+		return DropBefore
 	}
-	a.value = render.LerpColor(a.from, a.to, progress)
-	return a.value
+	if localY >= float32(height)-edge {
+		return DropAfter
+	}
+	return DropInside
 }
 
 type treeFloatAnimation struct {

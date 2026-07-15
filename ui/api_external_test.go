@@ -352,6 +352,16 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OpenKey("").
 			OnOpenChange(func(string) {}).
 			Disabled(false),
+		ui.Toolbar(
+			ui.Button("save", ui.Icon(lucide.Save).Size(16)).IconOnly(),
+			ui.ToolbarSeparator(),
+			ui.ToggleButton("bold", true, ui.Icon(lucide.Bold).Size(16)).IconOnly(),
+		).
+			Orientation(ui.ToolbarHorizontal).
+			Attached(true).
+			LoopFocus(true).
+			Alt("Editor tools").
+			Disabled(false),
 		ui.Alert("Update available", "Refresh to get the latest features.").
 			Status(ui.AlertAccent).
 			Indicator(ui.Icon(lucide.Info).Size(16)).

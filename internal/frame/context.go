@@ -26,6 +26,7 @@ type Context struct {
 	keys                         state.Keys
 	exclusive                    state.Exclusive
 	focus                        state.Focus
+	focusGroup                   *FocusGroup
 	fieldFocus                   map[string]fieldFocusTarget
 	fieldLabels                  map[string]string
 	previousLabels               map[string]string
@@ -161,6 +162,30 @@ func RequestFocusVisible(ctx *Context, tag event.Tag, visible bool) {
 		origin = state.FocusOriginPointer
 	}
 	ctx.focus.Request(tag, origin)
+}
+
+type FocusGroup struct {
+	Items []FocusGroupItem
+}
+
+type FocusGroupItem struct {
+	Tag     event.Tag
+	Prepare func(bool)
+}
+
+func PushFocusGroup(ctx *Context, group *FocusGroup) func() {
+	previous := ctx.focusGroup
+	ctx.focusGroup = group
+	return func() {
+		ctx.focusGroup = previous
+	}
+}
+
+func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool, prepare func(bool)) {
+	if ctx.focusGroup == nil || tag == nil || !enabled {
+		return
+	}
+	ctx.focusGroup.Items = append(ctx.focusGroup.Items, FocusGroupItem{Tag: tag, Prepare: prepare})
 }
 
 func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {

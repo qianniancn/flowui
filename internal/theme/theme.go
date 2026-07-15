@@ -136,6 +136,7 @@ type ComponentsTheme struct {
 	Scrollbar        ScrollbarTheme
 	SplitPane        SplitPaneTheme
 	StatusBar        StatusBarTheme
+	Toolbar          ToolbarTheme
 	Table            TableTheme
 	Pagination       PaginationTheme
 	Menu             MenuTheme
@@ -514,6 +515,14 @@ type StatusBarTheme struct {
 	PaddingX    unit.Dp
 	Gap         unit.Dp
 	BorderWidth unit.Dp
+}
+
+type ToolbarTheme struct {
+	Gap             unit.Dp
+	Padding         unit.Dp
+	Radius          unit.Dp
+	SeparatorLength unit.Dp
+	SeparatorWidth  unit.Dp
 }
 
 type TableTheme struct {
@@ -1306,6 +1315,13 @@ func DefaultTheme() Theme {
 				PaddingX:    10,
 				Gap:         8,
 				BorderWidth: 1,
+			},
+			Toolbar: ToolbarTheme{
+				Gap:             8,
+				Padding:         4,
+				Radius:          24,
+				SeparatorLength: 20,
+				SeparatorWidth:  1,
 			},
 			Table: TableTheme{
 				RootPadding:           4,

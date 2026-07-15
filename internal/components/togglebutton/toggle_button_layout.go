@@ -19,6 +19,7 @@ func (b ToggleButtonWidget) layout(ctx *frame.Context, gtx layout.Context) layou
 	clickable := &componentState.clickable
 	animGtx := gtx
 	enabled := gtx.Enabled() && !b.disabled
+	frame.RegisterFocusGroupItem(ctx, clickable, enabled, componentState.focus.Prepare)
 	presses := state.ActivePresses(clickable.History())
 	for clickable.Clicked(gtx) {
 		if enabled && b.onChange != nil {

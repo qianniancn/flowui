@@ -134,6 +134,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		key = frame.ClaimKey(ctx, state.KindClickable, b.key)
 	}
 	buttonState := buttonStateFor(ctx, key)
+	frame.RegisterFocusGroupItem(ctx, clickable, gtx.Enabled() && !b.disabled && !b.loading, buttonState.prepareFocus)
 	animGtx := gtx
 	presses := state.ActivePresses(clickable.History())
 	if b.disabled || b.loading {

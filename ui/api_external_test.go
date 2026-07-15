@@ -38,6 +38,7 @@ func TestContextExposesOnlySupportedMethods(t *testing.T) {
 		"ListState":       {},
 		"ScrollState":     {},
 		"Theme":           {},
+		"WindowState":     {},
 	}
 	if contextType.NumMethod() != len(want) {
 		t.Errorf("ui.Context method count = %d, want %d", contextType.NumMethod(), len(want))
@@ -646,6 +647,9 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	_ = application.Close
 	_ = application.CloseAll
 	_ = application.IsOpen
+	_ = application.Configure
+	_ = application.Perform
+	_ = application.WindowState
 	var _ func(...ui.WindowSpec) = ui.RunWindows
 	if window.Key() != "secondary" {
 		t.Fatalf("window key = %q", window.Key())
@@ -661,6 +665,13 @@ func TestPublicFacadeImportContract(t *testing.T) {
 		}
 	}
 	var _ ui.Option = ui.Title("FlowUI")
+	var _ ui.WindowOption = ui.MinSize(320, 240)
+	var _ ui.WindowOption = ui.MaxSize(1280, 960)
+	var _ ui.WindowOption = ui.TopMost(true)
+	var _ ui.WindowOption = ui.Decorated(false)
+	var _ ui.WindowAction = ui.WindowActionMaximize
+	var _ ui.WindowMode = ui.WindowModeFullscreen
+	var _ ui.WindowState
 	var _ ui.Option = ui.OnError(func(error) {})
 	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)

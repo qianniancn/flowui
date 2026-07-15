@@ -72,9 +72,10 @@ func Loop[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
 	onDestroy func(),
+	onConfig func(app.Config),
 	frame Frame[M, Msg],
 ) error {
-	return loop(w, initial, update, subscriptions, onError, onDestroy, frame)
+	return loop(w, initial, update, subscriptions, onError, onDestroy, onConfig, frame)
 }
 
 func loop[M any, Msg any](
@@ -84,6 +85,7 @@ func loop[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
 	onDestroy func(),
+	onConfig func(app.Config),
 	frame Frame[M, Msg],
 ) error {
 	core := newLoopCore(initial, update)
@@ -137,6 +139,11 @@ func loop[M any, Msg any](
 			}
 			cancel()
 			return e.Err
+		case app.ConfigEvent:
+			if onConfig != nil {
+				onConfig(e.Config)
+			}
+			w.Invalidate()
 		case app.FrameEvent:
 			effectErrors.Drain(onError)
 			core.frame(&effects, ctx, send, report, activeSubscriptions.accepts, func(model M) {

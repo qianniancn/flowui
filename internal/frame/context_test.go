@@ -1,9 +1,11 @@
 package frame
 
 import (
+	"image"
 	"image/color"
 	"testing"
 
+	"gioui.org/app"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -114,6 +116,34 @@ func TestPreparedAssociationTransitionRequestsAnotherFrame(t *testing.T) {
 
 	if !fieldAssociationsChanged(ctx) {
 		t.Fatal("prepared-to-unprepared transition did not change field associations")
+	}
+}
+
+func TestContextTracksWindowState(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	state := UpdateWindowConfig(ctx, app.Config{
+		Size:      image.Pt(640, 480),
+		Mode:      app.Maximized,
+		Focused:   true,
+		Decorated: true,
+		TopMost:   true,
+	})
+	if state != (WindowState{Size: image.Pt(640, 480), Mode: Maximized, Focused: true, Decorated: true, TopMost: true}) {
+		t.Fatalf("window state = %#v", state)
+	}
+	BeginFrameWithViewport(ctx, image.Pt(620, 440))
+	if got := ctx.WindowState(); got.Size != image.Pt(620, 440) || got.Mode != Maximized || !got.Focused {
+		t.Fatalf("frame window state = %#v", got)
+	}
+}
+
+func TestWindowModeString(t *testing.T) {
+	for mode, want := range map[WindowMode]string{
+		Windowed: "windowed", Fullscreen: "fullscreen", Minimized: "minimized", Maximized: "maximized", WindowMode(255): "unknown",
+	} {
+		if got := mode.String(); got != want {
+			t.Fatalf("WindowMode(%d).String() = %q, want %q", mode, got, want)
+		}
 	}
 }
 

@@ -49,6 +49,7 @@ func runWindowCmd[M any, Msg any](
 	view View[M, Msg],
 	onError func(error),
 	onDestroy func(),
+	onWindowState func(WindowState),
 ) error {
 	ctx := frame.New(w, theme, language)
 	if onError == nil {
@@ -81,7 +82,12 @@ func runWindowCmd[M any, Msg any](
 		return func(effectCtx context.Context, send func(Msg)) error {
 			return cmd(effectCtx, Send[Msg](send))
 		}
-	}, runtimeSubscriptions, onError, onDestroy, func(gtx layout.Context, model M, send func(Msg)) {
+	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config) {
+		state := frame.UpdateWindowConfig(ctx, config)
+		if onWindowState != nil {
+			onWindowState(state)
+		}
+	}, func(gtx layout.Context, model M, send func(Msg)) {
 		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
 		paint.FillShape(
 			gtx.Ops,

@@ -58,7 +58,7 @@ func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
 					},
 				},
 			}
-		}, nil, func() { close(destroyed) }, func(layout.Context, struct{}, func(struct{})) {})
+		}, nil, func() { close(destroyed) }, nil, func(layout.Context, struct{}, func(struct{})) {})
 	}()
 
 	window.events <- runtimeFrameEvent()
@@ -96,7 +96,7 @@ func TestLoopDeliversEffectErrorsBeforeNextFrame(t *testing.T) {
 				t.Errorf("error handler ran after frame %d, want before frame 2", frames.Load()+1)
 			}
 			reported <- err
-		}, nil, func(layout.Context, struct{}, func(struct{})) {
+		}, nil, nil, func(layout.Context, struct{}, func(struct{})) {
 			frames.Add(1)
 		})
 	}()
@@ -109,6 +109,35 @@ func TestLoopDeliversEffectErrorsBeforeNextFrame(t *testing.T) {
 	if !errors.As(err, &effectErr) || !errors.Is(effectErr, want) {
 		t.Fatalf("reported error = %v, want %v", err, want)
 	}
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
+func TestLoopReportsConfigChangesAndInvalidates(t *testing.T) {
+	window := newRuntimeTestWindow()
+	configured := make(chan app.Config, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- loop(
+			window,
+			struct{}{},
+			func(*struct{}, struct{}) Cmd[struct{}] { return nil },
+			nil,
+			nil,
+			nil,
+			func(config app.Config) { configured <- config },
+			func(layout.Context, struct{}, func(struct{})) {},
+		)
+	}()
+
+	want := app.Config{Size: image.Pt(640, 480), Mode: app.Maximized, Focused: true, TopMost: true}
+	window.events <- app.ConfigEvent{Config: want}
+	if got := receiveRuntimeTestValue(t, configured); got != want {
+		t.Fatalf("reported config = %#v, want %#v", got, want)
+	}
+	receiveRuntimeTestValue(t, window.invalidated)
 	window.events <- app.DestroyEvent{}
 	if err := receiveRuntimeTestValue(t, result); err != nil {
 		t.Fatalf("loop returned error: %v", err)

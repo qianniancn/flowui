@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image"
 	"testing"
 
 	"gioui.org/app"
@@ -102,6 +103,62 @@ func TestWindowSetAllowsReopenWhileClosedWindowFinishes(t *testing.T) {
 
 	windows.deactivate("details", second)
 	windows.complete(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationConfiguresAndControlsActiveWindow(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	_, _ = application.windows.add("main", window)
+	application.windows.finishStarting()
+
+	if application.Configure("missing", Title("Missing")) {
+		t.Fatal("configured a missing window")
+	}
+	if !application.Configure("main", Title("Workspace"), Size(800, 600), TopMost(true), Decorated(false)) {
+		t.Fatal("active window was not configured")
+	}
+	if !application.Perform("main", WindowActionCenter) || !application.Perform("main", WindowActionMaximize) {
+		t.Fatal("active window action was not performed")
+	}
+	if application.Perform("main", 0) || application.Perform("missing", WindowActionRaise) {
+		t.Fatal("invalid window action succeeded")
+	}
+
+	application.windows.deactivate("main", window)
+	application.windows.complete(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationReportsLatestWindowState(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	_, _ = application.windows.add("main", window)
+	application.windows.finishStarting()
+	if _, ok := application.WindowState("main"); ok {
+		t.Fatal("window state was available before the first config event")
+	}
+	want := WindowState{Size: image.Pt(800, 600), Mode: WindowModeMaximized, Focused: true, Decorated: true, TopMost: true}
+	application.windows.update("main", window, want)
+
+	if got, ok := application.WindowState("main"); !ok || got != want {
+		t.Fatalf("window state = %#v, %v; want %#v, true", got, ok, want)
+	}
+	application.windows.update("main", new(app.Window), WindowState{})
+	if got, _ := application.WindowState("main"); got != want {
+		t.Fatalf("stale window replaced state: %#v", got)
+	}
+	application.windows.deactivate("main", window)
+	if _, ok := application.WindowState("main"); ok {
+		t.Fatal("closed window retained state")
+	}
+	application.windows.complete(false)
 	if code := <-done; code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}

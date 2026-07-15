@@ -41,6 +41,7 @@ type Context struct {
 	hasForeground                bool
 	background                   color.NRGBA
 	hasBackground                bool
+	windowState                  WindowState
 	overlays                     overlayHost
 }
 
@@ -82,6 +83,59 @@ func (ctx *Context) Language() locale.Language {
 		return locale.LanguageEnglish
 	}
 	return ctx.language
+}
+
+type WindowMode uint8
+
+const (
+	Windowed WindowMode = iota
+	Fullscreen
+	Minimized
+	Maximized
+)
+
+func (mode WindowMode) String() string {
+	switch mode {
+	case Windowed:
+		return "windowed"
+	case Fullscreen:
+		return "fullscreen"
+	case Minimized:
+		return "minimized"
+	case Maximized:
+		return "maximized"
+	default:
+		return "unknown"
+	}
+}
+
+// WindowState is the latest native state reported for this window. Size is
+// the content size in physical pixels.
+type WindowState struct {
+	Size      image.Point
+	Mode      WindowMode
+	Focused   bool
+	Decorated bool
+	TopMost   bool
+}
+
+// WindowState returns the latest state for the current window.
+func (ctx *Context) WindowState() WindowState {
+	if ctx == nil {
+		return WindowState{}
+	}
+	return ctx.windowState
+}
+
+func UpdateWindowConfig(ctx *Context, config app.Config) WindowState {
+	ctx.windowState = WindowState{
+		Size:      config.Size,
+		Mode:      WindowMode(config.Mode),
+		Focused:   config.Focused,
+		Decorated: config.Decorated,
+		TopMost:   config.TopMost,
+	}
+	return ctx.windowState
 }
 
 // ActiveTheme returns the mutable theme used internally while laying out a
@@ -134,6 +188,7 @@ func rotateSet(current, previous map[string]struct{}) (map[string]struct{}, map[
 
 func BeginFrameWithViewport(ctx *Context, viewport image.Point) {
 	ctx.viewport = viewport
+	ctx.windowState.Size = viewport
 	BeginFrame(ctx)
 }
 

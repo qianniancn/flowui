@@ -11,10 +11,28 @@ type Option interface {
 	apply(*runOptions)
 }
 
+// WindowOption configures native window properties at creation or runtime.
+type WindowOption interface {
+	Option
+	appOption() app.Option
+}
+
 type optionFunc func(*runOptions)
 
 func (fn optionFunc) apply(cfg *runOptions) {
 	fn(cfg)
+}
+
+type windowOption struct {
+	value app.Option
+}
+
+func (option windowOption) apply(cfg *runOptions) {
+	cfg.window = append(cfg.window, option.value)
+}
+
+func (option windowOption) appOption() app.Option {
+	return option.value
 }
 
 type runOptions struct {
@@ -46,17 +64,34 @@ func (cfg runOptions) newTheme() *Theme {
 }
 
 // Title sets the window title.
-func Title(title string) Option {
-	return optionFunc(func(cfg *runOptions) {
-		cfg.window = append(cfg.window, app.Title(title))
-	})
+func Title(title string) WindowOption {
+	return windowOption{value: app.Title(title)}
 }
 
-// Size sets the initial window size in dp.
-func Size(width, height int) Option {
-	return optionFunc(func(cfg *runOptions) {
-		cfg.window = append(cfg.window, app.Size(unit.Dp(width), unit.Dp(height)))
-	})
+// Size sets the window size in dp.
+func Size(width, height int) WindowOption {
+	return windowOption{value: app.Size(unit.Dp(width), unit.Dp(height))}
+}
+
+// MinSize sets the minimum window size in dp.
+func MinSize(width, height int) WindowOption {
+	return windowOption{value: app.MinSize(unit.Dp(width), unit.Dp(height))}
+}
+
+// MaxSize sets the maximum window size in dp.
+func MaxSize(width, height int) WindowOption {
+	return windowOption{value: app.MaxSize(unit.Dp(width), unit.Dp(height))}
+}
+
+// TopMost controls whether the window stays above non-top-most windows. Gio
+// supports top-most windows on macOS and Windows.
+func TopMost(enabled bool) WindowOption {
+	return windowOption{value: app.TopMost(enabled)}
+}
+
+// Decorated controls native or Gio-provided window decorations.
+func Decorated(enabled bool) WindowOption {
+	return windowOption{value: app.Decorated(enabled)}
 }
 
 // WithTheme replaces the FlowUI theme used by widgets.

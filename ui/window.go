@@ -13,9 +13,21 @@ import (
 type WindowSpec struct {
 	key     string
 	options []app.Option
-	run     func(*app.Window, func()) error
+	run     func(*app.Window, func(), func(WindowState)) error
 	onError func(error)
 }
+
+// WindowAction is a native action requested for one window.
+type WindowAction system.Action
+
+const (
+	WindowActionMinimize   WindowAction = WindowAction(system.ActionMinimize)
+	WindowActionMaximize   WindowAction = WindowAction(system.ActionMaximize)
+	WindowActionRestore    WindowAction = WindowAction(system.ActionUnmaximize)
+	WindowActionFullscreen WindowAction = WindowAction(system.ActionFullscreen)
+	WindowActionRaise      WindowAction = WindowAction(system.ActionRaise)
+	WindowActionCenter     WindowAction = WindowAction(system.ActionCenter)
+)
 
 // Key returns the identity used to deduplicate and control the window.
 func (w WindowSpec) Key() string {
@@ -72,8 +84,8 @@ func newWindowSpec[M any, Msg any](
 		key:     key,
 		options: append([]app.Option(nil), cfg.window...),
 		onError: cfg.errorHandler,
-		run: func(window *app.Window, onDestroy func()) error {
-			return runWindowCmd(window, cfg.newTheme(), cfg.language, initial, update, subscriptions, view, cfg.errorHandler, onDestroy)
+		run: func(window *app.Window, onDestroy func(), onWindowState func(WindowState)) error {
+			return runWindowCmd(window, cfg.newTheme(), cfg.language, initial, update, subscriptions, view, cfg.errorHandler, onDestroy, onWindowState)
 		},
 	}
 }
@@ -171,7 +183,9 @@ func (a *Application) Open(spec WindowSpec) bool {
 			deactivated = true
 			a.windows.deactivate(spec.key, window)
 		}
-		err := spec.run(window, deactivate)
+		err := spec.run(window, deactivate, func(state WindowState) {
+			a.windows.update(spec.key, window, state)
+		})
 		deactivate()
 		spec.report(err)
 		a.windows.complete(err != nil)
@@ -185,6 +199,46 @@ func (a *Application) IsOpen(key string) bool {
 		return false
 	}
 	return a.windows.get(key) != nil
+}
+
+// Configure applies native window options to an active window.
+func (a *Application) Configure(key string, options ...WindowOption) bool {
+	if a == nil {
+		return false
+	}
+	window := a.windows.get(key)
+	if window == nil {
+		return false
+	}
+	native := make([]app.Option, 0, len(options))
+	for _, option := range options {
+		if option != nil {
+			native = append(native, option.appOption())
+		}
+	}
+	window.Option(native...)
+	return true
+}
+
+// Perform requests a native action for an active window.
+func (a *Application) Perform(key string, action WindowAction) bool {
+	if a == nil || action == 0 {
+		return false
+	}
+	window := a.windows.get(key)
+	if window == nil {
+		return false
+	}
+	window.Perform(system.Action(action))
+	return true
+}
+
+// WindowState returns the latest native state reported for an active window.
+func (a *Application) WindowState(key string) (WindowState, bool) {
+	if a == nil {
+		return WindowState{}, false
+	}
+	return a.windows.state(key)
 }
 
 // Close requests that one window close.
@@ -218,6 +272,7 @@ func RunWindows(windows ...WindowSpec) {
 type windowSet struct {
 	mu       sync.Mutex
 	active   map[string]*app.Window
+	states   map[string]WindowState
 	done     chan int
 	running  bool
 	starting bool
@@ -233,6 +288,7 @@ func (s *windowSet) begin() <-chan int {
 		panic("flowui: application already running")
 	}
 	s.active = make(map[string]*app.Window)
+	s.states = make(map[string]WindowState)
 	s.done = make(chan int, 1)
 	s.running = true
 	s.starting = true
@@ -270,6 +326,15 @@ func (s *windowSet) deactivate(key string, window *app.Window) {
 		return
 	}
 	delete(s.active, key)
+	delete(s.states, key)
+}
+
+func (s *windowSet) update(key string, window *app.Window, state WindowState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.active[key] == window {
+		s.states[key] = state
+	}
 }
 
 func (s *windowSet) complete(failed bool) {
@@ -299,6 +364,13 @@ func (s *windowSet) get(key string) *app.Window {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.active[key]
+}
+
+func (s *windowSet) state(key string) (WindowState, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.states[key]
+	return state, ok
 }
 
 func (s *windowSet) snapshot() []*app.Window {

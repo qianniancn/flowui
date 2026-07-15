@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"image"
 	"image/color"
 	"testing"
 
+	"gioui.org/app"
+	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
 
@@ -80,9 +83,21 @@ func TestWindowOptions(t *testing.T) {
 	cfg := newRunOptions([]Option{
 		Title("FlowUI"),
 		Size(640, 480),
+		MinSize(320, 240),
+		MaxSize(1280, 960),
+		TopMost(true),
+		Decorated(false),
 	})
-	if len(cfg.window) != 2 {
-		t.Fatalf("window options = %d, want 2", len(cfg.window))
+	if len(cfg.window) != 6 {
+		t.Fatalf("window options = %d, want 6", len(cfg.window))
+	}
+	config := app.Config{Decorated: true}
+	metric := unit.Metric{PxPerDp: 1, PxPerSp: 1}
+	for _, option := range cfg.window {
+		option(metric, &config)
+	}
+	if config.Title != "FlowUI" || config.Size != image.Pt(640, 480) || config.MinSize != image.Pt(320, 240) || config.MaxSize != image.Pt(1280, 960) || !config.TopMost || config.Decorated {
+		t.Fatalf("window config = %#v", config)
 	}
 }
 

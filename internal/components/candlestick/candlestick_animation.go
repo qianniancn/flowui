@@ -27,7 +27,7 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 		transition.target = target
 		transition.duration = w.animationDuration
 		transition.easing = w.animationEasing
-	} else if !sameCandleData(transition.target, target) {
+	} else if !sameCandleTarget(transition.target, target) {
 		transition.revision++
 		transition.from = candleTransitionFrom(transition.displayed, target)
 		transition.target = target
@@ -51,6 +51,13 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 	}
 	transition.displayed = interpolateCandleData(transition.from, target, progress)
 	return transition.displayed
+}
+
+func sameCandleTarget(previous, target chartData) bool {
+	if previous.generation != 0 || target.generation != 0 {
+		return previous.generation == target.generation
+	}
+	return sameCandleData(previous, target)
 }
 
 func candleBaselineData(target chartData) chartData {

@@ -27,7 +27,7 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 		transition.target = target
 		transition.duration = w.animationDuration
 		transition.easing = w.animationEasing
-	} else if !samePieGeometry(transition.target, target) {
+	} else if !samePieTarget(transition.target, target) {
 		transition.revision++
 		transition.from = pieTransitionFrom(transition.displayed, target)
 		transition.target = target
@@ -51,6 +51,13 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 	}
 	transition.displayed = interpolatePieData(transition.from, target, progress)
 	return transition.displayed
+}
+
+func samePieTarget(previous, target chartData) bool {
+	if previous.generation != 0 || target.generation != 0 {
+		return previous.generation == target.generation
+	}
+	return samePieGeometry(previous, target)
 }
 
 func pieBaselineData(target chartData) chartData {

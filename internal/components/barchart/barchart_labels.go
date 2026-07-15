@@ -66,6 +66,7 @@ func (w Widget) measureYAxisLabelWidth(ctx *frame.Context, gtx layout.Context, d
 
 func (w Widget) pruneXTicks(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) []categoryTick {
 	if len(geometry.xTicks) < 2 {
+		w.resolveCategoryTickLabels(geometry.xTicks)
 		return geometry.xTicks
 	}
 	tokens := frame.ActiveTheme(ctx).Components.BarChart
@@ -73,17 +74,24 @@ func (w Widget) pruneXTicks(ctx *frame.Context, gtx layout.Context, geometry cha
 		tick        categoryTick
 		left, right int
 	}
-	measured := make([]measuredTick, len(geometry.xTicks))
-	for index, tick := range geometry.xTicks {
+	measure := func(tick categoryTick) measuredTick {
+		tick.label = w.categoryTickLabel(tick)
 		label := recordChartText(ctx, gtx, tick.label, tokens.AxisTextSize, font.Normal, style.axisLabel, max(geometry.plot.Dx(), 1))
 		left := int(tick.pixel) - label.dims.Size.X/2
-		measured[index] = measuredTick{tick: tick, left: left, right: left + label.dims.Size.X}
+		return measuredTick{tick: tick, left: left, right: left + label.dims.Size.X}
 	}
 	gap := max(gtx.Dp(tokens.TickLabelGap), 4)
-	result := []measuredTick{measured[0]}
-	lastCandidate := measured[len(measured)-1]
-	for _, candidate := range measured[1 : len(measured)-1] {
+	result := []measuredTick{measure(geometry.xTicks[0])}
+	lastCandidate := measure(geometry.xTicks[len(geometry.xTicks)-1])
+	for _, tick := range geometry.xTicks[1 : len(geometry.xTicks)-1] {
 		previous := result[len(result)-1]
+		pixel := int(tick.pixel)
+		previousHalfWidth := (previous.right - previous.left + 1) / 2
+		lastHalfWidth := (lastCandidate.right - lastCandidate.left + 1) / 2
+		if pixel-previousHalfWidth < previous.right+gap || pixel+lastHalfWidth+gap > lastCandidate.left {
+			continue
+		}
+		candidate := measure(tick)
 		if candidate.left >= previous.right+gap && candidate.right+gap <= lastCandidate.left {
 			result = append(result, candidate)
 		}
@@ -103,6 +111,7 @@ func (w Widget) pruneXTicks(ctx *frame.Context, gtx layout.Context, geometry cha
 
 func (w Widget) pruneCategoryTicks(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) []categoryTick {
 	if len(geometry.xTicks) < 2 {
+		w.resolveCategoryTickLabels(geometry.xTicks)
 		return geometry.xTicks
 	}
 	tokens := frame.ActiveTheme(ctx).Components.BarChart
@@ -110,17 +119,24 @@ func (w Widget) pruneCategoryTicks(ctx *frame.Context, gtx layout.Context, geome
 		tick        categoryTick
 		top, bottom int
 	}
-	measured := make([]measuredTick, len(geometry.xTicks))
-	for index, tick := range geometry.xTicks {
+	measure := func(tick categoryTick) measuredTick {
+		tick.label = w.categoryTickLabel(tick)
 		label := recordChartText(ctx, gtx, tick.label, tokens.AxisTextSize, font.Normal, style.axisLabel, max(geometry.plot.Min.X, 1))
 		top := int(tick.pixel) - label.dims.Size.Y/2
-		measured[index] = measuredTick{tick: tick, top: top, bottom: top + label.dims.Size.Y}
+		return measuredTick{tick: tick, top: top, bottom: top + label.dims.Size.Y}
 	}
 	gap := max(gtx.Dp(tokens.TickLabelGap), 4)
-	result := []measuredTick{measured[0]}
-	lastCandidate := measured[len(measured)-1]
-	for _, candidate := range measured[1 : len(measured)-1] {
+	result := []measuredTick{measure(geometry.xTicks[0])}
+	lastCandidate := measure(geometry.xTicks[len(geometry.xTicks)-1])
+	for _, tick := range geometry.xTicks[1 : len(geometry.xTicks)-1] {
 		previous := result[len(result)-1]
+		pixel := int(tick.pixel)
+		previousHalfHeight := (previous.bottom - previous.top + 1) / 2
+		lastHalfHeight := (lastCandidate.bottom - lastCandidate.top + 1) / 2
+		if pixel-previousHalfHeight < previous.bottom+gap || pixel+lastHalfHeight+gap > lastCandidate.top {
+			continue
+		}
+		candidate := measure(tick)
 		if candidate.top >= previous.bottom+gap && candidate.bottom+gap <= lastCandidate.top {
 			result = append(result, candidate)
 		}
@@ -136,6 +152,19 @@ func (w Widget) pruneCategoryTicks(ctx *frame.Context, gtx layout.Context, geome
 		ticks[index] = result[index].tick
 	}
 	return ticks
+}
+
+func (w Widget) categoryTickLabel(tick categoryTick) string {
+	if tick.label != "" {
+		return tick.label
+	}
+	return w.categoryLabel(tick.index)
+}
+
+func (w Widget) resolveCategoryTickLabels(ticks []categoryTick) {
+	for index := range ticks {
+		ticks[index].label = w.categoryTickLabel(ticks[index])
+	}
 }
 
 func (w Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) {

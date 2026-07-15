@@ -142,6 +142,8 @@ type Widget struct {
 	key                     string
 	series                  []Series
 	categories              []string
+	dataVersion             uint64
+	hasDataVersion          bool
 	height                  unit.Dp
 	showGrid                bool
 	showLegend              bool
@@ -197,6 +199,14 @@ func New(key string, series []Series) Widget {
 		updateAnimationDuration: 500 * time.Millisecond,
 		updateAnimationEasing:   animation.EaseCubicInOut,
 	}
+}
+
+// DataVersion enables resolved-data reuse. Increase version whenever the
+// series, categories, or series rendering options change.
+func (w Widget) DataVersion(version uint64) Widget {
+	w.dataVersion = version
+	w.hasDataVersion = true
+	return w
 }
 
 func (w Widget) Categories(categories []string) Widget {

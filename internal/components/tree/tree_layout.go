@@ -52,7 +52,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *t
 			treeStateValue.list.Alignment = layout.Start
 			treeStateValue.list.ScrollAnyAxis = false
 			return layoutui.LayoutTrackedScrollbar(ctx, gtx, &treeStateValue.list, &treeStateValue.bar, len(visible), t.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
-				return t.layoutItem(ctx, gtx, treeStateValue, visible[index])
+				return t.layoutItem(ctx, gtx, treeStateValue, visible[index], index)
 			})
 		})
 	}()
@@ -85,8 +85,9 @@ func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	})
 }
 
-func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValue *treeState, entry flatItem) layout.Dimensions {
+func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValue *treeState, entry flatItem, index int) layout.Dimensions {
 	itemState := treeStateValue.item(entry.item.Key)
+	itemState.index = index
 	disabled := t.itemDisabled(entry.item)
 	selected := t.selectionMode != SelectionNone && entry.item.Key == t.selectedKey
 	expanded := treeContainsKey(t.expandedKeys, entry.item.Key)

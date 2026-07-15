@@ -186,20 +186,40 @@ func (w Widget) measureYLabelWidth(ctx *frame.Context, gtx layout.Context, scale
 
 func (w Widget) pruneCategoryTicks(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) []categoryTick {
 	if len(geometry.xTicks) <= 1 {
+		w.resolveCategoryTickLabels(geometry, geometry.xTicks)
 		return geometry.xTicks
 	}
 	tokens := frame.ActiveTheme(ctx).Components.CandlestickChart
 	result := make([]categoryTick, 0, len(geometry.xTicks))
 	lastRight := math.MinInt
+	lastWidth := 0
 	for index, tick := range geometry.xTicks {
+		if index > 0 && int(tick.pixel)-lastWidth/2 < lastRight+16 {
+			continue
+		}
+		tick.label = w.categoryTickLabel(geometry, tick)
 		label := recordChartText(ctx, gtx, tick.label, tokens.AxisTextSize, font.Normal, style.axisLabel, max(geometry.plot.Dx(), 1))
 		left := categoryTickLabelX(tick.pixel, label.dims.Size.X, geometry.plot)
 		if index == 0 || left >= lastRight+16 {
 			result = append(result, tick)
 			lastRight = left + label.dims.Size.X
+			lastWidth = label.dims.Size.X
 		}
 	}
 	return result
+}
+
+func (w Widget) categoryTickLabel(geometry chartGeometry, tick categoryTick) string {
+	if tick.label != "" {
+		return tick.label
+	}
+	return w.axisCategoryLabel(tick.index, geometry.timeFormat)
+}
+
+func (w Widget) resolveCategoryTickLabels(geometry chartGeometry, ticks []categoryTick) {
+	for index := range ticks {
+		ticks[index].label = w.categoryTickLabel(geometry, ticks[index])
+	}
 }
 
 func categoryTickLabelX(pixel float32, width int, plot image.Rectangle) int {

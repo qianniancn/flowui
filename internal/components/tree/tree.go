@@ -69,6 +69,8 @@ type Widget struct {
 	key              string
 	selectedKey      string
 	items            []Item
+	dataVersion      uint64
+	hasDataVersion   bool
 	expandedKeys     []string
 	disabledKeys     []string
 	emptyText        string
@@ -95,6 +97,14 @@ func New(key, selectedKey string, items []Item) Widget {
 		items:       items,
 		emptyText:   "No items",
 	}
+}
+
+// DataVersion enables validation and flattened-data reuse. Increase version
+// whenever the item hierarchy or item content changes.
+func (t Widget) DataVersion(version uint64) Widget {
+	t.dataVersion = version
+	t.hasDataVersion = true
+	return t
 }
 
 // ExpandedKeys sets the controlled set of expanded branch keys.
@@ -197,15 +207,18 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	state := treeStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
-	state.checkItems(t.items)
-	visible := flattenVisibleItems(t.items, treeKeySet(t.expandedKeys))
+	visible := state.resolveVisible(t)
 	state.dragSource = ""
 	state.dropTarget = treeDropTarget{}
 
 	if !t.disabled {
 		dragIndex := -1
-		for index, entry := range visible {
-			itemState := state.item(entry.item.Key)
+		for key, itemState := range state.items {
+			index := state.visibleIndex(visible, key, itemState)
+			if index < 0 {
+				continue
+			}
+			entry := visible[index]
 			disabled := t.itemDisabled(entry.item)
 			for itemState.toggle.Clicked(gtx) {
 				if !disabled && len(entry.item.Children) > 0 {

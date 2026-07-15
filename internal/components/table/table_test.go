@@ -433,6 +433,25 @@ func TestVirtualTableOnlyRequestsVisibleRows(t *testing.T) {
 	}
 }
 
+func TestVirtualTableDoesNotResolveSelectedRowWithoutKeyboardEvent(t *testing.T) {
+	columns := []Column{{Key: "name", Label: "Name"}}
+	calls := 0
+	table := NewVirtual("virtual-selected", columns, 10_000, func(index int) Row {
+		calls++
+		return Row{Key: fmt.Sprintf("row-%d", index), Cells: []Cell{{Text: "User"}}}
+	}).MaxHeight(140).
+		RowHeight(42).
+		SelectionMode(SelectionSingle).
+		SelectedKey("row-9999")
+	ctx := tableTestContext(nil)
+	frame.BeginFrame(ctx)
+	table.Layout(ctx, tableLayoutContext(nil, image.Pt(640, 200), time.Unix(1, 0)))
+	frame.EndFrame(ctx)
+	if calls == 0 || calls >= 40 {
+		t.Fatalf("virtual provider calls = %d, want only visible rows", calls)
+	}
+}
+
 func TestTableLoadMoreLatchesUntilRowsGrow(t *testing.T) {
 	columns := []Column{{Key: "name", Label: "Name"}}
 	rows := []Row{{Key: "one", Cells: []Cell{{Text: "One"}}}}

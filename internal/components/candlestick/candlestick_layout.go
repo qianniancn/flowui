@@ -36,6 +36,7 @@ type chartGeometry struct {
 	categoryEnd   int
 	bandWidth     float32
 	candleWidth   float32
+	timeFormat    string
 }
 
 type chartSelection struct {
@@ -56,7 +57,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		height = w.height
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(height)))
-	data := resolveChartData(w, frame.ActiveTheme(ctx))
+	data := state.dataCache.resolve(w, frame.ActiveTheme(ctx))
 	if resetWindow && w.onDataWindowChange != nil {
 		full := chart.FullDataWindow()
 		if w.effectiveDataWindow() != full {
@@ -179,8 +180,9 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 		geometry.bandWidth = float32(plot.Dx()) / float32(visible)
 		geometry.candleWidth = w.resolveCandleWidth(geometry.bandWidth, dp)
 		timeFormat := w.timeAxisFormat(geometry.categoryStart, geometry.categoryEnd)
+		geometry.timeFormat = timeFormat
 		for index := geometry.categoryStart; index < geometry.categoryEnd; index++ {
-			geometry.xTicks = append(geometry.xTicks, categoryTick{index: index, label: w.axisCategoryLabel(index, timeFormat), pixel: geometry.categoryCenter(index)})
+			geometry.xTicks = append(geometry.xTicks, categoryTick{index: index, pixel: geometry.categoryCenter(index)})
 		}
 	}
 	return geometry

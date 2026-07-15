@@ -21,6 +21,7 @@ type chartState struct {
 	hovered           bool
 	pointer           f32.Point
 	animation         lineChartAnimation
+	dataCache         chartDataCache
 	legendItems       map[string]*chart.LegendItem
 	legendFrame       map[string]struct{}
 	windowGesture     chart.DataWindowGesture

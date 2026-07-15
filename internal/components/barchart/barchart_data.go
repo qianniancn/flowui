@@ -49,6 +49,37 @@ type chartData struct {
 	columns    []barColumn
 	categories int
 	yExtent    dataExtent
+	generation uint64
+}
+
+type chartDataCache struct {
+	ready      bool
+	version    uint64
+	generation uint64
+	theme      *theme.Theme
+	metric     unit.Metric
+	data       chartData
+}
+
+func (c *chartDataCache) resolve(widget Widget, activeTheme *theme.Theme, metric unit.Metric) chartData {
+	if !widget.hasDataVersion {
+		*c = chartDataCache{}
+		return resolveChartData(widget, activeTheme, metric.Dp)
+	}
+	if c.ready && c.version == widget.dataVersion && c.theme == activeTheme && c.metric == metric {
+		return c.data
+	}
+	c.generation++
+	if c.generation == 0 {
+		c.generation = 1
+	}
+	c.data = resolveChartData(widget, activeTheme, metric.Dp)
+	c.data.generation = c.generation
+	c.ready = true
+	c.version = widget.dataVersion
+	c.theme = activeTheme
+	c.metric = metric
+	return c.data
 }
 
 func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) int) chartData {

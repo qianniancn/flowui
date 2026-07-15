@@ -56,7 +56,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		height = w.height
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(height)))
-	data := resolveChartData(w, frame.ActiveTheme(ctx), gtx.Dp)
+	data := state.dataCache.resolve(w, frame.ActiveTheme(ctx), gtx.Metric)
 	if w.handleLegendClicks(gtx, state, data, enabled) {
 		activated = false
 		resetWindow = false

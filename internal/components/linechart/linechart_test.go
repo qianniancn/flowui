@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"runtime"
 	"testing"
 	"time"
 
@@ -92,6 +93,55 @@ func TestLineChartLegendDataRetainsHiddenSeries(t *testing.T) {
 	}), &activeTheme, testDp)
 	if len(data.series) != 1 || len(data.legend) != 2 || !data.legend[1].hidden {
 		t.Fatalf("LineChart hidden legend data = %#v", data)
+	}
+}
+
+func TestLineChartDataVersionCachesResolvedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	cache := new(chartDataCache)
+	metric := unit.Metric{PxPerDp: 1, PxPerSp: 1}
+	first := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{1})}).DataVersion(1), &activeTheme, metric)
+	second := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{99})}).DataVersion(1), &activeTheme, metric)
+	if first.generation == 0 || second.generation != first.generation || second.series[0].points[0].Y != 1 {
+		t.Fatalf("same-version LineChart data was not reused: first %#v second %#v", first, second)
+	}
+	third := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{99})}).DataVersion(2), &activeTheme, metric)
+	if third.generation == second.generation || third.series[0].points[0].Y != 99 {
+		t.Fatalf("new-version LineChart data was not resolved: %#v", third)
+	}
+	scaled := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{99})}).DataVersion(2), &activeTheme, unit.Metric{PxPerDp: 2, PxPerSp: 2})
+	if scaled.generation == third.generation {
+		t.Fatal("LineChart cache ignored a metric change")
+	}
+	uncached := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{7})}), &activeTheme, metric)
+	if uncached.generation != 0 || uncached.series[0].points[0].Y != 7 {
+		t.Fatalf("unversioned LineChart data was cached: %#v", uncached)
+	}
+}
+
+func BenchmarkLineChartDataVersion(b *testing.B) {
+	values := make([]float64, 10_000)
+	for index := range values {
+		values[index] = float64(index)
+	}
+	widget := New("chart", []Series{Values("series", "Series", values)})
+	activeTheme := theme.DefaultTheme()
+	metric := unit.Metric{PxPerDp: 1, PxPerSp: 1}
+	for _, benchmark := range []struct {
+		name   string
+		widget Widget
+	}{
+		{name: "unversioned", widget: widget},
+		{name: "versioned", widget: widget.DataVersion(1)},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			cache := new(chartDataCache)
+			b.ReportAllocs()
+			for b.Loop() {
+				data := cache.resolve(benchmark.widget, &activeTheme, metric)
+				runtime.KeepAlive(data)
+			}
+		})
 	}
 }
 

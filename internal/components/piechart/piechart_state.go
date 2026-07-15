@@ -23,6 +23,7 @@ type chartState struct {
 	hovered           bool
 	pointer           f32.Point
 	animation         pieChartAnimation
+	dataCache         chartDataCache
 	legendItems       map[string]*chart.LegendItem
 	legendFrame       map[string]struct{}
 	tooltipTransition tooltip.PopupTransition

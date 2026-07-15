@@ -112,6 +112,24 @@ func TestCandlestickChartRejectsInvalidConfiguration(t *testing.T) {
 	}
 }
 
+func TestCandlestickChartDataVersionCachesResolvedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	cache := new(chartDataCache)
+	first := cache.resolve(New("chart", []Candle{OHLC(1, 2, 0, 3)}).DataVersion(1), &activeTheme)
+	second := cache.resolve(New("chart", []Candle{OHLC(10, 20, 0, 30)}).DataVersion(1), &activeTheme)
+	if first.generation == 0 || second.generation != first.generation || second.candles[0].close != 2 {
+		t.Fatalf("same-version CandlestickChart data was not reused: first %#v second %#v", first, second)
+	}
+	third := cache.resolve(New("chart", []Candle{OHLC(10, 20, 0, 30)}).DataVersion(2), &activeTheme)
+	if third.generation == second.generation || third.candles[0].close != 20 {
+		t.Fatalf("new-version CandlestickChart data was not resolved: %#v", third)
+	}
+	uncached := cache.resolve(New("chart", []Candle{OHLC(3, 4, 2, 5)}), &activeTheme)
+	if uncached.generation != 0 || uncached.candles[0].close != 4 {
+		t.Fatalf("unversioned CandlestickChart data was cached: %#v", uncached)
+	}
+}
+
 func TestCandlestickChartMatchesEChartsSignsAndExtent(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	values := []Candle{
@@ -295,6 +313,33 @@ func TestCandlestickChartPrunesLabelsAfterClampingToLeftEdge(t *testing.T) {
 	frame.EndFrame(ctx)
 	if len(ticks) != 1 {
 		t.Fatalf("left-edge time labels were not pruned: %#v", ticks)
+	}
+}
+
+func TestCandlestickChartFormatsOnlyPrunedCategoryLabels(t *testing.T) {
+	const count = 10_000
+	times := make([]time.Time, count)
+	ticks := make([]categoryTick, count)
+	start := time.Unix(1, 0)
+	for index := range count {
+		times[index] = start.Add(time.Duration(index) * time.Minute)
+		ticks[index] = categoryTick{index: index, pixel: 100 + float32(index)*400/count}
+	}
+	formats := 0
+	widget := New("market", nil).Times(times).FormatTime(func(time.Time) string {
+		formats++
+		return "07-07 07:00"
+	})
+	ctx := candlestickTestContext()
+	viewport := image.Pt(520, 360)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Ops: &ops}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	geometry := chartGeometry{plot: image.Rect(100, 0, 500, 300), xTicks: ticks, timeFormat: "01-02 15:04"}
+	result := widget.pruneCategoryTicks(ctx, gtx, geometry, candlestickStyleFor(frame.ActiveTheme(ctx), false))
+	frame.EndFrame(ctx)
+	if len(result) == 0 || formats != len(result) || formats >= 100 {
+		t.Fatalf("CandlestickChart formatted %d labels for %d results", formats, len(result))
 	}
 }
 

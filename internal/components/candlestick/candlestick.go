@@ -30,6 +30,8 @@ type Widget struct {
 	data                    []Candle
 	categories              []string
 	times                   []time.Time
+	dataVersion             uint64
+	hasDataVersion          bool
 	height                  unit.Dp
 	showGrid                bool
 	showTooltip             bool
@@ -83,6 +85,14 @@ func New(key string, data []Candle) Widget {
 		updateAnimationDuration: 300 * time.Millisecond,
 		updateAnimationEasing:   animation.EaseLinear,
 	}
+}
+
+// DataVersion enables resolved-data reuse. Increase version whenever the
+// candles or color options change.
+func (w Widget) DataVersion(version uint64) Widget {
+	w.dataVersion = version
+	w.hasDataVersion = true
+	return w
 }
 
 func (w Widget) Categories(values []string) Widget {

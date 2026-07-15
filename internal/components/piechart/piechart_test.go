@@ -36,6 +36,24 @@ func TestPieChartAllocatesEChartsAngles(t *testing.T) {
 	}
 }
 
+func TestPieChartDataVersionCachesResolvedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	cache := new(chartDataCache)
+	first := cache.resolve(New("chart", []Data{Slice("slice", "Slice", 1)}).DataVersion(1), &activeTheme)
+	second := cache.resolve(New("chart", []Data{Slice("slice", "Slice", 99)}).DataVersion(1), &activeTheme)
+	if first.generation == 0 || second.generation != first.generation || second.slices[0].value != 1 {
+		t.Fatalf("same-version PieChart data was not reused: first %#v second %#v", first, second)
+	}
+	third := cache.resolve(New("chart", []Data{Slice("slice", "Slice", 99)}).DataVersion(2), &activeTheme)
+	if third.generation == second.generation || third.slices[0].value != 99 {
+		t.Fatalf("new-version PieChart data was not resolved: %#v", third)
+	}
+	uncached := cache.resolve(New("chart", []Data{Slice("slice", "Slice", 7)}), &activeTheme)
+	if uncached.generation != 0 || uncached.slices[0].value != 7 {
+		t.Fatalf("unversioned PieChart data was cached: %#v", uncached)
+	}
+}
+
 func TestPieChartMinAndPadAnglesRedistributeRemainder(t *testing.T) {
 	slices := []resolvedSlice{{value: 1}, {value: 99}}
 	degrees := float32(math.Pi / 180)

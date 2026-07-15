@@ -70,7 +70,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		height = w.height
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(height)))
-	data := resolveChartData(w, frame.ActiveTheme(ctx), gtx.Dp)
+	data := state.dataCache.resolve(w, frame.ActiveTheme(ctx), gtx.Metric)
 	if w.handleLegendClicks(gtx, state, data, enabled) {
 		activated = false
 		resetWindow = false
@@ -242,7 +242,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 		geometry.bandWidth = float32(bandExtent) / float32(visibleCount)
 		geometry.xTicks = make([]categoryTick, 0, visibleCount)
 		for index := geometry.categoryStart; index < geometry.categoryEnd; index++ {
-			geometry.xTicks = append(geometry.xTicks, categoryTick{index: index, label: w.categoryLabel(index), pixel: geometry.categoryCenter(index)})
+			geometry.xTicks = append(geometry.xTicks, categoryTick{index: index, pixel: geometry.categoryCenter(index)})
 		}
 	}
 	barGap := float32(0.1)

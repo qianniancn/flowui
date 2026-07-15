@@ -181,6 +181,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ui.LineXYSeries("latency", "Latency", []ui.LineChartPoint{{X: 0, Y: 8}, {X: 1, Y: 11}}).
 				Smoothness(0.35),
 		}).
+			DataVersion(1).
 			Categories([]string{"Mon", "Tue", "Wed"}).
 			Height(280).
 			Grid(true).
@@ -227,6 +228,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				FormatLabel(func(value float64) string { return fmt.Sprint(value) }).
 				Hidden(false),
 		}).
+			DataVersion(1).
 			Categories([]string{"Mon", "Tue", "Wed"}).
 			Height(280).
 			Grid(true).
@@ -267,6 +269,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				Color(color.NRGBA{R: 1, A: 0xff}).
 				Hidden(false),
 		}).
+			DataVersion(1).
 			Height(320).
 			InnerRadius(.35).
 			OuterRadius(.7).
@@ -296,6 +299,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.CandlestickChart("market", []ui.CandlestickChartData{
 			ui.Candle(100, 105, 98, 108),
 		}).
+			DataVersion(1).
 			Times([]time.Time{time.Unix(1, 0)}).
 			FormatTime(func(value time.Time) string { return value.Format("15:04") }).
 			Height(320).
@@ -383,6 +387,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.Select("choice", model.selected, items).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
 		ui.Tree("files", model.selected, treeItems).
+			DataVersion(1).
 			ExpandedKeys(model.expanded).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnExpandedChange(func(keys []string) { send(facadeMsg{expanded: keys}) }).

@@ -75,6 +75,14 @@ type treeState struct {
 	dragMIME         string
 	dragSource       string
 	dropTarget       treeDropTarget
+	dataCache        treeDataCache
+}
+
+type treeDataCache struct {
+	ready        bool
+	version      uint64
+	expandedKeys []string
+	visible      []flatItem
 }
 
 func treeStateFor(ctx *frame.Context, key string) *treeState {
@@ -94,6 +102,32 @@ func (s *treeState) endFrame() {
 
 func (s *treeState) item(key string) *treeItemState {
 	return state.UseFrameMap(&s.items, &s.frameItems, key)
+}
+
+func (s *treeState) resolveVisible(tree Widget) []flatItem {
+	if !tree.hasDataVersion {
+		s.dataCache = treeDataCache{}
+		s.checkItems(tree.items)
+		return flattenVisibleItems(tree.items, treeKeySet(tree.expandedKeys))
+	}
+	cache := &s.dataCache
+	if cache.ready && cache.version == tree.dataVersion && treeKeysEqual(cache.expandedKeys, tree.expandedKeys) {
+		return cache.visible
+	}
+	s.checkItems(tree.items)
+	cache.visible = flattenVisibleItems(tree.items, treeKeySet(tree.expandedKeys))
+	cache.expandedKeys = append(cache.expandedKeys[:0], tree.expandedKeys...)
+	cache.version = tree.dataVersion
+	cache.ready = true
+	return cache.visible
+}
+
+func (s *treeState) visibleIndex(visible []flatItem, key string, item *treeItemState) int {
+	if item.index >= 0 && item.index < len(visible) && visible[item.index].item.Key == key {
+		return item.index
+	}
+	item.index = treeVisibleIndex(visible, key)
+	return item.index
 }
 
 func (s *treeState) checkItems(items []Item) {
@@ -126,8 +160,13 @@ type treeKeyResult struct {
 
 func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatItem) treeKeyResult {
 	s.keyFilters = s.keyFilters[:0]
-	for _, entry := range visible {
-		tag := &s.item(entry.item.Key).clickable
+	for keyValue, itemState := range s.items {
+		index := s.visibleIndex(visible, keyValue, itemState)
+		if index < 0 {
+			continue
+		}
+		entry := visible[index]
+		tag := &itemState.clickable
 		s.keyFilters = append(s.keyFilters,
 			key.Filter{Focus: tag, Name: key.NameDownArrow},
 			key.Filter{Focus: tag, Name: key.NameUpArrow},
@@ -151,11 +190,8 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 	}
 
 	current := s.focusedIndex(gtx, visible)
-	if current < 0 {
-		current = treeVisibleIndex(visible, tree.selectedKey)
-	}
 	result := treeKeyResult{}
-	expanded := treeKeySet(tree.expandedKeys)
+	var expanded map[string]struct{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
 		if !ok {
@@ -164,6 +200,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 		event, ok := e.(key.Event)
 		if !ok {
 			continue
+		}
+		if current < 0 {
+			current = treeVisibleIndex(visible, tree.selectedKey)
 		}
 		switch event.Name {
 		case key.NameDownArrow:
@@ -196,6 +235,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			}
 		case key.NameRightArrow:
 			if event.State == key.Press && current >= 0 && current < len(visible) {
+				if expanded == nil {
+					expanded = treeKeySet(tree.expandedKeys)
+				}
 				entry := visible[current]
 				if len(entry.item.Children) > 0 {
 					if _, ok := expanded[entry.item.Key]; !ok {
@@ -208,6 +250,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			}
 		case key.NameLeftArrow:
 			if event.State == key.Press && current >= 0 && current < len(visible) {
+				if expanded == nil {
+					expanded = treeKeySet(tree.expandedKeys)
+				}
 				entry := visible[current]
 				if len(entry.item.Children) > 0 {
 					if _, ok := expanded[entry.item.Key]; ok {
@@ -263,8 +308,9 @@ func (s *treeState) handleActivationKey(event key.Event, visible []flatItem, tre
 }
 
 func (s *treeState) focusedIndex(gtx layout.Context, visible []flatItem) int {
-	for index, entry := range visible {
-		if gtx.Focused(&s.item(entry.item.Key).clickable) {
+	for keyValue, itemState := range s.items {
+		index := s.visibleIndex(visible, keyValue, itemState)
+		if index >= 0 && gtx.Focused(&itemState.clickable) {
 			return index
 		}
 	}
@@ -307,6 +353,7 @@ func treeTypeaheadText(name key.Name) string {
 }
 
 type treeItemState struct {
+	index     int
 	clickable widget.Clickable
 	toggle    overlay.ClickArea
 	focus     state.FocusAnimation
@@ -570,6 +617,18 @@ func treeContainsKey(keys []string, key string) bool {
 		}
 	}
 	return false
+}
+
+func treeKeysEqual(first, second []string) bool {
+	if len(first) != len(second) {
+		return false
+	}
+	for index := range first {
+		if first[index] != second[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func toggleTreeKey(keys []string, key string) []string {

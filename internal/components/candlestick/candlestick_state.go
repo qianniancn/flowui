@@ -21,6 +21,7 @@ type chartState struct {
 	pointer           f32.Point
 	windowGesture     chart.DataWindowGesture
 	animation         candlestickAnimation
+	dataCache         chartDataCache
 	tooltipTransition tooltip.PopupTransition
 	tooltipSelection  chartSelection
 }

@@ -50,6 +50,8 @@ func (d Data) Hidden(hidden bool) Data {
 type Widget struct {
 	key                     string
 	data                    []Data
+	dataVersion             uint64
+	hasDataVersion          bool
 	height                  unit.Dp
 	innerRadius             float32
 	outerRadius             float32
@@ -92,6 +94,14 @@ func New(key string, data []Data) Widget {
 		updateAnimationDuration: 500 * time.Millisecond,
 		updateAnimationEasing:   animation.EaseCubicInOut,
 	}
+}
+
+// DataVersion enables resolved-data reuse. Increase version whenever the data
+// or angle, radius, and visibility options change.
+func (w Widget) DataVersion(version uint64) Widget {
+	w.dataVersion = version
+	w.hasDataVersion = true
+	return w
 }
 
 func (w Widget) Height(dp int) Widget {

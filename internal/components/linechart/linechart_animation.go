@@ -28,7 +28,7 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 		transition.target = target
 		transition.duration = w.animationDuration
 		transition.easing = w.animationEasing
-	} else if !sameLineGeometry(transition.target, target) {
+	} else if !sameLineTarget(transition.target, target) {
 		transition.revision++
 		transition.from = lineTransitionFrom(transition.displayed, target, w.animationBaseline(target))
 		transition.target = target
@@ -52,6 +52,13 @@ func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *char
 	}
 	transition.displayed = interpolateLineData(transition.from, target, progress, w.animationBaseline(target))
 	return transition.displayed
+}
+
+func sameLineTarget(previous, target chartData) bool {
+	if previous.generation != 0 || target.generation != 0 {
+		return previous.generation == target.generation
+	}
+	return sameLineGeometry(previous, target)
 }
 
 func lineBaselineData(target chartData, value float64) chartData {

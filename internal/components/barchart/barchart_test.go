@@ -128,10 +128,60 @@ func TestBarChartRejectsInvalidConfiguration(t *testing.T) {
 	}
 }
 
+func TestBarChartDataVersionCachesResolvedData(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	cache := new(chartDataCache)
+	metric := unit.Metric{PxPerDp: 1, PxPerSp: 1}
+	first := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{1})}).DataVersion(1), &activeTheme, metric)
+	second := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{99})}).DataVersion(1), &activeTheme, metric)
+	if first.generation == 0 || second.generation != first.generation || second.series[0].values[0].value != 1 {
+		t.Fatalf("same-version BarChart data was not reused: first %#v second %#v", first, second)
+	}
+	third := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{99})}).DataVersion(2), &activeTheme, metric)
+	if third.generation == second.generation || third.series[0].values[0].value != 99 {
+		t.Fatalf("new-version BarChart data was not resolved: %#v", third)
+	}
+	uncached := cache.resolve(New("chart", []Series{Values("series", "Series", []float64{7})}), &activeTheme, metric)
+	if uncached.generation != 0 || uncached.series[0].values[0].value != 7 {
+		t.Fatalf("unversioned BarChart data was cached: %#v", uncached)
+	}
+}
+
 func TestBarChartDataWindowConstrainsVisibleCategories(t *testing.T) {
 	start, end := visibleCategoryRange(10, chart.DataWindow{Start: 0.25, End: 0.75})
 	if start != 2 || end != 8 {
 		t.Fatalf("BarChart visible category range = %d:%d, want 2:8", start, end)
+	}
+}
+
+func TestBarChartResolvesCategoryLabelsAfterPruning(t *testing.T) {
+	categories := make([]string, 10_000)
+	for index := range categories {
+		categories[index] = "Category"
+	}
+	activeTheme := theme.DefaultTheme()
+	widget := New("chart", nil).Categories(categories)
+	data := resolveChartData(widget, &activeTheme, testDp)
+	plot := image.Rect(80, 0, 480, 240)
+	geometry := widget.resolveGeometry(data, image.Pt(520, 320), plot)
+	for _, tick := range geometry.xTicks {
+		if tick.label != "" {
+			t.Fatal("BarChart resolved category labels before pruning")
+		}
+	}
+	ctx := barChartTestContext()
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Exact(image.Pt(520, 320)), Ops: &ops}
+	frame.BeginFrameWithViewport(ctx, image.Pt(520, 320))
+	ticks := widget.pruneXTicks(ctx, gtx, geometry, barChartStyleFor(frame.ActiveTheme(ctx), false))
+	frame.EndFrame(ctx)
+	if len(ticks) == 0 || len(ticks) >= 100 {
+		t.Fatalf("pruned BarChart ticks = %d, want viewport candidates only", len(ticks))
+	}
+	for _, tick := range ticks {
+		if tick.label == "" {
+			t.Fatal("pruned BarChart tick is missing its label")
+		}
 	}
 }
 

@@ -1,8 +1,10 @@
 package tree
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"runtime"
 	"testing"
 	"time"
 
@@ -85,6 +87,68 @@ func TestTreeFlattenIncludesOnlyExpandedDescendants(t *testing.T) {
 	}
 	if expanded[2].isLast || len(expanded[2].ancestorsLast) != 2 || expanded[2].ancestorsLast[0] || expanded[2].ancestorsLast[1] {
 		t.Fatalf("main guide metadata = last %v ancestors %#v", expanded[2].isLast, expanded[2].ancestorsLast)
+	}
+}
+
+func TestTreeDataVersionCachesFlattenedItems(t *testing.T) {
+	state := new(treeState)
+	firstItems := []Item{{Key: "root", Label: "First", Children: []Item{{Key: "child", Label: "Child"}}}}
+	first := state.resolveVisible(New("tree", "", firstItems).DataVersion(1))
+	changedItems := []Item{{Key: "root", Label: "Changed", Children: []Item{{Key: "child", Label: "Child"}}}}
+	second := state.resolveVisible(New("tree", "", changedItems).DataVersion(1))
+	if len(first) != 1 || second[0].item.Label != "First" || &first[0] != &second[0] {
+		t.Fatalf("same-version Tree data was not reused: first %#v second %#v", first, second)
+	}
+	third := state.resolveVisible(New("tree", "", changedItems).DataVersion(2))
+	if third[0].item.Label != "Changed" || &third[0] == &second[0] {
+		t.Fatalf("new-version Tree data was not resolved: %#v", third)
+	}
+	expanded := state.resolveVisible(New("tree", "", changedItems).DataVersion(2).ExpandedKeys([]string{"root"}))
+	if got := treeFlatKeys(expanded); !treeSameKeys(got, []string{"root", "child"}) {
+		t.Fatalf("expanded Tree cache = %#v", got)
+	}
+}
+
+func TestTreeRetainsInteractionStateOnlyForViewportRows(t *testing.T) {
+	items := make([]Item, 500)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	widget := New("large", "", items).DataVersion(1).MaxHeight(80)
+	layoutTreeFrame(ctx, router, widget, time.Unix(1, 0))
+	layoutTreeFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)))
+	state := treePeekState(ctx, "large")
+	if len(state.items) == 0 || len(state.items) >= 30 {
+		t.Fatalf("retained Tree row states = %d, want viewport rows only", len(state.items))
+	}
+	if len(state.keyFilters) == 0 || len(state.keyFilters) >= 300 {
+		t.Fatalf("Tree key filters = %d, want viewport rows only", len(state.keyFilters))
+	}
+}
+
+func BenchmarkTreeDataVersion(b *testing.B) {
+	items := make([]Item, 10_000)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	widget := New("tree", "", items)
+	for _, benchmark := range []struct {
+		name   string
+		widget Widget
+	}{
+		{name: "unversioned", widget: widget},
+		{name: "versioned", widget: widget.DataVersion(1)},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			state := new(treeState)
+			b.ReportAllocs()
+			for b.Loop() {
+				visible := state.resolveVisible(benchmark.widget)
+				runtime.KeepAlive(visible)
+			}
+		})
 	}
 }
 

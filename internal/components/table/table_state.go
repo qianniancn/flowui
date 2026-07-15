@@ -203,9 +203,6 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 		return tableKeyResult{}
 	}
 	current := s.focusedIndex(gtx, table)
-	if current < 0 {
-		current = table.keyboardActiveIndex()
-	}
 	result := tableKeyResult{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -215,6 +212,9 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 		event, ok := e.(key.Event)
 		if !ok {
 			continue
+		}
+		if current < 0 {
+			current = table.keyboardActiveIndex()
 		}
 		switch event.Name {
 		case key.NameDownArrow:

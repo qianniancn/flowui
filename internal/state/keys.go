@@ -9,6 +9,7 @@ type Kind string
 
 const (
 	KindClickable        Kind = "clickable"
+	KindDraggable        Kind = "draggable"
 	KindEditor           Kind = "editor"
 	KindInput            Kind = "input"
 	KindComboBox         Kind = "combobox"

@@ -344,6 +344,7 @@ func sameSet(first, second map[string]struct{}) bool {
 
 const (
 	stateSlotClickable = "clickable"
+	stateSlotDraggable = "draggable"
 	stateSlotEditor    = "editor"
 	stateSlotBool      = "bool"
 	stateSlotList      = "list"
@@ -407,6 +408,12 @@ func HasFieldDescription(ctx *Context, key string) bool {
 func (ctx *Context) Clickable(key string) *widget.Clickable {
 	_, clickable := ClickableWithKey(ctx, key)
 	return clickable
+}
+
+// Draggable returns Gio drag state retained under key for a custom widget.
+func (ctx *Context) Draggable(key string) *widget.Draggable {
+	key = ClaimKey(ctx, state.KindDraggable, key)
+	return UseState[widget.Draggable](ctx, key, stateSlotDraggable)
 }
 
 func ClickableWithKey(ctx *Context, key string) (string, *widget.Clickable) {

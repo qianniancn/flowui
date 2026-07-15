@@ -49,7 +49,7 @@ component receives values from the model and reports intent through callbacks;
 the callback sends a typed message, and `Update` mutates the model.
 
 `ui.Context` owns only per-window Gio services and transient interaction state,
-such as clickables, editors, focus, animation progress, and overlay coordination.
+such as clickables, draggables, editors, focus, animation progress, and overlay coordination.
 It must not become a second application model.
 
 The public context exposes read-only theme and language snapshots plus the small

@@ -30,6 +30,7 @@ func TestContextExposesOnlySupportedMethods(t *testing.T) {
 		"BackgroundColor": {},
 		"BoolState":       {},
 		"Clickable":       {},
+		"Draggable":       {},
 		"Editor":          {},
 		"ForegroundColor": {},
 		"Invalidate":      {},

@@ -48,6 +48,19 @@ func TestContextScopesExplicitKeys(t *testing.T) {
 	}
 }
 
+func TestContextRetainsDraggableStateByKey(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	BeginFrame(ctx)
+	first := ctx.Draggable("component")
+	EndFrame(ctx)
+
+	BeginFrame(ctx)
+	second := ctx.Draggable("component")
+	if first != second {
+		t.Fatal("draggable state was not retained by key")
+	}
+}
+
 func TestContextScopesKeysWithSeparators(t *testing.T) {
 	ctx := New(nil, nil, locale.LanguageAuto)
 	BeginFrame(ctx)

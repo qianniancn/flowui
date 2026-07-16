@@ -207,6 +207,7 @@ Examples live in `examples/`:
 - `animations`: reusable easing, tween state, value interpolation, direction changes, and custom Gio drawing.
 - `counter`: basic MVU state updates.
 - `async`: asynchronous messages with commands.
+- `modules`: parent-child MVU composition with a child package, mapped messages, and `MapCmd`.
 - `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
 - `texts`: text typography, alignment, truncation, wrapping, and selectable clipboard content.
 - `title_bars`: VS Code-style menu and window controls for undecorated desktop windows.

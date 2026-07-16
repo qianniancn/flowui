@@ -201,6 +201,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `animations`：可复用缓动、Tween 状态、数值插值、方向切换和自定义 Gio 绘制。
 - `counter`：基础 MVU 状态更新。
 - `async`：基于 command 的异步消息。
+- `modules`：通过独立子包、消息包装和 `MapCmd` 组合父子 MVU 模块。
 - `commands`：复用于全局快捷键、菜单栏、下拉菜单和工具栏的应用命令。
 - `texts`：文本字体、对齐、截断、换行和可选择复制内容。
 - `title_bars`：用于无边框桌面窗口的 VS Code 风格菜单栏和窗口控制按钮。

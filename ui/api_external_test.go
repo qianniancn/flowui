@@ -676,6 +676,21 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Presets([]color.NRGBA{{R: 0xf4, G: 0x3f, B: 0x5e, A: 255}}).
 			Disabled(false).
 			OnChange(func(color.NRGBA) {}),
+		ui.DateField("due-date", time.Time{}).
+			Label("Due date").
+			Description("Choose a due date").
+			Locale(ui.DatePickerEnglish()).
+			OnChange(func(time.Time) {}),
+		ui.DatePicker("appointment", time.Time{}).
+			Label("Appointment").
+			Description("Choose an appointment date").
+			ErrorMessage("Invalid date").
+			Required(true).
+			OnChange(func(time.Time) {}),
+		ui.DateRangePicker("trip-dates", ui.DateRange{}).
+			Label("Trip dates").
+			Description("Choose a date range").
+			OnChange(func(ui.DateRange) {}),
 		ui.RangeSlider("price", 10, 80).Range(0, 100).Step(5),
 		ui.Tooltip("save-help", ui.Button("save", ui.Text("Save")), ui.Text("Save changes")).
 			Placement(ui.TooltipTop).
@@ -759,6 +774,13 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
+	var _ ui.DatePart = ui.DatePartYear
+	var _ = ui.DatePickerLocale{
+		DateOrder:    [3]ui.DatePart{ui.DatePartMonth, ui.DatePartDay, ui.DatePartYear},
+		DateLiterals: [4]string{"", "/", "/", ""},
+	}
+	var _ ui.DateFieldWidget = ui.DateField("date", time.Time{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
+	var _ ui.DateRangePickerWidget = ui.DateRangePicker("range", ui.DateRange{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
 	var _ ui.ColorPickerTheme
 	var _ ui.ColorAreaTheme
 	var _ ui.ColorFieldTheme

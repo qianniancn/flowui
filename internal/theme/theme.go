@@ -907,6 +907,13 @@ type DatePickerTheme struct {
 	Height             unit.Dp
 	Radius             unit.Dp
 	TextSize           unit.Sp
+	FieldGap           unit.Dp
+	SegmentHeight      unit.Dp
+	SegmentRadius      unit.Dp
+	YearSegmentWidth   unit.Dp
+	SegmentWidth       unit.Dp
+	SeparatorWidth     unit.Dp
+	RangeSeparatorSize unit.Dp
 	TriggerWidth       unit.Dp
 	IconSize           unit.Dp
 	IconRadius         unit.Dp
@@ -1795,6 +1802,13 @@ func DefaultTheme() Theme {
 				Height:             36,
 				Radius:             12,
 				TextSize:           14,
+				FieldGap:           4,
+				SegmentHeight:      24,
+				SegmentRadius:      6,
+				YearSegmentWidth:   38,
+				SegmentWidth:       24,
+				SeparatorWidth:     8,
+				RangeSeparatorSize: 20,
 				TriggerWidth:       36,
 				IconSize:           16,
 				IconRadius:         3,

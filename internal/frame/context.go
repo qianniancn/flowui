@@ -422,8 +422,9 @@ func EndFrame(ctx *Context) {
 	ctx.overlays.runAfterLayout()
 	frameKeys := ctx.keys.Frame()
 	for key := range ctx.fieldFocus {
-		kind := frameKeys[key]
-		if kind != state.KindInput && kind != state.KindComboBox && kind != state.KindSelect && kind != state.KindSlider {
+		switch frameKeys[key] {
+		case state.KindInput, state.KindComboBox, state.KindSelect, state.KindSlider, state.KindDateField, state.KindDatePicker, state.KindDateRangePicker:
+		default:
 			delete(ctx.fieldFocus, key)
 		}
 	}

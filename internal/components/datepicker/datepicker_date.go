@@ -76,6 +76,16 @@ func compareDate(a, b time.Time) int {
 	return 0
 }
 
+func dateBetween(value, start, end time.Time) bool {
+	if start.IsZero() || end.IsZero() {
+		return false
+	}
+	if compareDate(start, end) > 0 {
+		start, end = end, start
+	}
+	return compareDate(value, start) >= 0 && compareDate(value, end) <= 0
+}
+
 func dateKey(date time.Time) string {
 	return dateOnly(date).Format("2006-01-02")
 }

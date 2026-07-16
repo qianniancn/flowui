@@ -28,14 +28,14 @@ func (d DatePickerWidget) canMove(state *datePickerState, delta int) bool {
 }
 
 func (d DatePickerWidget) isDateDisabled(date time.Time) bool {
+	return dateOutsideRange(date, d.minDate, d.maxDate)
+}
+
+func dateOutsideRange(date, minDate, maxDate time.Time) bool {
 	date = dateOnly(date)
-	if !d.minDate.IsZero() && compareDate(date, d.minDate) < 0 {
-		return true
-	}
-	if !d.maxDate.IsZero() && compareDate(date, d.maxDate) > 0 {
-		return true
-	}
-	return false
+	return !date.IsZero() &&
+		(!minDate.IsZero() && compareDate(date, minDate) < 0 ||
+			!maxDate.IsZero() && compareDate(date, maxDate) > 0)
 }
 
 func (d DatePickerWidget) isMonthDisabled(date time.Time) bool {

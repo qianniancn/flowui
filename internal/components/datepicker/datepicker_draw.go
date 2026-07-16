@@ -57,6 +57,22 @@ func drawDatePickerCell(gtx layout.Context, size image.Point, style datePickerCe
 	paint.FillShape(gtx.Ops, style.bg, clip.UniformRRect(image.Rectangle{Max: size}, radius).Op(gtx.Ops))
 }
 
+func drawDatePickerRangeTrack(gtx layout.Context, col color.NRGBA, size image.Point, startRadius, endRadius int) {
+	if size.X <= 0 || size.Y <= 4 {
+		return
+	}
+	rect := image.Rect(0, 2, size.X, size.Y-2)
+	startRadius = min(max(startRadius, 0), rect.Dy()/2)
+	endRadius = min(max(endRadius, 0), rect.Dy()/2)
+	paint.FillShape(gtx.Ops, col, clip.RRect{
+		Rect: rect,
+		NW:   startRadius,
+		SW:   startRadius,
+		NE:   endRadius,
+		SE:   endRadius,
+	}.Op(gtx.Ops))
+}
+
 func drawDatePickerStrike(gtx layout.Context, theme *theme.Theme, size image.Point, col color.NRGBA) {
 	col.A = byte(uint16(col.A) * 3 / 4)
 	var path clip.Path
@@ -77,6 +93,40 @@ func drawDatePickerCalendarIcon(gtx layout.Context, size image.Point, col color.
 	iconGtx := gtx
 	iconGtx.Constraints = layout.Exact(size)
 	icon.Layout(lucide.Calendar, iconGtx, col)
+}
+
+func drawDatePickerTriggerFocus(gtx layout.Context, activeTheme *theme.Theme, size image.Point, visible bool) {
+	if !visible || size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	diameter := min(gtx.Dp(activeTheme.Components.DatePicker.IconSize+8), min(size.X, size.Y))
+	rect := image.Rect((size.X-diameter)/2, (size.Y-diameter)/2, (size.X+diameter)/2, (size.Y+diameter)/2)
+	drawDatePickerFocusRing(gtx, activeTheme, rect, gtx.Dp(activeTheme.Components.DatePicker.SegmentRadius), true)
+}
+
+func drawDatePickerControlFocus(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, visible bool) {
+	if !visible || size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	drawDatePickerFocusRing(gtx, activeTheme, image.Rectangle{Max: size}, radius, true)
+}
+
+func drawDatePickerFocusRing(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, visible bool) {
+	if !visible {
+		return
+	}
+	width := max(gtx.Dp(activeTheme.Components.Input.FocusRingWidth), 1)
+	rect = rect.Inset((width + 1) / 2)
+	if rect.Empty() {
+		return
+	}
+	radius = max(radius-(width+1)/2, 0)
+	stroke := clip.Stroke{
+		Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
+		Width: float32(width),
+	}.Op().Push(gtx.Ops)
+	paint.Fill(gtx.Ops, activeTheme.Palette.Focus)
+	stroke.Pop()
 }
 
 func datePickerNavStyle(theme *theme.Theme, hovered, pressed, disabled bool) datePickerNavButtonStyle {

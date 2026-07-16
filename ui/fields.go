@@ -30,6 +30,10 @@ type SelectSelectionMode = selects.SelectSelectionMode
 type SelectWidget = selects.SelectWidget
 type DatePickerWidget = datepicker.DatePickerWidget
 type DatePickerLocale = datepicker.DatePickerLocale
+type DatePart = datepicker.DatePart
+type DateFieldWidget = datepicker.DateFieldWidget
+type DateRange = datepicker.DateRange
+type DateRangePickerWidget = datepicker.DateRangePickerWidget
 
 const (
 	InputPrimary   = input.InputPrimary
@@ -54,6 +58,12 @@ const (
 
 	SelectSelectionSingle   = selects.SelectSelectionSingle
 	SelectSelectionMultiple = selects.SelectSelectionMultiple
+)
+
+const (
+	DatePartYear  = datepicker.DatePartYear
+	DatePartMonth = datepicker.DatePartMonth
+	DatePartDay   = datepicker.DatePartDay
 )
 
 func Input(key, value string) InputWidget {
@@ -118,4 +128,12 @@ func DatePickerChinese() DatePickerLocale {
 
 func DatePicker(key string, value time.Time) DatePickerWidget {
 	return datepicker.DatePicker(key, value)
+}
+
+func DateField(key string, value time.Time) DateFieldWidget {
+	return datepicker.DateField(key, value)
+}
+
+func DateRangePicker(key string, value DateRange) DateRangePickerWidget {
+	return datepicker.DateRangePicker(key, value)
 }

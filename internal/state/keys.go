@@ -58,6 +58,8 @@ const (
 	KindColorField        Kind = "color-field"
 	KindColorSlider       Kind = "color-slider"
 	KindColorSwatchPicker Kind = "color-swatch-picker"
+	KindDateField         Kind = "date-field"
+	KindDateRangePicker   Kind = "date-range-picker"
 )
 
 type Keys struct {

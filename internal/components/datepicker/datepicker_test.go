@@ -54,8 +54,12 @@ func TestDatePickerOptions(t *testing.T) {
 
 	d := DatePicker("date", value).
 		Hint("Pick date").
+		Label("Date").
+		Description("Choose a date").
+		ErrorMessage("Invalid date").
 		Variant(field.Secondary).
 		Invalid(true).
+		Required(true).
 		Disabled(true).
 		FullWidth().
 		Locale(DatePickerChinese()).
@@ -77,7 +81,7 @@ func TestDatePickerOptions(t *testing.T) {
 	if d.variant != field.Secondary {
 		t.Fatal("variant was not set")
 	}
-	if !d.invalid || !d.disabled || !d.fullWidth {
+	if d.label != "Date" || d.description == "" || d.errorMessage == "" || !d.invalid || !d.required || !d.disabled || !d.fullWidth {
 		t.Fatal("boolean option was not set")
 	}
 	if !sameDate(d.value, value) || !sameDate(d.minDate, minDate) || !sameDate(d.maxDate, maxDate) {
@@ -102,7 +106,7 @@ func TestDatePickerLocale(t *testing.T) {
 	value := testDate(2026, 7, 9)
 	chinese := DatePicker("date", value).Locale(DatePickerChinese())
 
-	if chinese.hint != "请选择日期" {
+	if chinese.hint != "YYYY年MM月DD日" {
 		t.Fatalf("hint = %q, want Chinese hint", chinese.hint)
 	}
 	if got := chinese.locale.MonthLabel(value); got != "2026年7月" {
@@ -117,8 +121,12 @@ func TestDatePickerLocale(t *testing.T) {
 	if got := chinese.locale.DateLabel(value); got != "2026年7月9日" {
 		t.Fatalf("date label = %q, want 2026年7月9日", got)
 	}
-	if got := DatePickerEnglish().DateLabel(value); got != "2026 / 07 / 09" {
-		t.Fatalf("English date label = %q, want 2026 / 07 / 09", got)
+	if got := DatePickerEnglish().DateLabel(value); got != "07 / 09 / 2026" {
+		t.Fatalf("English date label = %q, want 07 / 09 / 2026", got)
+	}
+	if chinese.locale.DateOrder != [3]DatePart{DatePartYear, DatePartMonth, DatePartDay} ||
+		DatePickerEnglish().DateOrder != [3]DatePart{DatePartMonth, DatePartDay, DatePartYear} {
+		t.Fatal("date segment order does not match the locale")
 	}
 }
 
@@ -136,7 +144,7 @@ func TestDatePickerUsesContextLocale(t *testing.T) {
 	ctx := newContextWithThemeAndLanguage(nil, nil, locale.LanguageChinese)
 	d := DatePicker("date", time.Time{}).resolveLocale(ctx)
 
-	if d.hint != "请选择日期" {
+	if d.hint != "YYYY年MM月DD日" {
 		t.Fatalf("hint = %q, want Chinese hint", d.hint)
 	}
 	if d.locale.WeekStart != time.Monday {
@@ -148,7 +156,7 @@ func TestDatePickerExplicitLocaleOverridesContextLanguage(t *testing.T) {
 	ctx := newContextWithThemeAndLanguage(nil, nil, locale.LanguageChinese)
 	d := DatePicker("date", time.Time{}).Locale(DatePickerEnglish()).resolveLocale(ctx)
 
-	if d.hint != "YYYY / MM / DD" {
+	if d.hint != "MM / DD / YYYY" {
 		t.Fatalf("hint = %q, want English hint", d.hint)
 	}
 	if d.locale.WeekStart != time.Sunday {
@@ -232,6 +240,39 @@ func TestDatePickerOpenResetsToDayView(t *testing.T) {
 	}
 }
 
+func TestDatePickerPointerTriggerFocusIsNotKeyboardVisible(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	picker := DatePicker("date", testDate(2026, 7, 1)).FullWidth()
+	start := time.Unix(1, 0)
+	layoutDatePickerFrameAt(ctx, router, picker, start)
+	state := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+
+	router.Queue(pointer.Event{
+		Kind:      pointer.Press,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Buttons:   pointer.ButtonPrimary,
+		Position:  f32.Pt(282, 18),
+	})
+	layoutDatePickerFrameAt(ctx, router, picker, start.Add(time.Millisecond))
+	router.Queue(pointer.Event{
+		Kind:      pointer.Release,
+		Source:    pointer.Mouse,
+		PointerID: 1,
+		Position:  f32.Pt(282, 18),
+	})
+	layoutDatePickerFrameAt(ctx, router, picker, start.Add(2*time.Millisecond))
+	layoutDatePickerFrameAt(ctx, router, picker, start.Add(3*time.Millisecond))
+
+	if !router.Source().Focused(&state.trigger) {
+		t.Fatal("pointer click did not focus the calendar trigger")
+	}
+	if frame.FocusVisible(ctx, &state.trigger, true) {
+		t.Fatal("pointer click exposed the calendar trigger keyboard focus ring")
+	}
+}
+
 func TestDatePickerHeaderAndYearClickFlow(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
@@ -260,6 +301,33 @@ func TestDatePickerHeaderAndYearClickFlow(t *testing.T) {
 	}
 	if state.viewMonth.Year() != 2026 {
 		t.Fatalf("view year = %d, want 2026", state.viewMonth.Year())
+	}
+}
+
+func TestDatePickerCalendarFocusKeepsPopoverOpenAndEscapeCloses(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	picker := DatePicker("date", testDate(2026, 7, 1))
+	layoutDatePickerFrame(ctx, router, picker)
+	state := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+	router.Source().Execute(key.FocusCmd{Tag: &state.trigger})
+	state.openCalendar()
+	layoutDatePickerFrame(ctx, router, picker)
+
+	day := state.days["2026-07-10"]
+	if day == nil {
+		t.Fatal("missing calendar day")
+	}
+	router.Source().Execute(key.FocusCmd{Tag: &day.clickable})
+	layoutDatePickerFrame(ctx, router, picker)
+	if !state.open {
+		t.Fatal("calendar focus closed the date picker")
+	}
+
+	router.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+	layoutDatePickerFrame(ctx, router, picker)
+	if state.open {
+		t.Fatal("Escape from a calendar day did not close the date picker")
 	}
 }
 

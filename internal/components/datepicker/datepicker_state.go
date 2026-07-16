@@ -26,6 +26,8 @@ func datePickerStateFor(ctx *frame.Context, key string) *datePickerState {
 
 type datePickerState struct {
 	input             field.State
+	segments          dateSegmentsState
+	hover             dateInputHoverState
 	trigger           widget.Clickable
 	dialog            overlay.ClickArea
 	header            widget.Clickable
@@ -65,6 +67,7 @@ func (s *datePickerState) endFrame() {
 
 func (s *datePickerState) sync(value, initialMonth time.Time) {
 	value = dateOnly(value)
+	s.segments.sync(value)
 	if !s.monthReady {
 		s.viewMonth = firstOfMonth(initialMonth)
 		s.syncedValue = value
@@ -176,11 +179,69 @@ func (s *datePickerState) navBackground(gtx layout.Context, delta int, target co
 
 type datePickerCellState struct {
 	clickable            widget.Clickable
+	date                 time.Time
 	backgroundTransition animation.ColorTransition
 }
 
 func (s *datePickerCellState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
 	return s.backgroundTransition.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
+}
+
+func (s *datePickerState) hoveredDay() time.Time {
+	for _, day := range s.days {
+		if day.clickable.Hovered() {
+			return day.date
+		}
+	}
+	return time.Time{}
+}
+
+func (s *datePickerState) calendarFocused(gtx layout.Context) bool {
+	return gtx.Focused(&s.header) ||
+		gtx.Focused(&s.prev) ||
+		gtx.Focused(&s.next) ||
+		datePickerCellsFocused(gtx, s.days) ||
+		datePickerCellsFocused(gtx, s.months) ||
+		datePickerCellsFocused(gtx, s.years)
+}
+
+func (s *datePickerState) calendarEscapePressed(gtx layout.Context) bool {
+	return datePickerEscapePressed(gtx, &s.header) ||
+		datePickerEscapePressed(gtx, &s.prev) ||
+		datePickerEscapePressed(gtx, &s.next) ||
+		datePickerCellsEscapePressed(gtx, s.days) ||
+		datePickerCellsEscapePressed(gtx, s.months) ||
+		datePickerCellsEscapePressed(gtx, s.years)
+}
+
+func datePickerCellsFocused(gtx layout.Context, cells map[string]*datePickerCellState) bool {
+	for _, cell := range cells {
+		if gtx.Focused(&cell.clickable) {
+			return true
+		}
+	}
+	return false
+}
+
+func datePickerCellsEscapePressed(gtx layout.Context, cells map[string]*datePickerCellState) bool {
+	for _, cell := range cells {
+		if datePickerEscapePressed(gtx, &cell.clickable) {
+			return true
+		}
+	}
+	return false
+}
+
+func datePickerEscapePressed(gtx layout.Context, target event.Tag) bool {
+	for {
+		value, ok := gtx.Event(key.Filter{Focus: target, Name: key.NameEscape})
+		if !ok {
+			return false
+		}
+		if eventValue, ok := value.(key.Event); ok && eventValue.State == key.Press {
+			return true
+		}
+	}
 }
 
 func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool) float32 {

@@ -10,19 +10,27 @@ import (
 )
 
 type DatePickerWidget struct {
-	key       string
-	value     time.Time
-	hint      string
-	hintSet   bool
-	locale    DatePickerLocale
-	localeSet bool
-	onChange  func(time.Time)
-	variant   field.Variant
-	disabled  bool
-	invalid   bool
-	fullWidth bool
-	minDate   time.Time
-	maxDate   time.Time
+	key          string
+	value        time.Time
+	hint         string
+	hintSet      bool
+	label        string
+	description  string
+	errorMessage string
+	locale       DatePickerLocale
+	localeSet    bool
+	onChange     func(time.Time)
+	variant      field.Variant
+	disabled     bool
+	invalid      bool
+	required     bool
+	fullWidth    bool
+	minDate      time.Time
+	maxDate      time.Time
+	rangeMode    bool
+	rangeStart   time.Time
+	rangeEnd     time.Time
+	onDateSelect func(time.Time)
 }
 
 const (
@@ -63,6 +71,21 @@ func (d DatePickerWidget) Hint(hint string) DatePickerWidget {
 	return d
 }
 
+func (d DatePickerWidget) Label(value string) DatePickerWidget {
+	d.label = value
+	return d
+}
+
+func (d DatePickerWidget) Description(value string) DatePickerWidget {
+	d.description = value
+	return d
+}
+
+func (d DatePickerWidget) ErrorMessage(value string) DatePickerWidget {
+	d.errorMessage = value
+	return d
+}
+
 func (d DatePickerWidget) Locale(locale DatePickerLocale) DatePickerWidget {
 	d.locale = normalizeDatePickerLocale(locale)
 	d.localeSet = true
@@ -84,6 +107,11 @@ func (d DatePickerWidget) Disabled(disabled bool) DatePickerWidget {
 
 func (d DatePickerWidget) Invalid(invalid bool) DatePickerWidget {
 	d.invalid = invalid
+	return d
+}
+
+func (d DatePickerWidget) Required(value bool) DatePickerWidget {
+	d.required = value
 	return d
 }
 
@@ -112,31 +140,38 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	now := datePickerFrameNow(gtx.Now)
 	state := datePickerStateFor(ctx, d.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
-	eventGtx := gtx
 	state.beginFrame()
 	state.sync(d.value, d.initialMonth(now))
-	if d.disabled {
+	state.hover.update(gtx)
+	enabled := gtx.Enabled() && !d.disabled
+	frame.RegisterFieldFocus(ctx, frame.FullKey(ctx, d.key), &state.segments.segments[d.locale.DateOrder[0]].clickable, enabled)
+	if !enabled {
 		state.open = false
-		eventGtx = eventGtx.Disabled()
 	}
 
-	focused := gtx.Focused(&state.trigger)
-	state.updateFocus(focused, d.disabled)
-	if !d.disabled && !state.open {
+	inputFocused := state.segments.focused(gtx)
+	focused := inputFocused || gtx.Focused(&state.trigger) || state.calendarFocused(gtx)
+	state.updateFocus(focused, !enabled)
+	if state.open && (state.segments.escapePressed(gtx) || state.calendarEscapePressed(gtx)) {
+		state.open = false
+	}
+	if enabled && !state.open {
 		state.updateKeys(gtx, &state.trigger)
 	}
 
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, state.trigger.Hovered(), focused || state.open, d.disabled, d.invalid)
+	invalid := d.invalid || !state.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
+	hovered := state.hover.hovered || state.segments.hovered() || state.trigger.Hovered()
+	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, hovered && !focused, inputFocused, !enabled, invalid)
 	style.Background = state.input.Background(gtx, style.Background)
 	style.Border = state.input.BorderColor(gtx, style.Border)
-	dims := d.layoutInput(ctx, eventGtx, state, style)
+	dims, anchor := d.layoutField(ctx, gtx, state, style, enabled, invalid)
 
-	progress := state.popoverProgress(gtx, state.open && !d.disabled)
-	if progress == 0 && (!state.open || d.disabled) {
+	progress := state.popoverProgress(gtx, state.open && enabled)
+	if progress == 0 && (!state.open || !enabled) {
 		state.endFrame()
 		return dims
 	}
-	d.layoutPopover(ctx, eventGtx, state, dims, progress, now, naturallyDisabled)
+	d.layoutPopover(ctx, gtx, state, anchor, progress, now, naturallyDisabled)
 	frame.AfterOverlays(ctx, state.endFrame)
 	return dims
 }

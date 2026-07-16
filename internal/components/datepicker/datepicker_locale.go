@@ -5,8 +5,18 @@ import (
 	"time"
 )
 
+type DatePart uint8
+
+const (
+	DatePartYear DatePart = iota
+	DatePartMonth
+	DatePartDay
+)
+
 type DatePickerLocale struct {
 	Hint           string
+	DateOrder      [3]DatePart
+	DateLiterals   [4]string
 	Weekdays       [7]string
 	Months         [12]string
 	WeekStart      time.Weekday
@@ -18,13 +28,15 @@ type DatePickerLocale struct {
 
 func datePickerEnglish() DatePickerLocale {
 	return DatePickerLocale{
-		Hint:      "YYYY / MM / DD",
-		Weekdays:  [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"},
-		Months:    [12]string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"},
-		WeekStart: time.Sunday,
+		Hint:         "MM / DD / YYYY",
+		DateOrder:    [3]DatePart{DatePartMonth, DatePartDay, DatePartYear},
+		DateLiterals: [4]string{"", "/", "/", ""},
+		Weekdays:     [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"},
+		Months:       [12]string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"},
+		WeekStart:    time.Sunday,
 		DateLabel: func(date time.Time) string {
 			year, month, day := date.Date()
-			return fmt.Sprintf("%04d / %02d / %02d", year, int(month), day)
+			return fmt.Sprintf("%02d / %02d / %04d", int(month), day, year)
 		},
 		MonthLabel: func(date time.Time) string {
 			return date.Format("January 2006")
@@ -40,10 +52,12 @@ func datePickerEnglish() DatePickerLocale {
 
 func datePickerChinese() DatePickerLocale {
 	return DatePickerLocale{
-		Hint:      "请选择日期",
-		Weekdays:  [7]string{"日", "一", "二", "三", "四", "五", "六"},
-		Months:    [12]string{"1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"},
-		WeekStart: time.Monday,
+		Hint:         "YYYY年MM月DD日",
+		DateOrder:    [3]DatePart{DatePartYear, DatePartMonth, DatePartDay},
+		DateLiterals: [4]string{"", "年", "月", "日"},
+		Weekdays:     [7]string{"日", "一", "二", "三", "四", "五", "六"},
+		Months:       [12]string{"1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"},
+		WeekStart:    time.Monday,
 		DateLabel: func(date time.Time) string {
 			year, month, day := date.Date()
 			return fmt.Sprintf("%04d年%d月%d日", year, int(month), day)
@@ -65,6 +79,12 @@ func normalizeDatePickerLocale(locale DatePickerLocale) DatePickerLocale {
 	fallback := datePickerEnglish()
 	if locale.Hint == "" {
 		locale.Hint = fallback.Hint
+	}
+	if !validDateOrder(locale.DateOrder) {
+		locale.DateOrder = fallback.DateOrder
+		if locale.DateLiterals == [4]string{} {
+			locale.DateLiterals = fallback.DateLiterals
+		}
 	}
 	for i, weekday := range locale.Weekdays {
 		if weekday == "" {
@@ -92,6 +112,17 @@ func normalizeDatePickerLocale(locale DatePickerLocale) DatePickerLocale {
 		locale.DateLabel = fallback.DateLabel
 	}
 	return locale
+}
+
+func validDateOrder(order [3]DatePart) bool {
+	var seen [3]bool
+	for _, part := range order {
+		if part > DatePartDay || seen[part] {
+			return false
+		}
+		seen[part] = true
+	}
+	return true
 }
 
 func orderedDatePickerWeekdays(locale DatePickerLocale) [7]string {

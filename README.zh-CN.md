@@ -164,7 +164,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `Tabs`
 - `Select`
 - `ComboBox`
-- `DatePicker`
+- `DateField`、`DatePicker`、`DateRangePicker`
 - `ColorArea`、`ColorField`、`ColorPicker`、`ColorSlider`、`ColorSwatch`、`ColorSwatchPicker`
 - `Popover`
 - `Tooltip`
@@ -261,7 +261,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `cards`：对齐 HeroUI 的卡片变体、语义分区和组合操作。
 - `selects`：单选、多选、分组、禁用选项、校验、受控打开状态和 Surface 样式。
 - `comboboxes`：选项选择和过滤。
-- `datepickers`：日期选择和范围限制。
+- `datepickers`：分段日期输入、日期范围选择、日历和范围限制。
 - `color_pickers`：对齐 HeroUI 的受控颜色选择，包含 HSB 色域、色相与透明度滑块、预设色和十六进制输入。
 - `form`：表单组合。
 - `layout`：布局组件。

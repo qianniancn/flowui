@@ -2,6 +2,7 @@ package titlebar
 
 import (
 	"image"
+	"image/color"
 	"testing"
 	"time"
 
@@ -68,8 +69,12 @@ func TestTitleBarTracksMaximizedWindowState(t *testing.T) {
 
 func TestTitleBarThemeAndLabels(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.TitleBar
-	if tokens.Height != 35 || tokens.ControlWidth != 46 || tokens.IconSize != 12 || tokens.CloseHover.A == 0 {
+	if tokens.Height != 35 || tokens.ControlWidth != 46 || tokens.IconSize != 12 || tokens.ControlPressed != (color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff}) || tokens.CloseHover.A == 0 {
 		t.Fatalf("title bar theme = %#v", tokens)
+	}
+	dark := theme.DarkTheme()
+	if dark.Components.TitleBar.ControlPressed != dark.Palette.SurfacePressed {
+		t.Fatalf("dark title bar pressed color = %v, want %v", dark.Components.TitleBar.ControlPressed, dark.Palette.SurfacePressed)
 	}
 	ctx := frame.New(nil, nil, locale.LanguageChinese)
 	if got := controlLabel(ctx, system.ActionMaximize, false); got != "最大化" {

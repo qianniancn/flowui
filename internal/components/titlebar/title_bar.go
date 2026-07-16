@@ -159,7 +159,7 @@ func controlStyleFor(activeTheme *theme.Theme, clickable *widget.Clickable, clos
 		style.background = activeTheme.Palette.SurfaceTertiary
 	}
 	if clickable.Pressed() {
-		style.background = activeTheme.Palette.SurfacePressed
+		style.background = theme.ColorOr(activeTheme.Components.TitleBar.ControlPressed, activeTheme.Palette.SurfacePressed)
 	}
 	return style
 }

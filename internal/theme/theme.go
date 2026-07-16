@@ -519,6 +519,7 @@ type TitleBarTheme struct {
 	TitleTextSize  unit.Sp
 	BorderWidth    unit.Dp
 	FocusRingWidth unit.Dp
+	ControlPressed color.NRGBA
 	CloseHover     color.NRGBA
 	ClosePressed   color.NRGBA
 }
@@ -1331,6 +1332,7 @@ func DefaultTheme() Theme {
 				TitleTextSize:  12,
 				BorderWidth:    1,
 				FocusRingWidth: 2,
+				ControlPressed: color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff},
 				CloseHover:     color.NRGBA{R: 0xc4, G: 0x2b, B: 0x1c, A: 0xff},
 				ClosePressed:   color.NRGBA{R: 0xa3, G: 0x21, B: 0x16, A: 0xff},
 			},
@@ -1779,6 +1781,7 @@ func DarkTheme() Theme {
 	theme.Palette.SurfaceTertiaryForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}
 	theme.Palette.SurfaceHover = color.NRGBA{R: 0x29, G: 0x2d, B: 0x34, A: 0xff}
 	theme.Palette.SurfacePressed = color.NRGBA{R: 0x32, G: 0x37, B: 0x40, A: 0xff}
+	theme.Components.TitleBar.ControlPressed = theme.Palette.SurfacePressed
 	theme.Palette.SurfaceRaised = color.NRGBA{R: 0x25, G: 0x28, B: 0x2f, A: 0xff}
 	theme.Palette.Overlay = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.OverlayForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

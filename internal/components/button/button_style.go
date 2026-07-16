@@ -95,6 +95,16 @@ func buttonSpinnerSize(theme *theme.Theme, size ButtonSize) unit.Dp {
 	}
 }
 
+func buttonLoadingInset(gtx layout.Context, theme *theme.Theme, size ButtonSize, inset layout.Inset) layout.Inset {
+	padding := gtx.Dp(inset.Left) + gtx.Dp(inset.Right)
+	extra := gtx.Dp(buttonSpinnerSize(theme, size)) + gtx.Dp(theme.Components.Button.ContentGap)
+	remaining := max(padding-extra, 0)
+	left := remaining / 2
+	inset.Left = gtx.Metric.PxToDp(left)
+	inset.Right = gtx.Metric.PxToDp(remaining - left)
+	return inset
+}
+
 func buttonColors(theme *theme.Theme, variant ButtonVariant) buttonPalette {
 	transparent := color.NRGBA{}
 	foreground := theme.Palette.DefaultForegroundColor()

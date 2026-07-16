@@ -12,6 +12,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -126,6 +127,27 @@ func TestButtonFullWidthIconOnly(t *testing.T) {
 	}
 	if dims.Size.Y != 40 {
 		t.Fatalf("button height = %d, want 40", dims.Size.Y)
+	}
+}
+
+func TestButtonLoadingKeepsIntrinsicWidth(t *testing.T) {
+	for _, scale := range []float32{1, 1.25, 1.5, 2} {
+		for _, size := range []ButtonSize{ButtonSmall, ButtonMedium, ButtonLarge} {
+			normalGtx := testLayoutContext()
+			normalGtx.Metric = unit.Metric{PxPerDp: scale, PxPerSp: scale}
+			normal := Button("load", text.New("Load saved value")).
+				Size(size).
+				Layout(newContext(nil), normalGtx)
+			loadingGtx := testLayoutContext()
+			loadingGtx.Metric = unit.Metric{PxPerDp: scale, PxPerSp: scale}
+			loading := Button("load", text.New("Load saved value")).
+				Size(size).
+				Loading(true).
+				Layout(newContext(nil), loadingGtx)
+			if loading.Size != normal.Size {
+				t.Fatalf("scale %.2f size %d loading dimensions = %v, want %v", scale, size, loading.Size, normal.Size)
+			}
+		}
 	}
 }
 

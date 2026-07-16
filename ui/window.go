@@ -7,14 +7,59 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/system"
+	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
 // WindowSpec describes one independent FlowUI window.
 type WindowSpec struct {
 	key     string
 	options []app.Option
-	run     func(*app.Window, func(), func(WindowState)) error
+	run     func(*app.Window, *windowAppearance, func(), func(WindowState)) error
 	onError func(error)
+}
+
+type windowAppearance struct {
+	mu          sync.Mutex
+	theme       *Theme
+	language    Language
+	languageSet bool
+}
+
+func (appearance *windowAppearance) setTheme(value Theme) {
+	if value.Material != nil {
+		materialTheme := *value.Material
+		value.Material = &materialTheme
+	}
+	syncMaterialTheme(&value)
+	appearance.mu.Lock()
+	appearance.theme = &value
+	appearance.mu.Unlock()
+}
+
+func (appearance *windowAppearance) setLanguage(value Language) {
+	appearance.mu.Lock()
+	appearance.language = value
+	appearance.languageSet = true
+	appearance.mu.Unlock()
+}
+
+func (appearance *windowAppearance) apply(ctx *Context) {
+	if appearance == nil {
+		return
+	}
+	appearance.mu.Lock()
+	activeTheme := appearance.theme
+	language := appearance.language
+	languageSet := appearance.languageSet
+	appearance.theme = nil
+	appearance.languageSet = false
+	appearance.mu.Unlock()
+	if activeTheme != nil {
+		frame.ReplaceTheme(ctx, *activeTheme)
+	}
+	if languageSet {
+		frame.ReplaceLanguage(ctx, language)
+	}
 }
 
 // WindowAction is a native action requested for one window.
@@ -101,9 +146,9 @@ func newWindowSpec[M any, Msg any](
 		key:     key,
 		options: append([]app.Option(nil), cfg.window...),
 		onError: cfg.errorHandler,
-		run: func(window *app.Window, onDestroy func(), onWindowState func(WindowState)) error {
+		run: func(window *app.Window, appearance *windowAppearance, onDestroy func(), onWindowState func(WindowState)) error {
 			initial, initialCmd := initialize()
-			return runWindowCmd(window, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState)
+			return runWindowCmd(window, appearance, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState)
 		},
 	}
 }
@@ -184,7 +229,8 @@ func (a *Application) Open(spec WindowSpec) bool {
 	spec.validate()
 	window := new(app.Window)
 	window.Option(spec.options...)
-	existing, added := a.windows.add(spec.key, window)
+	appearance := new(windowAppearance)
+	existing, added := a.windows.add(spec.key, window, appearance)
 	if existing != nil {
 		existing.Perform(system.ActionRaise)
 		return false
@@ -201,7 +247,7 @@ func (a *Application) Open(spec WindowSpec) bool {
 			deactivated = true
 			a.windows.deactivate(spec.key, window)
 		}
-		err := spec.run(window, deactivate, func(state WindowState) {
+		err := spec.run(window, appearance, deactivate, func(state WindowState) {
 			a.windows.update(spec.key, window, state)
 		})
 		deactivate()
@@ -235,6 +281,36 @@ func (a *Application) Configure(key string, options ...WindowOption) bool {
 		}
 	}
 	window.Option(native...)
+	return true
+}
+
+// SetTheme replaces the theme of an active window on its event loop. It
+// returns false when key does not identify an active window.
+func (a *Application) SetTheme(key string, value Theme) bool {
+	if a == nil {
+		return false
+	}
+	window, appearance := a.windows.appearance(key)
+	if window == nil || appearance == nil {
+		return false
+	}
+	appearance.setTheme(value)
+	window.Invalidate()
+	return true
+}
+
+// SetLanguage replaces the language of an active window on its event loop. It
+// returns false when key does not identify an active window.
+func (a *Application) SetLanguage(key string, value Language) bool {
+	if a == nil {
+		return false
+	}
+	window, appearance := a.windows.appearance(key)
+	if window == nil || appearance == nil {
+		return false
+	}
+	appearance.setLanguage(value)
+	window.Invalidate()
 	return true
 }
 
@@ -288,15 +364,16 @@ func RunWindows(windows ...WindowSpec) {
 }
 
 type windowSet struct {
-	mu       sync.Mutex
-	active   map[string]*app.Window
-	states   map[string]WindowState
-	done     chan int
-	running  bool
-	starting bool
-	closing  bool
-	failed   bool
-	loops    int
+	mu          sync.Mutex
+	active      map[string]*app.Window
+	appearances map[string]*windowAppearance
+	states      map[string]WindowState
+	done        chan int
+	running     bool
+	starting    bool
+	closing     bool
+	failed      bool
+	loops       int
 }
 
 func (s *windowSet) begin() <-chan int {
@@ -306,6 +383,7 @@ func (s *windowSet) begin() <-chan int {
 		panic("flowui: application already running")
 	}
 	s.active = make(map[string]*app.Window)
+	s.appearances = make(map[string]*windowAppearance)
 	s.states = make(map[string]WindowState)
 	s.done = make(chan int, 1)
 	s.running = true
@@ -316,7 +394,7 @@ func (s *windowSet) begin() <-chan int {
 	return s.done
 }
 
-func (s *windowSet) add(key string, window *app.Window) (*app.Window, bool) {
+func (s *windowSet) add(key string, window *app.Window, appearance *windowAppearance) (*app.Window, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.running || s.closing {
@@ -326,6 +404,7 @@ func (s *windowSet) add(key string, window *app.Window) (*app.Window, bool) {
 		return existing, false
 	}
 	s.active[key] = window
+	s.appearances[key] = appearance
 	s.loops++
 	return nil, true
 }
@@ -344,6 +423,7 @@ func (s *windowSet) deactivate(key string, window *app.Window) {
 		return
 	}
 	delete(s.active, key)
+	delete(s.appearances, key)
 	delete(s.states, key)
 }
 
@@ -382,6 +462,12 @@ func (s *windowSet) get(key string) *app.Window {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.active[key]
+}
+
+func (s *windowSet) appearance(key string) (*app.Window, *windowAppearance) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.active[key], s.appearances[key]
 }
 
 func (s *windowSet) state(key string) (WindowState, bool) {

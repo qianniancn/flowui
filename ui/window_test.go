@@ -2,9 +2,11 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"testing"
 
 	"gioui.org/app"
+	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
 func TestWindowSpecUsesIndependentIdentity(t *testing.T) {
@@ -64,13 +66,13 @@ func TestWindowSetWaitsForEveryWindowAndReportsFailure(t *testing.T) {
 	done := windows.begin()
 	first := new(app.Window)
 	second := new(app.Window)
-	if existing, added := windows.add("first", first); existing != nil || !added {
+	if existing, added := windows.add("first", first, new(windowAppearance)); existing != nil || !added {
 		t.Fatalf("first add = existing %p added %v", existing, added)
 	}
-	if existing, added := windows.add("second", second); existing != nil || !added {
+	if existing, added := windows.add("second", second, new(windowAppearance)); existing != nil || !added {
 		t.Fatalf("second add = existing %p added %v", existing, added)
 	}
-	if existing, added := windows.add("first", new(app.Window)); existing != first || added {
+	if existing, added := windows.add("first", new(app.Window), new(windowAppearance)); existing != first || added {
 		t.Fatalf("duplicate add = existing %p added %v", existing, added)
 	}
 	windows.finishStarting()
@@ -92,7 +94,7 @@ func TestWindowSetDoesNotExitDuringInitialStartup(t *testing.T) {
 	var windows windowSet
 	done := windows.begin()
 	window := new(app.Window)
-	_, _ = windows.add("main", window)
+	_, _ = windows.add("main", window, new(windowAppearance))
 	windows.deactivate("main", window)
 	windows.complete(false)
 	select {
@@ -110,12 +112,12 @@ func TestWindowSetAllowsReopenWhileClosedWindowFinishes(t *testing.T) {
 	var windows windowSet
 	done := windows.begin()
 	first := new(app.Window)
-	_, _ = windows.add("details", first)
+	_, _ = windows.add("details", first, new(windowAppearance))
 	windows.finishStarting()
 	windows.deactivate("details", first)
 
 	second := new(app.Window)
-	if existing, added := windows.add("details", second); existing != nil || !added {
+	if existing, added := windows.add("details", second, new(windowAppearance)); existing != nil || !added {
 		t.Fatalf("reopen = existing %p added %v", existing, added)
 	}
 	windows.complete(false)
@@ -136,7 +138,7 @@ func TestApplicationConfiguresAndControlsActiveWindow(t *testing.T) {
 	application := NewApplication()
 	done := application.windows.begin()
 	window := new(app.Window)
-	_, _ = application.windows.add("main", window)
+	_, _ = application.windows.add("main", window, new(windowAppearance))
 	application.windows.finishStarting()
 
 	if application.Configure("missing", Title("Missing")) {
@@ -159,11 +161,49 @@ func TestApplicationConfiguresAndControlsActiveWindow(t *testing.T) {
 	}
 }
 
+func TestApplicationChangesRuntimeAppearance(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	appearance := new(windowAppearance)
+	_, _ = application.windows.add("main", window, appearance)
+	application.windows.finishStarting()
+
+	activeTheme := DarkTheme()
+	activeTheme.Palette.Accent = color.NRGBA{R: 1, G: 2, B: 3, A: 255}
+	wantAccent := activeTheme.Palette.Accent
+	if !application.SetTheme("main", activeTheme) || !application.SetLanguage("main", LanguageChinese) {
+		t.Fatal("active window appearance was not changed")
+	}
+	activeTheme.Palette.Accent = color.NRGBA{}
+	if application.SetTheme("missing", DefaultTheme()) || application.SetLanguage("missing", LanguageEnglish) {
+		t.Fatal("missing window appearance was changed")
+	}
+
+	ctx := frame.New(nil, nil, LanguageEnglish)
+	appearance.apply(ctx)
+	if got := ctx.Theme(); got.Palette.Accent != wantAccent || got.Material.Palette.ContrastBg != wantAccent {
+		t.Fatalf("runtime theme = accent %#v material %#v", got.Palette.Accent, got.Material.Palette.ContrastBg)
+	}
+	if got := ctx.Language(); got != LanguageChinese {
+		t.Fatalf("runtime language = %q, want %q", got, LanguageChinese)
+	}
+
+	application.windows.deactivate("main", window)
+	if application.SetTheme("main", DefaultTheme()) || application.SetLanguage("main", LanguageEnglish) {
+		t.Fatal("closed window appearance was changed")
+	}
+	application.windows.complete(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
 func TestApplicationReportsLatestWindowState(t *testing.T) {
 	application := NewApplication()
 	done := application.windows.begin()
 	window := new(app.Window)
-	_, _ = application.windows.add("main", window)
+	_, _ = application.windows.add("main", window, new(windowAppearance))
 	application.windows.finishStarting()
 	if _, ok := application.WindowState("main"); ok {
 		t.Fatal("window state was available before the first config event")

@@ -58,6 +58,7 @@ func RunProgram[M any, Msg any](program Program[M, Msg], opts ...Option) {
 
 func runWindowCmd[M any, Msg any](
 	w *app.Window,
+	appearance *windowAppearance,
 	theme *Theme,
 	language Language,
 	initial M,
@@ -104,6 +105,7 @@ func runWindowCmd[M any, Msg any](
 			send(windowStateMessage(state))
 		}
 	}, func(gtx layout.Context, model M, send func(Msg)) {
+		appearance.apply(ctx)
 		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
 		paint.FillShape(
 			gtx.Ops,

@@ -93,6 +93,14 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 `MaterialTheme` is available only for the Gio material bridge used by low-level
 text/editor internals.
 
+An application that owns its windows can switch one active window at runtime.
+`SetTheme` and `SetLanguage` queue the change on that window's event loop:
+
+```go
+application.SetTheme("main", ui.DarkTheme())
+application.SetLanguage("main", ui.LanguageChinese)
+```
+
 ## Components
 
 ### Core
@@ -116,6 +124,7 @@ text/editor internals.
 - `CustomizeTheme`
 - `MaterialTheme`
 - `Locale`
+- `Application.SetTheme`, `Application.SetLanguage`
 
 ### Testing
 
@@ -211,6 +220,7 @@ Examples live in `examples/`:
 - `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
 - `texts`: text typography, alignment, truncation, wrapping, and selectable clipboard content.
 - `title_bars`: VS Code-style menu and window controls for undecorated desktop windows.
+- `multi_windows`: independent windows, native window controls, and per-window runtime theme and language switching.
 - `custom_widgets`: custom drawing, transient keyed state, focus handling, root Portal content, Gio transforms, and FlowUI easing.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.

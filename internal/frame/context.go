@@ -86,6 +86,23 @@ func (ctx *Context) Language() locale.Language {
 	return ctx.language
 }
 
+// ReplaceTheme updates the visual tokens used by subsequent layout work.
+func ReplaceTheme(ctx *Context, activeTheme theme.Theme) {
+	if ctx == nil {
+		return
+	}
+	theme.SyncMaterialTheme(&activeTheme)
+	ctx.theme = &activeTheme
+}
+
+// ReplaceLanguage updates the language used by localized components.
+func ReplaceLanguage(ctx *Context, language locale.Language) {
+	if ctx == nil {
+		return
+	}
+	ctx.language = locale.Resolve(language)
+}
+
 type WindowMode uint8
 
 const (

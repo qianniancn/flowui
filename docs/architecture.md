@@ -71,7 +71,9 @@ such as clickables, draggables, editors, focus, animation progress, and overlay 
 It must not become a second application model.
 
 The public context exposes read-only theme and language snapshots plus the small
-set of Gio state and focus helpers needed by custom widgets. Frame lifecycle and
+set of Gio state and focus helpers needed by custom widgets. Runtime theme and
+language changes go through `Application.SetTheme` and `Application.SetLanguage`
+so they are applied on the target window's event loop. Frame lifecycle and
 component registration remain internal; root overlays are exposed only through
 the constrained Portal API.
 

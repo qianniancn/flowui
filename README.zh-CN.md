@@ -88,6 +88,14 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 `MaterialTheme` 只用于 FlowUI 内部文本/编辑器使用的 Gio material 桥接。
 
+由 `Application` 管理窗口时，可以在运行期间切换指定活动窗口的主题和语言。
+`SetTheme` 和 `SetLanguage` 会把变更提交到对应窗口的事件循环：
+
+```go
+application.SetTheme("main", ui.DarkTheme())
+application.SetLanguage("main", ui.LanguageChinese)
+```
+
 ## 组件
 
 ### 核心
@@ -111,6 +119,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `CustomizeTheme`
 - `MaterialTheme`
 - `Locale`
+- `Application.SetTheme`、`Application.SetLanguage`
 
 ### 测试
 
@@ -205,6 +214,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `commands`：复用于全局快捷键、菜单栏、下拉菜单和工具栏的应用命令。
 - `texts`：文本字体、对齐、截断、换行和可选择复制内容。
 - `title_bars`：用于无边框桌面窗口的 VS Code 风格菜单栏和窗口控制按钮。
+- `multi_windows`：独立窗口、原生窗口控制，以及按窗口运行时切换主题和语言。
 - `custom_widgets`：自定义绘制、瞬态 keyed 状态、焦点处理、根级 Portal、Gio 形变和 FlowUI 缓动。
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
@@ -33,11 +34,51 @@ func counterView(application *ui.Application) ui.View[CounterModel, CounterMsg] 
 	}
 }
 
-type MainModel struct{}
-type MainMsg struct{}
+type MainModel struct {
+	Dark    bool
+	Chinese bool
+	Date    time.Time
+}
+
+type mainMsgKind uint8
+
+const (
+	setDark mainMsgKind = iota
+	setChinese
+	setDate
+)
+
+type MainMsg struct {
+	kind    mainMsgKind
+	enabled bool
+	date    time.Time
+}
+
+func mainUpdate(application *ui.Application) ui.Update[MainModel, MainMsg] {
+	return func(model *MainModel, msg MainMsg) {
+		switch msg.kind {
+		case setDark:
+			model.Dark = msg.enabled
+			activeTheme := ui.DefaultTheme()
+			if model.Dark {
+				activeTheme = ui.DarkTheme()
+			}
+			application.SetTheme("main", activeTheme)
+		case setChinese:
+			model.Chinese = msg.enabled
+			language := ui.LanguageEnglish
+			if model.Chinese {
+				language = ui.LanguageChinese
+			}
+			application.SetLanguage("main", language)
+		case setDate:
+			model.Date = msg.date
+		}
+	}
+}
 
 func mainView(application *ui.Application, counter ui.WindowSpec) ui.View[MainModel, MainMsg] {
-	return func(ctx *ui.Context, _ MainModel, _ ui.Send[MainMsg]) ui.Widget {
+	return func(ctx *ui.Context, model MainModel, send ui.Send[MainMsg]) ui.Widget {
 		state := ctx.WindowState()
 		status := fmt.Sprintf(
 			"%d x %d px | %s | focused: %t",
@@ -72,6 +113,14 @@ func mainView(application *ui.Application, counter ui.WindowSpec) ui.View[MainMo
 						ui.ToggleButton("decorated", state.Decorated, ui.Text("Decorated")).
 							OnChange(func(enabled bool) { application.Configure("main", ui.Decorated(enabled)) }),
 					).Gap(8).LineGap(8),
+					ui.Wrap(
+						ui.ToggleButton("dark-theme", model.Dark, ui.Text("Dark theme")).
+							OnChange(func(enabled bool) { send(MainMsg{kind: setDark, enabled: enabled}) }),
+						ui.ToggleButton("chinese-language", model.Chinese, ui.Text("Chinese locale")).
+							OnChange(func(enabled bool) { send(MainMsg{kind: setChinese, enabled: enabled}) }),
+						ui.DatePicker("locale-preview", model.Date).
+							OnChange(func(value time.Time) { send(MainMsg{kind: setDate, date: value}) }),
+					).Gap(8).LineGap(8),
 					ui.Divider(),
 					ui.Row(
 						ui.Button("open-counter", ui.Text("Open counter")).OnClick(func() { application.Open(counter) }),
@@ -102,7 +151,7 @@ func main() {
 	mainWindow := ui.NewWindow(
 		"main",
 		MainModel{},
-		func(*MainModel, MainMsg) {},
+		mainUpdate(application),
 		mainView(application, counter),
 		ui.Title("Multi-window"),
 		ui.Size(760, 520),

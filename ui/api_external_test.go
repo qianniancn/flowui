@@ -716,6 +716,8 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	_ = application.CloseAll
 	_ = application.IsOpen
 	_ = application.Configure
+	_ = application.SetTheme
+	_ = application.SetLanguage
 	_ = application.Perform
 	_ = application.WindowState
 	var _ func(...ui.WindowSpec) = ui.RunWindows

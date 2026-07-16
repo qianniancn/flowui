@@ -669,6 +669,13 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.Icon(lucide.Search).Size(18),
 		ui.Spinner().Color(ui.SpinnerSuccess).Size(ui.SpinnerSmall).Label("Saving"),
 		ui.Slider("volume", 30).Label("Volume").ShowValue(),
+		ui.ColorPicker("brand-color", color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255}).
+			Label("Brand color").
+			Alpha(true).
+			ShowField().
+			Presets([]color.NRGBA{{R: 0xf4, G: 0x3f, B: 0x5e, A: 255}}).
+			Disabled(false).
+			OnChange(func(color.NRGBA) {}),
 		ui.RangeSlider("price", 10, 80).Range(0, 100).Step(5),
 		ui.Tooltip("save-help", ui.Button("save", ui.Text("Save")), ui.Text("Save changes")).
 			Placement(ui.TooltipTop).
@@ -752,6 +759,17 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()
+	var _ ui.ColorPickerTheme
+	var _ ui.ColorAreaTheme
+	var _ ui.ColorFieldTheme
+	var _ ui.ColorSliderTheme
+	var _ ui.ColorSwatchTheme
+	var _ ui.ColorSwatchPickerTheme
+	var _ ui.ColorAreaWidget = ui.ColorArea("area", color.NRGBA{}).ShowDots(true).Disabled(false).OnChange(func(color.NRGBA) {})
+	var _ ui.ColorFieldWidget = ui.ColorField("field", color.NRGBA{}).Swatch(true).Alpha(true).Variant(ui.InputSecondary).FullWidth().OnChange(func(color.NRGBA) {})
+	var _ ui.ColorSliderWidget = ui.ColorSlider("hue", color.NRGBA{}, ui.ColorChannelHue).HideLabel().ShowOutput(false).OnChange(func(color.NRGBA) {})
+	var _ ui.ColorSwatchWidget = ui.ColorSwatch(color.NRGBA{}).Size(ui.ColorSwatchLarge).Shape(ui.ColorSwatchSquare).Alt("Color")
+	var _ ui.ColorSwatchPickerWidget = ui.ColorSwatchPicker("swatches", color.NRGBA{}, nil).Size(ui.ColorSwatchSmall).Shape(ui.ColorSwatchCircle).Arrangement(ui.ColorSwatchPickerGrid).DisabledColors(nil).OnChange(func(color.NRGBA) {})
 	var _ ui.SplitPaneTheme
 	var _ ui.TitleBarTheme
 	var _ ui.StatusBarTheme

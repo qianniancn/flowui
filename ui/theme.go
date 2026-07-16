@@ -56,6 +56,12 @@ type ToastTheme = theme.ToastTheme
 type ModalTheme = theme.ModalTheme
 type ComboBoxTheme = theme.ComboBoxTheme
 type DatePickerTheme = theme.DatePickerTheme
+type ColorPickerTheme = theme.ColorPickerTheme
+type ColorAreaTheme = theme.ColorAreaTheme
+type ColorFieldTheme = theme.ColorFieldTheme
+type ColorSliderTheme = theme.ColorSliderTheme
+type ColorSwatchTheme = theme.ColorSwatchTheme
+type ColorSwatchPickerTheme = theme.ColorSwatchPickerTheme
 
 func DefaultTheme() Theme {
 	return theme.DefaultTheme()

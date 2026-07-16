@@ -170,6 +170,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `Select`
 - `ComboBox`
 - `DatePicker`
+- `ColorArea`, `ColorField`, `ColorPicker`, `ColorSlider`, `ColorSwatch`, `ColorSwatchPicker`
 - `Popover`
 - `Tooltip`
 - `Menu`, `ContextMenu`
@@ -267,6 +268,7 @@ Examples live in `examples/`:
 - `selects`: single and multiple selection, sections, disabled options, validation, controlled open state, and Surface styling.
 - `comboboxes`: selectable and filterable options.
 - `datepickers`: date selection and constraints.
+- `color_pickers`: HeroUI-aligned controlled color selection with HSB area, hue and alpha sliders, presets, and hex input.
 - `form`: composing controls into a form.
 - `layout`: layout primitives.
 - `todo`: keyed repeated UI and list interactions.

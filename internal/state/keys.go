@@ -52,6 +52,14 @@ const (
 	KindPortal           Kind = "portal"
 )
 
+const (
+	KindColorPicker       Kind = "color-picker"
+	KindColorArea         Kind = "color-area"
+	KindColorField        Kind = "color-field"
+	KindColorSlider       Kind = "color-slider"
+	KindColorSwatchPicker Kind = "color-swatch-picker"
+)
+
 type Keys struct {
 	frame map[string]Kind
 	path  []string

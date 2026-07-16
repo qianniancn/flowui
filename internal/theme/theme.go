@@ -107,54 +107,60 @@ type Spacing struct {
 }
 
 type ComponentsTheme struct {
-	Button           ButtonTheme
-	ToggleButton     ToggleButtonTheme
-	CloseButton      CloseButtonTheme
-	Chip             ChipTheme
-	Avatar           AvatarTheme
-	Badge            BadgeTheme
-	Card             CardTheme
-	Alert            AlertTheme
-	AlertDialog      AlertDialogTheme
-	Description      DescriptionTheme
-	Label            LabelTheme
-	Input            InputTheme
-	TextArea         TextAreaTheme
-	InputGroup       InputGroupTheme
-	Checkbox         CheckboxTheme
-	Switch           SwitchTheme
-	SwitchGroup      SwitchGroupTheme
-	RadioGroup       RadioGroupTheme
-	ProgressBar      ProgressBarTheme
-	ProgressCircle   ProgressCircleTheme
-	Meter            MeterTheme
-	Spinner          SpinnerTheme
-	Slider           SliderTheme
-	ListBox          ListBoxTheme
-	Tree             TreeTheme
-	Sidebar          SidebarTheme
-	Scrollbar        ScrollbarTheme
-	SplitPane        SplitPaneTheme
-	TitleBar         TitleBarTheme
-	StatusBar        StatusBarTheme
-	Toolbar          ToolbarTheme
-	Table            TableTheme
-	Pagination       PaginationTheme
-	Menu             MenuTheme
-	Dropdown         DropdownTheme
-	Menubar          MenubarTheme
-	LineChart        LineChartTheme
-	BarChart         BarChartTheme
-	PieChart         PieChartTheme
-	CandlestickChart CandlestickChartTheme
-	Tabs             TabsTheme
-	Select           SelectTheme
-	Popover          PopoverTheme
-	Tooltip          TooltipTheme
-	Toast            ToastTheme
-	Modal            ModalTheme
-	ComboBox         ComboBoxTheme
-	DatePicker       DatePickerTheme
+	Button            ButtonTheme
+	ToggleButton      ToggleButtonTheme
+	CloseButton       CloseButtonTheme
+	Chip              ChipTheme
+	Avatar            AvatarTheme
+	Badge             BadgeTheme
+	Card              CardTheme
+	Alert             AlertTheme
+	AlertDialog       AlertDialogTheme
+	Description       DescriptionTheme
+	Label             LabelTheme
+	Input             InputTheme
+	TextArea          TextAreaTheme
+	InputGroup        InputGroupTheme
+	Checkbox          CheckboxTheme
+	Switch            SwitchTheme
+	SwitchGroup       SwitchGroupTheme
+	RadioGroup        RadioGroupTheme
+	ProgressBar       ProgressBarTheme
+	ProgressCircle    ProgressCircleTheme
+	Meter             MeterTheme
+	Spinner           SpinnerTheme
+	Slider            SliderTheme
+	ListBox           ListBoxTheme
+	Tree              TreeTheme
+	Sidebar           SidebarTheme
+	Scrollbar         ScrollbarTheme
+	SplitPane         SplitPaneTheme
+	TitleBar          TitleBarTheme
+	StatusBar         StatusBarTheme
+	Toolbar           ToolbarTheme
+	Table             TableTheme
+	Pagination        PaginationTheme
+	Menu              MenuTheme
+	Dropdown          DropdownTheme
+	Menubar           MenubarTheme
+	LineChart         LineChartTheme
+	BarChart          BarChartTheme
+	PieChart          PieChartTheme
+	CandlestickChart  CandlestickChartTheme
+	Tabs              TabsTheme
+	Select            SelectTheme
+	Popover           PopoverTheme
+	Tooltip           TooltipTheme
+	Toast             ToastTheme
+	Modal             ModalTheme
+	ComboBox          ComboBoxTheme
+	DatePicker        DatePickerTheme
+	ColorPicker       ColorPickerTheme
+	ColorArea         ColorAreaTheme
+	ColorField        ColorFieldTheme
+	ColorSlider       ColorSliderTheme
+	ColorSwatch       ColorSwatchTheme
+	ColorSwatchPicker ColorSwatchPickerTheme
 }
 
 type CardTheme struct {
@@ -921,6 +927,72 @@ type DatePickerTheme struct {
 	CellTextSize       unit.Sp
 	CellStrikeWidth    unit.Dp
 	CellStrikeHalfSize unit.Dp
+}
+
+type ColorPickerTheme struct {
+	TriggerGap        unit.Dp
+	TriggerRadius     unit.Dp
+	TriggerTextSize   unit.Sp
+	FocusRingWidth    unit.Dp
+	PanelGap          unit.Dp
+	PanelWidth        unit.Dp
+	PanelPadding      unit.Dp
+	PanelRadius       unit.Dp
+	PanelMaxHeight    unit.Dp
+	ContentGap        unit.Dp
+	CompactContentGap unit.Dp
+}
+
+type ColorAreaTheme struct {
+	Size              unit.Dp
+	Radius            unit.Dp
+	ThumbSize         unit.Dp
+	DraggingThumbSize unit.Dp
+	ThumbBorderWidth  unit.Dp
+	FocusRingWidth    unit.Dp
+	DotSize           unit.Dp
+	DotGap            unit.Dp
+}
+
+type ColorFieldTheme struct {
+	Gap unit.Dp
+}
+
+type ColorSliderTheme struct {
+	TextSize         unit.Sp
+	HeaderGap        unit.Dp
+	TrackHeight      unit.Dp
+	ThumbSize        unit.Dp
+	ThumbBorderWidth unit.Dp
+	FocusRingWidth   unit.Dp
+}
+
+type ColorSwatchTheme struct {
+	ExtraSmallSize unit.Dp
+	SmallSize      unit.Dp
+	MediumSize     unit.Dp
+	LargeSize      unit.Dp
+	ExtraLargeSize unit.Dp
+	SquareRadius   unit.Dp
+}
+
+type ColorSwatchPickerTheme struct {
+	Gap                          unit.Dp
+	ExtraSmallBorderWidth        unit.Dp
+	BorderWidth                  unit.Dp
+	LargeBorderWidth             unit.Dp
+	FocusRingWidth               unit.Dp
+	FocusRingGap                 unit.Dp
+	CheckStroke                  unit.Dp
+	SquareItemRadiusExtraSmall   unit.Dp
+	SquareItemRadiusSmall        unit.Dp
+	SquareItemRadius             unit.Dp
+	SquareSwatchRadiusExtraSmall unit.Dp
+	SquareSwatchRadiusSmall      unit.Dp
+	SquareSwatchRadius           unit.Dp
+	SquareSelectedSmallRadius    unit.Dp
+	ShadowOpacity                float32
+	SelectedScale                float32
 }
 
 func DefaultTheme() Theme {
@@ -1744,6 +1816,66 @@ func DefaultTheme() Theme {
 				CellStrikeWidth:    1,
 				CellStrikeHalfSize: 7,
 			},
+			ColorPicker: ColorPickerTheme{
+				TriggerGap:        12,
+				TriggerRadius:     4,
+				TriggerTextSize:   14,
+				FocusRingWidth:    2,
+				PanelGap:          6,
+				PanelWidth:        248,
+				PanelPadding:      12,
+				PanelRadius:       20,
+				PanelMaxHeight:    520,
+				ContentGap:        12,
+				CompactContentGap: 8,
+			},
+			ColorArea: ColorAreaTheme{
+				Size:              224,
+				Radius:            16,
+				ThumbSize:         16,
+				DraggingThumbSize: 20,
+				ThumbBorderWidth:  3,
+				FocusRingWidth:    2,
+				DotSize:           2,
+				DotGap:            8,
+			},
+			ColorField: ColorFieldTheme{
+				Gap: 4,
+			},
+			ColorSlider: ColorSliderTheme{
+				TextSize:         14,
+				HeaderGap:        4,
+				TrackHeight:      20,
+				ThumbSize:        16,
+				ThumbBorderWidth: 3,
+				FocusRingWidth:   2,
+			},
+			ColorSwatch: ColorSwatchTheme{
+				ExtraSmallSize: 16,
+				SmallSize:      24,
+				MediumSize:     32,
+				LargeSize:      36,
+				ExtraLargeSize: 40,
+				SquareRadius:   6,
+			},
+			ColorSwatchPicker: ColorSwatchPickerTheme{
+				Gap:                          8,
+				ExtraSmallBorderWidth:        1,
+				BorderWidth:                  2,
+				LargeBorderWidth:             3,
+				FocusRingWidth:               2,
+				FocusRingGap:                 2,
+				CheckStroke:                  1.5,
+				SquareItemRadiusExtraSmall:   6,
+				SquareItemRadiusSmall:        8,
+				SquareItemRadius:             12,
+				SquareSwatchRadiusExtraSmall: 6,
+				SquareSwatchRadiusSmall:      8,
+				SquareSwatchRadius:           8,
+				SquareSelectedSmallRadius:    6,
+				ShadowOpacity:                1,
+				SelectedScale:                0.77,
+			},
 		},
 		DisabledOpacity: 0.5,
 		Motion: MotionTheme{
@@ -1772,6 +1904,7 @@ func DarkTheme() Theme {
 	theme.Components.Dropdown.FocusColor = color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff}
 	theme.Components.Checkbox.ShadowOpacity = 0
 	theme.Components.InputGroup.ShadowOpacity = 0
+	theme.Components.ColorSwatchPicker.ShadowOpacity = 0
 	theme.Palette.Background = color.NRGBA{R: 0x16, G: 0x18, B: 0x1d, A: 0xff}
 	theme.Palette.Surface = color.NRGBA{R: 0x20, G: 0x23, B: 0x29, A: 0xff}
 	theme.Palette.SurfaceForeground = color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}

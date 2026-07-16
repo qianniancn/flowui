@@ -404,6 +404,16 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			LoopFocus(true).
 			Alt("Editor tools").
 			Disabled(false),
+		ui.ButtonGroup(
+			ui.Button("group-first", ui.Text("First")),
+			ui.Button("group-second", ui.Text("Second")),
+		).
+			Variant(ui.ButtonSecondary).
+			Size(ui.ButtonSmall).
+			Orientation(ui.ButtonGroupHorizontal).
+			Separators(true).
+			FullWidth().
+			Disabled(false),
 		ui.CommandScope(
 			[]ui.Command{saveCommand, boldCommand},
 			ui.Toolbar(
@@ -782,6 +792,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.DateFieldWidget = ui.DateField("date", time.Time{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
 	var _ ui.DateRangePickerWidget = ui.DateRangePicker("range", ui.DateRange{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
 	var _ ui.ColorPickerTheme
+	var _ ui.ButtonGroupTheme
 	var _ ui.ColorAreaTheme
 	var _ ui.ColorFieldTheme
 	var _ ui.ColorSliderTheme

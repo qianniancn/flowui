@@ -6,6 +6,7 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
@@ -13,15 +14,22 @@ import (
 )
 
 type ButtonWidget struct {
-	key       string
-	child     frame.Widget
-	onClick   func()
-	variant   ButtonVariant
-	size      ButtonSize
-	disabled  bool
-	loading   bool
-	fullWidth bool
-	iconOnly  bool
+	key         string
+	child       frame.Widget
+	label       string
+	onClick     func()
+	variant     ButtonVariant
+	variantSet  bool
+	size        ButtonSize
+	sizeSet     bool
+	disabled    bool
+	disabledSet bool
+	loading     bool
+	fullWidth   bool
+	iconOnly    bool
+	group       buttonGroupItemStyle
+	prepared    buttonPreparedContent
+	preparedSet bool
 }
 
 type ButtonVariant int
@@ -61,8 +69,14 @@ func (b ButtonWidget) OnClick(fn func()) ButtonWidget {
 	return b
 }
 
+func (b ButtonWidget) Label(value string) ButtonWidget {
+	b.label = value
+	return b
+}
+
 func (b ButtonWidget) Disabled(disabled bool) ButtonWidget {
 	b.disabled = disabled
+	b.disabledSet = true
 	return b
 }
 
@@ -73,11 +87,13 @@ func (b ButtonWidget) Loading(loading bool) ButtonWidget {
 
 func (b ButtonWidget) Variant(variant ButtonVariant) ButtonWidget {
 	b.variant = variant
+	b.variantSet = true
 	return b
 }
 
 func (b ButtonWidget) Size(size ButtonSize) ButtonWidget {
 	b.size = size
+	b.sizeSet = true
 	return b
 }
 
@@ -175,9 +191,12 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 			animGtx.Execute(op.InvalidateCmd{})
 		}
 
-		semantic.Button.Add(gtx.Ops)
 		macro := op.Record(gtx.Ops)
 		dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			if b.preparedSet {
+				b.prepared.call.Add(gtx.Ops)
+				return b.prepared.dims
+			}
 			return style.inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				restore := frame.PushColors(ctx, style.fg, style.bg)
 				defer restore()
@@ -185,12 +204,22 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 			})
 		})
 		call := macro.Stop()
+		semanticClip := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
+		semantic.Button.Add(gtx.Ops)
+		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
+		if b.label != "" {
+			semantic.LabelOp(b.label).Add(gtx.Ops)
+		}
 
-		scale := buttonAnimationScale(gtx, clickable.History(), frame.ActiveTheme(ctx), b.size, b.disabled)
+		scale := float32(1)
+		if !b.group.grouped {
+			scale = buttonAnimationScale(gtx, clickable.History(), frame.ActiveTheme(ctx), b.size, b.disabled)
+		}
 		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
 		drawButton(gtx, dims.Size, style)
 		call.Add(gtx.Ops)
 		stack.Pop()
+		semanticClip.Pop()
 		return dims
 	})
 	return dims, FocusHandle{state: buttonState}

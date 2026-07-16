@@ -20,6 +20,7 @@ type buttonStyle struct {
 	focus      float32
 	focusColor color.NRGBA
 	focusWidth unit.Dp
+	corners    buttonCorners
 }
 
 type buttonPalette struct {
@@ -50,11 +51,44 @@ func (b ButtonWidget) style(theme *theme.Theme, clickable *widget.Clickable) but
 	style.hasBorder = colors.hasBorder
 	style.focusColor = theme.Palette.Focus
 	style.focusWidth = theme.Components.Button.FocusRingWidth
+	style.corners = buttonGroupCorners(b.group)
 	if b.disabled {
 		style.fg = theme.DisabledColor(style.fg)
 		style.border = theme.DisabledColor(style.border)
 	}
 	return style
+}
+
+type buttonCorners struct {
+	nw bool
+	ne bool
+	se bool
+	sw bool
+}
+
+func buttonGroupCorners(group buttonGroupItemStyle) buttonCorners {
+	all := buttonCorners{nw: true, ne: true, se: true, sw: true}
+	if !group.grouped || group.position == buttonGroupSingle {
+		return all
+	}
+	if group.orientation == ButtonGroupVertical {
+		switch group.position {
+		case buttonGroupStart:
+			return buttonCorners{nw: true, ne: true}
+		case buttonGroupEnd:
+			return buttonCorners{se: true, sw: true}
+		default:
+			return buttonCorners{}
+		}
+	}
+	switch group.position {
+	case buttonGroupStart:
+		return buttonCorners{nw: true, sw: true}
+	case buttonGroupEnd:
+		return buttonCorners{ne: true, se: true}
+	default:
+		return buttonCorners{}
+	}
 }
 
 func buttonSizeStyle(theme *theme.Theme, size ButtonSize, iconOnly bool) buttonStyle {
@@ -120,7 +154,7 @@ func buttonColors(theme *theme.Theme, variant ButtonVariant) buttonPalette {
 	dangerSoftHover := theme.Palette.DangerSoftHover
 	dangerSoftFg := theme.Palette.DangerSoftForeground
 	border := theme.Palette.Border
-	outlineHover := theme.Palette.SurfaceRaised
+	outlineHover := defaultBg
 	outlineHover.A = byte(uint16(outlineHover.A) * 0x99 / 0xff)
 
 	switch variant {

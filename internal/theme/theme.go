@@ -108,6 +108,7 @@ type Spacing struct {
 
 type ComponentsTheme struct {
 	Button            ButtonTheme
+	ButtonGroup       ButtonGroupTheme
 	ToggleButton      ToggleButtonTheme
 	CloseButton       CloseButtonTheme
 	Chip              ChipTheme
@@ -214,6 +215,12 @@ type ButtonTheme struct {
 	PressedScaleSmall  float32
 	PressedScaleMedium float32
 	PressedScaleLarge  float32
+}
+
+type ButtonGroupTheme struct {
+	SeparatorWidth   unit.Dp
+	SeparatorLength  float32
+	SeparatorOpacity float32
 }
 
 type ToggleButtonTheme struct {
@@ -1085,6 +1092,11 @@ func DefaultTheme() Theme {
 				PressedScaleSmall:  0.98,
 				PressedScaleMedium: 0.97,
 				PressedScaleLarge:  0.96,
+			},
+			ButtonGroup: ButtonGroupTheme{
+				SeparatorWidth:   1,
+				SeparatorLength:  0.5,
+				SeparatorOpacity: 0.15,
 			},
 			ToggleButton: ToggleButtonTheme{
 				SmallHeight:        32,

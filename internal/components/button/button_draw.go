@@ -16,7 +16,7 @@ import (
 func drawButton(gtx layout.Context, size image.Point, style buttonStyle) {
 	radius := min(size.X, size.Y) / 2
 	rect := image.Rectangle{Max: size}
-	rr := clip.UniformRRect(rect, radius)
+	rr := buttonRoundedRect(rect, radius, style.corners)
 
 	if style.bg.A != 0 {
 		paint.FillShape(gtx.Ops, style.bg, rr.Op(gtx.Ops))
@@ -85,11 +85,27 @@ func drawButtonFocus(gtx layout.Context, size image.Point, radius int, style but
 	ring := style.focusColor
 	ring.A = byte(float32(ring.A)*style.focus + 0.5)
 	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(rect, max(radius-inset, 0)).Path(gtx.Ops),
+		Path:  buttonRoundedRect(rect, max(radius-inset, 0), style.corners).Path(gtx.Ops),
 		Width: float32(width),
 	}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, ring)
 	stroke.Pop()
+}
+
+func buttonRoundedRect(rect image.Rectangle, radius int, corners buttonCorners) clip.RRect {
+	corner := func(enabled bool) int {
+		if enabled {
+			return radius
+		}
+		return 0
+	}
+	return clip.RRect{
+		Rect: rect,
+		NW:   corner(corners.nw),
+		NE:   corner(corners.ne),
+		SE:   corner(corners.se),
+		SW:   corner(corners.sw),
+	}
 }
 
 func buttonSpinnerPhase(now time.Time) float32 {

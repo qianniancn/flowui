@@ -137,7 +137,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `Image`
 - `Avatar`
 - `Badge`
-- `Button`
+- `Button`、`ButtonGroup`
 - `ToggleButton`
 - `Input`
 - `TextArea`
@@ -218,6 +218,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `multi_windows`：独立窗口、原生窗口控制，以及按窗口运行时切换主题和语言。
 - `custom_widgets`：自定义绘制、瞬态 keyed 状态、焦点处理、根级 Portal、Gio 形变和 FlowUI 缓动。
 - `buttons`：按钮变体、加载、禁用和交互状态。
+- `button_groups`：组合按钮的变体、尺寸、方向、分隔线、禁用状态和铺满布局。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。
 - `chips`：对齐 HeroUI 的紧凑标签，包含颜色、变体、尺寸、图标和语义状态。

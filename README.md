@@ -142,7 +142,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `Image`
 - `Avatar`
 - `Badge`
-- `Button`
+- `Button`, `ButtonGroup`
 - `ToggleButton`
 - `Input`
 - `TextArea`
@@ -224,6 +224,7 @@ Examples live in `examples/`:
 - `multi_windows`: independent windows, native window controls, and per-window runtime theme and language switching.
 - `custom_widgets`: custom drawing, transient keyed state, focus handling, root Portal content, Gio transforms, and FlowUI easing.
 - `buttons`: button variants, loading, disabled, and interaction states.
+- `button_groups`: grouped button variants, sizes, orientations, separators, disabled states, and full-width layout.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.
 - `chips`: HeroUI-aligned compact labels with colors, variants, sizes, icons, and semantic statuses.

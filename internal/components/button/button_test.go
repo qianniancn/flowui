@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
@@ -72,6 +73,7 @@ func TestButtonDisabled(t *testing.T) {
 
 func TestButtonOptions(t *testing.T) {
 	b := Button("save", text.New("Save")).
+		Label("Save changes").
 		Variant(ButtonOutline).
 		Size(ButtonLarge).
 		Loading(true).
@@ -80,6 +82,9 @@ func TestButtonOptions(t *testing.T) {
 
 	if b.variant != ButtonOutline {
 		t.Fatal("button variant was not set")
+	}
+	if b.label != "Save changes" {
+		t.Fatal("button label was not set")
 	}
 	if b.size != ButtonLarge {
 		t.Fatal("button size was not set")
@@ -92,6 +97,22 @@ func TestButtonOptions(t *testing.T) {
 	}
 	if !b.iconOnly {
 		t.Fatal("button was not icon only")
+	}
+}
+
+func TestButtonSemanticsIncludeLabelAndDisabledState(t *testing.T) {
+	var router input.Router
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	Button("save", text.New("Save")).Label("Save changes").Disabled(true).Layout(newContext(nil), gtx)
+	router.Frame(&ops)
+	node, ok := buttonSemanticNode(router.AppendSemantics(nil))
+	if !ok || node.Desc.Label != "Save changes" || !node.Desc.Disabled {
+		t.Fatalf("button semantics = %#v", node.Desc)
 	}
 }
 
@@ -199,6 +220,11 @@ func TestButtonVariantColors(t *testing.T) {
 
 	if !outline.hasBorder {
 		t.Fatal("outline button is missing border")
+	}
+	wantOutlineHover := theme.Palette.DefaultColor()
+	wantOutlineHover.A = byte(uint16(wantOutlineHover.A) * 0x99 / 0xff)
+	if outline.hover != wantOutlineHover {
+		t.Fatalf("outline hover = %v, want 60%% default color %v", outline.hover, wantOutlineHover)
 	}
 	if ghost.pressed != ghost.hover {
 		t.Fatalf("ghost pressed = %v, want hover color %v", ghost.pressed, ghost.hover)
@@ -578,4 +604,16 @@ func layoutButtonFrame(ctx *frame.Context, router *input.Router) {
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(&ops)
+}
+
+func buttonSemanticNode(nodes []input.SemanticNode) (input.SemanticNode, bool) {
+	for _, node := range nodes {
+		if node.Desc.Class == semantic.Button {
+			return node, true
+		}
+		if child, ok := buttonSemanticNode(node.Children); ok {
+			return child, true
+		}
+	}
+	return input.SemanticNode{}, false
 }

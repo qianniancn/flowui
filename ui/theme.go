@@ -12,6 +12,7 @@ type ComponentsTheme = theme.ComponentsTheme
 type DescriptionTheme = theme.DescriptionTheme
 type LabelTheme = theme.LabelTheme
 type ButtonTheme = theme.ButtonTheme
+type ButtonGroupTheme = theme.ButtonGroupTheme
 type ToggleButtonTheme = theme.ToggleButtonTheme
 type CloseButtonTheme = theme.CloseButtonTheme
 type ChipTheme = theme.ChipTheme

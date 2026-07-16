@@ -10,6 +10,7 @@ type Kind string
 const (
 	KindClickable        Kind = "clickable"
 	KindDraggable        Kind = "draggable"
+	KindCustom           Kind = "custom"
 	KindEditor           Kind = "editor"
 	KindSelectableText   Kind = "selectable-text"
 	KindInput            Kind = "input"
@@ -48,6 +49,7 @@ const (
 	KindScrollbar        Kind = "scrollbar"
 	KindSplitPane        Kind = "split-pane"
 	KindTitleBar         Kind = "title-bar"
+	KindPortal           Kind = "portal"
 )
 
 type Keys struct {

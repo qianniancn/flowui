@@ -99,8 +99,11 @@ text/editor internals.
 - `Cmd`, `Do`
 - `Command`, `Shortcut`, `CommandScope`
 - `Context`
-- `Widget`
+- `Widget`, `WidgetFunc`
+- `UseState`, `UseStateWith`
 - `Key`
+- `Portal`
+- `TrackOverlayPlacement`
 
 ### App Options
 
@@ -110,6 +113,11 @@ text/editor internals.
 - `CustomizeTheme`
 - `MaterialTheme`
 - `Locale`
+
+### Testing
+
+- `uitest.New`, `uitest.NewWithConfig`
+- `Harness.Frame`, `Context`, `Router`, `Click`, `Key`, `Advance`, `Resize`
 
 ### Controls
 
@@ -197,6 +205,7 @@ Examples live in `examples/`:
 - `commands`: reusable actions shared by global shortcuts, menubars, dropdowns, and toolbars.
 - `texts`: text typography, alignment, truncation, wrapping, and selectable clipboard content.
 - `title_bars`: VS Code-style menu and window controls for undecorated desktop windows.
+- `custom_widgets`: custom drawing, transient keyed state, focus handling, root Portal content, Gio transforms, and FlowUI easing.
 - `buttons`: button variants, loading, disabled, and interaction states.
 - `toggle_buttons`: HeroUI-aligned controlled toggle buttons with variants, sizes, icon-only, selected, and disabled states.
 - `close_buttons`: HeroUI-aligned close buttons with disabled, custom icon, and interactive states.

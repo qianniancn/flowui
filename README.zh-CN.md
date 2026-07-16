@@ -94,8 +94,11 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `Cmd`、`Do`
 - `Command`、`Shortcut`、`CommandScope`
 - `Context`
-- `Widget`
+- `Widget`、`WidgetFunc`
+- `UseState`、`UseStateWith`
 - `Key`
+- `Portal`
+- `TrackOverlayPlacement`
 
 ### 应用配置
 
@@ -105,6 +108,11 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `CustomizeTheme`
 - `MaterialTheme`
 - `Locale`
+
+### 测试
+
+- `uitest.New`、`uitest.NewWithConfig`
+- `Harness.Frame`、`Context`、`Router`、`Click`、`Key`、`Advance`、`Resize`
 
 ### 基础控件
 
@@ -191,6 +199,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 - `commands`：复用于全局快捷键、菜单栏、下拉菜单和工具栏的应用命令。
 - `texts`：文本字体、对齐、截断、换行和可选择复制内容。
 - `title_bars`：用于无边框桌面窗口的 VS Code 风格菜单栏和窗口控制按钮。
+- `custom_widgets`：自定义绘制、瞬态 keyed 状态、焦点处理、根级 Portal、Gio 形变和 FlowUI 缓动。
 - `buttons`：按钮变体、加载、禁用和交互状态。
 - `toggle_buttons`：对齐 HeroUI 的受控切换按钮，包含变体、尺寸、纯图标、选中和禁用状态。
 - `close_buttons`：对齐 HeroUI 的关闭按钮，包含禁用、自定义图标和交互状态。

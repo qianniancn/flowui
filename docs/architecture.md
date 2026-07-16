@@ -6,6 +6,12 @@ FlowUI exposes one application-facing package:
 import "github.com/qianniancn/FlowUI/ui"
 ```
 
+Component tests may additionally import `github.com/qianniancn/FlowUI/uitest`.
+The package owns a deterministic FlowUI context, Gio input router, viewport,
+and clock. Its `Harness.Frame` method follows the same main layout, root
+overlay, focus-command, state-cleanup, and router order as a real window.
+Applications do not depend on `uitest` at runtime.
+
 The `ui` package is the MVU entry point and public facade. Applications should
 not import `internal` packages, and lower-level FlowUI packages must not import
 `ui`.
@@ -27,6 +33,14 @@ ui (MVU entry point and public facade)
              +--> internal/theme
              +--> internal/locale
              +--> internal/render
+
+component tests
+    |
+    +--> uitest
+            |
+            +--> ui
+            +--> internal/frame
+            +--> internal/theme
 ```
 
 Dependencies only point downward. The facade uses type aliases, constants, and
@@ -53,8 +67,22 @@ such as clickables, draggables, editors, focus, animation progress, and overlay 
 It must not become a second application model.
 
 The public context exposes read-only theme and language snapshots plus the small
-set of Gio state helpers needed by custom widgets. Frame lifecycle, component
-registration, focus coordination, and overlay coordination remain internal.
+set of Gio state and focus helpers needed by custom widgets. Frame lifecycle and
+component registration remain internal; root overlays are exposed only through
+the constrained Portal API.
+
+Custom widgets implement `ui.Widget` directly or use `ui.WidgetFunc`. Transient
+Gio interaction state can use `ui.UseState` or `ui.UseStateWith`; it is retained
+while its explicit key is rendered and released automatically after removal.
+Business values still belong in the Model. Public focus methods on `ui.Context`
+keep custom focus rings consistent with pointer and keyboard modality.
+
+`ui.Portal` is the low-level escape hatch for custom root-level content. It
+provides a resolved viewport anchor, stacking group, and preceding-frame input
+ownership. It intentionally does not add positioning, dismissal, animation,
+backdrops, or focus trapping. Applications should prefer Popover, Modal,
+Tooltip, and Menu when those policies fit. Portal content may register nested
+FlowUI overlays normally.
 
 Component identity is explicit. A key is scoped by `ui.Key`, claimed with a
 component kind, and paired with a typed state slot. Identity must not depend on
@@ -120,13 +148,13 @@ per node. Containers that accept repeated items must use their tracked item
 layout path so each item's final offset and clip are recorded.
 
 A custom Widget that places a FlowUI child with raw Gio layout, transform,
-clip, or `paint.PushOpacity` operations is outside this tracking contract. Use
-FlowUI layout containers and component animation paths for subtrees that can
-open overlays; otherwise the custom widget must keep those overlay-opening
-children at its local origin and full opacity. This limitation follows from
-Gio's public API and must not be worked around with pointer coordinates or
-private operation decoding, because those approaches fail for keyboard and
-programmatic opening.
+clip, or `paint.PushOpacity` operations must wrap that child with
+`ui.TrackOverlayPlacement` and record the matching offset, transform, clip, and
+opacity on the returned frame-local placement. FlowUI layout containers already
+do this automatically. Pointer coordinates and private operation decoding must
+not be used as substitutes because they fail for keyboard and programmatic
+opening. Custom layouts must call `PlaceOffset` or `PlaceTransform` after the
+tracked child returns, including when the final transform is the identity.
 
 ## Effects
 

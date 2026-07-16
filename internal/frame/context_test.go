@@ -63,6 +63,23 @@ func TestContextRetainsDraggableStateByKey(t *testing.T) {
 	}
 }
 
+func TestContextPublicFocusHelpersPreserveModality(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageEnglish)
+	BeginFrame(ctx)
+	pointerTarget := new(int)
+	ctx.RequestFocusVisible(pointerTarget, false)
+	if ctx.FocusVisible(pointerTarget, true) {
+		t.Fatal("pointer-originated custom focus was visible")
+	}
+
+	keyboardTarget := new(int)
+	ctx.RequestFocus(keyboardTarget)
+	if !ctx.FocusVisible(keyboardTarget, true) {
+		t.Fatal("keyboard-originated custom focus was hidden")
+	}
+	ctx.PreserveFocus()
+}
+
 func TestContextScopesKeysWithSeparators(t *testing.T) {
 	ctx := New(nil, nil, locale.LanguageAuto)
 	BeginFrame(ctx)

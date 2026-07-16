@@ -218,12 +218,22 @@ func RequestFocus(ctx *Context, tag event.Tag) {
 	RequestFocusVisible(ctx, tag, true)
 }
 
+// RequestFocus queues keyboard-visible focus for a custom widget.
+func (ctx *Context) RequestFocus(tag event.Tag) {
+	RequestFocus(ctx, tag)
+}
+
 func RequestFocusVisible(ctx *Context, tag event.Tag, visible bool) {
 	origin := state.FocusOriginKeyboard
 	if !visible {
 		origin = state.FocusOriginPointer
 	}
 	ctx.focus.Request(tag, origin)
+}
+
+// RequestFocusVisible queues focus and controls whether its focus ring is visible.
+func (ctx *Context) RequestFocusVisible(tag event.Tag, visible bool) {
+	RequestFocusVisible(ctx, tag, visible)
 }
 
 type FocusGroup struct {
@@ -252,6 +262,11 @@ func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool, prepare f
 
 func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {
 	return ctx.focus.Visible(tag, focused)
+}
+
+// FocusVisible reports whether a focused custom widget should draw its focus ring.
+func (ctx *Context) FocusVisible(tag event.Tag, focused bool) bool {
+	return FocusVisible(ctx, tag, focused)
 }
 
 type fieldFocusTarget struct {
@@ -354,6 +369,11 @@ func FocusOnPress(ctx *Context, tag event.Tag, history []widget.Press, before in
 // current focus after a pointer-only overlay surface consumed a press.
 func PreserveFocus(ctx *Context) {
 	ctx.focus.Preserve()
+}
+
+// PreserveFocus prevents a pointer-only custom overlay from clearing focus this frame.
+func (ctx *Context) PreserveFocus() {
+	PreserveFocus(ctx)
 }
 
 func PushColors(ctx *Context, foreground, background color.NRGBA) func() {

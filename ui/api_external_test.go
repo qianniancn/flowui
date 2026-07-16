@@ -28,18 +28,22 @@ type facadeModel struct {
 func TestContextExposesOnlySupportedMethods(t *testing.T) {
 	contextType := reflect.TypeOf((*ui.Context)(nil))
 	want := map[string]struct{}{
-		"BackgroundColor": {},
-		"BoolState":       {},
-		"Clickable":       {},
-		"Draggable":       {},
-		"Editor":          {},
-		"ForegroundColor": {},
-		"Invalidate":      {},
-		"Language":        {},
-		"ListState":       {},
-		"ScrollState":     {},
-		"Theme":           {},
-		"WindowState":     {},
+		"BackgroundColor":     {},
+		"BoolState":           {},
+		"Clickable":           {},
+		"Draggable":           {},
+		"Editor":              {},
+		"FocusVisible":        {},
+		"ForegroundColor":     {},
+		"Invalidate":          {},
+		"Language":            {},
+		"ListState":           {},
+		"PreserveFocus":       {},
+		"RequestFocus":        {},
+		"RequestFocusVisible": {},
+		"ScrollState":         {},
+		"Theme":               {},
+		"WindowState":         {},
 	}
 	if contextType.NumMethod() != len(want) {
 		t.Errorf("ui.Context method count = %d, want %d", contextType.NumMethod(), len(want))
@@ -709,6 +713,12 @@ func TestPublicFacadeImportContract(t *testing.T) {
 		t.Fatalf("window key = %q", window.Key())
 	}
 	var _ ui.Widget = externalWidget{}
+	var _ ui.Widget = ui.WidgetFunc(func(*ui.Context, layout.Context) layout.Dimensions { return layout.Dimensions{} })
+	var _ func(*ui.Context, string) *int = ui.UseState[int]
+	var _ func(*ui.Context, string, func() *int) *int = ui.UseStateWith[int]
+	var _ ui.PortalContent = func(image.Rectangle, bool) ui.Widget { return ui.Text("Portal") }
+	var _ ui.PortalWidget = ui.Portal("external-portal", false, nil, nil).Layer(ui.PortalLayerPopup).Passive(false).Disabled(false)
+	var _ func(*ui.Context, func() layout.Dimensions) (layout.Dimensions, ui.OverlayPlacement) = ui.TrackOverlayPlacement
 	var _ ui.Update[facadeModel, facadeMsg] = facadeUpdate
 	var _ ui.View[facadeModel, facadeMsg] = facadeView
 	var _ ui.Cmd[facadeMsg] = ui.Do(func(ui.Send[facadeMsg]) {})

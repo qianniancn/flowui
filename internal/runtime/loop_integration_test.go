@@ -44,7 +44,7 @@ func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
 	canceled := make(chan struct{})
 	result := make(chan error, 1)
 	go func() {
-		result <- loop(window, struct{}{}, func(*struct{}, struct{}) Cmd[struct{}] {
+		result <- Loop(window, struct{}{}, nil, func(*struct{}, struct{}) Cmd[struct{}] {
 			return nil
 		}, func(struct{}) []Subscription[struct{}] {
 			return []Subscription[struct{}]{
@@ -82,7 +82,7 @@ func TestLoopDeliversEffectErrorsBeforeNextFrame(t *testing.T) {
 	result := make(chan error, 1)
 	var frames atomic.Int32
 	go func() {
-		result <- loop(window, struct{}{}, func(*struct{}, struct{}) Cmd[struct{}] {
+		result <- Loop(window, struct{}{}, nil, func(*struct{}, struct{}) Cmd[struct{}] {
 			return nil
 		}, func(struct{}) []Subscription[struct{}] {
 			return []Subscription[struct{}]{
@@ -120,14 +120,15 @@ func TestLoopReportsConfigChangesAndInvalidates(t *testing.T) {
 	configured := make(chan app.Config, 1)
 	result := make(chan error, 1)
 	go func() {
-		result <- loop(
+		result <- Loop(
 			window,
 			struct{}{},
+			nil,
 			func(*struct{}, struct{}) Cmd[struct{}] { return nil },
 			nil,
 			nil,
 			nil,
-			func(config app.Config) { configured <- config },
+			func(config app.Config, _ func(struct{})) { configured <- config },
 			func(layout.Context, struct{}, func(struct{})) {},
 		)
 	}()
@@ -138,6 +139,76 @@ func TestLoopReportsConfigChangesAndInvalidates(t *testing.T) {
 		t.Fatalf("reported config = %#v, want %#v", got, want)
 	}
 	receiveRuntimeTestValue(t, window.invalidated)
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
+func TestLoopRunsInitialCommandAndQueuesItsMessage(t *testing.T) {
+	window := newRuntimeTestWindow()
+	commandSent := make(chan struct{})
+	viewed := make(chan int, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(
+			window,
+			0,
+			func(_ context.Context, send func(int)) error {
+				send(7)
+				close(commandSent)
+				return nil
+			},
+			func(model *int, msg int) Cmd[int] {
+				*model = msg
+				return nil
+			},
+			nil,
+			nil,
+			nil,
+			nil,
+			func(_ layout.Context, model int, _ func(int)) { viewed <- model },
+		)
+	}()
+
+	receiveRuntimeTestValue(t, commandSent)
+	window.events <- runtimeFrameEvent()
+	if got := receiveRuntimeTestValue(t, viewed); got != 7 {
+		t.Fatalf("initial command model = %d, want 7", got)
+	}
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
+func TestLoopQueuesConfigMessagesForNextFrame(t *testing.T) {
+	window := newRuntimeTestWindow()
+	viewed := make(chan image.Point, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(
+			window,
+			image.Point{},
+			nil,
+			func(model *image.Point, msg image.Point) Cmd[image.Point] {
+				*model = msg
+				return nil
+			},
+			nil,
+			nil,
+			nil,
+			func(config app.Config, send func(image.Point)) { send(config.Size) },
+			func(_ layout.Context, model image.Point, _ func(image.Point)) { viewed <- model },
+		)
+	}()
+
+	want := image.Pt(800, 600)
+	window.events <- app.ConfigEvent{Config: app.Config{Size: want}}
+	window.events <- runtimeFrameEvent()
+	if got := receiveRuntimeTestValue(t, viewed); got != want {
+		t.Fatalf("config message model = %v, want %v", got, want)
+	}
 	window.events <- app.DestroyEvent{}
 	if err := receiveRuntimeTestValue(t, result); err != nil {
 		t.Fatalf("loop returned error: %v", err)

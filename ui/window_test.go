@@ -14,6 +14,21 @@ func TestWindowSpecUsesIndependentIdentity(t *testing.T) {
 	}
 }
 
+func TestProgramWindowSpec(t *testing.T) {
+	program := Program[int, int]{
+		Init:   func() (int, Cmd[int]) { return 1, nil },
+		Update: func(*int, int) Cmd[int] { return nil },
+		View:   func(*Context, int, Send[int]) Widget { return Text("Program") },
+		WindowStateMessage: func(state WindowState) int {
+			return state.Size.X
+		},
+	}
+	spec := NewProgramWindow("program", program, Title("Program"))
+	if spec.Key() != "program" || spec.run == nil || len(spec.options) != 1 {
+		t.Fatalf("program window = key %q run %v options %d", spec.Key(), spec.run != nil, len(spec.options))
+	}
+}
+
 func TestWindowSpecRejectsInvalidDefinitions(t *testing.T) {
 	tests := []struct {
 		name string
@@ -22,6 +37,15 @@ func TestWindowSpecRejectsInvalidDefinitions(t *testing.T) {
 		{"empty key", func() { NewWindow("", 0, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil }) }},
 		{"nil update", func() { NewWindow[int, int]("main", 0, nil, func(*Context, int, Send[int]) Widget { return nil }) }},
 		{"nil view", func() { NewWindow[int, int]("main", 0, func(*int, int) {}, nil) }},
+		{"nil program init", func() {
+			NewProgramWindow("main", Program[int, int]{Update: func(*int, int) Cmd[int] { return nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
+		}},
+		{"nil program update", func() {
+			NewProgramWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
+		}},
+		{"nil program view", func() {
+			NewProgramWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, Update: func(*int, int) Cmd[int] { return nil }})
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

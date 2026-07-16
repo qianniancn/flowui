@@ -12,6 +12,10 @@ and clock. Its `Harness.Frame` method follows the same main layout, root
 overlay, focus-command, state-cleanup, and router order as a real window.
 Applications do not depend on `uitest` at runtime.
 
+`uitest.AppHarness` drives the production message queue, `UpdateCmd`, command
+execution, error delivery, and shutdown cancellation without opening a window.
+It complements the widget Harness rather than maintaining a second MVU runtime.
+
 The `ui` package is the MVU entry point and public facade. Applications should
 not import `internal` packages, and lower-level FlowUI packages must not import
 `ui`.
@@ -158,6 +162,12 @@ tracked child returns, including when the final transform is the identity.
 
 ## Effects
 
+`ui.Program` groups `Init`, `Update`, `Subscriptions`, and `View` when an
+application needs the complete lifecycle. `Init` runs once per window instance
+and its optional command is managed by the same effect group as commands
+returned by `UpdateCmd`. `WindowStateMessage`, when present, maps Gio
+configuration changes into queued messages for the next update.
+
 `UpdateCmd` is serialized on the event loop and is the only place a command
 workflow may mutate the model. Each returned `Cmd` starts in its own goroutine
 after `UpdateCmd` returns, so it can overlap later updates and views. Every
@@ -202,6 +212,12 @@ bound, so effects must honor their context promptly.
 `View` and a `Subscriptions` function follow the same ownership boundary: the
 model and any reference-backed fields it contains are read-only. Event
 callbacks and effects send messages instead of mutating captured model data.
+
+Gio v0.10.1 reports a native window close only as the final `DestroyEvent`; it
+does not expose a cancellable close-request event. FlowUI therefore cannot
+reliably veto operating-system close actions. An application that requires an
+unsaved-changes guard must keep the close action in application-controlled UI
+and perform the native close only after confirmation.
 
 ## Adding A Component
 

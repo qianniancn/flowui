@@ -16,6 +16,7 @@ FlowUI 是一个基于 Gio 构建的小型 MVU UI 框架。
 - MVU 架构：`Model`、`Msg`、`Update`、`View`。
 - 通过 `ui.Send[Msg]` 发送强类型消息。
 - 通过 `RunCmd`、`Cmd`、`Do` 支持异步副作用。
+- 完整 Program 支持启动命令、订阅和窗口状态消息。
 - 应用命令可复用于全局快捷键、菜单、下拉菜单和工具栏。
 - Gio 控件状态由 `Context` 统一管理。
 - 基于 key 的局部状态隔离，并在每帧结束后自动清理不再使用的状态。
@@ -68,7 +69,8 @@ func main() {
 ```
 
 普通同步更新使用 `Run`。如果 `Update` 需要启动异步任务，并在任务完成后
-继续发送消息，可以使用 `RunCmd`。
+继续发送消息，可以使用 `RunCmd`。启动任务、订阅或原生窗口状态变化也需要
+进入 MVU 循环时，使用 `RunProgram`。
 
 ## 主题
 
@@ -89,7 +91,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 ### 核心
 
-- `Run`、`RunCmd`
+- `Run`、`RunCmd`、`RunProgram`、`Program`
 - `Send`、`Update`、`UpdateCmd`、`View`
 - `Cmd`、`Do`
 - `Command`、`Shortcut`、`CommandScope`
@@ -113,6 +115,8 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 - `uitest.New`、`uitest.NewWithConfig`
 - `Harness.Frame`、`Context`、`Router`、`Click`、`Key`、`Advance`、`Resize`
+- `uitest.NewApp`、`uitest.NewAppWithConfig`
+- `AppHarness.Send`、`Frame`、`Wait`、`Model`、`Errors`、`Close`
 
 ### 基础控件
 

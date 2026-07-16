@@ -58,7 +58,7 @@ func (c *loopCore[M, Msg]) frame(
 	view(c.model)
 }
 
-type eventWindow interface {
+type EventWindow interface {
 	Event() event.Event
 	Invalidate()
 }
@@ -66,26 +66,14 @@ type eventWindow interface {
 const effectShutdownTimeout = 2 * time.Second
 
 func Loop[M any, Msg any](
-	w *app.Window,
+	w EventWindow,
 	initial M,
+	initialCmd Cmd[Msg],
 	update Update[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
 	onDestroy func(),
-	onConfig func(app.Config),
-	frame Frame[M, Msg],
-) error {
-	return loop(w, initial, update, subscriptions, onError, onDestroy, onConfig, frame)
-}
-
-func loop[M any, Msg any](
-	w eventWindow,
-	initial M,
-	update Update[M, Msg],
-	subscriptions Subscriptions[M, Msg],
-	onError func(error),
-	onDestroy func(),
-	onConfig func(app.Config),
+	onConfig func(app.Config, func(Msg)),
 	frame Frame[M, Msg],
 ) error {
 	core := newLoopCore(initial, update)
@@ -130,6 +118,7 @@ func loop[M any, Msg any](
 		effectErrors.Push(err)
 		w.Invalidate()
 	}
+	StartCmd(&effects, ctx, initialCmd, send, report)
 
 	for {
 		switch e := w.Event().(type) {
@@ -141,7 +130,7 @@ func loop[M any, Msg any](
 			return e.Err
 		case app.ConfigEvent:
 			if onConfig != nil {
-				onConfig(e.Config)
+				onConfig(e.Config, send)
 			}
 			w.Invalidate()
 		case app.FrameEvent:

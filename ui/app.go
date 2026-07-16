@@ -39,14 +39,33 @@ func RunWithSubscriptions[M any, Msg any](
 	RunWindows(NewWindowWithSubscriptions("main", initial, update, subscriptions, view, opts...))
 }
 
+// Program describes a complete MVU application. Init runs once for each
+// window instance and may return a startup command.
+type Program[M any, Msg any] struct {
+	Init          func() (M, Cmd[Msg])
+	Update        UpdateCmd[M, Msg]
+	Subscriptions Subscriptions[M, Msg]
+	View          View[M, Msg]
+	// WindowStateMessage maps native configuration changes to messages that
+	// Update receives before the following view.
+	WindowStateMessage func(WindowState) Msg
+}
+
+// RunProgram opens a Gio window and runs a complete MVU Program.
+func RunProgram[M any, Msg any](program Program[M, Msg], opts ...Option) {
+	RunWindows(NewProgramWindow("main", program, opts...))
+}
+
 func runWindowCmd[M any, Msg any](
 	w *app.Window,
 	theme *Theme,
 	language Language,
 	initial M,
+	initialCmd Cmd[Msg],
 	update UpdateCmd[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
+	windowStateMessage func(WindowState) Msg,
 	onError func(error),
 	onDestroy func(),
 	onWindowState func(WindowState),
@@ -74,18 +93,15 @@ func runWindowCmd[M any, Msg any](
 			return result
 		}
 	}
-	return runtime.Loop(w, initial, func(model *M, msg Msg) runtime.Cmd[Msg] {
-		cmd := update(model, msg)
-		if cmd == nil {
-			return nil
-		}
-		return func(effectCtx context.Context, send func(Msg)) error {
-			return cmd(effectCtx, Send[Msg](send))
-		}
-	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config) {
+	return runtime.Loop(w, initial, runtimeCmd(initialCmd), func(model *M, msg Msg) runtime.Cmd[Msg] {
+		return runtimeCmd(update(model, msg))
+	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config, send func(Msg)) {
 		state := frame.UpdateWindowConfig(ctx, config)
 		if onWindowState != nil {
 			onWindowState(state)
+		}
+		if windowStateMessage != nil {
+			send(windowStateMessage(state))
 		}
 	}, func(gtx layout.Context, model M, send func(Msg)) {
 		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
@@ -101,6 +117,15 @@ func runWindowCmd[M any, Msg any](
 		frame.ApplyFrameCommands(ctx, gtx)
 		frame.EndFrame(ctx)
 	})
+}
+
+func runtimeCmd[Msg any](cmd Cmd[Msg]) runtime.Cmd[Msg] {
+	if cmd == nil {
+		return nil
+	}
+	return func(effectCtx context.Context, send func(Msg)) error {
+		return cmd(effectCtx, Send[Msg](send))
+	}
 }
 
 func writeEffectError(w io.Writer, err error) {

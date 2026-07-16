@@ -20,6 +20,10 @@ type Loaded struct {
 	Text string
 }
 
+func Init() (Model, ui.Cmd[Msg]) {
+	return Model{Loading: true}, load()
+}
+
 func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Load:
@@ -28,22 +32,26 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 		}
 		m.Loading = true
 		m.Result = ""
-		return ui.DoContext(func(ctx context.Context, send ui.Send[Msg]) error {
-			timer := time.NewTimer(time.Second)
-			defer timer.Stop()
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-timer.C:
-				send(Loaded{Text: "Loaded after one second."})
-				return nil
-			}
-		})
+		return load()
 	case Loaded:
 		m.Loading = false
 		m.Result = msg.Text
 	}
 	return nil
+}
+
+func load() ui.Cmd[Msg] {
+	return ui.DoContext(func(ctx context.Context, send ui.Send[Msg]) error {
+		timer := time.NewTimer(time.Second)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			send(Loaded{Text: "Loaded after one second."})
+			return nil
+		}
+	})
 }
 
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -74,7 +82,11 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.RunCmd(Model{}, Update, View,
+	ui.RunProgram(ui.Program[Model, Msg]{
+		Init:   Init,
+		Update: Update,
+		View:   View,
+	},
 		ui.Title("FlowUI Async"),
 		ui.Size(900, 600),
 	)

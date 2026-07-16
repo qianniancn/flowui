@@ -47,7 +47,7 @@ func NewWindow[M any, Msg any](key string, initial M, update Update[M, Msg], vie
 
 // NewWindowCmd creates a window whose Update function may return commands.
 func NewWindowCmd[M any, Msg any](key string, initial M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
-	return newWindowSpec(key, initial, update, nil, view, opts)
+	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initial, nil }, update, nil, view, nil, opts)
 }
 
 // NewWindowWithSubscriptions creates a window with commands and subscriptions.
@@ -59,15 +59,32 @@ func NewWindowWithSubscriptions[M any, Msg any](
 	view View[M, Msg],
 	opts ...Option,
 ) WindowSpec {
-	return newWindowSpec(key, initial, update, subscriptions, view, opts)
+	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initial, nil }, update, subscriptions, view, nil, opts)
+}
+
+// NewProgramWindow creates a window from a complete MVU Program.
+func NewProgramWindow[M any, Msg any](key string, program Program[M, Msg], opts ...Option) WindowSpec {
+	if program.Init == nil {
+		panic("flowui: nil program init")
+	}
+	return newWindowSpec(
+		key,
+		program.Init,
+		program.Update,
+		program.Subscriptions,
+		program.View,
+		program.WindowStateMessage,
+		opts,
+	)
 }
 
 func newWindowSpec[M any, Msg any](
 	key string,
-	initial M,
+	initialize func() (M, Cmd[Msg]),
 	update UpdateCmd[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
+	windowStateMessage func(WindowState) Msg,
 	opts []Option,
 ) WindowSpec {
 	if key == "" {
@@ -85,7 +102,8 @@ func newWindowSpec[M any, Msg any](
 		options: append([]app.Option(nil), cfg.window...),
 		onError: cfg.errorHandler,
 		run: func(window *app.Window, onDestroy func(), onWindowState func(WindowState)) error {
-			return runWindowCmd(window, cfg.newTheme(), cfg.language, initial, update, subscriptions, view, cfg.errorHandler, onDestroy, onWindowState)
+			initial, initialCmd := initialize()
+			return runWindowCmd(window, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState)
 		},
 	}
 }

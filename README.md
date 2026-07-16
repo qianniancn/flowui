@@ -18,6 +18,7 @@ widget state is managed by `Context` with explicit keys.
 - MVU architecture: `Model`, `Msg`, `Update`, and `View`.
 - Typed message dispatch through `ui.Send[Msg]`.
 - Optional command effects with `RunCmd`, `Cmd`, and `Do`.
+- Complete programs with startup commands, subscriptions, and window-state messages.
 - Reusable application commands shared by shortcuts, menus, dropdowns, and toolbars.
 - Gio widget state managed by `Context`.
 - Key-scoped local state with automatic cleanup after each frame.
@@ -72,7 +73,8 @@ func main() {
 ```
 
 Use `Run` for synchronous updates. Use `RunCmd` when `Update` needs to start
-asynchronous work and send another message later.
+asynchronous work and send another message later. Use `RunProgram` when startup
+work, subscriptions, or native window-state changes must also enter the MVU loop.
 
 ## Theming
 
@@ -94,7 +96,7 @@ text/editor internals.
 
 ### Core
 
-- `Run`, `RunCmd`
+- `Run`, `RunCmd`, `RunProgram`, `Program`
 - `Send`, `Update`, `UpdateCmd`, `View`
 - `Cmd`, `Do`
 - `Command`, `Shortcut`, `CommandScope`
@@ -118,6 +120,8 @@ text/editor internals.
 
 - `uitest.New`, `uitest.NewWithConfig`
 - `Harness.Frame`, `Context`, `Router`, `Click`, `Key`, `Advance`, `Resize`
+- `uitest.NewApp`, `uitest.NewAppWithConfig`
+- `AppHarness.Send`, `Frame`, `Wait`, `Model`, `Errors`, `Close`
 
 ### Controls
 

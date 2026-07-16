@@ -2,7 +2,9 @@
 package counter
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
 )
@@ -27,8 +29,15 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 			return nil
 		}
 		model.Loading = true
-		return ui.Do(func(send ui.Send[Msg]) {
-			send(Loaded{Count: 10})
+		return ui.DoContext(func(ctx context.Context, send ui.Send[Msg]) error {
+			timer := time.NewTimer(1500 * time.Millisecond)
+			defer timer.Stop()
+			select {
+			case <-timer.C:
+				send(Loaded{Count: 10})
+			case <-ctx.Done():
+			}
+			return nil
 		})
 	case Loaded:
 		model.Count = msg.Count

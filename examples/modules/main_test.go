@@ -21,7 +21,10 @@ func TestChildCommandReturnsThroughParentUpdate(t *testing.T) {
 	if !loading.Counter.Loading || loading.Counter.Count != 0 {
 		t.Fatalf("loading model = %#v", loading.Counter)
 	}
-	if !harness.Wait(time.Second) {
+	if harness.Wait(100 * time.Millisecond) {
+		t.Fatal("child command completed before the loading state was observable")
+	}
+	if !harness.Wait(2 * time.Second) {
 		t.Fatal("child command did not invalidate the parent")
 	}
 	loaded := harness.Frame()

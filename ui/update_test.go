@@ -30,6 +30,43 @@ func TestDoContextReturnsError(t *testing.T) {
 	}
 }
 
+func TestMapCmdMapsMessagesAndPreservesContextAndError(t *testing.T) {
+	type contextKey struct{}
+	type parentMessage struct{ value int }
+	wantErr := errors.New("failed")
+	ctx := context.WithValue(context.Background(), contextKey{}, "value")
+	child := func(cmdCtx context.Context, send Send[int]) error {
+		if cmdCtx != ctx || cmdCtx.Value(contextKey{}) != "value" {
+			t.Fatal("mapped command did not preserve context")
+		}
+		send(2)
+		send(3)
+		return wantErr
+	}
+	mapped := MapCmd(child, func(msg int) parentMessage { return parentMessage{value: msg} })
+
+	var got []int
+	err := mapped(ctx, func(msg parentMessage) { got = append(got, msg.value) })
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("mapped error = %v, want %v", err, wantErr)
+	}
+	if len(got) != 2 || got[0] != 2 || got[1] != 3 {
+		t.Fatalf("mapped messages = %v, want [2 3]", got)
+	}
+}
+
+func TestMapCmdPreservesNilAndRejectsNilMapper(t *testing.T) {
+	if MapCmd[int, string](nil, nil) != nil {
+		t.Fatal("nil child command did not remain nil")
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("non-nil command accepted a nil mapper")
+		}
+	}()
+	MapCmd(Do(func(Send[int]) {}), (func(int) string)(nil))
+}
+
 func TestSubscribeValidatesDefinition(t *testing.T) {
 	tests := []struct {
 		name string

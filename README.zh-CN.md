@@ -16,6 +16,7 @@ FlowUI 是一个基于 Gio 构建的小型 MVU UI 框架。
 - MVU 架构：`Model`、`Msg`、`Update`、`View`。
 - 通过 `ui.Send[Msg]` 发送强类型消息。
 - 通过 `RunCmd`、`Cmd`、`Do` 支持异步副作用。
+- 通过 `MapCmd` 组合父子 MVU 模块的命令。
 - 完整 Program 支持启动命令、订阅和窗口状态消息。
 - 应用命令可复用于全局快捷键、菜单、下拉菜单和工具栏。
 - Gio 控件状态由 `Context` 统一管理。
@@ -93,7 +94,7 @@ ui.Run(Model{}, Update, View, ui.WithTheme(theme))
 
 - `Run`、`RunCmd`、`RunProgram`、`Program`
 - `Send`、`Update`、`UpdateCmd`、`View`
-- `Cmd`、`Do`
+- `Cmd`、`Do`、`MapCmd`
 - `Command`、`Shortcut`、`CommandScope`
 - `Context`
 - `Widget`、`WidgetFunc`

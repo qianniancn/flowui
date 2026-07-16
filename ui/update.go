@@ -46,6 +46,22 @@ func DoContext[Msg any](fn func(context.Context, Send[Msg]) error) Cmd[Msg] {
 	return fn
 }
 
+// MapCmd adapts a child command to a parent message type without changing its
+// context, execution, or error behavior.
+func MapCmd[ChildMsg any, ParentMsg any](cmd Cmd[ChildMsg], mapMsg func(ChildMsg) ParentMsg) Cmd[ParentMsg] {
+	if cmd == nil {
+		return nil
+	}
+	if mapMsg == nil {
+		panic("flowui: nil command mapper")
+	}
+	return func(ctx context.Context, send Send[ParentMsg]) error {
+		return cmd(ctx, func(msg ChildMsg) {
+			send(mapMsg(msg))
+		})
+	}
+}
+
 // EffectKind identifies asynchronous work managed by FlowUI.
 type EffectKind = runtime.EffectKind
 

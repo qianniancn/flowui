@@ -182,6 +182,10 @@ capture. A command returns data to the application only by calling its `Send`
 argument; concurrent sends are queued safely and applied by `UpdateCmd` in a
 later frame. Sends made after cancellation are discarded.
 
+`ui.MapCmd` lets a parent update reuse a child module's command by mapping each
+child message to the parent message type. It preserves the command context and
+error unchanged; it does not introduce another goroutine or effect lifecycle.
+
 `Subscription` represents long-lived asynchronous input such as a timer,
 filesystem watcher, or server event stream. `RunWithSubscriptions` derives the
 desired subscription set from the updated model before each view. Keys are

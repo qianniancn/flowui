@@ -45,6 +45,28 @@ func ExampleDoContext() {
 	// Output: true
 }
 
+func ExampleMapCmd() {
+	type childLoaded struct {
+		count int
+	}
+	type parentMessage struct {
+		loaded childLoaded
+	}
+
+	child := ui.Do(func(send ui.Send[childLoaded]) {
+		send(childLoaded{count: 3})
+	})
+	parent := ui.MapCmd(child, func(msg childLoaded) parentMessage {
+		return parentMessage{loaded: msg}
+	})
+
+	results := make(chan parentMessage, 1)
+	_ = parent(context.Background(), func(msg parentMessage) { results <- msg })
+	fmt.Println((<-results).loaded.count)
+
+	// Output: 3
+}
+
 func ExampleSubscribe() {
 	type model struct {
 		listening bool

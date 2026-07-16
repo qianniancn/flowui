@@ -18,6 +18,7 @@ widget state is managed by `Context` with explicit keys.
 - MVU architecture: `Model`, `Msg`, `Update`, and `View`.
 - Typed message dispatch through `ui.Send[Msg]`.
 - Optional command effects with `RunCmd`, `Cmd`, and `Do`.
+- Parent-child MVU command composition with `MapCmd`.
 - Complete programs with startup commands, subscriptions, and window-state messages.
 - Reusable application commands shared by shortcuts, menus, dropdowns, and toolbars.
 - Gio widget state managed by `Context`.
@@ -98,7 +99,7 @@ text/editor internals.
 
 - `Run`, `RunCmd`, `RunProgram`, `Program`
 - `Send`, `Update`, `UpdateCmd`, `View`
-- `Cmd`, `Do`
+- `Cmd`, `Do`, `MapCmd`
 - `Command`, `Shortcut`, `CommandScope`
 - `Context`
 - `Widget`, `WidgetFunc`

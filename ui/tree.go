@@ -10,6 +10,7 @@ type TreeGuideStyle = tree.GuideStyle
 type TreeDropPosition = tree.DropPosition
 type TreeDropEvent = tree.DropEvent
 type TreeSelectionMode = tree.SelectionMode
+type TreeChildrenState = tree.ChildrenState
 
 const (
 	TreeDefault     = tree.VariantDefault
@@ -22,8 +23,14 @@ const (
 	TreeDropInside  = tree.DropInside
 	TreeDropAfter   = tree.DropAfter
 
-	TreeSelectionSingle = tree.SelectionSingle
-	TreeSelectionNone   = tree.SelectionNone
+	TreeSelectionSingle   = tree.SelectionSingle
+	TreeSelectionMultiple = tree.SelectionMultiple
+	TreeSelectionNone     = tree.SelectionNone
+
+	TreeChildrenLoaded   = tree.ChildrenLoaded
+	TreeChildrenUnloaded = tree.ChildrenUnloaded
+	TreeChildrenLoading  = tree.ChildrenLoading
+	TreeChildrenError    = tree.ChildrenError
 )
 
 func Tree(key, selectedKey string, items []TreeItem) TreeWidget {

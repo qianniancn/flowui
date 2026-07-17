@@ -122,7 +122,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		var _ ui.Language = ctx.Language()
 	}
 	items := []ui.SelectItem{{Key: "one", Label: "One"}}
-	treeItems := []ui.TreeItem{{Key: "folder", Label: "Folder", Children: []ui.TreeItem{{Key: "file", Label: "File"}}}}
+	treeItems := []ui.TreeItem{{
+		Key: "folder", Label: "Folder",
+		Leading: ui.Icon(lucide.Folder), ExpandedLeading: ui.Icon(lucide.FolderOpen),
+		AcceptsChildren: true, Renamable: true, ChildrenState: ui.TreeChildrenLoaded,
+		Children: []ui.TreeItem{{Key: "file", Label: "File"}},
+	}}
 	tableColumns := []ui.TableColumn{
 		{Key: "name", Label: "Name", Sortable: true, Resizable: true, RowHeader: true, MinWidth: 120, MaxWidth: 320, Weight: 2},
 		{Key: "status", Label: "Status", Width: 120, Align: ui.TableAlignEnd},
@@ -451,19 +456,28 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
 		ui.Tree("files", model.selected, treeItems).
 			DataVersion(1).
+			SelectedKeys([]string{"file"}).
 			ExpandedKeys(model.expanded).
+			ContextMenu(ui.Menu("tree-actions", []ui.MenuItem{{Key: "open", Label: "Open"}})).
+			OnContextMenu(func(string) {}).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnExpandedChange(func(keys []string) { send(facadeMsg{expanded: keys}) }).
 			OnAction(func(string) {}).
 			OnDrop(func(ui.TreeDropEvent) {}).
+			CanDrop(func(ui.TreeDropEvent) bool { return true }).
+			OnLoadChildren(func(string) {}).
+			OnRename(func(string, string) {}).
+			RequestRename("folder", 1).
 			Variant(ui.TreeSurface).
 			Size(ui.TreeSmall).
-			SelectionMode(ui.TreeSelectionSingle).
+			SelectionMode(ui.TreeSelectionMultiple).
+			OnSelectionChange(func([]string) {}).
 			DisabledKeys([]string{"file"}).
 			AllowEmptySelection().
 			Guides(true).
 			GuideConnectors(true).
 			GuideStyle(ui.TreeGuideDashed).
+			ExpandOnRowClick(true).
 			EmptyText("No files").
 			MaxHeight(240),
 		ui.SidebarSections("primary-navigation", model.selected, []ui.SidebarSection{

@@ -46,7 +46,7 @@ func (c ContextMenuWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context,
 
 func (c ContextMenuWidget) updateTrigger(ctx *frame.Context, gtx layout.Context, state *contextMenuState, open *bool) {
 	for {
-		e, ok := gtx.Event(contextMenuTriggerFilters(&state.trigger)...)
+		e, ok := gtx.Event(contextMenuTriggerFilters(&state.trigger, c.triggerFocusTarget(state))...)
 		if !ok {
 			break
 		}
@@ -73,7 +73,7 @@ func (c ContextMenuWidget) updateTriggerPointer(ctx *frame.Context, gtx layout.C
 			state.hasAnchor = true
 			state.trigger.touchTracking = false
 			state.focusVisible = false
-			frame.RequestFocusVisible(ctx, &state.trigger, false)
+			frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), false)
 			*open = state.requestOpen(ctx, c, true)
 		}
 		return
@@ -115,7 +115,7 @@ func (c ContextMenuWidget) updateLongPress(ctx *frame.Context, gtx layout.Contex
 	state.hasAnchor = true
 	state.trigger.touchTracking = false
 	state.focusVisible = false
-	frame.RequestFocusVisible(ctx, &state.trigger, false)
+	frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), false)
 	*open = state.requestOpen(ctx, c, true)
 }
 
@@ -159,7 +159,7 @@ func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Co
 		}
 		event, ok := e.(key.Event)
 		if ok && event.State == key.Press {
-			frame.RequestFocusVisible(ctx, &state.trigger, true)
+			frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), true)
 			open = state.requestOpen(ctx, c, false)
 		}
 	}
@@ -174,7 +174,7 @@ func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context,
 	menuState := rootMenu.stateFor(ctx)
 	rootMenu = rootMenu.withClose(func(focusVisible bool) {
 		menuState.openSubmenu = ""
-		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
+		frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), focusVisible)
 		state.skipRestore = true
 		state.requestOpen(ctx, c, false)
 	})

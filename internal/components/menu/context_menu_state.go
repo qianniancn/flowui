@@ -168,10 +168,10 @@ func contextMenuMovedBeyond(start, current f32.Point, threshold float32) bool {
 	return dx > threshold || dy > threshold
 }
 
-func contextMenuTriggerFilters(tag event.Tag) []event.Filter {
+func contextMenuTriggerFilters(pointerTarget, focusTarget event.Tag) []event.Filter {
 	return []event.Filter{
-		pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Release | pointer.Move | pointer.Drag | pointer.Cancel},
-		key.FocusFilter{Target: tag},
-		key.Filter{Focus: tag, Name: key.NameF10, Required: key.ModShift},
+		pointer.Filter{Target: pointerTarget, Kinds: pointer.Press | pointer.Release | pointer.Move | pointer.Drag | pointer.Cancel},
+		key.FocusFilter{Target: focusTarget},
+		key.Filter{Focus: focusTarget, Name: key.NameF10, Required: key.ModShift},
 	}
 }

@@ -65,7 +65,7 @@ func drawTreeDropIndicator(gtx layout.Context, size image.Point, position DropPo
 	if size.X <= 0 || size.Y <= 0 || col.A == 0 {
 		return
 	}
-	width := max(gtx.Dp(unit.Dp(2)), 1)
+	width := max(gtx.Dp(unit.Dp(1)), 1)
 	if position == DropInside {
 		inset := max(width/2+1, 1)
 		rect := image.Rectangle{Max: size}.Inset(inset)
@@ -107,6 +107,18 @@ func drawTreeToggleIcon(gtx layout.Context, tokens theme.TreeTheme, size image.P
 	icon.Layout(lucide.ChevronRight, iconGtx, col)
 	offset.Pop()
 	rotation.Pop()
+}
+
+func drawTreeRetryIcon(gtx layout.Context, tokens theme.TreeTheme, size image.Point, col color.NRGBA) {
+	iconSize := min(gtx.Dp(tokens.ChevronIconSize), min(size.X, size.Y))
+	if iconSize <= 0 {
+		return
+	}
+	stack := op.Offset(image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(iconSize, iconSize))
+	icon.Layout(lucide.RefreshCw, iconGtx, col)
+	stack.Pop()
 }
 
 func drawTreeConnectorToggle(gtx layout.Context, tokens theme.TreeTheme, size image.Point, expansion float32, foreground, background color.NRGBA) {
@@ -242,7 +254,7 @@ func treeGuideSegments(entry flatItem, rowPadding, indent, toggleSlot, contentGa
 		segments = append(segments, treeGuideSegment{from: image.Pt(x, 0), to: image.Pt(x, y2), extend: !entry.isLast})
 		if connectors {
 			endX := toggleCenterX(entry.depth)
-			if len(entry.item.Children) == 0 {
+			if !treeItemExpandable(entry.item) {
 				endX = rowPadding + entry.depth*indent + toggleSlot + contentGap
 			}
 			segments = append(segments, treeGuideSegment{from: image.Pt(x, centerY), to: image.Pt(endX, centerY)})

@@ -3,6 +3,7 @@ package menu
 import (
 	"image"
 
+	"gioui.org/io/event"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
@@ -16,6 +17,7 @@ type ContextMenuWidget struct {
 	defaultOpen       bool
 	hasDefaultOpen    bool
 	onOpenChange      func(bool)
+	focusTarget       event.Tag
 	disabled          bool
 	longPressDisabled bool
 }
@@ -38,6 +40,12 @@ func (c ContextMenuWidget) DefaultOpen(open bool) ContextMenuWidget {
 
 func (c ContextMenuWidget) OnOpenChange(fn func(bool)) ContextMenuWidget {
 	c.onOpenChange = fn
+	return c
+}
+
+// FocusTarget sets the focusable trigger restored after the menu closes.
+func (c ContextMenuWidget) FocusTarget(target event.Tag) ContextMenuWidget {
+	c.focusTarget = target
 	return c
 }
 
@@ -75,7 +83,7 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	if restoreFocus {
 		frame.AfterOverlays(ctx, func() {
 			if !frame.HasTopOverlay(ctx) {
-				frame.RequestFocusVisible(ctx, &state.trigger, state.focusVisible)
+				frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), state.focusVisible)
 			}
 		})
 	}
@@ -85,4 +93,11 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 		c.registerOverlay(ctx, state, open, progress, !gtx.Enabled())
 	}
 	return dims
+}
+
+func (c ContextMenuWidget) triggerFocusTarget(state *contextMenuState) event.Tag {
+	if c.focusTarget != nil {
+		return c.focusTarget
+	}
+	return &state.trigger
 }

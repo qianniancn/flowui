@@ -14,6 +14,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -38,12 +39,20 @@ func TestTreeOptionsUseValueSemantics(t *testing.T) {
 	base := New("files", "readme", items)
 	configured := base.
 		ExpandedKeys([]string{"project"}).
+		SelectedKeys([]string{"project", "readme"}).
 		DisabledKeys([]string{"archive"}).
 		EmptyText("Empty").
 		OnChange(func(string) {}).
+		OnSelectionChange(func([]string) {}).
 		OnExpandedChange(func([]string) {}).
 		OnAction(func(string) {}).
 		OnDrop(func(DropEvent) {}).
+		CanDrop(func(DropEvent) bool { return true }).
+		OnLoadChildren(func(string) {}).
+		OnRename(func(string, string) {}).
+		RequestRename("archive", 4).
+		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}})).
+		OnContextMenu(func(string) {}).
 		Variant(VariantSurface).
 		Size(SizeSmall).
 		SelectionMode(SelectionNone).
@@ -52,6 +61,7 @@ func TestTreeOptionsUseValueSemantics(t *testing.T) {
 		Guides(true).
 		GuideConnectors(true).
 		GuideStyle(GuideDashed).
+		ExpandOnRowClick(true).
 		MaxHeight(180)
 
 	if len(base.expandedKeys) != 0 || len(base.disabledKeys) != 0 || base.variant != VariantDefault || base.size != SizeMedium || base.selectionMode != SelectionSingle {
@@ -63,10 +73,13 @@ func TestTreeOptionsUseValueSemantics(t *testing.T) {
 	if !treeSameKeys(configured.expandedKeys, []string{"project"}) || !treeSameKeys(configured.disabledKeys, []string{"archive"}) {
 		t.Fatal("controlled key options were not retained")
 	}
-	if configured.emptyText != "Empty" || configured.onChange == nil || configured.onExpandedChange == nil || configured.onAction == nil || configured.onDrop == nil {
+	if configured.emptyText != "Empty" || configured.onChange == nil || configured.onSelectionChange == nil || configured.onExpandedChange == nil || configured.onAction == nil || configured.onDrop == nil || configured.canDrop == nil || configured.onLoadChildren == nil || configured.onRename == nil || configured.renameRequestKey != "archive" || configured.renameRequest != 4 || !configured.hasContextMenu || configured.onContextMenu == nil {
 		t.Fatal("callbacks or empty text were not retained")
 	}
-	if configured.variant != VariantSurface || configured.size != SizeSmall || configured.selectionMode != SelectionNone || !configured.disabled || !configured.allowEmpty || !configured.guides || !configured.guideConnectors || configured.guideStyle != GuideDashed || configured.maxHeight != 180 {
+	if !treeSameKeys(configured.selectedKeys, []string{"project", "readme"}) {
+		t.Fatal("multiple selection was not retained")
+	}
+	if configured.variant != VariantSurface || configured.size != SizeSmall || configured.selectionMode != SelectionNone || !configured.disabled || !configured.allowEmpty || !configured.guides || !configured.guideConnectors || configured.guideStyle != GuideDashed || !configured.expandOnRowClick || configured.maxHeight != 180 {
 		t.Fatal("behavior options were not retained")
 	}
 }
@@ -206,6 +219,55 @@ func TestTreeRowClickSelectsAndRunsAction(t *testing.T) {
 	}
 }
 
+func TestTreeRowClickExpansionIsOptional(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		tree Widget
+		want []string
+	}{
+		{name: "default", tree: New("files", "", treeTestItems())},
+		{name: "enabled", tree: New("files", "", treeTestItems()).ExpandOnRowClick(true), want: []string{"project"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := treeTestContext(nil, locale.LanguageEnglish)
+			state := new(treeState)
+			state.beginFrame()
+			state.item("project").clickable.Click()
+			state.endFrame()
+			treeSetState(ctx, "files", state)
+
+			selected := ""
+			var expanded []string
+			test.tree.
+				OnChange(func(key string) { selected = key }).
+				OnExpandedChange(func(keys []string) { expanded = keys }).
+				Layout(ctx, treeLayoutContext(nil, image.Pt(360, 240), time.Time{}))
+			if selected != "project" || !treeSameKeys(expanded, test.want) {
+				t.Fatalf("row click = selected %q expanded %#v, want project/%#v", selected, expanded, test.want)
+			}
+		})
+	}
+}
+
+func TestTreeLeafRowClickDoesNotRequestExpansion(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	state := new(treeState)
+	state.beginFrame()
+	state.item("readme").clickable.Click()
+	state.endFrame()
+	treeSetState(ctx, "files", state)
+
+	called := false
+	New("files", "", treeTestItems()).
+		ExpandedKeys([]string{"project"}).
+		ExpandOnRowClick(true).
+		OnExpandedChange(func([]string) { called = true }).
+		Layout(ctx, treeLayoutContext(nil, image.Pt(360, 240), time.Time{}))
+	if called {
+		t.Fatal("leaf row click requested expansion")
+	}
+}
+
 func TestTreeToggleClickOnlyChangesExpansion(t *testing.T) {
 	ctx := treeTestContext(nil, locale.LanguageEnglish)
 	state := new(treeState)
@@ -224,6 +286,50 @@ func TestTreeToggleClickOnlyChangesExpansion(t *testing.T) {
 	}
 	if !treeSameKeys(expanded, []string{"project"}) {
 		t.Fatalf("expanded = %#v, want project", expanded)
+	}
+}
+
+func TestTreeAsyncBranchRequestsLoadAndExpansion(t *testing.T) {
+	items := []Item{{Key: "remote", Label: "Remote", ChildrenState: ChildrenUnloaded}}
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	state := new(treeState)
+	state.beginFrame()
+	state.item("remote").toggle.Click()
+	state.endFrame()
+	treeSetState(ctx, "async", state)
+	loaded := ""
+	var expanded []string
+	New("async", "", items).
+		OnLoadChildren(func(key string) { loaded = key }).
+		OnExpandedChange(func(keys []string) { expanded = keys }).
+		Layout(ctx, treeLayoutContext(nil, image.Pt(360, 120), time.Time{}))
+	if loaded != "remote" || !treeSameKeys(expanded, []string{"remote"}) {
+		t.Fatalf("async toggle = load %q expanded %#v", loaded, expanded)
+	}
+
+	loaded = ""
+	expanded = nil
+	New("async-error", "", []Item{{Key: "remote", Label: "Remote", ChildrenState: ChildrenError, LoadError: "Offline"}}).
+		ExpandedKeys([]string{"remote"}).
+		OnLoadChildren(func(key string) { loaded = key }).
+		OnExpandedChange(func(keys []string) { expanded = keys }).
+		requestItemToggle(Item{Key: "remote", ChildrenState: ChildrenError})
+	if loaded != "remote" || expanded != nil {
+		t.Fatalf("async retry = load %q expanded %#v", loaded, expanded)
+	}
+}
+
+func TestTreeAsyncStateControlsBranchAndErrorDescription(t *testing.T) {
+	if !treeItemExpandable(Item{ChildrenState: ChildrenUnloaded}) || !treeItemExpandable(Item{ChildrenState: ChildrenLoading}) || !treeItemExpandable(Item{ChildrenState: ChildrenError}) {
+		t.Fatal("an asynchronous Tree item was not expandable")
+	}
+	item := Item{Description: "Remote files", ChildrenState: ChildrenError, LoadError: "Connection failed"}
+	if got := treeItemDescription(item); got != "Connection failed" {
+		t.Fatalf("error description = %q", got)
+	}
+	item.ChildrenState = ChildrenLoaded
+	if got := treeItemDescription(item); got != "Remote files" {
+		t.Fatalf("loaded description = %q", got)
 	}
 }
 
@@ -277,7 +383,7 @@ func TestTreeSelectionNoneOnlyRunsAction(t *testing.T) {
 		SelectionMode(SelectionNone).
 		OnChange(func(key string) { changed = key }).
 		OnAction(func(key string) { action = key })
-	tree.activate("project")
+	tree.activateWithModifiers(nil, nil, "project", 0)
 	if changed != "" || action != "project" {
 		t.Fatalf("callbacks = changed %q action %q", changed, action)
 	}
@@ -285,12 +391,48 @@ func TestTreeSelectionNoneOnlyRunsAction(t *testing.T) {
 
 func TestTreeAllowEmptySelection(t *testing.T) {
 	changed := "not-called"
-	New("files", "project", treeTestItems()).
+	tree := New("files", "project", treeTestItems()).
 		AllowEmptySelection().
-		OnChange(func(key string) { changed = key }).
-		activate("project")
+		OnChange(func(key string) { changed = key })
+	tree.activateWithModifiers(nil, nil, "project", 0)
 	if changed != "" {
 		t.Fatalf("changed = %q, want empty", changed)
+	}
+}
+
+func TestTreeMultipleSelectionUsesDesktopModifiers(t *testing.T) {
+	visible := flattenVisibleItems(treeTestItems(), treeKeySet([]string{"project"}))
+	state := new(treeState)
+	state.selectionAnchor = "project"
+	selected := []string{"project"}
+	tree := func() Widget {
+		return New("files", "", treeTestItems()).
+			SelectionMode(SelectionMultiple).
+			SelectedKeys(selected).
+			OnSelectionChange(func(keys []string) { selected = keys })
+	}
+
+	tree().activateWithModifiers(state, visible, "readme", key.ModShift)
+	if !treeSameKeys(selected, []string{"project", "src", "readme"}) {
+		t.Fatalf("shift range = %#v", selected)
+	}
+	tree().activateWithModifiers(state, visible, "src", key.ModCtrl)
+	if !treeSameKeys(selected, []string{"project", "readme"}) {
+		t.Fatalf("ctrl toggle = %#v", selected)
+	}
+	tree().activateWithModifiers(state, visible, "archive", 0)
+	if !treeSameKeys(selected, []string{"archive"}) {
+		t.Fatalf("plain selection = %#v", selected)
+	}
+}
+
+func TestTreeSelectedDragKeysPreserveOrderAndExcludeDescendants(t *testing.T) {
+	visible := flattenVisibleItems(treeTestItems(), treeKeySet([]string{"project", "src"}))
+	tree := New("files", "", treeTestItems()).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys([]string{"ui", "project", "main", "archive"})
+	if got := tree.selectedDragKeys(visible); !treeSameKeys(got, []string{"project", "archive"}) {
+		t.Fatalf("drag keys = %#v, want project/archive", got)
 	}
 }
 
@@ -371,6 +513,183 @@ func TestTreeKeyboardEnterSelectsFocusedNode(t *testing.T) {
 	}
 }
 
+func TestTreePointerFocusThenF2StartsAndCommitsRename(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	items := treeTestItems()
+	items[1].Renamable = true
+	renamedKey, renamedLabel := "", ""
+	widgetValue := New("files", "archive", items).OnRename(func(key, label string) {
+		renamedKey, renamedLabel = key, label
+	})
+	start := time.Unix(8, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	state := treePeekState(ctx, "files")
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonPrimary, Position: f32.Pt(100, 60),
+	})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	if !router.Source().Focused(&state.items["archive"].clickable) {
+		t.Fatal("pointer press did not focus the renamable row")
+	}
+	router.Queue(pointer.Event{
+		Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1,
+		Position: f32.Pt(100, 60),
+	})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(2*time.Millisecond))
+	router.Queue(key.Event{Name: key.NameF2, State: key.Press})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(3*time.Millisecond))
+	if state.renameKey != "archive" || state.renameEditor.Text() != "Archive" {
+		t.Fatalf("rename state = key %q text %q", state.renameKey, state.renameEditor.Text())
+	}
+	state.renameEditor.SetText("History")
+	state.finishRename(widgetValue, true)
+	if renamedKey != "archive" || renamedLabel != "History" || state.renameKey != "" {
+		t.Fatalf("rename result = %q/%q active %q", renamedKey, renamedLabel, state.renameKey)
+	}
+}
+
+func TestTreeContextMenuOpensForUnselectedRow(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	selected, contextKey := "", ""
+	widgetValue := New("files", selected, treeTestItems()).
+		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}})).
+		OnChange(func(key string) { selected = key }).
+		OnContextMenu(func(key string) { contextKey = key })
+	start := time.Unix(10, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonSecondary, Position: f32.Pt(100, 60),
+	})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	state := treePeekState(ctx, "files")
+	if selected != "" || contextKey != "archive" {
+		t.Fatalf("context menu row = selected %q target %q, want empty/archive", selected, contextKey)
+	}
+	if !router.Source().Focused(&state.items["archive"].clickable) {
+		t.Fatal("context menu did not focus its Tree row")
+	}
+}
+
+func TestTreeContextMenuPreservesExistingMultipleSelection(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	selected := []string{"project", "archive"}
+	selectionChanged := false
+	contextKey := ""
+	widgetValue := New("files", "", treeTestItems()).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys(selected).
+		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}})).
+		OnSelectionChange(func(keys []string) {
+			selectionChanged = true
+			selected = keys
+		}).
+		OnContextMenu(func(key string) { contextKey = key })
+	start := time.Unix(11, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonSecondary, Position: f32.Pt(100, 60),
+	})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	if selectionChanged || !treeSameKeys(selected, []string{"project", "archive"}) || contextKey != "archive" {
+		t.Fatalf("selected context row = changed %v selected %#v target %q", selectionChanged, selected, contextKey)
+	}
+}
+
+func TestTreeContextMenuOpensFromShiftF10(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	contextKey := ""
+	widgetValue := New("files", "", treeTestItems()).
+		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}})).
+		OnContextMenu(func(key string) { contextKey = key })
+	start := time.Unix(12, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	state := treePeekState(ctx, "files")
+	router.Source().Execute(key.FocusCmd{Tag: &state.items["archive"].clickable})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	router.Queue(key.Event{Name: key.NameF10, Modifiers: key.ModShift, State: key.Press})
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(2*time.Millisecond))
+	if contextKey != "archive" {
+		t.Fatalf("Shift+F10 context target = %q, want archive", contextKey)
+	}
+}
+
+func TestTreeRenameRejectsEmptyAndHonorsCancel(t *testing.T) {
+	called := false
+	widgetValue := New("files", "", nil).OnRename(func(string, string) { called = true })
+	state := new(treeState)
+	state.beginRename(Item{Key: "file", Label: "File"})
+	state.renameEditor.SetText("   ")
+	state.finishRename(widgetValue, true)
+	state.beginRename(Item{Key: "file", Label: "File"})
+	state.renameEditor.SetText("Changed")
+	state.finishRename(widgetValue, false)
+	if called {
+		t.Fatal("empty or cancelled rename invoked OnRename")
+	}
+}
+
+func TestTreeRenameRequestStartsOncePerRevision(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	items := treeTestItems()
+	items[1].Renamable = true
+	widgetValue := New("files", "archive", items).
+		OnRename(func(string, string) {}).
+		RequestRename("archive", 1)
+	start := time.Unix(13, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	state := treePeekState(ctx, "files")
+	if state.renameKey != "archive" || state.renameEditor.Text() != "Archive" || !router.Source().Focused(&state.renameEditor) {
+		t.Fatalf("rename request = key %q text %q focused %v", state.renameKey, state.renameEditor.Text(), router.Source().Focused(&state.renameEditor))
+	}
+	state.renameEditor.SetText("Editing")
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	if state.renameEditor.Text() != "Editing" {
+		t.Fatalf("same revision restarted editor with %q", state.renameEditor.Text())
+	}
+	state.finishRename(widgetValue, false)
+	layoutTreeFrame(ctx, router, widgetValue.RequestRename("archive", 2), start.Add(2*time.Millisecond))
+	if state.renameKey != "archive" || state.renameEditor.Text() != "Archive" {
+		t.Fatalf("new revision did not restart rename: key %q text %q", state.renameKey, state.renameEditor.Text())
+	}
+	state.finishRename(widgetValue, false)
+	items[0].Renamable = true
+	otherTarget := New("files", "project", items).
+		OnRename(func(string, string) {}).
+		RequestRename("project", 2)
+	layoutTreeFrame(ctx, router, otherTarget, start.Add(3*time.Millisecond))
+	if state.renameKey != "project" || state.renameEditor.Text() != "Project" {
+		t.Fatalf("same revision with a new key did not start rename: key %q text %q", state.renameKey, state.renameEditor.Text())
+	}
+}
+
+func TestTreeRenameRequestWaitsForHiddenTarget(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	items := treeTestItems()
+	items[0].Children[0].Children[0].Renamable = true
+	widgetValue := New("files", "", items).
+		OnRename(func(string, string) {}).
+		RequestRename("main", 1)
+	start := time.Unix(14, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	state := treePeekState(ctx, "files")
+	if state.renameKey != "" || state.renameRequestReady {
+		t.Fatalf("hidden request was consumed: key %q ready %v", state.renameKey, state.renameRequestReady)
+	}
+	layoutTreeFrame(ctx, router, widgetValue.ExpandedKeys([]string{"project", "src"}), start.Add(time.Millisecond))
+	if state.renameKey != "main" || state.renameEditor.Text() != "main.go" {
+		t.Fatalf("visible request did not start rename: key %q text %q", state.renameKey, state.renameEditor.Text())
+	}
+}
+
 func TestTreeKeyboardNavigationSkipsDisabledNodes(t *testing.T) {
 	visible := flattenVisibleItems(treeTestItems(), treeKeySet([]string{"project"}))
 	tree := New("files", "", treeTestItems()).DisabledKeys([]string{"readme"})
@@ -383,6 +702,18 @@ func TestTreeKeyboardNavigationSkipsDisabledNodes(t *testing.T) {
 	next, ok = treeMoveVisible(visible, tree, readme-1, 1)
 	if !ok || visible[next].item.Key != "archive" {
 		t.Fatalf("disabled readme was not skipped: %d/%v key %q", next, ok, visible[next].item.Key)
+	}
+}
+
+func TestTreeKeyboardActiveIndexSkipsHiddenAndDisabledSelections(t *testing.T) {
+	visible := flattenVisibleItems(treeTestItems(), treeKeySet([]string{"project"}))
+	tree := New("files", "", treeTestItems()).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys([]string{"project", "main", "readme"}).
+		DisabledKeys([]string{"readme"})
+	index := tree.keyboardActiveIndex(visible)
+	if index < 0 || visible[index].item.Key != "project" {
+		t.Fatalf("keyboard active index = %d, want visible project", index)
 	}
 }
 
@@ -503,7 +834,7 @@ func TestTreeGuideDashesMatchReferencePattern(t *testing.T) {
 }
 
 func TestTreeDropTargetUsesRowQuarters(t *testing.T) {
-	visible := []flatItem{{item: Item{Key: "one"}}, {item: Item{Key: "two"}}}
+	visible := []flatItem{{item: Item{Key: "one"}}, {item: Item{Key: "two", AcceptsChildren: true}}}
 	heights := []int{24, 24}
 	tests := []struct {
 		y        float32
@@ -524,25 +855,122 @@ func TestTreeDropTargetUsesRowQuarters(t *testing.T) {
 	}
 }
 
+func TestTreeLeafDropTargetUsesRowHalves(t *testing.T) {
+	visible := []flatItem{{item: Item{Key: "source"}}, {item: Item{Key: "file"}}}
+	heights := []int{24, 24}
+	for _, test := range []struct {
+		y        float32
+		position DropPosition
+	}{
+		{27, DropBefore},
+		{38, DropAfter},
+	} {
+		target := treeDropTargetAt(visible, 0, test.y, heights, 1)
+		if target.key != "file" || target.position != test.position {
+			t.Fatalf("leaf drop at %.0f = %#v, want file/%v", test.y, target, test.position)
+		}
+	}
+}
+
+func TestTreeDragViewportAndAutoScrollEdges(t *testing.T) {
+	heights := []int{24, 24, 24}
+	position := layout.Position{First: 1, Offset: 4, Count: 2}
+	if got := treeDragViewportY(heights, 1, position, 2, 12); got != 33 {
+		t.Fatalf("drag viewport y = %v, want 33", got)
+	}
+	if got := treeAutoScrollDirection(10, 200, 24); got != -1 {
+		t.Fatalf("top auto-scroll direction = %d", got)
+	}
+	if got := treeAutoScrollDirection(100, 200, 24); got != 0 {
+		t.Fatalf("middle auto-scroll direction = %d", got)
+	}
+	if got := treeAutoScrollDirection(190, 200, 24); got != 1 {
+		t.Fatalf("bottom auto-scroll direction = %d", got)
+	}
+}
+
+func TestTreeDragAutoScrollAdvancesList(t *testing.T) {
+	state := new(treeState)
+	state.list.Axis = layout.Vertical
+	start := time.Unix(9, 0)
+	layoutList := func(now time.Time) {
+		gtx := treeLayoutContext(nil, image.Pt(240, 72), now)
+		state.list.Layout(gtx, 20, func(gtx layout.Context, _ int) layout.Dimensions {
+			return layout.Dimensions{Size: image.Pt(240, 24)}
+		})
+	}
+	layoutList(start)
+	gtx := treeLayoutContext(nil, image.Pt(240, 72), start.Add(time.Millisecond))
+	state.updateDragScroll(gtx, 70, 72, 24, 20)
+	layoutList(start.Add(2 * time.Millisecond))
+	if state.list.Position.First == 0 && state.list.Position.Offset == 0 {
+		t.Fatal("drag auto-scroll did not advance the list")
+	}
+}
+
+func TestTreeDragHoverExpandsOnceAfterDelay(t *testing.T) {
+	state := new(treeState)
+	start := time.Unix(7, 0)
+	if state.updateDragHover(treeLayoutContext(nil, image.Pt(320, 200), start), "folder", true) {
+		t.Fatal("drag hover expanded immediately")
+	}
+	if state.updateDragHover(treeLayoutContext(nil, image.Pt(320, 200), start.Add(treeDragExpandDelay-time.Millisecond)), "folder", true) {
+		t.Fatal("drag hover expanded before its delay")
+	}
+	if !state.updateDragHover(treeLayoutContext(nil, image.Pt(320, 200), start.Add(treeDragExpandDelay)), "folder", true) {
+		t.Fatal("drag hover did not expand at its delay")
+	}
+	if state.updateDragHover(treeLayoutContext(nil, image.Pt(320, 200), start.Add(time.Second)), "folder", true) {
+		t.Fatal("drag hover expanded the same target twice")
+	}
+}
+
 func TestTreeDropRejectsSelfDescendantsAndDisabledItems(t *testing.T) {
 	items := treeTestItems()
+	items[1].AcceptsChildren = true
 	visible := flattenVisibleItems(items, treeKeySet([]string{"project", "src"}))
 	tree := New("files", "", items)
-	if treeDropAllowed(tree, visible, "project", "project") {
+	if treeDropAllowed(tree, visible, []string{"project"}, "project", DropBefore) {
 		t.Fatal("Tree allowed dropping an item onto itself")
 	}
-	if treeDropAllowed(tree, visible, "project", "main") {
+	if treeDropAllowed(tree, visible, []string{"project"}, "main", DropBefore) {
 		t.Fatal("Tree allowed dropping a parent into its descendant")
 	}
-	if !treeDropAllowed(tree, visible, "main", "archive") {
+	if !treeDropAllowed(tree, visible, []string{"main"}, "archive", DropInside) {
 		t.Fatal("Tree rejected a valid sibling move")
 	}
-	if treeDropAllowed(tree.DisabledKeys([]string{"archive"}), visible, "main", "archive") {
+	if treeDropAllowed(tree.DisabledKeys([]string{"archive"}), visible, []string{"main"}, "archive", DropInside) {
 		t.Fatal("Tree allowed dropping onto a disabled item")
+	}
+	if treeDropAllowed(tree, visible, []string{"main"}, "readme", DropInside) {
+		t.Fatal("Tree allowed dropping inside a leaf")
+	}
+	if !treeDropAllowed(tree, visible, []string{"main"}, "readme", DropBefore) {
+		t.Fatal("Tree rejected dropping before a leaf")
 	}
 	target := treeDropIndicatorTarget(visible, treeDropTarget{key: "project", drawKey: "project", position: DropAfter})
 	if target.drawKey != "readme" {
 		t.Fatalf("expanded branch after-indicator = %q, want readme", target.drawKey)
+	}
+}
+
+func TestTreeCanDropReceivesBatchAndControlsIndicator(t *testing.T) {
+	visible := flattenVisibleItems(treeTestItems(), treeKeySet([]string{"project", "src"}))
+	var proposed DropEvent
+	tree := New("files", "", treeTestItems()).CanDrop(func(event DropEvent) bool {
+		proposed = event
+		return false
+	})
+	sources := []string{"main", "ui"}
+	if tree.dropAllowed(visible, sources, "archive", DropBefore) {
+		t.Fatal("CanDrop rejection was ignored")
+	}
+	if proposed.SourceKey != "main" || !treeSameKeys(proposed.SourceKeys, sources) || proposed.TargetKey != "archive" || proposed.Position != DropBefore {
+		t.Fatalf("drop proposal = %#v", proposed)
+	}
+	proposed.SourceKeys[0] = "changed"
+	if sources[0] != "main" {
+		t.Fatal("drop proposal exposed the Tree source slice")
 	}
 }
 
@@ -551,7 +979,14 @@ func TestTreeDragEmitsDropEvent(t *testing.T) {
 	router := new(input.Router)
 	var dropped DropEvent
 	activated := ""
-	tree := New("files", "", treeTestItems()).
+	items := []Item{
+		{Key: "one", Label: "One"},
+		{Key: "two", Label: "Two"},
+		{Key: "folder", Label: "Folder", AcceptsChildren: true},
+	}
+	tree := New("files", "", items).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys([]string{"one", "two"}).
 		OnAction(func(key string) { activated = key }).
 		OnDrop(func(event DropEvent) { dropped = event })
 	start := time.Unix(4, 0)
@@ -570,24 +1005,49 @@ func TestTreeDragEmitsDropEvent(t *testing.T) {
 	layoutTreeFrame(ctx, router, tree, start.Add(3*time.Millisecond))
 	router.Queue(pointer.Event{
 		Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1,
-		Buttons: pointer.ButtonPrimary, Position: f32.Pt(100, 60),
+		Buttons: pointer.ButtonPrimary, Position: f32.Pt(100, 100),
 	})
 	layoutTreeFrame(ctx, router, tree, start.Add(4*time.Millisecond))
 	state := treePeekState(ctx, "files")
-	if state.dragSource != "project" || state.dropTarget.key != "archive" || state.dropTarget.drawKey != "archive" || state.dropTarget.position != DropInside {
+	if state.dragSource != "one" || !treeSameKeys(state.dragSources, []string{"one", "two"}) || state.dropTarget.key != "folder" || state.dropTarget.drawKey != "folder" || state.dropTarget.position != DropInside {
 		t.Fatalf("active drop target = source %q target %#v", state.dragSource, state.dropTarget)
 	}
 	router.Queue(pointer.Event{
 		Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1,
-		Position: f32.Pt(100, 60),
+		Position: f32.Pt(100, 100),
 	})
 	layoutTreeFrame(ctx, router, tree, start.Add(5*time.Millisecond))
 	layoutTreeFrame(ctx, router, tree, start.Add(6*time.Millisecond))
-	if dropped != (DropEvent{SourceKey: "project", TargetKey: "archive", Position: DropInside}) {
+	if dropped.SourceKey != "one" || !treeSameKeys(dropped.SourceKeys, []string{"one", "two"}) || dropped.TargetKey != "folder" || dropped.Position != DropInside {
 		t.Fatalf("drop event = %#v", dropped)
 	}
 	if activated != "" {
 		t.Fatalf("drag also activated %q", activated)
+	}
+}
+
+func TestDraggableTreeReleasesOffscreenItemState(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	items := make([]Item, 80)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: fmt.Sprintf("Item %d", index)}
+	}
+	widgetValue := New("files", "", items).MaxHeight(72).OnDrop(func(DropEvent) {})
+	start := time.Unix(15, 0)
+	layoutTreeFrame(ctx, router, widgetValue, start)
+	state := treePeekState(ctx, "files")
+	initial := len(state.items)
+	if initial == 0 {
+		t.Fatal("draggable Tree did not create visible item state")
+	}
+	state.list.ScrollTo(60)
+	layoutTreeFrame(ctx, router, widgetValue, start.Add(time.Millisecond))
+	if _, retained := state.items["item-0"]; retained {
+		t.Fatal("draggable Tree retained an offscreen item state")
+	}
+	if len(state.items) > initial+1 {
+		t.Fatalf("draggable Tree state grew from %d to %d after scrolling", initial, len(state.items))
 	}
 }
 
@@ -664,16 +1124,35 @@ func TestTreeLayoutUsesThemeAndMaxHeight(t *testing.T) {
 	}
 }
 
+func TestTreeDragPreviewUsesCompactIndependentSize(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	dims := New("files", "", nil).Size(SizeSmall).layoutDragPreview(
+		ctx,
+		treeLayoutContext(nil, image.Pt(520, 24), time.Time{}),
+		"A long item name that must not use the full Tree row width",
+	)
+	if dims.Size.X > 240 || dims.Size.Y <= 24 {
+		t.Fatalf("drag preview dimensions = %v, want width <= 240 and independent row height", dims.Size)
+	}
+}
+
 func TestTreeComposedContentInheritsSelectedColors(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	leading := &treeProbe{size: image.Pt(16, 16)}
+	expandedLeading := &treeProbe{size: image.Pt(16, 16)}
 	trailing := &treeProbe{size: image.Pt(32, 16)}
-	item := Item{Key: "selected", Label: "Selected", Leading: leading, Trailing: trailing}
-	New("tree", "selected", []Item{item}).Layout(
+	item := Item{
+		Key: "selected", Label: "Selected", Leading: leading, ExpandedLeading: expandedLeading, Trailing: trailing,
+		Children: []Item{{Key: "child", Label: "Child"}},
+	}
+	New("tree", "selected", []Item{item}).ExpandedKeys([]string{"selected"}).Layout(
 		treeTestContext(&activeTheme, locale.LanguageEnglish),
 		treeLayoutContext(nil, image.Pt(320, 100), time.Time{}),
 	)
-	for name, probe := range map[string]*treeProbe{"leading": leading, "trailing": trailing} {
+	if leading.layouts != 0 {
+		t.Fatalf("collapsed leading layouts = %d, want 0 while expanded", leading.layouts)
+	}
+	for name, probe := range map[string]*treeProbe{"expanded leading": expandedLeading, "trailing": trailing} {
 		if probe.layouts != 1 || probe.foreground != activeTheme.Palette.AccentSoftForeground || probe.background != activeTheme.Palette.AccentSoft {
 			t.Errorf("%s content = layouts %d colors %#v/%#v", name, probe.layouts, probe.foreground, probe.background)
 		}

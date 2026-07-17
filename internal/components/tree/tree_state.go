@@ -1,6 +1,8 @@
 package tree
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -28,6 +30,8 @@ const treeDragMIMEPrefix = "application/x-flowui-tree-item/"
 const (
 	treeTypeaheadTimeout = 500 * time.Millisecond
 	treeExpandDuration   = 200 * time.Millisecond
+	treeDragExpandDelay  = 600 * time.Millisecond
+	treeDragScrollSpeed  = 8
 )
 
 type flatItem struct {
@@ -61,21 +65,35 @@ func flattenVisibleItems(items []Item, expanded map[string]struct{}) []flatItem 
 }
 
 type treeState struct {
-	list             layout.List
-	bar              widget.Scrollbar
-	items            map[string]*treeItemState
-	frameItems       map[string]struct{}
-	itemKeys         map[string]struct{}
-	keyFilters       []event.Filter
-	pressedKey       key.Name
-	pressedActionKey string
-	typeahead        string
-	typeaheadAt      time.Time
-	typeaheadReady   bool
-	dragMIME         string
-	dragSource       string
-	dropTarget       treeDropTarget
-	dataCache        treeDataCache
+	list               layout.List
+	bar                widget.Scrollbar
+	items              map[string]*treeItemState
+	frameItems         map[string]struct{}
+	itemKeys           map[string]struct{}
+	keyFilters         []event.Filter
+	pressedKey         key.Name
+	pressedModifiers   key.Modifiers
+	pressedActionKey   string
+	selectionAnchor    string
+	typeahead          string
+	typeaheadAt        time.Time
+	typeaheadReady     bool
+	dragMIME           string
+	dragSource         string
+	dragSources        []string
+	dropTarget         treeDropTarget
+	dragHoverKey       string
+	dragHoverAt        time.Time
+	dragHoverRequested bool
+	dragScrollAt       time.Time
+	renameKey          string
+	renameOriginal     string
+	renameEditor       widget.Editor
+	renameFocused      bool
+	renameRequestKey   string
+	renameRequest      uint64
+	renameRequestReady bool
+	dataCache          treeDataCache
 }
 
 type treeDataCache struct {
@@ -153,9 +171,13 @@ func (s *treeState) checkItems(items []Item) {
 }
 
 type treeKeyResult struct {
-	focusKey  string
-	actionKey string
-	toggleKey string
+	focusKey        string
+	actionKey       string
+	actionModifiers key.Modifiers
+	rangeKey        string
+	toggleKey       string
+	loadKey         string
+	renameKey       string
 }
 
 func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatItem) treeKeyResult {
@@ -184,6 +206,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			key.Filter{Focus: tag, Name: key.NameSpace},
 			key.Filter{Focus: tag},
 		)
+		if tree.onRename != nil && entry.item.Renamable {
+			s.keyFilters = append(s.keyFilters, key.Filter{Focus: tag, Name: key.NameF2})
+		}
 	}
 	if len(s.keyFilters) == 0 {
 		return treeKeyResult{}
@@ -202,7 +227,7 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			continue
 		}
 		if current < 0 {
-			current = treeVisibleIndex(visible, tree.selectedKey)
+			current = tree.keyboardActiveIndex(visible)
 		}
 		switch event.Name {
 		case key.NameDownArrow:
@@ -210,6 +235,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 				if next, ok := treeMoveVisible(visible, tree, current, 1); ok {
 					current = next
 					result.focusKey = visible[next].item.Key
+					if event.Modifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+						result.rangeKey = result.focusKey
+					}
 				}
 			}
 		case key.NameUpArrow:
@@ -217,6 +245,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 				if next, ok := treeMoveVisible(visible, tree, current, -1); ok {
 					current = next
 					result.focusKey = visible[next].item.Key
+					if event.Modifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+						result.rangeKey = result.focusKey
+					}
 				}
 			}
 		case key.NameHome:
@@ -224,6 +255,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 				if next, ok := treeFirstEnabled(visible, tree); ok {
 					current = next
 					result.focusKey = visible[next].item.Key
+					if event.Modifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+						result.rangeKey = result.focusKey
+					}
 				}
 			}
 		case key.NameEnd:
@@ -231,6 +265,9 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 				if next, ok := treeLastEnabled(visible, tree); ok {
 					current = next
 					result.focusKey = visible[next].item.Key
+					if event.Modifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+						result.rangeKey = result.focusKey
+					}
 				}
 			}
 		case key.NameRightArrow:
@@ -239,9 +276,14 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 					expanded = treeKeySet(tree.expandedKeys)
 				}
 				entry := visible[current]
-				if len(entry.item.Children) > 0 {
+				if treeItemExpandable(entry.item) {
 					if _, ok := expanded[entry.item.Key]; !ok {
 						result.toggleKey = entry.item.Key
+						if entry.item.ChildrenState == ChildrenUnloaded || entry.item.ChildrenState == ChildrenError {
+							result.loadKey = entry.item.Key
+						}
+					} else if entry.item.ChildrenState == ChildrenError {
+						result.loadKey = entry.item.Key
 					} else if child := treeFirstEnabledChild(visible, tree, current); child >= 0 {
 						current = child
 						result.focusKey = visible[child].item.Key
@@ -254,7 +296,7 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 					expanded = treeKeySet(tree.expandedKeys)
 				}
 				entry := visible[current]
-				if len(entry.item.Children) > 0 {
+				if treeItemExpandable(entry.item) {
 					if _, ok := expanded[entry.item.Key]; ok {
 						result.toggleKey = entry.item.Key
 						continue
@@ -267,6 +309,13 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			}
 		case key.NameEnter, key.NameReturn, key.NameSpace:
 			s.handleActivationKey(event, visible, tree, current, &result)
+		case key.NameF2:
+			if event.State == key.Press && current >= 0 && current < len(visible) {
+				entry := visible[current]
+				if entry.item.Renamable && tree.onRename != nil && !tree.itemDisabled(entry.item) {
+					result.renameKey = entry.item.Key
+				}
+			}
 		default:
 			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
@@ -294,15 +343,22 @@ func (s *treeState) handleActivationKey(event key.Event, visible []flatItem, tre
 	switch event.State {
 	case key.Press:
 		s.pressedKey = event.Name
+		s.pressedModifiers = event.Modifiers
 		s.pressedActionKey = ""
 		if current >= 0 && current < len(visible) && !tree.itemDisabled(visible[current].item) {
 			s.pressedActionKey = visible[current].item.Key
 		}
 	case key.Release:
 		if s.pressedKey == event.Name && s.pressedActionKey != "" {
-			result.actionKey = s.pressedActionKey
+			if s.pressedModifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+				result.rangeKey = s.pressedActionKey
+			} else {
+				result.actionKey = s.pressedActionKey
+				result.actionModifiers = s.pressedModifiers
+			}
 		}
 		s.pressedKey = ""
+		s.pressedModifiers = 0
 		s.pressedActionKey = ""
 	}
 }
@@ -371,7 +427,7 @@ type treeDropTarget struct {
 	position DropPosition
 }
 
-func (s *treeItemState) updateDrag(gtx layout.Context, mime, sourceKey string) bool {
+func (s *treeItemState) updateDrag(gtx layout.Context, mime string, sourceKeys []string) bool {
 	for {
 		raw, ok := gtx.Event(pointer.Filter{Target: &s.dragTag, Kinds: pointer.Press})
 		if !ok {
@@ -383,15 +439,15 @@ func (s *treeItemState) updateDrag(gtx layout.Context, mime, sourceKey string) b
 	}
 	s.drag.Type = mime
 	if requestedMIME, requested := s.drag.Update(gtx); requested {
-		s.drag.Offer(gtx, requestedMIME, io.NopCloser(strings.NewReader(sourceKey)))
+		data, _ := json.Marshal(sourceKeys)
+		s.drag.Offer(gtx, requestedMIME, io.NopCloser(bytes.NewReader(data)))
 	}
 	position := s.drag.Pos()
 	slop := float32(gtx.Dp(3))
 	return s.drag.Dragging() && position.X*position.X+position.Y*position.Y > slop*slop
 }
 
-func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, visible []flatItem, entry flatItem) {
-	itemState := state.item(entry.item.Key)
+func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, itemState *treeItemState, visible []flatItem, entry flatItem) {
 	for index := range itemState.dropTags {
 		for {
 			raw, ok := gtx.Event(transfer.TargetFilter{Target: &itemState.dropTags[index], Type: state.dragMIME})
@@ -402,43 +458,82 @@ func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, visible [
 			if !ok {
 				continue
 			}
-			sourceKey, ok := treeDropSource(event)
-			if ok && treeDropAllowed(t, visible, sourceKey, entry.item.Key) {
-				t.onDrop(DropEvent{SourceKey: sourceKey, TargetKey: entry.item.Key, Position: DropPosition(index)})
+			sourceKeys, ok := treeDropSource(event)
+			position := DropPosition(index)
+			if ok && t.dropAllowed(visible, sourceKeys, entry.item.Key, position) {
+				t.onDrop(treeDropEvent(sourceKeys, entry.item.Key, position))
 			}
 		}
 	}
 }
 
-func treeDropSource(event transfer.DataEvent) (string, bool) {
+func treeDropSource(event transfer.DataEvent) ([]string, bool) {
 	reader := event.Open()
 	if reader == nil {
-		return "", false
+		return nil, false
 	}
-	data, err := io.ReadAll(io.LimitReader(reader, 4097))
+	data, err := io.ReadAll(io.LimitReader(reader, 64*1024+1))
 	_ = reader.Close()
-	return string(data), err == nil && len(data) > 0 && len(data) <= 4096
+	if err != nil || len(data) == 0 || len(data) > 64*1024 {
+		return nil, false
+	}
+	var keys []string
+	if json.Unmarshal(data, &keys) != nil {
+		return nil, false
+	}
+	unique := keys[:0]
+	for _, itemKey := range keys {
+		if itemKey != "" && !treeContainsKey(unique, itemKey) {
+			unique = append(unique, itemKey)
+		}
+	}
+	return unique, len(unique) > 0
 }
 
-func treeDropAllowed(tree Widget, visible []flatItem, sourceKey, targetKey string) bool {
-	sourceIndex := treeVisibleIndex(visible, sourceKey)
+func treeDropAllowed(tree Widget, visible []flatItem, sourceKeys []string, targetKey string, position DropPosition) bool {
 	targetIndex := treeVisibleIndex(visible, targetKey)
-	if sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex {
+	if len(sourceKeys) == 0 || targetIndex < 0 {
 		return false
 	}
-	if tree.itemDisabled(visible[sourceIndex].item) || tree.itemDisabled(visible[targetIndex].item) {
+	if tree.itemDisabled(visible[targetIndex].item) {
 		return false
 	}
-	if targetIndex > sourceIndex {
+	if position == DropInside && !treeItemAcceptsChildren(visible[targetIndex].item) {
+		return false
+	}
+	for _, sourceKey := range sourceKeys {
+		sourceIndex := treeVisibleIndex(visible, sourceKey)
+		if sourceIndex < 0 || sourceIndex == targetIndex || tree.itemDisabled(visible[sourceIndex].item) {
+			return false
+		}
+		if targetIndex <= sourceIndex {
+			continue
+		}
 		sourceDepth := visible[sourceIndex].depth
+		outsideSource := false
 		for index := sourceIndex + 1; index <= targetIndex; index++ {
 			if visible[index].depth <= sourceDepth {
-				return true
+				outsideSource = true
+				break
 			}
 		}
-		return false
+		if !outsideSource {
+			return false
+		}
 	}
 	return true
+}
+
+func (t Widget) dropAllowed(visible []flatItem, sourceKeys []string, targetKey string, position DropPosition) bool {
+	if !treeDropAllowed(t, visible, sourceKeys, targetKey, position) {
+		return false
+	}
+	return t.canDrop == nil || t.canDrop(treeDropEvent(sourceKeys, targetKey, position))
+}
+
+func treeDropEvent(sourceKeys []string, targetKey string, position DropPosition) DropEvent {
+	keys := append([]string(nil), sourceKeys...)
+	return DropEvent{SourceKey: keys[0], SourceKeys: keys, TargetKey: targetKey, Position: position}
 }
 
 func treeDropTargetAt(visible []flatItem, sourceIndex int, pointerY float32, heights []int, gap int) treeDropTarget {
@@ -453,7 +548,10 @@ func treeDropTargetAt(visible []flatItem, sourceIndex int, pointerY float32, hei
 		height := heights[index]
 		bottom := top + float32(height)
 		if pointerY >= top && pointerY < bottom {
-			return treeDropTarget{key: entry.item.Key, drawKey: entry.item.Key, depth: entry.depth, position: treeDropPositionAt(pointerY-top, height)}
+			return treeDropTarget{
+				key: entry.item.Key, drawKey: entry.item.Key, depth: entry.depth,
+				position: treeDropPositionAt(pointerY-top, height, treeItemAcceptsChildren(entry.item)),
+			}
 		}
 		top = bottom + float32(gap)
 	}
@@ -474,7 +572,13 @@ func treeDropIndicatorTarget(visible []flatItem, target treeDropTarget) treeDrop
 	return target
 }
 
-func treeDropPositionAt(localY float32, height int) DropPosition {
+func treeDropPositionAt(localY float32, height int, acceptsChildren bool) DropPosition {
+	if !acceptsChildren {
+		if localY < float32(height)/2 {
+			return DropBefore
+		}
+		return DropAfter
+	}
 	edge := float32(max(height/4, 1))
 	if localY < edge {
 		return DropBefore
@@ -483,6 +587,169 @@ func treeDropPositionAt(localY float32, height int) DropPosition {
 		return DropAfter
 	}
 	return DropInside
+}
+
+func treeItemAcceptsChildren(item Item) bool {
+	return item.AcceptsChildren || treeItemExpandable(item)
+}
+
+func treeItemExpandable(item Item) bool {
+	return len(item.Children) > 0 || item.ChildrenState != ChildrenLoaded
+}
+
+func treeDragViewportY(heights []int, gap int, position layout.Position, sourceIndex int, sourceY float32) float32 {
+	top := float32(-position.Offset)
+	if sourceIndex >= position.First {
+		for index := position.First; index < sourceIndex && index < len(heights); index++ {
+			top += float32(heights[index] + gap)
+		}
+	} else {
+		for index := position.First - 1; index >= sourceIndex && index >= 0; index-- {
+			top -= float32(heights[index] + gap)
+		}
+	}
+	return top + sourceY
+}
+
+func treeListPositionContains(position layout.Position, index int) bool {
+	return index >= position.First && index < position.First+position.Count
+}
+
+func treeAutoScrollDirection(pointerY float32, viewportHeight, edge int) int {
+	if viewportHeight <= 0 || edge <= 0 {
+		return 0
+	}
+	edge = min(edge, viewportHeight/2)
+	if pointerY < float32(edge) {
+		return -1
+	}
+	if pointerY > float32(viewportHeight-edge) {
+		return 1
+	}
+	return 0
+}
+
+func (s *treeState) updateDragScroll(gtx layout.Context, pointerY float32, viewportHeight, edge, itemCount int) {
+	direction := treeAutoScrollDirection(pointerY, viewportHeight, edge)
+	if direction == 0 || s.list.Position.Count >= itemCount {
+		s.dragScrollAt = time.Time{}
+		return
+	}
+	delta := time.Second / 60
+	if !s.dragScrollAt.IsZero() && !gtx.Now.Before(s.dragScrollAt) {
+		delta = min(gtx.Now.Sub(s.dragScrollAt), 50*time.Millisecond)
+	}
+	s.dragScrollAt = gtx.Now
+	s.list.ScrollBy(float32(direction) * treeDragScrollSpeed * float32(delta) / float32(time.Second))
+	gtx.Execute(op.InvalidateCmd{})
+}
+
+func (s *treeState) updateDragHover(gtx layout.Context, key string, eligible bool) bool {
+	if !eligible || key == "" {
+		s.dragHoverKey = ""
+		s.dragHoverAt = time.Time{}
+		s.dragHoverRequested = false
+		return false
+	}
+	if s.dragHoverKey != key {
+		s.dragHoverKey = key
+		s.dragHoverAt = gtx.Now
+		s.dragHoverRequested = false
+	}
+	if s.dragHoverRequested {
+		return false
+	}
+	deadline := s.dragHoverAt.Add(treeDragExpandDelay)
+	if gtx.Now.Before(deadline) {
+		gtx.Execute(op.InvalidateCmd{At: deadline})
+		return false
+	}
+	s.dragHoverRequested = true
+	return true
+}
+
+func (s *treeState) resetDragAssist() {
+	s.dragScrollAt = time.Time{}
+	s.dragHoverKey = ""
+	s.dragHoverAt = time.Time{}
+	s.dragHoverRequested = false
+}
+
+func (s *treeState) beginRename(item Item) {
+	s.renameKey = item.Key
+	s.renameOriginal = item.Label
+	s.renameFocused = false
+	s.renameEditor.SingleLine = true
+	s.renameEditor.Submit = true
+	s.renameEditor.SetText(item.Label)
+	s.renameEditor.SetCaret(0, len([]rune(item.Label)))
+}
+
+func (s *treeState) applyRenameRequest(ctx *frame.Context, tree Widget, visible []flatItem) {
+	if tree.renameRequestKey == "" {
+		s.renameRequestReady = false
+		return
+	}
+	if s.renameRequestReady && s.renameRequestKey == tree.renameRequestKey && s.renameRequest == tree.renameRequest {
+		return
+	}
+	index := treeVisibleIndex(visible, tree.renameRequestKey)
+	if index < 0 {
+		return
+	}
+	item := visible[index].item
+	if !item.Renamable || tree.onRename == nil || tree.itemDisabled(item) {
+		return
+	}
+	s.renameRequestKey = tree.renameRequestKey
+	s.renameRequest = tree.renameRequest
+	s.renameRequestReady = true
+	s.beginRename(item)
+	frame.RequestFocus(ctx, &s.renameEditor)
+}
+
+func (s *treeState) updateRename(gtx layout.Context, tree Widget) {
+	if s.renameKey == "" {
+		return
+	}
+	for {
+		eventValue, ok := s.renameEditor.Update(gtx)
+		if !ok {
+			break
+		}
+		if _, ok := eventValue.(widget.SubmitEvent); ok {
+			s.finishRename(tree, true)
+			return
+		}
+	}
+	for {
+		eventValue, ok := gtx.Event(key.Filter{Focus: &s.renameEditor, Name: key.NameEscape})
+		if !ok {
+			break
+		}
+		if eventValue, ok := eventValue.(key.Event); ok && eventValue.State == key.Press {
+			s.finishRename(tree, false)
+			return
+		}
+	}
+	focused := gtx.Focused(&s.renameEditor)
+	if focused {
+		s.renameFocused = true
+	} else if s.renameFocused {
+		s.finishRename(tree, true)
+	}
+}
+
+func (s *treeState) finishRename(tree Widget, commit bool) {
+	itemKey := s.renameKey
+	original := s.renameOriginal
+	value := strings.TrimSpace(s.renameEditor.Text())
+	s.renameKey = ""
+	s.renameOriginal = ""
+	s.renameFocused = false
+	if commit && value != "" && value != original && tree.onRename != nil {
+		tree.onRename(itemKey, value)
+	}
 }
 
 type treeFloatAnimation struct {

@@ -4,6 +4,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -64,8 +65,9 @@ type Column struct {
 
 // Cell contains either plain text or a custom widget. Content takes precedence.
 type Cell struct {
-	Text    string
-	Content frame.Widget
+	Text        string
+	Content     frame.Widget
+	Interactive bool
 }
 
 // Row describes one controlled Table row.
@@ -78,6 +80,10 @@ type Row struct {
 
 // RowProvider returns a row by zero-based index for a virtual Table.
 type RowProvider func(index int) Row
+
+// RowContextMenu returns the menu shown for a secondary click, long press, or
+// Shift+F10 anywhere on a row.
+type RowContextMenu func(Row) menu.Widget
 
 // Widget presents structured data with controlled sorting and selection.
 type Widget struct {
@@ -103,6 +109,7 @@ type Widget struct {
 	onAction           func(string)
 	onColumnResize     func(string, int)
 	onLoadMore         func()
+	rowContextMenu     RowContextMenu
 	disabled           bool
 	allowEmpty         bool
 	selectionIndicator bool
@@ -112,6 +119,9 @@ type Widget struct {
 	minWidth           int
 	headerHeight       int
 	rowHeight          int
+	gridLines          bool
+	gridLinesSet       bool
+	bordered           bool
 }
 
 // New creates a controlled Table.
@@ -232,6 +242,12 @@ func (t Widget) OnColumnResize(fn func(string, int)) Widget {
 	return t
 }
 
+// RowContextMenu sets the menu available from the complete row area.
+func (t Widget) RowContextMenu(menu RowContextMenu) Widget {
+	t.rowContextMenu = menu
+	return t
+}
+
 func (t Widget) Disabled(disabled bool) Widget {
 	t.disabled = disabled
 	return t
@@ -269,6 +285,29 @@ func (t Widget) HeaderHeight(dp int) Widget {
 func (t Widget) RowHeight(dp int) Widget {
 	t.rowHeight = max(dp, 0)
 	return t
+}
+
+// GridLines controls internal table lines. When enabled, horizontal and
+// vertical lines form a complete cell grid. The default keeps the standard
+// Table separators for compatibility.
+func (t Widget) GridLines(visible bool) Widget {
+	t.gridLines = visible
+	t.gridLinesSet = true
+	return t
+}
+
+// Border controls the outer table border.
+func (t Widget) Border(visible bool) Widget {
+	t.bordered = visible
+	return t
+}
+
+func (t Widget) showsGridLines() bool {
+	return !t.gridLinesSet || t.gridLines
+}
+
+func (t Widget) showsFullGrid() bool {
+	return t.gridLinesSet && t.gridLines
 }
 
 func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -534,6 +573,9 @@ func (t Widget) consumeRowClicks(gtx layout.Context, stateValue *tableState, row
 		click, ok := rowState.clickable.Update(gtx)
 		if !ok {
 			return
+		}
+		if rowState.clickInInteractiveCell() {
+			continue
 		}
 		if !t.rowDisabled(row) {
 			t.activateWithModifiers(stateValue, row.Key, click.Modifiers)

@@ -134,7 +134,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 	}
 	tableRows := []ui.TableRow{{
 		Key: "member", Label: "Member",
-		Cells: []ui.TableCell{{Text: "Member"}, {Content: ui.Chip("Active").Color(ui.ChipSuccess)}},
+		Cells: []ui.TableCell{{Text: "Member"}, {Content: ui.Input("member-status", "Active"), Interactive: true}},
 	}}
 	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
 	saveCommand := ui.NewCommand("save-command", "Save").
@@ -547,6 +547,8 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			MaxHeight(280).
 			HeaderHeight(36).
 			RowHeight(44).
+			GridLines(true).
+			Border(true).
 			LoadMore(true, false, func() {}).
 			LoadMoreContent(ui.Spinner()).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
@@ -554,6 +556,9 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnSortChange(func(sort ui.TableSortDescriptor) { send(facadeMsg{tableSort: &sort}) }).
 			OnAction(func(string) {}).
 			OnColumnResize(func(string, int) {}).
+			RowContextMenu(func(ui.TableRow) ui.MenuWidget {
+				return ui.Menu("row-actions", []ui.MenuItem{{Key: "open", Label: "Open"}})
+			}).
 			Disabled(false),
 		ui.VirtualTable("virtual-members", tableColumns, 1000, func(int) ui.TableRow { return tableRows[0] }).
 			MaxHeight(280),

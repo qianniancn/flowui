@@ -52,6 +52,7 @@ type overlayRequest struct {
 	rootOrder uint64
 	parent    *overlayRequest
 	rendered  bool
+	dismissed bool
 }
 
 type overlayTransform struct {
@@ -218,6 +219,14 @@ func AfterOverlays(ctx *Context, fn func()) {
 	}
 }
 
+// DismissActiveOverlay removes the overlay currently being laid out from this
+// frame's visible and interactive overlay stack.
+func DismissActiveOverlay(ctx *Context) {
+	if ctx != nil && ctx.overlays.active != nil {
+		ctx.overlays.active.dismissed = true
+	}
+}
+
 // LayoutOverlays resolves anchors and records every overlay at the root. The
 // resulting macro is deferred once so it is painted after deferred work from
 // the main widget tree.
@@ -271,7 +280,7 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 				request.Layout(requestGtx, anchor, interactive)
 			}
 		}()
-		if !request.Passive {
+		if !request.Passive && !request.dismissed {
 			top = request.identity
 			topRequest = request
 			hasTop = true

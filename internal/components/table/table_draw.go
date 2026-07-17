@@ -22,6 +22,23 @@ func drawTableRoot(gtx layout.Context, size image.Point, radius int, col color.N
 	paint.FillShape(gtx.Ops, col, clip.UniformRRect(image.Rectangle{Max: size}, radius).Op(gtx.Ops))
 }
 
+func drawTableBorder(gtx layout.Context, size image.Point, radius, width int, col color.NRGBA) {
+	if size.X <= 0 || size.Y <= 0 || width <= 0 || col.A == 0 {
+		return
+	}
+	inset := max((width+1)/2, 1)
+	rect := image.Rectangle{Max: size}.Inset(inset)
+	if rect.Empty() {
+		return
+	}
+	stroke := clip.Stroke{
+		Path:  clip.UniformRRect(rect, max(radius-inset, 0)).Path(gtx.Ops),
+		Width: float32(width),
+	}.Op().Push(gtx.Ops)
+	paint.Fill(gtx.Ops, col)
+	stroke.Pop()
+}
+
 func drawTableHeader(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, col, separator color.NRGBA) {
 	if size.X <= 0 || size.Y <= 0 || col.A == 0 {
 		return
@@ -68,11 +85,31 @@ func drawTableRow(gtx layout.Context, activeTheme *theme.Theme, size image.Point
 	stroke.Pop()
 }
 
-func drawTableHeaderSeparator(gtx layout.Context, activeTheme *theme.Theme, x, height int, col color.NRGBA) {
+func drawTableHeaderSeparator(gtx layout.Context, activeTheme *theme.Theme, x, height int, col color.NRGBA, full bool) {
 	lineHeight := min(gtx.Dp(activeTheme.Components.Table.ColumnSeparatorHeight), height)
+	if full {
+		lineHeight = height
+	}
 	width := max(gtx.Dp(activeTheme.Components.Table.SeparatorWidth), 1)
 	y := max((height-lineHeight)/2, 0)
 	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, y, x+width, y+lineHeight)).Op())
+}
+
+func drawTableRowSeparators(gtx layout.Context, activeTheme *theme.Theme, columns tableColumns, height int, col color.NRGBA) {
+	if height <= 0 || col.A == 0 {
+		return
+	}
+	width := max(gtx.Dp(activeTheme.Components.Table.SeparatorWidth), 1)
+	x := columns.selection
+	if x > 0 && len(columns.widths) > 0 {
+		paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, 0, x+width, height)).Op())
+	}
+	for index, columnWidth := range columns.widths {
+		x += columnWidth
+		if index < len(columns.widths)-1 {
+			paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, 0, x+width, height)).Op())
+		}
+	}
 }
 
 func drawTableColumnResizer(gtx layout.Context, x, height, baseHeight, activeWidth int, base, accent color.NRGBA, active bool, focus float32) {

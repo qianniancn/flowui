@@ -247,7 +247,7 @@ application.SetLanguage("main", ui.LanguageChinese)
 - `status_bars`：紧凑的桌面应用状态栏，支持左右内容、语义化 Surface 和可选强调色样式。
 - `scrollbars`：对齐 HeroUI 的细型纵向与横向滚动条，使用 Gio 的轨道与滑块交互。
 - `split_panes`：支持最小尺寸和键盘操作的横向、纵向与嵌套桌面分栏。
-- `tables`：对齐 HeroUI 的数据表格，包含列宽拖拽、范围选择、分页、异步加载、虚拟行、自定义单元格和滚动。
+- `tables`：对齐 HeroUI 的数据表格，支持可选的 Excel 风格完整网格线和边框、交互式自定义单元格、整行右键菜单，以及列宽拖拽、范围选择、分页、异步加载、虚拟行和滚动。
 - `paginations`：对齐 HeroUI 的受控分页导航，包含摘要、省略号、尺寸和禁用状态。
 - `tabs`：主次变体、横向与纵向布局、禁用标签、分隔线、紧凑强调色样式和溢出滚动。
 - `modals`：受控模态弹窗，包含尺寸、位置、遮罩变体和关闭行为。

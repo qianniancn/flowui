@@ -28,6 +28,7 @@ type Context struct {
 	exclusive                    state.Exclusive
 	focus                        state.Focus
 	focusGroup                   *FocusGroup
+	focusCollector               *FocusCollector
 	fieldFocus                   map[string]fieldFocusTarget
 	fieldLabels                  map[string]string
 	previousLabels               map[string]string
@@ -262,6 +263,25 @@ type FocusGroupItem struct {
 	Prepare func(bool)
 }
 
+// FocusCollector gathers focusable descendants laid out within a component.
+type FocusCollector struct {
+	Targets []event.Tag
+}
+
+func PushFocusCollector(ctx *Context, collector *FocusCollector) func() {
+	previous := ctx.focusCollector
+	ctx.focusCollector = collector
+	return func() {
+		ctx.focusCollector = previous
+	}
+}
+
+func registerCollectedFocus(ctx *Context, tag event.Tag, enabled bool) {
+	if ctx.focusCollector != nil && tag != nil && enabled {
+		ctx.focusCollector.Targets = append(ctx.focusCollector.Targets, tag)
+	}
+}
+
 func PushFocusGroup(ctx *Context, group *FocusGroup) func() {
 	previous := ctx.focusGroup
 	ctx.focusGroup = group
@@ -271,6 +291,7 @@ func PushFocusGroup(ctx *Context, group *FocusGroup) func() {
 }
 
 func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool, prepare func(bool)) {
+	registerCollectedFocus(ctx, tag, enabled)
 	if ctx.focusGroup == nil || tag == nil || !enabled {
 		return
 	}
@@ -296,6 +317,7 @@ func RegisterFieldFocus(ctx *Context, key string, tag event.Tag, enabled bool) {
 		ctx.fieldFocus = make(map[string]fieldFocusTarget)
 	}
 	ctx.fieldFocus[key] = fieldFocusTarget{tag: tag, enabled: enabled}
+	registerCollectedFocus(ctx, tag, enabled)
 }
 
 func RequestFieldFocus(ctx *Context, key string) {

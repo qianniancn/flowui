@@ -86,6 +86,36 @@ func TestPassiveOverlayDoesNotOwnOverlayInput(t *testing.T) {
 	}
 }
 
+func TestDismissActiveOverlayReleasesTopImmediately(t *testing.T) {
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "menu",
+		Layout: func(_ layout.Context, _ image.Rectangle, _ bool) layout.Dimensions {
+			DismissActiveOverlay(ctx)
+			return layout.Dimensions{}
+		},
+	})
+
+	LayoutOverlays(ctx, gtx)
+	if HasTopOverlay(ctx) || OverlayTopmost(ctx, OverlayLayerPopup, "menu") {
+		t.Fatal("dismissed overlay retained top-level input ownership")
+	}
+
+	BeginFrameWithViewport(ctx, image.Pt(100, 100))
+	interactive := false
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "next",
+		Layout: func(_ layout.Context, _ image.Rectangle, value bool) layout.Dimensions {
+			interactive = value
+			return layout.Dimensions{}
+		},
+	})
+	LayoutOverlays(ctx, gtx)
+	if !interactive {
+		t.Fatal("dismissed overlay delayed input ownership for the next overlay")
+	}
+}
+
 func TestOverlayAnchorAccumulatesPlacedTransforms(t *testing.T) {
 	ctx, gtx := overlayTestContext(image.Pt(300, 200))
 	var got image.Rectangle

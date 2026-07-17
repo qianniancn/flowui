@@ -253,7 +253,7 @@ Examples live in `examples/`:
 - `status_bars`: compact desktop application status bars with left and right content, semantic surfaces, and optional accent styling.
 - `scrollbars`: HeroUI-aligned thin vertical and horizontal scrollbars backed by Gio track and thumb interactions.
 - `split_panes`: resizable horizontal, vertical, and nested desktop panes with minimum sizes and keyboard control.
-- `tables`: HeroUI-aligned data tables with resizing, range selection, pagination, asynchronous loading, virtual rows, custom cells, and scrolling.
+- `tables`: HeroUI-aligned data tables with optional Excel-style grid lines and borders, interactive custom cells, complete-row context menus, resizing, range selection, pagination, asynchronous loading, virtual rows, and scrolling.
 - `paginations`: HeroUI-aligned controlled page navigation with summaries, ellipses, sizes, and disabled states.
 - `tabs`: primary and secondary variants, horizontal and vertical layouts, disabled tabs, separators, compact accent styling, and overflow scrolling.
 - `modals`: controlled modal dialogs with sizes, placements, backdrop variants, and dismiss behavior.

@@ -67,9 +67,11 @@ func membersTable(model Model, send ui.Send[Msg]) ui.TableWidget {
 	}
 
 	rows := make([]ui.TableRow, 0, len(members))
+	rowsByKey := make(map[string]member, len(members))
 	for _, value := range members {
+		rowsByKey[value.key] = value
 		cells := []ui.TableCell{
-			{Content: memberContextMenu(value, model, send)},
+			{Content: memberIdentity(value)},
 			{Text: value.role},
 			{Content: statusChip(value.status)},
 		}
@@ -85,11 +87,14 @@ func membersTable(model Model, send ui.Send[Msg]) ui.TableWidget {
 	}
 	return ui.Table("context-menu-members", columns, rows).
 		Variant(ui.TableSecondary).
-		MinWidth(minWidth)
+		MinWidth(minWidth).
+		RowContextMenu(func(row ui.TableRow) ui.MenuWidget {
+			return memberMenu(rowsByKey[row.Key], model, send)
+		})
 }
 
-func memberContextMenu(value member, model Model, send ui.Send[Msg]) ui.ContextMenuWidget {
-	menu := ui.Menu("member-actions", []ui.MenuItem{
+func memberMenu(value member, model Model, send ui.Send[Msg]) ui.MenuWidget {
+	return ui.Menu("member-actions", []ui.MenuItem{
 		{Key: "open", Label: "Open profile", Shortcut: "Enter", Leading: ui.Icon(lucide.UserRound).Size(16)},
 		{Key: "copy-email", Label: "Copy email", Shortcut: "Ctrl+C", Leading: ui.Icon(lucide.Copy).Size(16)},
 		ui.MenuSeparator(),
@@ -118,8 +123,6 @@ func memberContextMenu(value member, model Model, send ui.Send[Msg]) ui.ContextM
 		OnRadioChange(func(_ string, density string) {
 			send(Msg{Density: density})
 		})
-
-	return ui.ContextMenu("member-menu-"+value.key, memberIdentity(value), menu)
 }
 
 func memberIdentity(value member) ui.Widget {

@@ -18,6 +18,7 @@ type ContextMenuWidget struct {
 	hasDefaultOpen    bool
 	onOpenChange      func(bool)
 	focusTarget       event.Tag
+	focusTargets      []event.Tag
 	disabled          bool
 	longPressDisabled bool
 }
@@ -49,6 +50,13 @@ func (c ContextMenuWidget) FocusTarget(target event.Tag) ContextMenuWidget {
 	return c
 }
 
+// FocusTargets adds focusable descendants that can open the menu with
+// Shift+F10 and receive focus again after it closes.
+func (c ContextMenuWidget) FocusTargets(targets ...event.Tag) ContextMenuWidget {
+	c.focusTargets = append([]event.Tag(nil), targets...)
+	return c
+}
+
 func (c ContextMenuWidget) Disabled(disabled bool) ContextMenuWidget {
 	c.disabled = disabled
 	return c
@@ -68,6 +76,9 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	}
 
 	dims := c.layoutTrigger(ctx, gtx, state, &open)
+	if open && !state.wasOpen {
+		state.focusTarget = c.focusedTarget(gtx, state)
+	}
 	if open && !state.hasAnchor {
 		state.anchor = image.Rect(state.triggerSize.X/2, state.triggerSize.Y/2, state.triggerSize.X/2+1, state.triggerSize.Y/2+1)
 		state.hasAnchor = true
@@ -96,8 +107,27 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 }
 
 func (c ContextMenuWidget) triggerFocusTarget(state *contextMenuState) event.Tag {
+	if state.focusTarget != nil {
+		return state.focusTarget
+	}
+	return c.defaultFocusTarget(state)
+}
+
+func (c ContextMenuWidget) defaultFocusTarget(state *contextMenuState) event.Tag {
 	if c.focusTarget != nil {
 		return c.focusTarget
 	}
 	return &state.trigger
+}
+
+func (c ContextMenuWidget) focusedTarget(gtx layout.Context, state *contextMenuState) event.Tag {
+	if target := c.defaultFocusTarget(state); gtx.Focused(target) {
+		return target
+	}
+	for _, target := range c.focusTargets {
+		if target != nil && gtx.Focused(target) {
+			return target
+		}
+	}
+	return c.defaultFocusTarget(state)
 }

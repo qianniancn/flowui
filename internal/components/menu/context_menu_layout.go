@@ -46,13 +46,14 @@ func (c ContextMenuWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context,
 
 func (c ContextMenuWidget) updateTrigger(ctx *frame.Context, gtx layout.Context, state *contextMenuState, open *bool) {
 	for {
-		e, ok := gtx.Event(contextMenuTriggerFilters(&state.trigger, c.triggerFocusTarget(state))...)
+		e, ok := gtx.Event(contextMenuTriggerFilters(&state.trigger, c.defaultFocusTarget(state), c.focusTargets)...)
 		if !ok {
 			break
 		}
 		switch event := e.(type) {
 		case key.Event:
 			if event.Name == key.NameF10 && event.State == key.Press && event.Modifiers&key.ModShift != 0 {
+				state.focusTarget = c.focusedTarget(gtx, state)
 				point := f32.Pt(float32(state.triggerSize.X)/2, float32(state.triggerSize.Y)/2)
 				state.anchor = contextMenuPointRect(point, 1)
 				state.hasAnchor = true
@@ -69,6 +70,7 @@ func (c ContextMenuWidget) updateTrigger(ctx *frame.Context, gtx layout.Context,
 func (c ContextMenuWidget) updateTriggerPointer(ctx *frame.Context, gtx layout.Context, state *contextMenuState, open *bool, event pointer.Event) {
 	if event.Source == pointer.Mouse {
 		if event.Kind == pointer.Press && event.Buttons.Contain(pointer.ButtonSecondary) {
+			state.focusTarget = c.focusedTarget(gtx, state)
 			state.anchor = contextMenuPointRect(event.Position, 1)
 			state.hasAnchor = true
 			state.trigger.touchTracking = false
@@ -115,6 +117,7 @@ func (c ContextMenuWidget) updateLongPress(ctx *frame.Context, gtx layout.Contex
 	state.hasAnchor = true
 	state.trigger.touchTracking = false
 	state.focusVisible = false
+	state.focusTarget = c.focusedTarget(gtx, state)
 	frame.RequestFocusVisible(ctx, c.triggerFocusTarget(state), false)
 	*open = state.requestOpen(ctx, c, true)
 }
@@ -127,13 +130,17 @@ func (c ContextMenuWidget) registerOverlay(ctx *frame.Context, state *contextMen
 		HasAnchor: true,
 		Disabled:  disabled,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
-			overlayOpen := c.handleOverlayEvents(ctx, gtx, state, open, interactive)
+			overlayOpen, dismissed := c.handleOverlayEvents(ctx, gtx, state, open, interactive)
+			if dismissed {
+				frame.DismissActiveOverlay(ctx)
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
 			return c.layoutOverlay(ctx, gtx, state, anchor, overlayOpen, progress, interactive && gtx.Enabled())
 		},
 	})
 }
 
-func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *contextMenuState, open, interactive bool) bool {
+func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *contextMenuState, open, interactive bool) (bool, bool) {
 	for state.dialog.Clicked(gtx) {
 	}
 	if state.dialog.TakePressed() {
@@ -148,9 +155,10 @@ func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Co
 	if dismissed && open {
 		state.skipRestore = true
 		open = state.requestOpen(ctx, c, false)
+		state.transition.Set(0, 0, gtx.Now)
 	}
 	if !interactive || !open {
-		return open
+		return open, dismissed
 	}
 	for {
 		e, ok := gtx.Event(key.Filter{Name: key.NameEscape})
@@ -163,7 +171,7 @@ func (c ContextMenuWidget) handleOverlayEvents(ctx *frame.Context, gtx layout.Co
 			open = state.requestOpen(ctx, c, false)
 		}
 	}
-	return open
+	return open, dismissed
 }
 
 func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *contextMenuState, anchor image.Rectangle, open bool, progress float32, interactive bool) layout.Dimensions {

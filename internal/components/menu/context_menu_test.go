@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/io/event"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -16,6 +17,22 @@ import (
 
 type contextMenuFixedWidget struct {
 	size image.Point
+}
+
+type contextMenuFocusWidget struct {
+	size   image.Point
+	target event.Tag
+}
+
+func (w contextMenuFocusWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	for {
+		if _, ok := gtx.Event(key.FocusFilter{Target: w.target}); !ok {
+			break
+		}
+	}
+	dims := layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
+	event.Op(gtx.Ops, w.target)
+	return dims
 }
 
 func (w contextMenuFixedWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -68,6 +85,38 @@ func TestContextMenuShiftF10OpensAtTriggerCenter(t *testing.T) {
 	layoutContextMenuFrame(ctx, router, widget, start.Add(2*time.Millisecond))
 	if !state.open || state.anchor != image.Rect(80, 50, 81, 51) {
 		t.Fatalf("Shift+F10 context menu = open %v anchor %v", state.open, state.anchor)
+	}
+}
+
+func TestContextMenuShiftF10UsesAdditionalFocusTarget(t *testing.T) {
+	ctx := menuTestContext()
+	router := new(input.Router)
+	target := new(int)
+	widget := ContextMenu(
+		"child-focus-menu",
+		contextMenuFocusWidget{size: image.Pt(160, 100), target: target},
+		Menu("actions", []Item{{Key: "copy", Label: "Copy"}}),
+	).FocusTargets(target)
+	start := time.Unix(1, 0)
+	layoutContextMenuFrame(ctx, router, widget, start)
+	router.Source().Execute(key.FocusCmd{Tag: target})
+	layoutContextMenuFrame(ctx, router, widget, start.Add(time.Millisecond))
+	if !router.Source().Focused(target) {
+		t.Fatal("additional context menu focus target did not accept focus")
+	}
+
+	router.Queue(key.Event{Name: key.NameF10, Modifiers: key.ModShift, State: key.Press})
+	layoutContextMenuFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	state, _ := frame.PeekState[contextMenuState](ctx, "child-focus-menu", stateSlotContextMenu)
+	if !state.open {
+		t.Fatal("Shift+F10 on an additional focus target did not open the context menu")
+	}
+	layoutContextMenuFrame(ctx, router, widget, start.Add(contextMenuEnterDuration+3*time.Millisecond))
+
+	router.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+	layoutContextMenuFrame(ctx, router, widget, start.Add(contextMenuEnterDuration+4*time.Millisecond))
+	if !router.Source().Focused(target) {
+		t.Fatal("closing the context menu did not restore its additional focus target")
 	}
 }
 
@@ -167,6 +216,13 @@ func TestContextMenuOutsideClickClosesWithoutRestoringTriggerFocus(t *testing.T)
 	state, _ := frame.PeekState[contextMenuState](ctx, "row-menu", stateSlotContextMenu)
 	if state.open || router.Source().Focused(&state.trigger) {
 		t.Fatalf("outside click = open %v trigger focused %v", state.open, router.Source().Focused(&state.trigger))
+	}
+	if frame.HasTopOverlay(ctx) {
+		t.Fatal("outside click retained context menu input ownership for the dismissal frame")
+	}
+	layoutContextMenuFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	if frame.HasTopOverlay(ctx) {
+		t.Fatal("outside click left the context menu overlay active during its exit animation")
 	}
 }
 

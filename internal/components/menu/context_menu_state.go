@@ -32,6 +32,7 @@ type contextMenuState struct {
 	transition   animation.FloatTransition
 	skipRestore  bool
 	focusVisible bool
+	focusTarget  event.Tag
 	binding      contextMenuBinding
 }
 
@@ -168,10 +169,19 @@ func contextMenuMovedBeyond(start, current f32.Point, threshold float32) bool {
 	return dx > threshold || dy > threshold
 }
 
-func contextMenuTriggerFilters(pointerTarget, focusTarget event.Tag) []event.Filter {
-	return []event.Filter{
+func contextMenuTriggerFilters(pointerTarget, focusTarget event.Tag, additional []event.Tag) []event.Filter {
+	filters := []event.Filter{
 		pointer.Filter{Target: pointerTarget, Kinds: pointer.Press | pointer.Release | pointer.Move | pointer.Drag | pointer.Cancel},
 		key.FocusFilter{Target: focusTarget},
 		key.Filter{Focus: focusTarget, Name: key.NameF10, Required: key.ModShift},
 	}
+	for _, target := range additional {
+		if target == nil {
+			continue
+		}
+		filters = append(filters,
+			key.Filter{Focus: target, Name: key.NameF10, Required: key.ModShift},
+		)
+	}
+	return filters
 }

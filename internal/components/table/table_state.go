@@ -2,6 +2,7 @@ package table
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math"
 	"strings"
@@ -434,11 +435,32 @@ func (t Widget) rowLabel(row Row) string {
 }
 
 type tableRowState struct {
-	clickable  widget.Clickable
-	focus      state.FocusAnimation
-	background tableColorAnimation
-	selection  checkbox.SelectionAnimation
-	index      int
+	clickable        widget.Clickable
+	focus            state.FocusAnimation
+	background       tableColorAnimation
+	selection        checkbox.SelectionAnimation
+	interactiveCells []image.Rectangle
+	focusTargets     []event.Tag
+	handledPress     time.Time
+	index            int
+}
+
+func (s *tableRowState) clickInInteractiveCell() bool {
+	history := s.clickable.History()
+	if len(history) == 0 {
+		return false
+	}
+	press := history[len(history)-1]
+	if press.Start.IsZero() || !press.Start.After(s.handledPress) {
+		return false
+	}
+	s.handledPress = press.Start
+	for _, cell := range s.interactiveCells {
+		if press.Position.In(cell) {
+			return true
+		}
+	}
+	return false
 }
 
 type tableColumnState struct {

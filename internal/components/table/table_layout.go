@@ -16,6 +16,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/components/spinner"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -98,6 +99,10 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 	}
 	offset.Pop()
 	root.Pop()
+	if t.bordered {
+		width := max(gtx.Dp(tokens.SeparatorWidth), 1)
+		drawTableBorder(gtx, size, radius, width, style.border)
+	}
 	return layout.Dimensions{Size: size}
 }
 
@@ -153,7 +158,11 @@ func (t Widget) drawColumnResizeGuide(ctx *frame.Context, gtx layout.Context, st
 func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle) layout.Dimensions {
 	size := gtx.Constraints.Max
 	radius := tableHeaderRadius(gtx, frame.ActiveTheme(ctx), size, t.variant)
-	drawTableHeader(gtx, frame.ActiveTheme(ctx), size, radius, style.header, style.headerSeparator)
+	headerSeparator := style.headerSeparator
+	if !t.showsGridLines() {
+		headerSeparator = color.NRGBA{}
+	}
+	drawTableHeader(gtx, frame.ActiveTheme(ctx), size, radius, style.header, headerSeparator)
 	headerBackground := style.header
 	if headerBackground.A == 0 {
 		headerBackground = ctx.BackgroundColor()
@@ -184,8 +193,8 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 			})
 		}
 		x += columns.selection
-		if len(t.columns) > 0 {
-			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator)
+		if len(t.columns) > 0 && t.showsGridLines() {
+			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator, t.showsFullGrid())
 		}
 	}
 	for index, column := range t.columns {
@@ -196,8 +205,8 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 		t.layoutHeaderCell(ctx, cellGtx, stateValue, column, style)
 		offset.Pop()
 		x += width
-		if index < len(t.columns)-1 && !column.Resizable {
-			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator)
+		if index < len(t.columns)-1 && !column.Resizable && t.showsGridLines() {
+			drawTableHeaderSeparator(gtx, frame.ActiveTheme(ctx), x, size.Y, style.columnSeparator, t.showsFullGrid())
 		}
 	}
 	t.layoutColumnResizers(ctx, gtx, stateValue, columns, style, size)
@@ -209,6 +218,13 @@ func (t Widget) layoutColumnResizers(ctx *frame.Context, gtx layout.Context, sta
 	hitSize := max(gtx.Dp(tokens.ColumnResizerHitSize), 1)
 	activeWidth := max(gtx.Dp(tokens.ColumnResizerWidth), 1)
 	baseHeight := max(gtx.Dp(tokens.ColumnSeparatorHeight), 1)
+	if t.showsFullGrid() {
+		baseHeight = size.Y
+	}
+	baseColor := style.columnSeparator
+	if !t.showsGridLines() {
+		baseColor = color.NRGBA{}
+	}
 	enabled := gtx.Enabled() && !t.disabled
 	x := columns.selection
 	for index, column := range t.columns {
@@ -219,7 +235,7 @@ func (t Widget) layoutColumnResizers(ctx *frame.Context, gtx layout.Context, sta
 		resize := &stateValue.column(column.Key).resize
 		focusVisible := resize.focus.Visible(gtx.Focused(resize), nil)
 		focus := resize.focus.Opacity(gtx, focusVisible && enabled)
-		drawTableColumnResizer(gtx, x, size.Y, baseHeight, activeWidth, style.columnSeparator, frame.ActiveTheme(ctx).Palette.Accent, false, focus)
+		drawTableColumnResizer(gtx, x, size.Y, baseHeight, activeWidth, baseColor, frame.ActiveTheme(ctx).Palette.Accent, false, focus)
 
 		hit := image.Rect(max(x-hitSize/2, 0), 0, min(x+(hitSize+1)/2, size.X), size.Y)
 		if hit.Empty() {
@@ -376,9 +392,17 @@ func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context, width int, s
 }
 
 type recordedCell struct {
-	call      op.CallOp
-	dims      layout.Dimensions
-	placement frame.OverlayPlacement
+	call         op.CallOp
+	dims         layout.Dimensions
+	placement    frame.OverlayPlacement
+	interactive  bool
+	focusTargets []event.Tag
+}
+
+type tableRowTrigger func(*frame.Context, layout.Context) layout.Dimensions
+
+func (trigger tableRowTrigger) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	return trigger(ctx, gtx)
 }
 
 func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle, row Row, index int, last bool) layout.Dimensions {
@@ -394,52 +418,76 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 	}
 	gtx.Constraints.Min.X = columns.width
 	gtx.Constraints.Max.X = columns.width
-	return rowState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.LabelOp(t.rowLabel(row)).Add(gtx.Ops)
-		semantic.SelectedOp(selected).Add(gtx.Ops)
-		semantic.EnabledOp(!disabled).Add(gtx.Ops)
-		rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
-		rowStyle.background = rowState.background.update(animGtx, rowStyle.background)
-		background := rowStyle.background
-		if background.A == 0 {
-			background = style.body
+	trigger := tableRowTrigger(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return rowState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			semantic.LabelOp(t.rowLabel(row)).Add(gtx.Ops)
+			semantic.SelectedOp(selected).Add(gtx.Ops)
+			semantic.EnabledOp(!disabled).Add(gtx.Ops)
+			rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
+			rowStyle.background = rowState.background.update(animGtx, rowStyle.background)
+			background := rowStyle.background
 			if background.A == 0 {
-				background = ctx.BackgroundColor()
+				background = style.body
+				if background.A == 0 {
+					background = ctx.BackgroundColor()
+				}
 			}
-		}
-		restore := frame.PushColors(ctx, rowStyle.foreground, background)
-		defer restore()
+			restore := frame.PushColors(ctx, rowStyle.foreground, background)
+			defer restore()
 
-		recorded := make([]recordedCell, 0, len(row.Cells)+1)
-		rowHeight := t.rowMinHeight(gtx, ctx)
-		if columns.selection > 0 {
-			selection := rowState.selection.Progress(animGtx, selected)
-			recorded = append(recorded, t.recordSelectionCell(ctx, gtx, columns.selection, selection))
-			rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
-		}
-		for index, cell := range row.Cells {
-			recorded = append(recorded, t.recordCell(ctx, gtx, columns.widths[index], t.columns[index], cell, rowStyle))
-			rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
-		}
-		rowHeight = min(rowHeight, gtx.Constraints.Max.Y)
-		size := image.Pt(columns.width, rowHeight)
-		focused := rowState.focus.Visible(gtx.Focused(&rowState.clickable), rowState.clickable.History())
-		focus := rowState.focus.Opacity(animGtx, focused && !disabled)
-		opacity := paint.PushOpacity(gtx.Ops, rowStyle.opacity)
-		showSeparator := t.variant == VariantSecondary || !last
-		drawTableRow(gtx, frame.ActiveTheme(ctx), size, rowStyle, style.rowSeparator, showSeparator, focus)
-		x := 0
-		for _, cell := range recorded {
-			y := max((rowHeight-cell.dims.Size.Y)/2, 0)
-			cell.placement.PlaceOffset(image.Pt(x, y))
-			offset := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
-			cell.call.Add(gtx.Ops)
-			offset.Pop()
-			x += cell.dims.Size.X
-		}
-		opacity.Pop()
-		return layout.Dimensions{Size: size}
+			recorded := make([]recordedCell, 0, len(row.Cells)+1)
+			rowHeight := t.rowMinHeight(gtx, ctx)
+			if columns.selection > 0 {
+				selection := rowState.selection.Progress(animGtx, selected)
+				recorded = append(recorded, t.recordSelectionCell(ctx, gtx, columns.selection, selection))
+				rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
+			}
+			for index, cell := range row.Cells {
+				recorded = append(recorded, t.recordCell(ctx, gtx, columns.widths[index], t.columns[index], cell, rowStyle))
+				rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
+			}
+			rowHeight = min(rowHeight, gtx.Constraints.Max.Y)
+			size := image.Pt(columns.width, rowHeight)
+			focused := frame.FocusVisible(ctx, &rowState.clickable, gtx.Focused(&rowState.clickable))
+			focus := rowState.focus.Opacity(animGtx, focused && !disabled)
+			opacity := paint.PushOpacity(gtx.Ops, rowStyle.opacity)
+			showSeparator := t.variant == VariantSecondary || !last
+			if t.gridLinesSet {
+				showSeparator = t.gridLines && !last
+			}
+			drawTableRow(gtx, frame.ActiveTheme(ctx), size, rowStyle, style.rowSeparator, showSeparator, focus)
+			if t.showsFullGrid() {
+				drawTableRowSeparators(gtx, frame.ActiveTheme(ctx), columns, rowHeight, style.columnSeparator)
+			}
+			rowState.interactiveCells = rowState.interactiveCells[:0]
+			rowState.focusTargets = rowState.focusTargets[:0]
+			x := 0
+			for _, cell := range recorded {
+				y := max((rowHeight-cell.dims.Size.Y)/2, 0)
+				if cell.interactive {
+					rowState.interactiveCells = append(rowState.interactiveCells, image.Rect(x, 0, x+cell.dims.Size.X, rowHeight))
+					rowState.focusTargets = append(rowState.focusTargets, cell.focusTargets...)
+				}
+				cell.placement.PlaceOffset(image.Pt(x, y))
+				offset := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
+				cell.call.Add(gtx.Ops)
+				offset.Pop()
+				x += cell.dims.Size.X
+			}
+			opacity.Pop()
+			return layout.Dimensions{Size: size}
+		})
 	})
+	if t.rowContextMenu == nil {
+		return trigger.Layout(ctx, gtx)
+	}
+	owner := frame.FullKey(ctx, t.key)
+	key := frame.DerivedKey(ctx, owner, "row-context-menu:"+row.Key)
+	return menu.ContextMenu(key, trigger, t.rowContextMenu(row)).
+		FocusTarget(&rowState.clickable).
+		FocusTargets(rowState.focusTargets...).
+		Disabled(disabled).
+		Layout(ctx, gtx)
 }
 
 func (t Widget) recordSelectionCell(ctx *frame.Context, gtx layout.Context, width int, selection float32) recordedCell {
@@ -473,13 +521,16 @@ func (t Widget) recordCell(ctx *frame.Context, gtx layout.Context, width int, co
 		Top: frame.ActiveTheme(ctx).Components.Table.CellPaddingY, Right: frame.ActiveTheme(ctx).Components.Table.CellPaddingX,
 		Bottom: frame.ActiveTheme(ctx).Components.Table.CellPaddingY, Left: frame.ActiveTheme(ctx).Components.Table.CellPaddingX,
 	}
+	collector := new(frame.FocusCollector)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		restore := frame.PushFocusCollector(ctx, collector)
+		defer restore()
 		return layoutui.LayoutTrackedInset(ctx, cellGtx, inset, func(gtx layout.Context) layout.Dimensions {
 			return alignWidget(ctx, gtx, column.Align, content)
 		})
 	})
 	dims.Size.X = width
-	return recordedCell{call: macro.Stop(), dims: dims, placement: placement}
+	return recordedCell{call: macro.Stop(), dims: dims, placement: placement, interactive: cell.Interactive, focusTargets: collector.Targets}
 }
 
 func alignWidget(ctx *frame.Context, gtx layout.Context, alignment Alignment, child frame.Widget) layout.Dimensions {

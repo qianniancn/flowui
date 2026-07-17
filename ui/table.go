@@ -6,6 +6,7 @@ type TableWidget = table.Widget
 type TableColumn = table.Column
 type TableRow = table.Row
 type TableRowProvider = table.RowProvider
+type TableRowContextMenu = table.RowContextMenu
 type TableCell = table.Cell
 type TableVariant = table.Variant
 type TableSelectionMode = table.SelectionMode

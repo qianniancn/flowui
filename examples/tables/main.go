@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
 )
 
 type member struct {
@@ -20,21 +20,25 @@ type member struct {
 }
 
 type Model struct {
-	Selected []string
-	Sort     ui.TableSortDescriptor
-	Last     string
-	Page     int
-	Loaded   int
-	Loading  bool
+	Selected     []string
+	Sort         ui.TableSortDescriptor
+	Last         string
+	Page         int
+	Loaded       int
+	Loading      bool
+	EditableName string
+	EditableRole string
 }
 
 type Msg struct {
-	Selected []string
-	Sort     *ui.TableSortDescriptor
-	Action   string
-	Page     int
-	LoadMore bool
-	Loaded   int
+	Selected  []string
+	Sort      *ui.TableSortDescriptor
+	Action    string
+	Page      int
+	LoadMore  bool
+	Loaded    int
+	EditCell  string
+	EditValue string
 }
 
 func Update(model *Model, msg Msg) ui.Cmd[Msg] {
@@ -69,6 +73,12 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 		model.Loaded = msg.Loaded
 		model.Loading = false
 	}
+	switch msg.EditCell {
+	case "name":
+		model.EditableName = msg.EditValue
+	case "role":
+		model.EditableRole = msg.EditValue
+	}
 	return nil
 }
 
@@ -87,6 +97,8 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					section("Primary", basicTable("primary", ui.TablePrimary)),
 					section("Secondary", basicTable("secondary", ui.TableSecondary)),
+					section("Excel-style grid and border", basicTable("grid", ui.TableSecondary).GridLines(true).Border(true)),
+					section("Interactive Input and Select cells", editableTable(model, send)),
 					section("Selection, sorting, resizing, and custom cells", membersTable(model, send)),
 					section("Pagination", paginatedTable(model, send)),
 					section("Async loading", asyncTable(model, send)),
@@ -171,6 +183,43 @@ func memberColumns() []ui.TableColumn {
 		{Key: "status", Label: "Status", Sortable: true, Resizable: true, Width: 124, MinWidth: 100, MaxWidth: 180},
 		{Key: "email", Label: "Email", Sortable: true, MinWidth: 210, Weight: 1.5},
 	}
+}
+
+func editableTable(model Model, send ui.Send[Msg]) ui.TableWidget {
+	roles := []ui.SelectItem{
+		{Key: "designer", Label: "Designer"},
+		{Key: "engineer", Label: "Engineer"},
+		{Key: "manager", Label: "Manager"},
+	}
+	rows := []ui.TableRow{{
+		Key: "editable-member", Label: model.EditableName,
+		Cells: []ui.TableCell{
+			{
+				Content: ui.Input("editable-member-name", model.EditableName).
+					OnChange(func(value string) { send(Msg{EditCell: "name", EditValue: value}) }).
+					FullWidth(),
+				Interactive: true,
+			},
+			{
+				Content: ui.Select("editable-member-role", model.EditableRole, roles).
+					OnChange(func(value string) { send(Msg{EditCell: "role", EditValue: value}) }).
+					FullWidth(),
+				Interactive: true,
+			},
+			{Content: statusChip("Active")},
+		},
+	}}
+	columns := []ui.TableColumn{
+		{Key: "name", Label: "Name", MinWidth: 220, Weight: 1.4},
+		{Key: "role", Label: "Role", MinWidth: 180, Weight: 1},
+		{Key: "status", Label: "Status", Width: 120},
+	}
+	return ui.Table("editable-members", columns, rows).
+		Variant(ui.TableSecondary).
+		GridLines(true).
+		Border(true).
+		MinWidth(620).
+		RowHeight(64)
 }
 
 func paginatedTable(model Model, send ui.Send[Msg]) ui.TableWidget {
@@ -317,10 +366,12 @@ var members = []member{
 func main() {
 	ui.RunCmd(
 		Model{
-			Selected: []string{"kate", "sara"},
-			Sort:     ui.TableSortDescriptor{Column: "name", Direction: ui.TableSortAscending},
-			Page:     1,
-			Loaded:   asyncBatchSize,
+			Selected:     []string{"kate", "sara"},
+			Sort:         ui.TableSortDescriptor{Column: "name", Direction: ui.TableSortAscending},
+			Page:         1,
+			Loaded:       asyncBatchSize,
+			EditableName: "Ada Lovelace",
+			EditableRole: "engineer",
 		},
 		Update,
 		View,

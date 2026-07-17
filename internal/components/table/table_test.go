@@ -13,6 +13,10 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
+	inputui "github.com/qianniancn/FlowUI/internal/components/input"
+	"github.com/qianniancn/FlowUI/internal/components/menu"
+	selectui "github.com/qianniancn/FlowUI/internal/components/select"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
@@ -29,6 +33,20 @@ type tableProbe struct {
 
 type tableOverlayProbe struct {
 	anchor image.Rectangle
+}
+
+type tableInteractiveProbe struct {
+	clicks int
+	button widget.Clickable
+}
+
+func (p *tableInteractiveProbe) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	for p.button.Clicked(gtx) {
+		p.clicks++
+	}
+	return p.button.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(80, 28))}
+	})
 }
 
 func (p *tableOverlayProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -69,11 +87,16 @@ func TestTableOptionsUseValueSemantics(t *testing.T) {
 		OnSelectionChange(func([]string) {}).
 		OnSortChange(func(SortDescriptor) {}).
 		OnAction(func(string) {}).
+		RowContextMenu(func(Row) menu.Widget {
+			return menu.Menu("row-actions", []menu.Item{{Key: "open", Label: "Open"}})
+		}).
 		Disabled(true).
 		AllowEmptySelection().
 		ShowSelectionIndicator().
 		MaxHeight(240).
-		MinWidth(640)
+		MinWidth(640).
+		GridLines(true).
+		Border(true)
 
 	if base.variant != VariantPrimary || base.selectionMode != SelectionNone || len(base.selectedKeys) != 0 || base.maxHeight != 0 {
 		t.Fatal("configuring a Table mutated the base value")
@@ -84,11 +107,26 @@ func TestTableOptionsUseValueSemantics(t *testing.T) {
 	if configured.sort.Column != "name" || configured.sort.Direction != SortDescending || configured.emptyText != "Empty" {
 		t.Fatal("sort or empty options were not retained")
 	}
-	if configured.onChange == nil || configured.onSelectionChange == nil || configured.onSortChange == nil || configured.onAction == nil {
+	if configured.onChange == nil || configured.onSelectionChange == nil || configured.onSortChange == nil || configured.onAction == nil || configured.rowContextMenu == nil {
 		t.Fatal("callbacks were not retained")
 	}
-	if !configured.disabled || !configured.allowEmpty || !configured.selectionIndicator || configured.maxHeight != 240 || configured.minWidth != 640 {
+	if !configured.disabled || !configured.allowEmpty || !configured.selectionIndicator || configured.maxHeight != 240 || configured.minWidth != 640 || !configured.gridLinesSet || !configured.gridLines || !configured.bordered {
 		t.Fatal("behavior options were not retained")
+	}
+}
+
+func TestTableGridLineModes(t *testing.T) {
+	base := New("members", []Column{{Key: "name"}}, nil)
+	if !base.showsGridLines() || base.showsFullGrid() || base.bordered {
+		t.Fatal("default table line mode changed")
+	}
+	grid := base.GridLines(true).Border(true)
+	if !grid.showsGridLines() || !grid.showsFullGrid() || !grid.bordered {
+		t.Fatal("full grid mode was not enabled")
+	}
+	hidden := base.GridLines(false)
+	if hidden.showsGridLines() || hidden.showsFullGrid() {
+		t.Fatal("hidden grid mode still shows lines")
 	}
 }
 
@@ -146,6 +184,158 @@ func TestTableTracksOverlayAnchorInsideCustomCell(t *testing.T) {
 	)
 	if probe.anchor != want {
 		t.Fatalf("custom cell overlay anchor = %v, want %v", probe.anchor, want)
+	}
+}
+
+func TestTableInteractiveCellOwnsPrimaryClick(t *testing.T) {
+	ctx := tableTestContext(nil)
+	router := new(input.Router)
+	probe := new(tableInteractiveProbe)
+	actions := 0
+	table := New(
+		"interactive-cell",
+		[]Column{{Key: "name", Label: "Name", Width: 180}},
+		[]Row{{Key: "first", Label: "First", Cells: []Cell{{Content: probe, Interactive: true}}}},
+	).OnAction(func(string) { actions++ })
+	start := time.Unix(1, 0)
+	layoutTableFrame(ctx, router, table, start)
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(40, 58)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(40, 58)},
+	)
+	layoutTableFrame(ctx, router, table, start.Add(time.Millisecond))
+	if probe.clicks != 1 {
+		t.Fatalf("interactive cell clicks = %d, want 1", probe.clicks)
+	}
+	if actions != 0 {
+		t.Fatalf("row actions = %d, want 0", actions)
+	}
+	tablePeekState(ctx, "interactive-cell").row("first").clickable.Click()
+	layoutTableFrame(ctx, router, table, start.Add(2*time.Millisecond))
+	if actions != 1 {
+		t.Fatalf("keyboard or programmatic row actions = %d, want 1", actions)
+	}
+}
+
+func TestTableRowContextMenuUsesCompleteRow(t *testing.T) {
+	ctx := tableTestContext(nil)
+	router := new(input.Router)
+	menuRows := 0
+	table := New(
+		"row-menu-table",
+		[]Column{{Key: "name", Label: "Name", Width: 180}, {Key: "role", Label: "Role", Width: 180}},
+		[]Row{{Key: "first", Label: "First", Cells: []Cell{{Text: "First"}, {Text: "Engineer"}}}},
+	).RowContextMenu(func(row Row) menu.Widget {
+		if row.Key == "first" {
+			menuRows++
+		}
+		return menu.Menu("row-actions", []menu.Item{{Key: "open", Label: "Open"}})
+	})
+	start := time.Unix(1, 0)
+	layoutTableOverlayFrame(ctx, router, table, start)
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonSecondary, Position: f32.Pt(260, 58),
+	})
+	layoutTableOverlayFrame(ctx, router, table, start.Add(time.Millisecond))
+	layoutTableOverlayFrame(ctx, router, table, start.Add(200*time.Millisecond))
+	if menuRows < 2 {
+		t.Fatalf("row menu callbacks = %d, want one per frame", menuRows)
+	}
+	if !frame.HasTopOverlay(ctx) {
+		t.Fatal("secondary click outside the first cell did not open the row menu")
+	}
+	if focus := tablePeekState(ctx, "row-menu-table").row("first").focus.TargetOpacity(); focus != 0 {
+		t.Fatalf("secondary click row focus opacity = %v, want 0", focus)
+	}
+}
+
+func TestTableRowContextMenuKeepsPointerFocusHiddenAcrossRepeatedOpens(t *testing.T) {
+	ctx := tableTestContext(nil)
+	router := new(input.Router)
+	table := New(
+		"repeated-row-menu",
+		[]Column{{Key: "name", Label: "Name", Width: 180}},
+		[]Row{{Key: "first", Label: "First", Cells: []Cell{{Text: "First"}}}},
+	).RowContextMenu(func(Row) menu.Widget {
+		return menu.Menu("row-actions", []menu.Item{{Key: "open", Label: "Open"}})
+	})
+	start := time.Unix(1, 0)
+	layoutTableOverlayFrame(ctx, router, table, start)
+	for cycle := 0; cycle < 3; cycle++ {
+		openAt := start.Add(time.Duration(cycle*250+1) * time.Millisecond)
+		router.Queue(pointer.Event{
+			Kind: pointer.Press, Source: pointer.Mouse, PointerID: pointer.ID(cycle*2 + 1),
+			Buttons: pointer.ButtonSecondary, Position: f32.Pt(120, 58),
+		})
+		layoutTableOverlayFrame(ctx, router, table, openAt)
+		layoutTableOverlayFrame(ctx, router, table, openAt.Add(200*time.Millisecond))
+		if focus := tablePeekState(ctx, "repeated-row-menu").row("first").focus.TargetOpacity(); focus != 0 {
+			t.Fatalf("cycle %d row focus opacity = %v, want 0", cycle+1, focus)
+		}
+
+		router.Queue(
+			pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: pointer.ID(cycle*2 + 2), Buttons: pointer.ButtonPrimary, Position: f32.Pt(620, 300)},
+			pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: pointer.ID(cycle*2 + 2), Position: f32.Pt(620, 300)},
+		)
+		layoutTableOverlayFrame(ctx, router, table, openAt.Add(201*time.Millisecond))
+		layoutTableOverlayFrame(ctx, router, table, openAt.Add(202*time.Millisecond))
+		if frame.HasTopOverlay(ctx) {
+			t.Fatalf("cycle %d context menu overlay remained after outside click", cycle+1)
+		}
+	}
+}
+
+func TestTableRowContextMenuShiftF10FromInteractiveContentRestoresFocus(t *testing.T) {
+	tests := []struct {
+		name    string
+		content frame.Widget
+	}{
+		{name: "input", content: inputui.Input("row-name", "Ada").FullWidth()},
+		{name: "select", content: selectui.Select("row-role", "engineer", []selectui.SelectItem{{Key: "engineer", Label: "Engineer"}}).FullWidth()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := tableTestContext(nil)
+			router := new(input.Router)
+			keyValue := "interactive-row-menu-" + test.name
+			table := New(
+				keyValue,
+				[]Column{{Key: "value", Label: "Value", Width: 220}},
+				[]Row{{Key: "first", Label: "First", Cells: []Cell{{Content: test.content, Interactive: true}}}},
+			).RowContextMenu(func(Row) menu.Widget {
+				return menu.Menu("row-actions", []menu.Item{{Key: "open", Label: "Open"}})
+			})
+			start := time.Unix(1, 0)
+			layoutTableOverlayFrame(ctx, router, table, start)
+			targets := tablePeekState(ctx, keyValue).row("first").focusTargets
+			if len(targets) == 0 {
+				t.Fatalf("interactive %s focus target was not collected", test.name)
+			}
+			target := targets[0]
+
+			router.Source().Execute(key.FocusCmd{Tag: target})
+			layoutTableOverlayFrame(ctx, router, table, start.Add(time.Millisecond))
+			if !router.Source().Focused(target) {
+				t.Fatalf("interactive %s did not accept focus", test.name)
+			}
+
+			router.Queue(key.Event{Name: key.NameF10, Modifiers: key.ModShift, State: key.Press})
+			layoutTableOverlayFrame(ctx, router, table, start.Add(2*time.Millisecond))
+			layoutTableOverlayFrame(ctx, router, table, start.Add(200*time.Millisecond))
+			if !frame.HasTopOverlay(ctx) {
+				t.Fatalf("Shift+F10 from the interactive %s did not open the row context menu", test.name)
+			}
+
+			router.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+			layoutTableOverlayFrame(ctx, router, table, start.Add(201*time.Millisecond))
+			if !router.Source().Focused(target) {
+				t.Fatalf("closing the row context menu did not restore the interactive %s focus", test.name)
+			}
+			if !frame.FocusVisible(ctx, target, true) {
+				t.Fatalf("keyboard-opened row context menu did not restore keyboard-visible %s focus", test.name)
+			}
+		})
 	}
 }
 
@@ -648,6 +838,16 @@ func layoutTableFrame(ctx *frame.Context, router *input.Router, table Widget, no
 	gtx := tableLayoutContext(router, image.Pt(640, 320), now)
 	frame.BeginFrame(ctx)
 	table.Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(gtx.Ops)
+}
+
+func layoutTableOverlayFrame(ctx *frame.Context, router *input.Router, table Widget, now time.Time) {
+	gtx := tableLayoutContext(router, image.Pt(640, 320), now)
+	frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+	table.Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)
 	router.Frame(gtx.Ops)

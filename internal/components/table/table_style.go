@@ -16,6 +16,7 @@ type tableStyle struct {
 	columnSeparator color.NRGBA
 	headerSeparator color.NRGBA
 	rowSeparator    color.NRGBA
+	border          color.NRGBA
 	focus           color.NRGBA
 }
 
@@ -33,6 +34,7 @@ func tableStyleFor(activeTheme *theme.Theme, variant Variant) tableStyle {
 		columnSeparator: columnSeparator,
 		headerSeparator: headerSeparator,
 		rowSeparator:    rowSeparator,
+		border:          activeTheme.Palette.Border,
 		focus:           activeTheme.Palette.Focus,
 	}
 	if variant == VariantPrimary {

@@ -452,6 +452,18 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		ui.Surface(
 			ui.Tabs("settings", "general", tabs).Variant(ui.TabsSecondary),
 		).Variant(ui.SurfaceSecondary).Radius(8),
+		ui.Collapsible("details", model.open, "Details", ui.Text("More information")).
+			Leading(ui.Icon(lucide.Info).Size(16)).
+			Trailing(ui.Chip("New").Size(ui.ChipSmall)).
+			Disabled(false).
+			OnExpandedChange(func(expanded bool) { send(facadeMsg{open: &expanded}) }),
+		ui.CollapsibleGroup("sections", model.expanded, []ui.CollapsibleItem{
+			{Key: "general", Label: "General", Content: ui.Text("General settings")},
+			{Key: "advanced", Label: "Advanced", Content: ui.Text("Advanced settings"), Disabled: true},
+		}).
+			AllowMultipleExpanded(true).
+			Disabled(false).
+			OnExpandedChange(func(keys []string) { send(facadeMsg{expanded: keys}) }),
 		ui.Select("choice", model.selected, items).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }),
 		ui.Tree("files", model.selected, treeItems).

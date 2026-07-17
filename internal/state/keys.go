@@ -40,6 +40,7 @@ const (
 	KindCandlestickChart Kind = "candlestick-chart"
 	KindTween            Kind = "tween"
 	KindTabs             Kind = "tabs"
+	KindCollapsible      Kind = "collapsible"
 	KindPopover          Kind = "popover"
 	KindTooltip          Kind = "tooltip"
 	KindToast            Kind = "toast"

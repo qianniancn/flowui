@@ -149,6 +149,7 @@ type ComponentsTheme struct {
 	PieChart          PieChartTheme
 	CandlestickChart  CandlestickChartTheme
 	Tabs              TabsTheme
+	Collapsible       CollapsibleTheme
 	Select            SelectTheme
 	Popover           PopoverTheme
 	Tooltip           TooltipTheme
@@ -791,6 +792,14 @@ type TabsTheme struct {
 	ScrollShadowSize    unit.Dp
 	ScrollChevronSize   unit.Dp
 	ScrollChevronStroke unit.Dp
+}
+
+type CollapsibleTheme struct {
+	BodyPadding       unit.Dp
+	IndicatorSize     unit.Dp
+	IndicatorStroke   unit.Dp
+	ContentDuration   time.Duration
+	IndicatorDuration time.Duration
 }
 
 type SelectTheme struct {
@@ -1698,6 +1707,13 @@ func DefaultTheme() Theme {
 				ScrollShadowSize:    64,
 				ScrollChevronSize:   10,
 				ScrollChevronStroke: 1.5,
+			},
+			Collapsible: CollapsibleTheme{
+				BodyPadding:       8,
+				IndicatorSize:     16,
+				IndicatorStroke:   1.7,
+				ContentDuration:   200 * time.Millisecond,
+				IndicatorDuration: 250 * time.Millisecond,
 			},
 			Select: SelectTheme{
 				Height:            36,

@@ -50,6 +50,7 @@ type BarChartTheme = theme.BarChartTheme
 type PieChartTheme = theme.PieChartTheme
 type CandlestickChartTheme = theme.CandlestickChartTheme
 type TabsTheme = theme.TabsTheme
+type CollapsibleTheme = theme.CollapsibleTheme
 type SelectTheme = theme.SelectTheme
 type PopoverTheme = theme.PopoverTheme
 type TooltipTheme = theme.TooltipTheme

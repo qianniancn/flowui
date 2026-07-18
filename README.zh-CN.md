@@ -91,6 +91,9 @@ go run .
 Command 在事件循环之外运行。捕获不可变的值，并通过 `ui.Send` 发送结果；
 不要在 command 中保存模型指针或 `ui.Context`。
 
+搜索、预览等只需要最新结果的任务使用 `ui.LatestCmd`，不再需要时使用
+`ui.CancelLatestCmd` 取消对应任务。
+
 多窗口应用可以使用 `ui.NewWindow`、`ui.NewWindowCmd` 或
 `ui.NewProgramWindow` 创建 `ui.WindowSpec`，再交给 `ui.RunWindows` 或
 `ui.Application.Run`。

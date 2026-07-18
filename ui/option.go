@@ -137,9 +137,9 @@ func Locale(language Language) Option {
 	})
 }
 
-// OnError handles command, subscription, and window lifecycle errors on the
-// window event thread. Panics are recovered and reported as *EffectError values
-// too.
+// OnError handles command, subscription, synchronous runtime, and window
+// lifecycle errors. Effect errors are delivered on the window event thread;
+// synchronous callback panics are returned as *RuntimePanicError values.
 func OnError(handler func(error)) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.errorHandler = handler

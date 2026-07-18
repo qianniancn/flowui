@@ -175,14 +175,21 @@ workflow may mutate the model. Each returned `Cmd` starts in its own goroutine
 after `UpdateCmd` returns, so it can overlap later updates and views. Every
 command receives a root `context.Context` that is canceled when the window is
 destroyed. Blocking and fallible work should use `ui.DoContext`; `ui.Do` remains
-a convenience for short context-free work.
+a convenience for short context-free work. `ui.LatestCmd` cancels an older
+same-key command and rejects messages from older generations; use it for
+search, preview, and autocomplete work. `ui.CancelLatestCmd` cancels a keyed
+workflow when the model no longer needs its result.
 
 A command must capture only immutable value snapshots prepared during
 `UpdateCmd`. It must not retain or access the model pointer or a `ui.Context`.
 Reference-backed values such as slices and maps need an explicit copy before
 capture. A command returns data to the application only by calling its `Send`
 argument; concurrent sends are queued safely and applied by `UpdateCmd` in a
-later frame. Sends made after cancellation are discarded.
+later frame. The runtime bounds the message queue to 256 entries. Ordinary
+messages beyond the bound are dropped and reported as `QueueOverflowError`; if
+a subscription stream is full, a queued value from the same generation is
+replaced by the latest value. The error queue is bounded to 64 entries as well.
+Sends made after cancellation are discarded.
 
 `ui.MapCmd` lets a parent update reuse a child module's command by mapping each
 child message to the parent message type. It preserves the command context and
@@ -190,7 +197,8 @@ error unchanged; it does not introduce another goroutine or effect lifecycle.
 
 `Subscription` represents long-lived asynchronous input such as a timer,
 filesystem watcher, or server event stream. `RunWithSubscriptions` derives the
-desired subscription set from the updated model before each view. Keys are
+desired subscription set on the initial frame and after an updated model;
+stable desired data is reused on animation-only frames. Keys are
 lifecycle identities: a stable key retains the running subscription, removal
 cancels it, and a changed key starts a replacement. Duplicate or empty keys are
 programming errors. A subscription should remain running until its context is
@@ -209,6 +217,9 @@ errors are ignored. Without an `OnError` option, FlowUI writes the error and any
 panic stack to standard error. The handler is for logging and unexpected
 infrastructure failures; expected domain failures should normally be converted
 into typed messages so `UpdateCmd` can represent them in the model.
+Panics from `UpdateCmd`, `Subscriptions`, or `View` are recovered as
+`RuntimePanicError` values with a phase and stack trace; the window loop stops
+rather than continuing with a potentially partially-mutated model.
 
 Window shutdown cancels every command and subscription and waits up to two
 seconds for their cleanup before returning. A timeout is reported as

@@ -94,6 +94,9 @@ Commands run outside the event loop. Capture immutable values in a command and
 send results back through `ui.Send`; do not retain a model pointer or a
 `ui.Context`.
 
+Use `ui.LatestCmd` and `ui.CancelLatestCmd` for keyed work such as search or
+preview, where an older result should be canceled and ignored.
+
 For multiple windows, create `ui.WindowSpec` values with `ui.NewWindow`,
 `ui.NewWindowCmd`, or `ui.NewProgramWindow`, then pass them to
 `ui.RunWindows` or `ui.Application.Run`.

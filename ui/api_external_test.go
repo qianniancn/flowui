@@ -798,6 +798,8 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.View[facadeModel, facadeMsg] = facadeView
 	var _ ui.Cmd[facadeMsg] = ui.Do(func(ui.Send[facadeMsg]) {})
 	var _ ui.Cmd[facadeMsg] = ui.DoContext(func(context.Context, ui.Send[facadeMsg]) error { return nil })
+	var _ ui.Cmd[facadeMsg] = ui.LatestCmd("load", ui.Do(func(ui.Send[facadeMsg]) {}))
+	var _ ui.Cmd[facadeMsg] = ui.CancelLatestCmd[facadeMsg]("load")
 	var _ ui.Subscriptions[facadeModel, facadeMsg] = func(facadeModel) []ui.Subscription[facadeMsg] {
 		return []ui.Subscription[facadeMsg]{
 			ui.Subscribe("events", func(context.Context, ui.Send[facadeMsg]) error { return nil }),

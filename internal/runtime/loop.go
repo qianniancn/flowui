@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"gioui.org/app"
@@ -18,18 +20,59 @@ type queuedMessage[Msg any] struct {
 	value        Msg
 	subscription subscriptionToken
 	fromSub      bool
+	latest       latestCommandToken
+	fromLatest   bool
+}
+
+const (
+	messageQueueLimit = 256
+	errorQueueLimit   = 64
+)
+
+type RuntimePhase string
+
+const (
+	RuntimePhaseUpdate        RuntimePhase = "update"
+	RuntimePhaseSubscriptions RuntimePhase = "subscriptions"
+	RuntimePhaseView          RuntimePhase = "view"
+)
+
+// RuntimePanicError describes a panic from synchronous application code.
+type RuntimePanicError struct {
+	Phase RuntimePhase
+	Panic any
+	Stack []byte
+}
+
+func (e *RuntimePanicError) Error() string {
+	return fmt.Sprintf("%s panicked: %v", e.Phase, e.Panic)
+}
+
+// QueueOverflowError reports messages or errors dropped after a runtime queue
+// reached its fixed bound.
+type QueueOverflowError struct {
+	Queue   string
+	Dropped int
+	Limit   int
+}
+
+func (e *QueueOverflowError) Error() string {
+	return fmt.Sprintf("%s queue overflow: dropped %d (limit %d)", e.Queue, e.Dropped, e.Limit)
 }
 
 type loopCore[M any, Msg any] struct {
 	model    M
 	messages Queue[queuedMessage[Msg]]
+	latest   *latestCommandManager
 	update   Update[M, Msg]
 }
 
 func newLoopCore[M any, Msg any](initial M, update Update[M, Msg]) *loopCore[M, Msg] {
 	return &loopCore[M, Msg]{
-		model:  initial,
-		update: update,
+		model:    initial,
+		update:   update,
+		messages: Queue[queuedMessage[Msg]]{limit: messageQueueLimit},
+		latest:   newLatestCommandManager(),
 	}
 }
 
@@ -38,7 +81,37 @@ func (c *loopCore[M, Msg]) send(msg Msg) {
 }
 
 func (c *loopCore[M, Msg]) sendSubscription(token subscriptionToken, msg Msg) {
-	c.messages.Push(queuedMessage[Msg]{value: msg, subscription: token, fromSub: true})
+	c.messages.PushOrReplace(queuedMessage[Msg]{value: msg, subscription: token, fromSub: true}, func(current queuedMessage[Msg]) bool {
+		return current.fromSub && current.subscription == token
+	})
+}
+
+func (c *loopCore[M, Msg]) sendLatest(token latestCommandToken, msg Msg) {
+	c.messages.PushOrReplace(queuedMessage[Msg]{value: msg, latest: token, fromLatest: true}, func(current queuedMessage[Msg]) bool {
+		return current.fromLatest && current.latest == token
+	})
+}
+
+func (c *loopCore[M, Msg]) updateMessages(
+	group *effectGroup,
+	ctx context.Context,
+	send func(Msg),
+	report func(error),
+	acceptSubscription func(subscriptionToken) bool,
+) (updated bool, dropped int, err error) {
+	err = recoverRuntimePanic(RuntimePhaseUpdate, func() {
+		dropped = c.messages.Drain(func(msg queuedMessage[Msg]) {
+			if msg.fromSub && (acceptSubscription == nil || !acceptSubscription(msg.subscription)) {
+				return
+			}
+			if msg.fromLatest && !c.latest.accepts(msg.latest) {
+				return
+			}
+			updated = true
+			StartCmd(group, ctx, c.update(&c.model, msg.value), send, report)
+		})
+	})
+	return updated, dropped, err
 }
 
 func (c *loopCore[M, Msg]) frame(
@@ -48,14 +121,25 @@ func (c *loopCore[M, Msg]) frame(
 	report func(error),
 	acceptSubscription func(subscriptionToken) bool,
 	view func(M),
-) {
-	c.messages.Drain(func(msg queuedMessage[Msg]) {
-		if msg.fromSub && (acceptSubscription == nil || !acceptSubscription(msg.subscription)) {
-			return
-		}
-		StartCmd(group, ctx, c.update(&c.model, msg.value), send, report)
+) (updated bool, dropped int, err error) {
+	updated, dropped, err = c.updateMessages(group, ctx, send, report, acceptSubscription)
+	if err != nil {
+		return updated, dropped, err
+	}
+	err = recoverRuntimePanic(RuntimePhaseView, func() {
+		view(c.model)
 	})
-	view(c.model)
+	return updated, dropped, err
+}
+
+func recoverRuntimePanic(phase RuntimePhase, fn func()) (err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = &RuntimePanicError{Phase: phase, Panic: recovered, Stack: debug.Stack()}
+		}
+	}()
+	fn()
+	return nil
 }
 
 type EventWindow interface {
@@ -77,10 +161,13 @@ func Loop[M any, Msg any](
 	frame Frame[M, Msg],
 ) error {
 	core := newLoopCore(initial, update)
-	ctx, cancel := context.WithCancel(context.Background())
+	root, cancel := context.WithCancel(context.Background())
+	ctx := withLatestCommandManager(root, core.latest)
 	var activeSubscriptions subscriptionSet[Msg]
 	var effects effectGroup
-	var effectErrors Queue[error]
+	effectErrors := Queue[error]{limit: errorQueueLimit}
+	var desiredSubscriptions []Subscription[Msg]
+	subscriptionsReady := subscriptions == nil
 	var ops op.Ops
 	defer func() {
 		cancel()
@@ -118,6 +205,13 @@ func Loop[M any, Msg any](
 		effectErrors.Push(err)
 		w.Invalidate()
 	}
+	ctx = context.WithValue(ctx, latestDispatchKey{}, func(token latestCommandToken, msg Msg) {
+		if ctx.Err() != nil || !core.latest.accepts(token) {
+			return
+		}
+		core.sendLatest(token, msg)
+		w.Invalidate()
+	})
 	StartCmd(&effects, ctx, initialCmd, send, report)
 
 	for {
@@ -134,17 +228,43 @@ func Loop[M any, Msg any](
 			}
 			w.Invalidate()
 		case app.FrameEvent:
-			effectErrors.Drain(onError)
-			core.frame(&effects, ctx, send, report, activeSubscriptions.accepts, func(model M) {
-				if subscriptions != nil {
-					activeSubscriptions.reconcile(ctx, subscriptions(model), &effects, sendSubscription, report, wake)
-				} else {
-					activeSubscriptions.reconcile(ctx, nil, &effects, sendSubscription, report, wake)
+			droppedErrors := effectErrors.Drain(onError)
+			if droppedErrors > 0 {
+				onError(&QueueOverflowError{Queue: "error", Dropped: droppedErrors, Limit: errorQueueLimit})
+			}
+			updated, droppedMessages, err := core.updateMessages(&effects, ctx, send, report, activeSubscriptions.accepts)
+			if err != nil {
+				return err
+			}
+			if droppedMessages > 0 {
+				onError(&QueueOverflowError{Queue: "message", Dropped: droppedMessages, Limit: messageQueueLimit})
+			}
+			if subscriptions != nil && (!subscriptionsReady || updated) {
+				var desired []Subscription[Msg]
+				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
+					desired = subscriptions(core.model)
+				}); err != nil {
+					return err
 				}
+				desiredSubscriptions = desired
+				subscriptionsReady = true
+			}
+			if subscriptions != nil && subscriptionsReady {
+				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
+					activeSubscriptions.reconcile(ctx, desiredSubscriptions, &effects, sendSubscription, report, wake)
+				}); err != nil {
+					return err
+				}
+			}
+			var viewErr error
+			viewErr = recoverRuntimePanic(RuntimePhaseView, func() {
 				gtx := app.NewContext(&ops, e)
-				frame(gtx, model, send)
+				frame(gtx, core.model, send)
 				e.Frame(gtx.Ops)
 			})
+			if viewErr != nil {
+				return viewErr
+			}
 		}
 	}
 }

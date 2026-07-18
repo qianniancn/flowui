@@ -23,6 +23,30 @@ type Update[M any, Msg any] func(*M, Msg)
 // maps, and other reference-backed model data before capturing them.
 type Cmd[Msg any] func(context.Context, Send[Msg]) error
 
+// LatestCmd cancels an older command with the same key and drops messages from
+// an older generation. It is intended for search, preview, and autocomplete
+// workflows where only the newest result is useful.
+func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
+	wrapped := runtime.LatestCmd(key, func(ctx context.Context, send func(Msg)) error {
+		if cmd == nil {
+			return nil
+		}
+		return cmd(ctx, Send[Msg](send))
+	})
+	return func(ctx context.Context, send Send[Msg]) error {
+		return wrapped(ctx, func(msg Msg) { send(msg) })
+	}
+}
+
+// CancelLatestCmd cancels the active LatestCmd with key and invalidates its
+// queued messages.
+func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
+	wrapped := runtime.CancelLatestCmd[Msg](key)
+	return func(ctx context.Context, send Send[Msg]) error {
+		return wrapped(ctx, func(msg Msg) { send(msg) })
+	}
+}
+
 // UpdateCmd applies a message and may return a command to run. It must finish
 // all model mutation before returning; a returned Cmd must follow the Cmd
 // capture rules.
@@ -72,6 +96,16 @@ const (
 
 // EffectError describes an error or panic from a command or subscription.
 type EffectError = runtime.EffectError
+
+type RuntimePhase = runtime.RuntimePhase
+type RuntimePanicError = runtime.RuntimePanicError
+type QueueOverflowError = runtime.QueueOverflowError
+
+const (
+	RuntimePhaseUpdate        = runtime.RuntimePhaseUpdate
+	RuntimePhaseSubscriptions = runtime.RuntimePhaseSubscriptions
+	RuntimePhaseView          = runtime.RuntimePhaseView
+)
 
 // ErrEffectShutdownTimeout is reported when asynchronous work does not stop
 // within the runtime's bounded shutdown period.

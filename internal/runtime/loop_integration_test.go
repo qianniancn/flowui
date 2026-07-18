@@ -182,6 +182,179 @@ func TestLoopRunsInitialCommandAndQueuesItsMessage(t *testing.T) {
 	}
 }
 
+func TestLoopReturnsUpdatePanic(t *testing.T) {
+	window := newRuntimeTestWindow()
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(*int, struct{}) Cmd[struct{}] {
+			panic("update broken")
+		}, nil, nil, nil, func(_ app.Config, send func(struct{})) { send(struct{}{}) }, func(layout.Context, int, func(struct{})) {})
+	}()
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	err := receiveRuntimeTestValue(t, result)
+	var panicErr *RuntimePanicError
+	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseUpdate || len(panicErr.Stack) == 0 {
+		t.Fatalf("update panic = %#v", err)
+	}
+}
+
+func TestLoopReturnsSubscriptionPanic(t *testing.T) {
+	window := newRuntimeTestWindow()
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(*int, struct{}) Cmd[struct{}] { return nil }, func(int) []Subscription[struct{}] {
+			panic("subscriptions broken")
+		}, nil, nil, nil, func(layout.Context, int, func(struct{})) {})
+	}()
+	window.events <- runtimeFrameEvent()
+	err := receiveRuntimeTestValue(t, result)
+	var panicErr *RuntimePanicError
+	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseSubscriptions || len(panicErr.Stack) == 0 {
+		t.Fatalf("subscription panic = %#v", err)
+	}
+}
+
+func TestLoopReturnsViewPanic(t *testing.T) {
+	window := newRuntimeTestWindow()
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(*int, struct{}) Cmd[struct{}] { return nil }, nil, nil, nil, nil, func(layout.Context, int, func(struct{})) {
+			panic("view broken")
+		})
+	}()
+	window.events <- runtimeFrameEvent()
+	err := receiveRuntimeTestValue(t, result)
+	var panicErr *RuntimePanicError
+	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseView || len(panicErr.Stack) == 0 {
+		t.Fatalf("view panic = %#v", err)
+	}
+}
+
+func TestLoopDerivesSubscriptionsOnlyAfterModelUpdates(t *testing.T) {
+	window := newRuntimeTestWindow()
+	viewed := make(chan struct{}, 3)
+	var derived atomic.Int32
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(model *int, msg int) Cmd[int] {
+			*model = msg
+			return nil
+		}, func(int) []Subscription[int] {
+			derived.Add(1)
+			return []Subscription[int]{{Key: "events", Run: func(ctx context.Context, _ func(int)) error {
+				<-ctx.Done()
+				return ctx.Err()
+			}}}
+		}, nil, nil, func(_ app.Config, send func(int)) { send(1) }, func(layout.Context, int, func(int)) { viewed <- struct{}{} })
+	}()
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	if got := derived.Load(); got != 1 {
+		t.Fatalf("subscription derivations after idle frames = %d, want 1", got)
+	}
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	if got := derived.Load(); got != 2 {
+		t.Fatalf("subscription derivations after model update = %d, want 2", got)
+	}
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
+func TestLoopReportsBoundedMessageQueueDrops(t *testing.T) {
+	window := newRuntimeTestWindow()
+	viewed := make(chan struct{}, 1)
+	errorsReported := make(chan error, 1)
+	result := make(chan error, 1)
+	var updates atomic.Int32
+	go func() {
+		result <- Loop(window, 0, nil, func(model *int, _ int) Cmd[int] {
+			updates.Add(1)
+			(*model)++
+			return nil
+		}, nil, func(err error) {
+			if _, ok := err.(*QueueOverflowError); ok {
+				errorsReported <- err
+			}
+		}, nil, func(_ app.Config, send func(int)) {
+			for index := 0; index < messageQueueLimit+4; index++ {
+				send(index)
+			}
+		}, func(layout.Context, int, func(int)) { viewed <- struct{}{} })
+	}()
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	overflow := receiveRuntimeTestValue(t, errorsReported)
+	var overflowErr *QueueOverflowError
+	if !errors.As(overflow, &overflowErr) || overflowErr.Dropped != 4 || updates.Load() != messageQueueLimit {
+		t.Fatalf("queue overflow = %#v, updates = %d", overflow, updates.Load())
+	}
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
+func TestLoopLatestCmdDropsReplacedResultFromDispatchQueue(t *testing.T) {
+	type model struct{ result int }
+	window := newRuntimeTestWindow()
+	viewed := make(chan model, 3)
+	oldStarted := make(chan struct{})
+	oldCanceled := make(chan struct{})
+	newDone := make(chan struct{})
+	var query atomic.Int32
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, model{}, nil, func(model *model, msg int) Cmd[int] {
+			switch msg {
+			case 1:
+				return LatestCmd("search", func(ctx context.Context, send func(int)) error {
+					close(oldStarted)
+					<-ctx.Done()
+					send(101)
+					close(oldCanceled)
+					return ctx.Err()
+				})
+			case 2:
+				return LatestCmd("search", func(_ context.Context, send func(int)) error {
+					send(202)
+					close(newDone)
+					return nil
+				})
+			default:
+				model.result = msg
+				return nil
+			}
+		}, nil, nil, nil, func(_ app.Config, send func(int)) { send(int(query.Load())) }, func(_ layout.Context, model model, _ func(int)) { viewed <- model })
+	}()
+	query.Store(1)
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	receiveRuntimeTestValue(t, oldStarted)
+	query.Store(2)
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, viewed)
+	receiveRuntimeTestValue(t, oldCanceled)
+	receiveRuntimeTestValue(t, newDone)
+	window.events <- runtimeFrameEvent()
+	if got := receiveRuntimeTestValue(t, viewed).result; got != 202 {
+		t.Fatalf("latest result = %d, want 202", got)
+	}
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+}
+
 func TestLoopQueuesConfigMessagesForNextFrame(t *testing.T) {
 	window := newRuntimeTestWindow()
 	viewed := make(chan image.Point, 1)

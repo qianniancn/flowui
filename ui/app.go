@@ -135,7 +135,14 @@ func writeEffectError(w io.Writer, err error) {
 		return
 	}
 	fmt.Fprintln(w, "flowui:", err)
-	if effectErr, ok := err.(*EffectError); ok && len(effectErr.Stack) > 0 {
-		_, _ = w.Write(effectErr.Stack)
+	var stack []byte
+	switch value := err.(type) {
+	case *EffectError:
+		stack = value.Stack
+	case *RuntimePanicError:
+		stack = value.Stack
+	}
+	if len(stack) > 0 {
+		_, _ = w.Write(stack)
 	}
 }

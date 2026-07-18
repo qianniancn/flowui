@@ -99,3 +99,15 @@ func TestWriteEffectErrorIncludesPanicStack(t *testing.T) {
 		t.Fatalf("error output = %q", got)
 	}
 }
+
+func TestWriteRuntimePanicIncludesStack(t *testing.T) {
+	var output bytes.Buffer
+	writeEffectError(&output, &RuntimePanicError{
+		Phase: RuntimePhaseView,
+		Panic: "broken",
+		Stack: []byte("stack trace\n"),
+	})
+	if got := output.String(); got != "flowui: view panicked: broken\nstack trace\n" {
+		t.Fatalf("runtime panic output = %q", got)
+	}
+}

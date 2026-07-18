@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"runtime"
 	"testing"
 	"time"
 
@@ -639,6 +640,56 @@ func TestVirtualTableDoesNotResolveSelectedRowWithoutKeyboardEvent(t *testing.T)
 	frame.EndFrame(ctx)
 	if calls == 0 || calls >= 40 {
 		t.Fatalf("virtual provider calls = %d, want only visible rows", calls)
+	}
+}
+
+func BenchmarkVirtualTableRowIndex(b *testing.B) {
+	columns := []Column{{Key: "name", Label: "Name"}}
+	rows := make([]Row, 10_000)
+	for index := range rows {
+		rows[index] = Row{Key: fmt.Sprintf("row-%d", index), Cells: []Cell{{Text: "User"}}}
+	}
+	table := NewVirtual("large", columns, len(rows), func(index int) Row { return rows[index] })
+	target := rows[len(rows)-1].Key
+	b.ReportAllocs()
+	for b.Loop() {
+		runtime.KeepAlive(table.rowIndex(target))
+	}
+}
+
+func BenchmarkTableLargeSelection(b *testing.B) {
+	keys := make([]string, 10_000)
+	for index := range keys {
+		keys[index] = fmt.Sprintf("row-%d", index)
+	}
+	table := Widget{selectionMode: SelectionMultiple, selectedKeys: keys}
+	target := keys[len(keys)-1]
+	state := new(tableState)
+	b.ReportAllocs()
+	for b.Loop() {
+		table.selectedKeySet = state.selectedKeys.Resolve(keys)
+		runtime.KeepAlive(table.isSelected(target))
+	}
+}
+
+func BenchmarkVirtualTableLargeLayout(b *testing.B) {
+	columns := []Column{{Key: "name", Label: "Name"}}
+	rows := make([]Row, 10_000)
+	selected := make([]string, len(rows))
+	for index := range rows {
+		rows[index] = Row{Key: fmt.Sprintf("row-%d", index), Cells: []Cell{{Text: "User"}}}
+		selected[index] = rows[index].Key
+	}
+	table := NewVirtual("large", columns, len(rows), func(index int) Row { return rows[index] }).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys(selected).
+		MaxHeight(140).
+		RowHeight(42)
+	ctx := tableTestContext(nil)
+	var router input.Router
+	b.ReportAllocs()
+	for b.Loop() {
+		layoutTableFrame(ctx, &router, table, time.Time{})
 	}
 }
 

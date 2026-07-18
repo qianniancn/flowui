@@ -165,6 +165,48 @@ func BenchmarkTreeDataVersion(b *testing.B) {
 	}
 }
 
+func BenchmarkTreeLargeKeySets(b *testing.B) {
+	keys := make([]string, 10_000)
+	for index := range keys {
+		keys[index] = fmt.Sprintf("item-%d", index)
+	}
+	target := keys[len(keys)-1]
+	for _, benchmark := range []struct {
+		name string
+		tree Widget
+		run  func(Widget) bool
+	}{
+		{name: "selected", tree: Widget{selectionMode: SelectionMultiple, selectedKeys: keys}, run: func(tree Widget) bool { return tree.itemSelected(target) }},
+		{name: "disabled", tree: Widget{disabledKeys: keys}, run: func(tree Widget) bool { return tree.itemDisabled(Item{Key: target}) }},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			state := new(treeState)
+			b.ReportAllocs()
+			for b.Loop() {
+				benchmark.tree.selectedKeySet = state.selectedKeys.Resolve(benchmark.tree.selectedKeys)
+				benchmark.tree.disabledKeySet = state.disabledKeys.Resolve(benchmark.tree.disabledKeys)
+				runtime.KeepAlive(benchmark.run(benchmark.tree))
+			}
+		})
+	}
+}
+
+func BenchmarkTreeLargeLayout(b *testing.B) {
+	items := make([]Item, 10_000)
+	selected := make([]string, len(items))
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+		selected[index] = items[index].Key
+	}
+	tree := New("large", "", items).DataVersion(1).SelectionMode(SelectionMultiple).SelectedKeys(selected)
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	var router input.Router
+	b.ReportAllocs()
+	for b.Loop() {
+		layoutTreeFrame(ctx, &router, tree, time.Time{})
+	}
+}
+
 func TestTreeRejectsEmptyAndDuplicateKeysAcrossDepths(t *testing.T) {
 	tests := []struct {
 		name  string

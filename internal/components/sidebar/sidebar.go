@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
 
 // Item describes one destination in a Sidebar.
@@ -38,6 +39,7 @@ type Widget struct {
 	onChange       func(string)
 	onAction       func(string)
 	disabledKeys   []string
+	disabledKeySet stateutil.StringSet
 	disabled       bool
 	collapsed      bool
 	width          unit.Dp
@@ -125,6 +127,7 @@ func (w Widget) OnAction(fn func(string)) Widget {
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := sidebarStateFor(ctx, w.key)
+	w.disabledKeySet = state.disabledKeys.Resolve(w.disabledKeys)
 	entries, items := state.resolveEntries(w)
 	state.beginFrame()
 	defer state.endFrame()
@@ -155,7 +158,7 @@ func (w Widget) activate(key string) {
 }
 
 func (w Widget) itemDisabled(item Item) bool {
-	return w.disabled || item.Disabled || sidebarContainsKey(w.disabledKeys, item.Key)
+	return w.disabled || item.Disabled || stateutil.StringSetContains(w.disabledKeys, w.disabledKeySet, item.Key)
 }
 
 type entry struct {

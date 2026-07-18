@@ -1,8 +1,10 @@
 package listbox
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"runtime"
 	"testing"
 	"time"
 
@@ -492,6 +494,81 @@ func TestListBoxDataVersionCachesEntries(t *testing.T) {
 	updatedEntries, _ := state.resolveEntries(widget.DataVersion(2))
 	if &entries[0] == &updatedEntries[0] {
 		t.Fatal("changed ListBox data version reused stale entries")
+	}
+}
+
+func BenchmarkListBoxLargeData(b *testing.B) {
+	items := make([]ListBoxItem, 10_000)
+	for index := range items {
+		items[index] = ListBoxItem{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	widget := ListBox("large", "", items)
+	for _, benchmark := range []struct {
+		name   string
+		widget ListBoxWidget
+	}{
+		{name: "unversioned", widget: widget},
+		{name: "versioned", widget: widget.DataVersion(1)},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			state := new(listBoxState)
+			state.resolveEntries(benchmark.widget)
+			b.ReportAllocs()
+			for b.Loop() {
+				entries, resolved := state.resolveEntries(benchmark.widget)
+				runtime.KeepAlive(entries)
+				runtime.KeepAlive(resolved)
+			}
+		})
+	}
+}
+
+func BenchmarkListBoxLargeSelection(b *testing.B) {
+	keys := make([]string, 10_000)
+	for index := range keys {
+		keys[index] = fmt.Sprintf("item-%d", index)
+	}
+	widget := ListBoxMultiple("large", keys, nil)
+	target := keys[len(keys)-1]
+	state := new(listBoxState)
+	b.ReportAllocs()
+	for b.Loop() {
+		widget.selectedKeySet = state.selectedKeys.Resolve(keys)
+		runtime.KeepAlive(widget.isSelected(target))
+	}
+}
+
+func BenchmarkListBoxLargeLayout(b *testing.B) {
+	items := make([]ListBoxItem, 10_000)
+	for index := range items {
+		items[index] = ListBoxItem{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	widget := ListBox("large", "", items).DataVersion(1)
+	ctx := newContext(nil)
+	b.ReportAllocs()
+	for b.Loop() {
+		gtx := testLayoutContext()
+		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+		widget.Layout(ctx, gtx)
+		frame.EndFrame(ctx)
+	}
+}
+
+func BenchmarkListBoxLargeDisabledLayout(b *testing.B) {
+	items := make([]ListBoxItem, 10_000)
+	disabled := make([]string, len(items))
+	for index := range items {
+		items[index] = ListBoxItem{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+		disabled[index] = items[index].Key
+	}
+	widget := ListBox("large-disabled", "", items).DisabledKeys(disabled).DataVersion(1)
+	ctx := newContext(nil)
+	b.ReportAllocs()
+	for b.Loop() {
+		gtx := testLayoutContext()
+		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+		widget.Layout(ctx, gtx)
+		frame.EndFrame(ctx)
 	}
 }
 

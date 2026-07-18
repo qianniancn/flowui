@@ -1,8 +1,10 @@
 package sidebar
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"runtime"
 	"testing"
 	"time"
 
@@ -79,6 +81,46 @@ func TestSidebarDataVersionCachesEntries(t *testing.T) {
 	updatedEntries, _ := state.resolveEntries(widget.DataVersion(2))
 	if &entries[0] == &updatedEntries[0] {
 		t.Fatal("changed Sidebar data version reused stale entries")
+	}
+}
+
+func BenchmarkSidebarLargeData(b *testing.B) {
+	items := make([]Item, 10_000)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	widget := Widget{key: "large", items: items}
+	for _, benchmark := range []struct {
+		name   string
+		widget Widget
+	}{
+		{name: "unversioned", widget: widget},
+		{name: "versioned", widget: widget.DataVersion(1)},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			state := new(sidebarState)
+			state.resolveEntries(benchmark.widget)
+			b.ReportAllocs()
+			for b.Loop() {
+				entries, resolved := state.resolveEntries(benchmark.widget)
+				runtime.KeepAlive(entries)
+				runtime.KeepAlive(resolved)
+			}
+		})
+	}
+}
+
+func BenchmarkSidebarLargeLayout(b *testing.B) {
+	items := make([]Item, 10_000)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: "Item"}
+	}
+	widget := New("large", "", items).DataVersion(1)
+	ctx := sidebarTestContext(nil)
+	b.ReportAllocs()
+	for b.Loop() {
+		var router input.Router
+		layoutSidebarFrame(ctx, &router, widget, time.Time{})
 	}
 }
 

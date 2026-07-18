@@ -95,11 +95,13 @@ type Widget struct {
 	key               string
 	selectedKey       string
 	selectedKeys      []string
+	selectedKeySet    stateutil.StringSet
 	items             []Item
 	dataVersion       uint64
 	hasDataVersion    bool
 	expandedKeys      []string
 	disabledKeys      []string
+	disabledKeySet    stateutil.StringSet
 	emptyText         string
 	onChange          func(string)
 	onSelectionChange func([]string)
@@ -301,6 +303,8 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	state := treeStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
+	t.selectedKeySet = state.selectedKeys.Resolve(t.selectedKeys)
+	t.disabledKeySet = state.disabledKeys.Resolve(t.disabledKeys)
 	visible := state.resolveVisible(t)
 	if state.renameKey != "" && treeVisibleIndex(visible, state.renameKey) < 0 {
 		state.finishRename(t, false)
@@ -514,7 +518,7 @@ func (t Widget) requestLoad(key string) {
 }
 
 func (t Widget) itemDisabled(item Item) bool {
-	return t.disabled || item.Disabled || treeContainsKey(t.disabledKeys, item.Key)
+	return t.disabled || item.Disabled || stateutil.StringSetContains(t.disabledKeys, t.disabledKeySet, item.Key)
 }
 
 func (t Widget) itemSelected(key string) bool {
@@ -522,7 +526,7 @@ func (t Widget) itemSelected(key string) bool {
 		return false
 	}
 	if t.selectionMode == SelectionMultiple {
-		return treeContainsKey(t.selectedKeys, key)
+		return stateutil.StringSetContains(t.selectedKeys, t.selectedKeySet, key)
 	}
 	return key == t.selectedKey
 }

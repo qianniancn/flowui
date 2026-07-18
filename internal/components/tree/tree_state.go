@@ -94,6 +94,8 @@ type treeState struct {
 	renameRequest      uint64
 	renameRequestReady bool
 	dataCache          treeDataCache
+	selectedKeys       state.StringSetCache
+	disabledKeys       state.StringSetCache
 }
 
 type treeDataCache struct {

@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
 
 type ListBoxItem struct {
@@ -45,6 +46,7 @@ type ListBoxWidget struct {
 	derivedRole       string
 	selectedKey       string
 	selectedKeys      []string
+	selectedKeySet    stateutil.StringSet
 	items             []ListBoxItem
 	sections          []ListBoxSection
 	dataVersion       uint64
@@ -55,6 +57,7 @@ type ListBoxWidget struct {
 	onAction          func(string)
 	selectionMode     ListBoxSelectionMode
 	disabledKeys      []string
+	disabledKeySet    stateutil.StringSet
 	disabled          bool
 	fullWidth         bool
 	allowEmpty        bool
@@ -197,10 +200,12 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	state := l.stateFor(ctx)
 	state.beginFrame()
 	defer state.endFrame()
+	l.selectedKeySet = state.selectedKeys.Resolve(l.selectedKeys)
+	l.disabledKeySet = state.disabledKeys.Resolve(l.disabledKeys)
 	entries, items := state.resolveEntries(l)
 
 	if !l.disabled {
-		result := state.updateKeys(gtx, items, l.disabledKeys, state.keyboardActiveKey(l))
+		result := state.updateKeys(gtx, items, l, state.keyboardActiveKey(l))
 		if result.focusKey != "" {
 			frame.RequestFocus(ctx, &state.item(result.focusKey).Clickable)
 		}
@@ -243,7 +248,7 @@ func (l ListBoxWidget) isSelected(key string) bool {
 	case ListBoxSelectionNone:
 		return false
 	case ListBoxSelectionMultiple:
-		return listBoxContainsKey(l.selectedKeys, key)
+		return stateutil.StringSetContains(l.selectedKeys, l.selectedKeySet, key)
 	default:
 		return key == l.selectedKey
 	}
@@ -299,7 +304,7 @@ func (l ListBoxWidget) hasItems() bool {
 }
 
 func (l ListBoxWidget) itemDisabled(item ListBoxItem) bool {
-	return l.disabled || item.Disabled || listBoxContainsKey(l.disabledKeys, item.Key)
+	return l.disabled || item.Disabled || stateutil.StringSetContains(l.disabledKeys, l.disabledKeySet, item.Key)
 }
 
 func listBoxToggleSelectedKeys(selectedKeys []string, key string) []string {

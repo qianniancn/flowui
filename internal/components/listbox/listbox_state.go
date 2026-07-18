@@ -38,6 +38,8 @@ type listBoxState struct {
 	itemKeys         map[string]int
 	keyFilters       []event.Filter
 	dataCache        listBoxDataCache
+	selectedKeys     state.StringSetCache
+	disabledKeys     state.StringSetCache
 	focusedKey       string
 	pressedKey       key.Name
 	pressedActionKey string
@@ -110,7 +112,7 @@ func (s *listBoxState) checkItems(items []ListBoxItem) {
 	}
 }
 
-func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disabledKeys []string, selectedKey string) listBoxKeyResult {
+func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widget ListBoxWidget, selectedKey string) listBoxKeyResult {
 	s.keyFilters = s.keyFilters[:0]
 	current := s.focusedIndex(gtx)
 	if current < 0 {
@@ -131,7 +133,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			key.Filter{Focus: tag, Name: key.NameHome},
 			key.Filter{Focus: tag, Name: key.NameEnd},
 		)
-		if !listBoxItemDisabled(items[index], disabledKeys) {
+		if !widget.itemDisabled(items[index]) {
 			s.keyFilters = append(s.keyFilters,
 				key.Filter{Focus: tag, Name: key.NameEnter},
 				key.Filter{Focus: tag, Name: key.NameReturn},
@@ -159,7 +161,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxMoveIndex(items, disabledKeys, current, 1); ok {
+			if next, ok := listBoxMoveIndex(items, widget.disabledKeys, current, 1); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -167,7 +169,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxMoveIndex(items, disabledKeys, current, -1); ok {
+			if next, ok := listBoxMoveIndex(items, widget.disabledKeys, current, -1); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -175,7 +177,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxFirstEnabled(items, disabledKeys); ok {
+			if next, ok := listBoxFirstEnabled(items, widget.disabledKeys); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -183,7 +185,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxLastEnabled(items, disabledKeys); ok {
+			if next, ok := listBoxLastEnabled(items, widget.disabledKeys); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -192,7 +194,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 			case key.Press:
 				s.pressedKey = event.Name
 				s.pressedActionKey = ""
-				if current >= 0 && current < len(items) && !listBoxItemDisabled(items[current], disabledKeys) {
+				if current >= 0 && current < len(items) && !listBoxItemDisabled(items[current], widget.disabledKeys) {
 					s.pressedActionKey = items[current].Key
 				}
 			case key.Release:
@@ -204,7 +206,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 				actionKey := s.pressedActionKey
 				s.pressedKey = ""
 				s.pressedActionKey = ""
-				if item, ok := listBoxItemByKey(items, actionKey); ok && !listBoxItemDisabled(item, disabledKeys) {
+				if item, ok := listBoxItemByKey(items, actionKey); ok && !listBoxItemDisabled(item, widget.disabledKeys) {
 					result.actionKey = actionKey
 				}
 			}
@@ -217,10 +219,10 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disab
 				continue
 			}
 			query := s.appendTypeahead(gtx.Now, text)
-			next, ok := listBoxTypeaheadIndex(items, disabledKeys, current, query)
+			next, ok := listBoxTypeaheadIndex(items, widget.disabledKeys, current, query)
 			if !ok && query != text {
 				s.typeahead = text
-				next, ok = listBoxTypeaheadIndex(items, disabledKeys, current, text)
+				next, ok = listBoxTypeaheadIndex(items, widget.disabledKeys, current, text)
 			}
 			if ok {
 				current = next

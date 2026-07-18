@@ -19,6 +19,7 @@ type sidebarState struct {
 	itemIndex        map[string]int
 	keyFilters       []event.Filter
 	dataCache        sidebarDataCache
+	disabledKeys     stateutil.StringSetCache
 	focusedKey       string
 	pressedKey       key.Name
 	pressedActionKey string

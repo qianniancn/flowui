@@ -6,6 +6,7 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
 
 // Variant selects the Table container treatment.
@@ -97,8 +98,10 @@ type Widget struct {
 	selectionMode      SelectionMode
 	selectedKey        string
 	selectedKeys       []string
+	selectedKeySet     stateutil.StringSet
 	sort               SortDescriptor
 	disabledKeys       []string
+	disabledKeySet     stateutil.StringSet
 	emptyText          string
 	emptyContent       frame.Widget
 	footer             frame.Widget
@@ -314,6 +317,8 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	state := tableStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
+	t.selectedKeySet = state.selectedKeys.Resolve(t.selectedKeys)
+	t.disabledKeySet = state.disabledKeys.Resolve(t.disabledKeys)
 	if t.virtual {
 		state.checkColumns(t.columns)
 	} else {
@@ -505,14 +510,14 @@ func (t Widget) isSelected(key string) bool {
 	case SelectionSingle:
 		return key == t.selectedKey
 	case SelectionMultiple:
-		return containsKey(t.selectedKeys, key)
+		return stateutil.StringSetContains(t.selectedKeys, t.selectedKeySet, key)
 	default:
 		return false
 	}
 }
 
 func (t Widget) rowDisabled(row Row) bool {
-	return t.disabled || row.Disabled || containsKey(t.disabledKeys, row.Key)
+	return t.disabled || row.Disabled || stateutil.StringSetContains(t.disabledKeys, t.disabledKeySet, row.Key)
 }
 
 func (t Widget) showsSelectionIndicator() bool {

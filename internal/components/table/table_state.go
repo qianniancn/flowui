@@ -40,6 +40,8 @@ type tableState struct {
 	rowKeys            map[string]struct{}
 	columnKeys         map[string]struct{}
 	keyFilters         []event.Filter
+	selectedKeys       state.StringSetCache
+	disabledKeys       state.StringSetCache
 	pressedKey         key.Name
 	pressedRowKey      string
 	pressedModifiers   key.Modifiers

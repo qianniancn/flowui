@@ -1,6 +1,7 @@
 package icon
 
 import (
+	"container/list"
 	"image"
 	"image/color"
 	"sync"
@@ -15,6 +16,12 @@ import (
 const defaultSize = unit.Dp(24)
 
 const lucideStrokeScale = 12
+
+const (
+	// The byte limit tracks encoded IconVG input; widget.Icon does not expose decoded size.
+	iconCacheMaxEntries = 256
+	iconCacheMaxBytes   = 4 << 20
+)
 
 type Widget struct {
 	data     []byte
@@ -33,7 +40,20 @@ type renderer struct {
 	icon *widget.Icon
 }
 
-var renderers sync.Map
+type cacheEntry struct {
+	renderer *renderer
+	bytes    int
+	elem     *list.Element
+}
+
+var renderers = struct {
+	sync.Mutex
+	entries map[cacheKey]*cacheEntry
+	lru     list.List
+	bytes   int
+}{
+	entries: make(map[cacheKey]*cacheEntry),
+}
 
 func New(data []byte) Widget {
 	return Widget{data: data}
@@ -87,16 +107,54 @@ func Layout(data []byte, gtx layout.Context, col color.NRGBA) layout.Dimensions 
 		return layout.Dimensions{}
 	}
 	key := cacheKey{first: &data[0], length: len(data)}
-	valueRenderer, ok := renderers.Load(key)
-	if !ok {
-		resolved, err := widget.NewIcon(data)
-		if err != nil {
-			panic(err)
-		}
-		valueRenderer, _ = renderers.LoadOrStore(key, &renderer{icon: resolved})
+	renderers.Lock()
+	if cached, ok := renderers.entries[key]; ok {
+		renderers.lru.MoveToFront(cached.elem)
+		valueRenderer := cached.renderer
+		renderers.Unlock()
+		valueRenderer.mu.Lock()
+		defer valueRenderer.mu.Unlock()
+		return valueRenderer.icon.Layout(gtx, col)
 	}
-	cached := valueRenderer.(*renderer)
-	cached.mu.Lock()
-	defer cached.mu.Unlock()
-	return cached.icon.Layout(gtx, col)
+	renderers.Unlock()
+
+	resolved, err := widget.NewIcon(data)
+	if err != nil {
+		panic(err)
+	}
+	valueRenderer := &renderer{icon: resolved}
+
+	renderers.Lock()
+	if cached, ok := renderers.entries[key]; ok {
+		renderers.lru.MoveToFront(cached.elem)
+		valueRenderer = cached.renderer
+	} else if len(data) <= iconCacheMaxBytes {
+		for len(renderers.entries) >= iconCacheMaxEntries || renderers.bytes+len(data) > iconCacheMaxBytes {
+			evictOldestLocked()
+		}
+		entry := &cacheEntry{renderer: valueRenderer, bytes: len(data)}
+		entry.elem = renderers.lru.PushFront(key)
+		renderers.entries[key] = entry
+		renderers.bytes += entry.bytes
+	}
+	renderers.Unlock()
+
+	valueRenderer.mu.Lock()
+	defer valueRenderer.mu.Unlock()
+	return valueRenderer.icon.Layout(gtx, col)
+}
+
+func evictOldestLocked() {
+	oldest := renderers.lru.Back()
+	if oldest == nil {
+		return
+	}
+	key := oldest.Value.(cacheKey)
+	entry := renderers.entries[key]
+	delete(renderers.entries, key)
+	renderers.bytes -= entry.bytes
+	if renderers.bytes < 0 {
+		renderers.bytes = 0
+	}
+	renderers.lru.Remove(oldest)
 }

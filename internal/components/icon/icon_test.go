@@ -75,9 +75,51 @@ func TestIconLayoutConcurrent(t *testing.T) {
 	wg.Wait()
 }
 
+func TestIconCacheEvictsLeastRecentlyUsedEntries(t *testing.T) {
+	resetIconCacheForTest()
+	defer resetIconCacheForTest()
+
+	data := make([][]byte, iconCacheMaxEntries+1)
+	for i := range data[:iconCacheMaxEntries] {
+		data[i] = append([]byte(nil), testIconVG...)
+		gtx := iconTestContext()
+		New(data[i]).Layout(frame.New(nil, nil, locale.LanguageEnglish), gtx)
+	}
+	New(data[0]).Layout(frame.New(nil, nil, locale.LanguageEnglish), iconTestContext())
+	data[iconCacheMaxEntries] = append([]byte(nil), testIconVG...)
+	New(data[iconCacheMaxEntries]).Layout(frame.New(nil, nil, locale.LanguageEnglish), iconTestContext())
+
+	renderers.Lock()
+	if got := len(renderers.entries); got != iconCacheMaxEntries {
+		renderers.Unlock()
+		t.Fatalf("cache entries = %d, want %d", got, iconCacheMaxEntries)
+	}
+	if renderers.bytes > iconCacheMaxBytes {
+		renderers.Unlock()
+		t.Fatalf("cache bytes = %d, want <= %d", renderers.bytes, iconCacheMaxBytes)
+	}
+	if _, ok := renderers.entries[cacheKey{first: &data[0][0], length: len(data[0])}]; !ok {
+		renderers.Unlock()
+		t.Fatal("recently used icon was evicted")
+	}
+	if _, ok := renderers.entries[cacheKey{first: &data[1][0], length: len(data[1])}]; ok {
+		renderers.Unlock()
+		t.Fatal("least recently used icon was retained")
+	}
+	renderers.Unlock()
+}
+
 func iconTestContext() layout.Context {
 	return layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
 		Ops:         new(op.Ops),
 	}
+}
+
+func resetIconCacheForTest() {
+	renderers.Lock()
+	renderers.entries = make(map[cacheKey]*cacheEntry)
+	renderers.lru.Init()
+	renderers.bytes = 0
+	renderers.Unlock()
 }

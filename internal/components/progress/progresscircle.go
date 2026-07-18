@@ -105,7 +105,11 @@ func (p ProgressCircleWidget) Layout(ctx *frame.Context, gtx layout.Context) lay
 	macro := op.Record(gtx.Ops)
 	if iconSize > 0 {
 		offset := op.Offset(image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)).Push(gtx.Ops)
-		drawProgressCircle(gtx, iconSize, activeTheme.Components.ProgressCircle.StrokeRatio, style, progress, p.indeterminate)
+		period := time.Duration(0)
+		if !p.disabled {
+			period = theme.ResolveMotionDuration(activeTheme.Motion, progressCircleSpinDuration)
+		}
+		drawProgressCircle(gtx, iconSize, activeTheme.Components.ProgressCircle.StrokeRatio, style, progress, p.indeterminate, period)
 		offset.Pop()
 	}
 	call := macro.Stop()

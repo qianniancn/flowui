@@ -331,6 +331,20 @@ func TestPopupTransitionFollowsPointerAndSnapsAfterExit(t *testing.T) {
 	}
 }
 
+func TestPopupTransitionRespectsDisabledMotion(t *testing.T) {
+	start := time.Unix(3, 0)
+	transition := new(PopupTransition)
+	motion := theme.MotionTheme{Enabled: false, DurationScale: 1}
+
+	if got := transition.Progress(testContextAt(start), true, motion); got != 1 {
+		t.Fatalf("disabled motion progress = %v, want 1", got)
+	}
+	transition.Position(testContextAt(start), f32.Pt(10, 20), motion)
+	if got := transition.Position(testContextAt(start), f32.Pt(110, 60), motion); got != f32.Pt(110, 60) {
+		t.Fatalf("disabled motion position = %v, want (110,60)", got)
+	}
+}
+
 func TestPopupCanDisableTransformMotion(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	gtx := testContextAt(time.Unix(3, 0))

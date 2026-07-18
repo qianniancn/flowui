@@ -98,6 +98,6 @@ func placeMeterChild(gtx layout.Context, child recordedMeterChild, position imag
 func (m MeterWidget) layoutTrack(gtx layout.Context, style meterStyle, sizeStyle meterSizeStyle, progress float32) layout.Dimensions {
 	height := min(gtx.Dp(sizeStyle.height), gtx.Constraints.Max.Y)
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, height))
-	drawLinearTrack(gtx, size, sizeStyle.radius, linearTrackStyle{track: style.track, fill: style.fill}, progress, false, !m.disabled)
+	drawLinearTrack(gtx, size, sizeStyle.radius, linearTrackStyle{track: style.track, fill: style.fill}, progress, false, 0)
 	return layout.Dimensions{Size: size}
 }

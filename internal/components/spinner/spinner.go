@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const spinnerPeriod = 750 * time.Millisecond
@@ -69,7 +70,8 @@ func (s SpinnerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	if iconSize > 0 {
 		offset := image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)
 		stack := op.Offset(offset).Push(gtx.Ops)
-		drawSpinner(gtx, iconSize, sizeStyle.strokeRatio, sizeStyle.insetRatio, style.color)
+		period := theme.ResolveMotionDuration(activeTheme.Motion, spinnerPeriod)
+		drawSpinner(gtx, iconSize, sizeStyle.strokeRatio, sizeStyle.insetRatio, style.color, period)
 		stack.Pop()
 	}
 	call := macro.Stop()

@@ -7,8 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/io/input"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func TestProgressCircleOptions(t *testing.T) {
@@ -81,13 +85,41 @@ func TestProgressCircleStyleUsesPaletteAndDisabledOpacity(t *testing.T) {
 
 func TestProgressCirclePhase(t *testing.T) {
 	start := time.Unix(1, 0)
-	if got := progressCirclePhase(time.Time{}); got != 0 {
+	if got := progressCirclePhase(time.Time{}, progressCircleSpinDuration); got != 0 {
 		t.Fatalf("zero phase = %v", got)
 	}
-	first := progressCirclePhase(start)
-	middle := progressCirclePhase(start.Add(progressCircleSpinDuration / 2))
+	first := progressCirclePhase(start, progressCircleSpinDuration)
+	middle := progressCirclePhase(start.Add(progressCircleSpinDuration/2), progressCircleSpinDuration)
 	if first == middle || math.Abs(float64(middle-first)-math.Pi) > .001 {
 		t.Fatalf("phases = %v/%v", first, middle)
+	}
+	if got := progressCirclePhase(start, 0); got != 0 {
+		t.Fatalf("disabled motion phase = %v, want 0", got)
+	}
+}
+
+func TestIndeterminateProgressCircleRespectsMotionTheme(t *testing.T) {
+	wakes := func(enabled bool) bool {
+		themeValue := theme.DefaultTheme()
+		themeValue.Motion.Enabled = enabled
+		ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+		var router input.Router
+		var ops op.Ops
+		ProgressCircle("sync", 0).Indeterminate().Layout(ctx, layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+			Source:      router.Source(),
+			Ops:         &ops,
+			Now:         time.Unix(1, 0),
+		})
+		router.Frame(&ops)
+		_, wake := router.WakeupTime()
+		return wake
+	}
+	if !wakes(true) {
+		t.Fatal("enabled indeterminate progress circle did not request redraw")
+	}
+	if wakes(false) {
+		t.Fatal("indeterminate progress circle requested redraw with motion disabled")
 	}
 }
 

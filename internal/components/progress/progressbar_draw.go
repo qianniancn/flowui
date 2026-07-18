@@ -18,11 +18,11 @@ type linearTrackStyle struct {
 	fill  color.NRGBA
 }
 
-func drawProgressBar(gtx layout.Context, size image.Point, radius unit.Dp, style progressBarStyle, progress float32, indeterminate, animate bool) {
-	drawLinearTrack(gtx, size, radius, linearTrackStyle{track: style.track, fill: style.fill}, progress, indeterminate, animate)
+func drawProgressBar(gtx layout.Context, size image.Point, radius unit.Dp, style progressBarStyle, progress float32, indeterminate bool, period time.Duration) {
+	drawLinearTrack(gtx, size, radius, linearTrackStyle{track: style.track, fill: style.fill}, progress, indeterminate, period)
 }
 
-func drawLinearTrack(gtx layout.Context, size image.Point, radius unit.Dp, style linearTrackStyle, progress float32, indeterminate, animate bool) {
+func drawLinearTrack(gtx layout.Context, size image.Point, radius unit.Dp, style linearTrackStyle, progress float32, indeterminate bool, period time.Duration) {
 	if size.X <= 0 || size.Y <= 0 {
 		return
 	}
@@ -33,7 +33,7 @@ func drawLinearTrack(gtx layout.Context, size image.Point, radius unit.Dp, style
 
 	clipStack := track.Push(gtx.Ops)
 	if indeterminate {
-		drawProgressBarIndeterminate(gtx, size, r, style, animate)
+		drawProgressBarIndeterminate(gtx, size, r, style, period)
 	} else {
 		drawProgressBarFill(gtx, size, r, style, progress)
 	}
@@ -53,10 +53,10 @@ func drawProgressBarFill(gtx layout.Context, size image.Point, radius int, style
 	paint.FillShape(gtx.Ops, style.fill, clip.UniformRRect(rect, min(radius, rect.Dx()/2)).Op(gtx.Ops))
 }
 
-func drawProgressBarIndeterminate(gtx layout.Context, size image.Point, radius int, style linearTrackStyle, animate bool) {
+func drawProgressBarIndeterminate(gtx layout.Context, size image.Point, radius int, style linearTrackStyle, period time.Duration) {
 	width := max(int(float32(size.X)*progressBarIndeterminateFillRate+0.5), 1)
-	x := progressBarIndeterminatePosition(gtx.Now, width, animate)
-	if animate {
+	x := progressBarIndeterminatePosition(gtx.Now, width, period)
+	if period > 0 {
 		gtx.Execute(op.InvalidateCmd{})
 	}
 	rect := image.Rect(x, 0, x+width, size.Y)
@@ -71,21 +71,21 @@ func progressBarRadius(gtx layout.Context, size image.Point, radius unit.Dp) int
 	return min(r, min(size.X, size.Y)/2)
 }
 
-func progressBarIndeterminateOffset(now time.Time, fillWidth int) int {
-	if fillWidth <= 0 || now.IsZero() {
+func progressBarIndeterminateOffset(now time.Time, fillWidth int, period time.Duration) int {
+	if fillWidth <= 0 || now.IsZero() || period <= 0 {
 		return -fillWidth
 	}
-	elapsed := now.UnixNano() % int64(progressBarIndeterminatePeriod)
+	elapsed := now.UnixNano() % int64(period)
 	if elapsed < 0 {
-		elapsed += int64(progressBarIndeterminatePeriod)
+		elapsed += int64(period)
 	}
-	progress := render.Ease(float32(elapsed) / float32(progressBarIndeterminatePeriod))
+	progress := render.Ease(float32(elapsed) / float32(period))
 	return int(render.Lerp(float32(-fillWidth), float32(fillWidth)*3.5, progress) + 0.5)
 }
 
-func progressBarIndeterminatePosition(now time.Time, fillWidth int, animate bool) int {
-	if !animate {
+func progressBarIndeterminatePosition(now time.Time, fillWidth int, period time.Duration) int {
+	if period <= 0 {
 		return 0
 	}
-	return progressBarIndeterminateOffset(now, fillWidth)
+	return progressBarIndeterminateOffset(now, fillWidth, period)
 }

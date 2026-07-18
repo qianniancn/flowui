@@ -169,16 +169,41 @@ func TestProgressBarAnimation(t *testing.T) {
 func TestProgressBarIndeterminateOffset(t *testing.T) {
 	width := 40
 	start := time.Unix(1, 0)
-	if got := progressBarIndeterminateOffset(time.Time{}, width); got != -width {
+	if got := progressBarIndeterminateOffset(time.Time{}, width, progressBarIndeterminatePeriod); got != -width {
 		t.Fatalf("zero time offset = %d, want %d", got, -width)
 	}
-	first := progressBarIndeterminateOffset(start, width)
-	mid := progressBarIndeterminateOffset(start.Add(progressBarIndeterminatePeriod/2), width)
+	first := progressBarIndeterminateOffset(start, width, progressBarIndeterminatePeriod)
+	mid := progressBarIndeterminateOffset(start.Add(progressBarIndeterminatePeriod/2), width, progressBarIndeterminatePeriod)
 	if first == mid {
 		t.Fatal("indeterminate offset did not advance")
 	}
-	if got := progressBarIndeterminatePosition(start, width, false); got != 0 {
+	if got := progressBarIndeterminatePosition(start, width, 0); got != 0 {
 		t.Fatalf("static indeterminate offset = %d, want 0", got)
+	}
+}
+
+func TestIndeterminateProgressBarRespectsMotionTheme(t *testing.T) {
+	wakes := func(enabled bool) bool {
+		themeValue := theme.DefaultTheme()
+		themeValue.Motion.Enabled = enabled
+		ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+		var router input.Router
+		var ops op.Ops
+		ProgressBar("sync", 0).Indeterminate().Layout(ctx, layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(200, 100)},
+			Source:      router.Source(),
+			Ops:         &ops,
+			Now:         time.Unix(1, 0),
+		})
+		router.Frame(&ops)
+		_, wake := router.WakeupTime()
+		return wake
+	}
+	if !wakes(true) {
+		t.Fatal("enabled indeterminate progress bar did not request redraw")
+	}
+	if wakes(false) {
+		t.Fatal("indeterminate progress bar requested redraw with motion disabled")
 	}
 }
 

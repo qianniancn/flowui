@@ -391,6 +391,18 @@ func TestPopoverAvoidsPositiveOverflow(t *testing.T) {
 	}
 }
 
+func TestPopoverSlideOffsetUsesThemeDistance(t *testing.T) {
+	themeValue := theme.DefaultTheme()
+	themeValue.Components.Popover.AnimationDistance = 10
+	ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+	gtx := testLayoutContext()
+
+	got := popoverSlideOffset(ctx, gtx, 0, overlay.PopoverBottom)
+	if want := image.Pt(0, -gtx.Dp(10)); got != want {
+		t.Fatalf("popover slide offset = %v, want %v", got, want)
+	}
+}
+
 func TestPopoverProgressAnimation(t *testing.T) {
 	state := new(popoverState)
 	start := time.Unix(1, 0)

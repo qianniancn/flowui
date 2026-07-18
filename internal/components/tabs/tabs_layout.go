@@ -130,7 +130,7 @@ func (t TabsWidget) drawSelectionIndicator(ctx *frame.Context, gtx layout.Contex
 		return
 	}
 	target := t.tabRect(position, widths, index, tabHeight, tabGap)
-	rect := state.indicator.transition(gtx, selectedKey, t.orientation, target)
+	rect := state.indicator.transition(gtx, selectedKey, t.orientation, target, frame.ActiveTheme(ctx).Motion)
 	disabled := tabsDisabled || t.items[index].Disabled
 	style := tabsItemStyleFor(frame.ActiveTheme(ctx), t.variant, t.color, false, disabled)
 	drawTabIndicator(gtx, frame.ActiveTheme(ctx), rect, t.orientation, t.variant, style.indicator)

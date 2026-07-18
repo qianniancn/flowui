@@ -25,6 +25,8 @@ type facadeModel struct {
 	open          bool
 }
 
+var _ ui.ToolbarTheme = ui.DefaultTheme().Components.Toolbar
+
 func TestContextExposesOnlySupportedMethods(t *testing.T) {
 	contextType := reflect.TypeOf((*ui.Context)(nil))
 	want := map[string]struct{}{

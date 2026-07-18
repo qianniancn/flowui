@@ -139,11 +139,18 @@ func main() {
 	ui.Run(Model{}, Update, View,
 		ui.CustomizeTheme(func(theme *ui.Theme) {
 			theme.Palette.Accent = color.NRGBA{R: 0x00, G: 0x78, B: 0xd4, A: 0xff}
+			theme.Components.Button.Radius = 8
+			theme.Components.Button.BorderWidth = 2
 		}),
 		ui.Locale(ui.LanguageEnglish),
 	)
 }
 ```
+
+Theme customization applies to the application or window. Component tokens
+such as `theme.Components.Button` affect matching components in that window;
+they are not per-widget style setters. Use component variants and sizes for
+instance-level choices.
 
 FlowUI includes English and Chinese component strings. `ui.LanguageAuto`
 selects the host language. An application that owns its windows can change a

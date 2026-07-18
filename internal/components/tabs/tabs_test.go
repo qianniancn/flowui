@@ -529,6 +529,20 @@ func TestTabsIndicatorTracksScrollingWithoutRestarting(t *testing.T) {
 	}
 }
 
+func TestTabsIndicatorRespectsDisabledMotion(t *testing.T) {
+	state := new(tabsIndicatorState)
+	gtx := testLayoutContext()
+	gtx.Now = time.Unix(1, 0)
+	first := image.Rect(0, 0, 80, 32)
+	second := image.Rect(80, 0, 200, 32)
+	motion := theme.MotionTheme{Enabled: false, DurationScale: 1}
+
+	state.transition(gtx, "first", TabsHorizontal, first, motion)
+	if got := state.transition(gtx, "second", TabsHorizontal, second, motion); got != second {
+		t.Fatalf("disabled motion indicator = %v, want %v", got, second)
+	}
+}
+
 func TestTabsItemRectAccountsForListOffsetAndOrientation(t *testing.T) {
 	position := layout.Position{First: 1, Offset: 10}
 	widths := []int{80, 100, 120}

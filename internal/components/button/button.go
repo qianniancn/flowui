@@ -11,6 +11,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ButtonWidget struct {
@@ -168,10 +169,9 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		style.bg = buttonState.background(animGtx, style.bg, motion)
 		style.focus = buttonState.focusOpacity(animGtx, focusVisible && !b.disabled, motion)
 		child := b.styleChild(style)
-		if b.loading {
+		if b.loading && theme.ResolveMotionDuration(motion, buttonSpinnerPeriod) > 0 {
 			animGtx.Execute(op.InvalidateCmd{})
 		}
-
 		macro := op.Record(gtx.Ops)
 		dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			if b.preparedSet {

@@ -165,7 +165,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	}
 	tooltipProgress := float32(0)
 	if enabled && w.showTooltip {
-		tooltipProgress = state.tooltipTransition.Progress(gtx, tooltipVisible)
+		tooltipProgress = state.tooltipTransition.Progress(gtx, tooltipVisible, frame.ActiveTheme(ctx).Motion)
 		if !tooltipVisible && tooltipProgress <= 0 {
 			state.tooltipSelection = chartSelection{}
 		}
@@ -175,7 +175,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	}
 	tooltipPointer := state.pointer
 	if tooltipVisible || tooltipProgress > 0 {
-		tooltipPointer = state.tooltipTransition.Position(gtx, state.pointer)
+		tooltipPointer = state.tooltipTransition.Position(gtx, state.pointer, frame.ActiveTheme(ctx).Motion)
 	}
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)

@@ -12,6 +12,7 @@ import (
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotTooltip = "tooltip"
@@ -146,8 +147,8 @@ func (s *tooltipState) addInput(gtx layout.Context, size image.Point, disabled b
 	area.Pop()
 }
 
-func (s *tooltipState) progress(gtx layout.Context) float32 {
-	return s.popup.Progress(gtx, s.open)
+func (s *tooltipState) progress(gtx layout.Context, motions ...theme.MotionTheme) float32 {
+	return s.popup.Progress(gtx, s.open, motions...)
 }
 
 func (s *tooltipState) exiting() bool {

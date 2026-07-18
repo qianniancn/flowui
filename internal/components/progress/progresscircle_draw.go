@@ -18,7 +18,7 @@ type progressCircleGeometry struct {
 	innerRadius float32
 }
 
-func drawProgressCircle(gtx layout.Context, diameter int, strokeRatio float32, style progressCircleStyle, progress float32, indeterminate bool) {
+func drawProgressCircle(gtx layout.Context, diameter int, strokeRatio float32, style progressCircleStyle, progress float32, indeterminate bool, period time.Duration) {
 	geometry, ok := resolveProgressCircleGeometry(diameter, strokeRatio)
 	if !ok {
 		return
@@ -29,8 +29,10 @@ func drawProgressCircle(gtx layout.Context, diameter int, strokeRatio float32, s
 	start := float32(-math.Pi / 2)
 	if indeterminate {
 		progress = .25
-		start += progressCirclePhase(gtx.Now)
-		gtx.Execute(op.InvalidateCmd{})
+		start += progressCirclePhase(gtx.Now, period)
+		if period > 0 {
+			gtx.Execute(op.InvalidateCmd{})
+		}
 	}
 	if progress > 0 {
 		drawProgressCircleArc(gtx, geometry, start, progress*float32(2*math.Pi), style.fill)
@@ -122,13 +124,13 @@ func progressCirclePoint(center f32.Point, radius, angle float32) f32.Point {
 	)
 }
 
-func progressCirclePhase(now time.Time) float32 {
-	if now.IsZero() {
+func progressCirclePhase(now time.Time, period time.Duration) float32 {
+	if now.IsZero() || period <= 0 {
 		return 0
 	}
-	elapsed := now.UnixNano() % int64(progressCircleSpinDuration)
+	elapsed := now.UnixNano() % int64(period)
 	if elapsed < 0 {
-		elapsed += int64(progressCircleSpinDuration)
+		elapsed += int64(period)
 	}
-	return float32(elapsed) / float32(progressCircleSpinDuration) * float32(2*math.Pi)
+	return float32(elapsed) / float32(period) * float32(2*math.Pi)
 }

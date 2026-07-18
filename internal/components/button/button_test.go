@@ -188,8 +188,8 @@ func TestButtonSizeStyle(t *testing.T) {
 		t.Fatalf("icon inset = %+v, want horizontal zero", icon.inset)
 	}
 	styled := Button("shape", text.New("Shape")).style(&theme, new(widget.Clickable))
-	if styled.radius != 24 || styled.borderWidth != 1 {
-		t.Fatalf("button shape = radius %v border %v, want 24/1", styled.radius, styled.borderWidth)
+	if styled.radius != 24 || styled.borderWidth != 1 || theme.Components.Button.SpinnerStrokeWidth != 2 {
+		t.Fatalf("button shape = radius %v border %v spinner stroke %v, want 24/1/2", styled.radius, styled.borderWidth, theme.Components.Button.SpinnerStrokeWidth)
 	}
 }
 
@@ -208,11 +208,14 @@ func TestButtonSpinnerSize(t *testing.T) {
 
 func TestButtonSpinnerPhase(t *testing.T) {
 	start := time.Unix(1, 0)
-	if phase := buttonSpinnerPhase(time.Time{}); phase != 0 {
+	if phase := buttonSpinnerPhase(time.Time{}, buttonSpinnerPeriod); phase != 0 {
 		t.Fatalf("zero phase = %v, want 0", phase)
 	}
-	if phase := buttonSpinnerPhase(start); phase != buttonSpinnerPhase(start.Add(buttonSpinnerPeriod)) {
+	if phase := buttonSpinnerPhase(start, buttonSpinnerPeriod); phase != buttonSpinnerPhase(start.Add(buttonSpinnerPeriod), buttonSpinnerPeriod) {
 		t.Fatalf("phase did not repeat after one period")
+	}
+	if phase := buttonSpinnerPhase(start, 0); phase != 0 {
+		t.Fatalf("disabled motion phase = %v, want 0", phase)
 	}
 }
 
@@ -498,6 +501,27 @@ func TestLoadingButtonInvalidates(t *testing.T) {
 
 	if _, wake := router.WakeupTime(); !wake {
 		t.Fatal("loading button did not request a redraw")
+	}
+}
+
+func TestLoadingButtonRespectsDisabledMotion(t *testing.T) {
+	var router input.Router
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         time.Unix(1, 0),
+	}
+	themeValue := theme.DefaultTheme()
+	themeValue.Motion.Enabled = false
+	ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+
+	Button("save", text.New("Save")).Loading(true).Layout(ctx, gtx)
+	router.Frame(&ops)
+
+	if _, wake := router.WakeupTime(); wake {
+		t.Fatal("loading button requested redraw with motion disabled")
 	}
 }
 

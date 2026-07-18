@@ -134,11 +134,17 @@ func main() {
 	ui.Run(Model{}, Update, View,
 		ui.CustomizeTheme(func(theme *ui.Theme) {
 			theme.Palette.Accent = color.NRGBA{R: 0x00, G: 0x78, B: 0xd4, A: 0xff}
+			theme.Components.Button.Radius = 8
+			theme.Components.Button.BorderWidth = 2
 		}),
 		ui.Locale(ui.LanguageEnglish),
 	)
 }
 ```
+
+主题覆盖作用于应用或窗口。`theme.Components.Button` 这类组件 Token 会影响
+该窗口中的同类组件，并不是单个组件实例的样式设置器；单个实例的差异应使用
+组件已有的变体和尺寸选项。
 
 FlowUI 内置英文和中文组件文案。`ui.LanguageAuto` 会根据系统语言选择
 默认语言。由应用管理窗口时，可以通过 `Application.SetTheme` 和

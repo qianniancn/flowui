@@ -8,6 +8,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type buttonPreparedContent struct {
@@ -55,7 +56,9 @@ func (b ButtonWidget) layoutContent(ctx *frame.Context, gtx layout.Context, styl
 		return child.Layout(ctx, gtx)
 	}
 	spinner := func(gtx layout.Context) layout.Dimensions {
-		return drawButtonSpinner(gtx, buttonSpinnerSize(frame.ActiveTheme(ctx), b.size), style.fg)
+		activeTheme := frame.ActiveTheme(ctx)
+		period := theme.ResolveMotionDuration(activeTheme.Motion, buttonSpinnerPeriod)
+		return drawButtonSpinner(gtx, buttonSpinnerSize(activeTheme, b.size), activeTheme.Components.Button.SpinnerStrokeWidth, style.fg, period)
 	}
 	if b.iconOnly {
 		return spinner(gtx)

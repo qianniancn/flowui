@@ -32,16 +32,16 @@ func drawButton(gtx layout.Context, size image.Point, style buttonStyle) {
 	drawButtonFocus(gtx, size, radius, style)
 }
 
-func drawButtonSpinner(gtx layout.Context, size unit.Dp, col color.NRGBA) layout.Dimensions {
+func drawButtonSpinner(gtx layout.Context, size, strokeWidthDp unit.Dp, col color.NRGBA, period time.Duration) layout.Dimensions {
 	d := max(gtx.Dp(size), 1)
-	strokeWidth := float32(max(gtx.Dp(unit.Dp(2)), 1))
+	strokeWidth := float32(max(gtx.Dp(strokeWidthDp), 1))
 	radius := float32(d)/2 - strokeWidth/2
 	if radius <= 0 {
 		return layout.Dimensions{Size: image.Pt(d, d)}
 	}
 
 	const segments = 18
-	start := buttonSpinnerPhase(gtx.Now)
+	start := buttonSpinnerPhase(gtx.Now, period)
 	sweep := float32(math.Pi * 1.45)
 	center := f32.Pt(float32(d)/2, float32(d)/2)
 
@@ -65,7 +65,6 @@ func drawButtonSpinner(gtx layout.Context, size unit.Dp, col color.NRGBA) layout
 	}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, col)
 	stroke.Pop()
-
 	return layout.Dimensions{Size: image.Pt(d, d)}
 }
 
@@ -108,13 +107,13 @@ func buttonRoundedRect(rect image.Rectangle, radius int, corners buttonCorners) 
 	}
 }
 
-func buttonSpinnerPhase(now time.Time) float32 {
-	if now.IsZero() {
+func buttonSpinnerPhase(now time.Time, period time.Duration) float32 {
+	if now.IsZero() || period <= 0 {
 		return 0
 	}
-	elapsed := now.UnixNano() % int64(buttonSpinnerPeriod)
+	elapsed := now.UnixNano() % int64(period)
 	if elapsed < 0 {
-		elapsed += int64(buttonSpinnerPeriod)
+		elapsed += int64(period)
 	}
-	return float32(elapsed) / float32(buttonSpinnerPeriod) * float32(math.Pi*2)
+	return float32(elapsed) / float32(period) * float32(math.Pi*2)
 }

@@ -2,18 +2,20 @@ package progress
 
 import (
 	"image"
+	"time"
 
 	"gioui.org/font"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func (p ProgressBarWidget) layout(ctx *frame.Context, gtx layout.Context, style progressBarStyle, sizeStyle progressBarSizeStyle, progress float32) layout.Dimensions {
 	output := p.outputText()
 	hasHeader := p.label != "" || output != ""
 	if !hasHeader {
-		return p.layoutTrack(gtx, style, sizeStyle, progress)
+		return p.layoutTrack(ctx, gtx, style, sizeStyle, progress)
 	}
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -23,7 +25,7 @@ func (p ProgressBarWidget) layout(ctx *frame.Context, gtx layout.Context, style 
 			return p.layoutHeader(ctx, gtx, style, output)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return p.layoutTrack(gtx, style, sizeStyle, progress)
+			return p.layoutTrack(ctx, gtx, style, sizeStyle, progress)
 		}),
 	)
 }
@@ -59,12 +61,16 @@ func (p ProgressBarWidget) layoutHeader(ctx *frame.Context, gtx layout.Context, 
 	}.Layout(gtx, children...)
 }
 
-func (p ProgressBarWidget) layoutTrack(gtx layout.Context, style progressBarStyle, sizeStyle progressBarSizeStyle, progress float32) layout.Dimensions {
+func (p ProgressBarWidget) layoutTrack(ctx *frame.Context, gtx layout.Context, style progressBarStyle, sizeStyle progressBarSizeStyle, progress float32) layout.Dimensions {
 	height := min(gtx.Dp(sizeStyle.height), gtx.Constraints.Max.Y)
 	if height <= 0 {
 		height = gtx.Dp(sizeStyle.height)
 	}
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, height))
-	drawProgressBar(gtx, size, sizeStyle.radius, style, progress, p.indeterminate, !p.disabled)
+	period := time.Duration(0)
+	if !p.disabled {
+		period = theme.ResolveMotionDuration(frame.ActiveTheme(ctx).Motion, progressBarIndeterminatePeriod)
+	}
+	drawProgressBar(gtx, size, sizeStyle.radius, style, progress, p.indeterminate, period)
 	return layout.Dimensions{Size: size}
 }

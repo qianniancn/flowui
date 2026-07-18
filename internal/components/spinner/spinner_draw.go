@@ -46,7 +46,7 @@ var spinnerArcs = [...]spinnerArcSpec{
 	},
 }
 
-func drawSpinner(gtx layout.Context, diameter int, strokeRatio, insetRatio float32, col color.NRGBA) {
+func drawSpinner(gtx layout.Context, diameter int, strokeRatio, insetRatio float32, col color.NRGBA, period time.Duration) {
 	if diameter <= 0 || col.A == 0 {
 		return
 	}
@@ -55,12 +55,14 @@ func drawSpinner(gtx layout.Context, diameter int, strokeRatio, insetRatio float
 		return
 	}
 
-	transform := op.Affine(f32.AffineId().Rotate(geometry.center, spinnerPhase(gtx.Now))).Push(gtx.Ops)
+	transform := op.Affine(f32.AffineId().Rotate(geometry.center, spinnerPhase(gtx.Now, period))).Push(gtx.Ops)
 	for _, arc := range spinnerArcs {
 		drawSpinnerArc(gtx, diameter, geometry, arc, col)
 	}
 	transform.Pop()
-	gtx.Execute(op.InvalidateCmd{})
+	if period > 0 {
+		gtx.Execute(op.InvalidateCmd{})
+	}
 }
 
 func resolveSpinnerGeometry(diameter int, strokeRatio, insetRatio float32) (spinnerGeometry, bool) {
@@ -142,13 +144,13 @@ func spinnerAlpha(col color.NRGBA, opacity float32) color.NRGBA {
 	return col
 }
 
-func spinnerPhase(now time.Time) float32 {
-	if now.IsZero() {
+func spinnerPhase(now time.Time, period time.Duration) float32 {
+	if now.IsZero() || period <= 0 {
 		return 0
 	}
-	elapsed := now.UnixNano() % int64(spinnerPeriod)
+	elapsed := now.UnixNano() % int64(period)
 	if elapsed < 0 {
-		elapsed += int64(spinnerPeriod)
+		elapsed += int64(period)
 	}
-	return float32(elapsed) / float32(spinnerPeriod) * float32(math.Pi*2)
+	return float32(elapsed) / float32(period) * float32(math.Pi*2)
 }

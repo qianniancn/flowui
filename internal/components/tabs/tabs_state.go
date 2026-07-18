@@ -247,7 +247,7 @@ type tabsIndicatorState struct {
 	set         bool
 }
 
-func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientation TabsOrientation, target image.Rectangle) image.Rectangle {
+func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientation TabsOrientation, target image.Rectangle, motions ...theme.MotionTheme) image.Rectangle {
 	if key == "" || target.Empty() {
 		s.set = false
 		return image.Rectangle{}
@@ -263,7 +263,7 @@ func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientat
 	}
 
 	if s.key != key {
-		s.from = s.current(gtx)
+		s.from = s.current(gtx, motions...)
 		s.to = target
 		s.at = gtx.Now
 		s.key = key
@@ -278,14 +278,22 @@ func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientat
 			s.at = gtx.Now
 		}
 	}
-	return s.current(gtx)
+	return s.current(gtx, motions...)
 }
 
-func (s *tabsIndicatorState) current(gtx layout.Context) image.Rectangle {
+func (s *tabsIndicatorState) current(gtx layout.Context, motions ...theme.MotionTheme) image.Rectangle {
 	if s.from == s.to {
 		return s.to
 	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), tabsIndicatorDuration))
+	duration := tabsIndicatorDuration
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
+	if duration <= 0 {
+		s.from = s.to
+		return s.to
+	}
+	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), duration))
 	if progress < 1 {
 		gtx.Execute(op.InvalidateCmd{})
 	} else {

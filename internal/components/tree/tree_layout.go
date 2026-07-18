@@ -157,7 +157,8 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 			if count := len(treeStateValue.dragSources); count > 1 {
 				label = fmt.Sprintf("%s +%d", label, count-1)
 			}
-			offset := itemState.dragPress.Round().Add(image.Pt(gtx.Dp(unit.Dp(12)), gtx.Dp(unit.Dp(12))))
+			offsetPx := gtx.Dp(tokens.DragPreviewOffset)
+			offset := itemState.dragPress.Round().Add(image.Pt(offsetPx, offsetPx))
 			preview = t.dragPreview(ctx, label, offset)
 		}
 		itemState.drag.Layout(gtx, func(layout.Context) layout.Dimensions { return dims }, preview)
@@ -193,12 +194,13 @@ func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label 
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := treeTokensFor(activeTheme, t.size)
 	gtx.Constraints.Min = image.Point{}
-	gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, gtx.Dp(unit.Dp(240)))
+	gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, gtx.Dp(tokens.DragPreviewMaxWidth))
 	gtx.Constraints.Max.Y = max(gtx.Constraints.Max.Y, gtx.Dp(tokens.RowHeight+unit.Dp(8)))
 
 	macro := op.Record(gtx.Ops)
 	dims := layout.Inset{
-		Top: unit.Dp(6), Right: unit.Dp(10), Bottom: unit.Dp(6), Left: unit.Dp(10),
+		Top: tokens.DragPreviewPaddingY, Right: tokens.DragPreviewPaddingX,
+		Bottom: tokens.DragPreviewPaddingY, Left: tokens.DragPreviewPaddingX,
 	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		text := material.Label(activeTheme.Material, tokens.ItemTextSize, label)
 		text.Color = activeTheme.Palette.OverlayForegroundColor()
@@ -211,7 +213,7 @@ func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label 
 
 	surface := activeTheme.Palette.OverlayColor()
 	surface.A = byte(float32(surface.A)*0.5 + 0.5)
-	radius := min(gtx.Dp(unit.Dp(6)), min(dims.Size.X, dims.Size.Y)/2)
+	radius := min(max(gtx.Dp(tokens.DragPreviewRadius), 0), min(dims.Size.X, dims.Size.Y)/2)
 	render.DrawSurface(
 		gtx,
 		image.Rectangle{Max: dims.Size},

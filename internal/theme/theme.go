@@ -227,6 +227,7 @@ type ButtonTheme struct {
 	BorderWidth        unit.Dp
 	ContentGap         unit.Dp
 	FocusRingWidth     unit.Dp
+	SpinnerStrokeWidth unit.Dp
 	SpinnerSmall       unit.Dp
 	SpinnerMedium      unit.Dp
 	SpinnerLarge       unit.Dp
@@ -504,6 +505,11 @@ type TreeTheme struct {
 	FocusRingWidth            unit.Dp
 	PressedScale              float32 // Deprecated: Tree rows no longer scale when pressed.
 	SurfaceRadius             unit.Dp
+	DragPreviewOffset         unit.Dp
+	DragPreviewMaxWidth       unit.Dp
+	DragPreviewPaddingX       unit.Dp
+	DragPreviewPaddingY       unit.Dp
+	DragPreviewRadius         unit.Dp
 	SmallPadding              unit.Dp
 	SmallGap                  unit.Dp
 	SmallRowHeight            unit.Dp
@@ -853,16 +859,17 @@ type SelectTheme struct {
 }
 
 type PopoverTheme struct {
-	Offset         unit.Dp
-	Padding        unit.Dp
-	Radius         unit.Dp
-	MaxWidth       unit.Dp
-	ArrowWidth     unit.Dp
-	ArrowHeight    unit.Dp
-	HeadingSize    unit.Sp
-	BodyTextSize   unit.Sp
-	SectionGap     unit.Dp
-	AnimationScale float32
+	Offset            unit.Dp
+	Padding           unit.Dp
+	Radius            unit.Dp
+	MaxWidth          unit.Dp
+	ArrowWidth        unit.Dp
+	ArrowHeight       unit.Dp
+	HeadingSize       unit.Sp
+	BodyTextSize      unit.Sp
+	SectionGap        unit.Dp
+	AnimationScale    float32
+	AnimationDistance unit.Dp
 }
 
 type TooltipTheme struct {
@@ -978,6 +985,8 @@ type DatePickerTheme struct {
 	YearGridGap        unit.Dp
 	NavButtonSize      unit.Dp
 	NavChevronStroke   unit.Dp
+	HeaderGap          unit.Dp
+	HeaderIconSize     unit.Dp
 	HeaderTextSize     unit.Sp
 	WeekdayTextSize    unit.Sp
 	CellTextSize       unit.Sp
@@ -1130,6 +1139,7 @@ func DefaultTheme() Theme {
 				BorderWidth:        1,
 				ContentGap:         8,
 				FocusRingWidth:     2,
+				SpinnerStrokeWidth: 2,
 				SpinnerSmall:       14,
 				SpinnerMedium:      16,
 				SpinnerLarge:       18,
@@ -1425,6 +1435,11 @@ func DefaultTheme() Theme {
 				FocusRingWidth:            2,
 				PressedScale:              0.98,
 				SurfaceRadius:             24,
+				DragPreviewOffset:         12,
+				DragPreviewMaxWidth:       240,
+				DragPreviewPaddingX:       10,
+				DragPreviewPaddingY:       6,
+				DragPreviewRadius:         6,
 				SmallPadding:              2,
 				SmallGap:                  1,
 				SmallRowHeight:            24,
@@ -1783,16 +1798,17 @@ func DefaultTheme() Theme {
 				AnimationDistance: 4,
 			},
 			Popover: PopoverTheme{
-				Offset:         8,
-				Padding:        16,
-				Radius:         24,
-				MaxWidth:       320,
-				ArrowWidth:     12,
-				ArrowHeight:    7,
-				HeadingSize:    14,
-				BodyTextSize:   14,
-				SectionGap:     8,
-				AnimationScale: 0.90,
+				Offset:            8,
+				Padding:           16,
+				Radius:            24,
+				MaxWidth:          320,
+				ArrowWidth:        12,
+				ArrowHeight:       7,
+				HeadingSize:       14,
+				BodyTextSize:      14,
+				SectionGap:        8,
+				AnimationScale:    0.90,
+				AnimationDistance: 4,
 			},
 			Tooltip: TooltipTheme{
 				Offset:            3,
@@ -1903,6 +1919,8 @@ func DefaultTheme() Theme {
 				YearGridGap:        4,
 				NavButtonSize:      24,
 				NavChevronStroke:   1.8,
+				HeaderGap:          4,
+				HeaderIconSize:     14,
 				HeaderTextSize:     14,
 				WeekdayTextSize:    12,
 				CellTextSize:       14,

@@ -23,6 +23,13 @@ func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
 }
 
+func TestDatePickerThemeHeaderTokens(t *testing.T) {
+	tokens := theme.DefaultTheme().Components.DatePicker
+	if tokens.HeaderGap != 4 || tokens.HeaderIconSize != 14 || tokens.RangeRadius != 8 {
+		t.Fatalf("DatePicker header tokens = gap %v icon %v range radius %v", tokens.HeaderGap, tokens.HeaderIconSize, tokens.RangeRadius)
+	}
+}
+
 func newContextWithThemeAndLanguage(_ any, value *theme.Theme, language locale.Language) *frame.Context {
 	return frame.New(nil, value, language)
 }

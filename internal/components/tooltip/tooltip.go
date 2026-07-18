@@ -128,7 +128,7 @@ func (t TooltipWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	triggerDims := t.layoutTrigger(ctx, gtx)
 	state.addInput(gtx, triggerDims.Size, disabled)
 
-	progress := state.progress(gtx)
+	progress := state.progress(gtx, frame.ActiveTheme(ctx).Motion)
 	if progress <= 0 && !state.open {
 		return triggerDims
 	}

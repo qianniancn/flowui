@@ -777,7 +777,7 @@ func TestTreeGeometryAndStyleMatchHeroUIPatterns(t *testing.T) {
 	if tokens.Padding != 4 || tokens.Gap != 4 || tokens.RowHeight != 36 || tokens.RowRadius != 16 || tokens.RowPaddingX != 8 || tokens.RowPaddingY != 6 {
 		t.Fatalf("Tree geometry = %+v", tokens)
 	}
-	if tokens.Indent != 20 || tokens.ChevronSlotSize != 20 || tokens.ChevronIconSize != 16 || tokens.ContentGap != 8 || tokens.SmallRowRadius != 4 || tokens.SmallItemTextSize != 13 {
+	if tokens.Indent != 20 || tokens.ChevronSlotSize != 20 || tokens.ChevronIconSize != 16 || tokens.ContentGap != 8 || tokens.SmallRowRadius != 4 || tokens.SmallItemTextSize != 13 || tokens.DragPreviewOffset != 12 || tokens.DragPreviewMaxWidth != 240 || tokens.DragPreviewRadius != 6 {
 		t.Fatalf("Tree hierarchy geometry = %+v", tokens)
 	}
 	selected := treeItemStyleFor(&activeTheme, true, false, false)

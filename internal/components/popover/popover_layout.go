@@ -43,7 +43,7 @@ func (p PopoverWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, sta
 	}
 
 	panelAffine := popoverPanelAffine(ctx, panelRect, progress, placement)
-	panelOffset := panelPos.Add(popoverSlideOffset(gtx, progress, placement))
+	panelOffset := panelPos.Add(popoverSlideOffset(ctx, gtx, progress, placement))
 	panelTransform := panelAffine.Mul(f32.AffineId().Offset(f32.Pt(float32(panelOffset.X), float32(panelOffset.Y))))
 	panelPlacement.PlaceTransform(panelTransform)
 	panelPlacement.SetOpacity(progress)
@@ -225,8 +225,8 @@ func popoverAnimationScale(ctx *frame.Context, progress float32) float32 {
 	return start + (1-start)*progress
 }
 
-func popoverSlideOffset(gtx layout.Context, progress float32, placement overlay.PopoverPlacement) image.Point {
-	delta := gtx.Dp(unit.Dp(4))
+func popoverSlideOffset(ctx *frame.Context, gtx layout.Context, progress float32, placement overlay.PopoverPlacement) image.Point {
+	delta := gtx.Dp(frame.ActiveTheme(ctx).Components.Popover.AnimationDistance)
 	return overlay.SlideOffset(delta, progress, placement.Placement())
 }
 

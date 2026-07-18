@@ -12,6 +12,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Popup is the controlled presentation layer shared by triggered and
@@ -168,7 +169,7 @@ type PopupTransition struct {
 	positionReady bool
 }
 
-func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
+func (t *PopupTransition) Progress(gtx layout.Context, visible bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if visible {
 		target = 1
@@ -193,6 +194,17 @@ func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
 	if t.to == 0 {
 		duration = tooltipExitDuration
 	}
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
+	if duration <= 0 {
+		t.value = t.to
+		t.from = t.to
+		if t.value == 0 {
+			t.positionReady = false
+		}
+		return t.value
+	}
 	progress := render.Ease(render.Progress(gtx.Now.Sub(t.at), duration))
 	if progress < 1 {
 		gtx.Execute(op.InvalidateCmd{})
@@ -206,7 +218,7 @@ func (t *PopupTransition) Progress(gtx layout.Context, visible bool) float32 {
 
 // Position follows a pointer target with ECharts-style ease-out motion. The
 // first position after a completed exit is shown immediately.
-func (t *PopupTransition) Position(gtx layout.Context, target f32.Point) f32.Point {
+func (t *PopupTransition) Position(gtx layout.Context, target f32.Point, motions ...theme.MotionTheme) f32.Point {
 	if !t.positionReady {
 		t.position = target
 		t.positionFrom = target
@@ -215,24 +227,33 @@ func (t *PopupTransition) Position(gtx layout.Context, target f32.Point) f32.Poi
 		t.positionReady = true
 		return target
 	}
-	t.advancePosition(gtx.Now)
+	duration := tooltipMoveDuration
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
+	t.advancePosition(gtx.Now, duration)
 	if target != t.positionTo {
 		t.positionFrom = t.position
 		t.positionTo = target
 		t.positionAt = gtx.Now
 	}
-	if t.advancePosition(gtx.Now) {
+	if t.advancePosition(gtx.Now, duration) {
 		gtx.Execute(op.InvalidateCmd{})
 	}
 	return t.position
 }
 
-func (t *PopupTransition) advancePosition(now time.Time) bool {
+func (t *PopupTransition) advancePosition(now time.Time, duration time.Duration) bool {
 	if t.positionFrom == t.positionTo {
 		t.position = t.positionTo
 		return false
 	}
-	progress := render.Progress(now.Sub(t.positionAt), tooltipMoveDuration)
+	if duration <= 0 {
+		t.position = t.positionTo
+		t.positionFrom = t.positionTo
+		return false
+	}
+	progress := render.Progress(now.Sub(t.positionAt), duration)
 	remaining := 1 - progress
 	progress = 1 - remaining*remaining*remaining
 	t.position = f32.Pt(

@@ -14,7 +14,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/components/label"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
@@ -354,8 +353,9 @@ func (d DatePickerWidget) layoutHeaderTrigger(ctx *frame.Context, gtx layout.Con
 	if state.viewMode == datePickerViewYears {
 		col = frame.ActiveTheme(ctx).Palette.AccentSoftForeground
 	}
-	gap := gtx.Dp(unit.Dp(4))
-	iconSize := gtx.Dp(unit.Dp(14))
+	tokens := frame.ActiveTheme(ctx).Components.DatePicker
+	gap := gtx.Dp(tokens.HeaderGap)
+	iconSize := gtx.Dp(tokens.HeaderIconSize)
 	return layout.Flex{
 		Axis:      layout.Horizontal,
 		Alignment: layout.Middle,

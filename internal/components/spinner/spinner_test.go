@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/io/input"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -129,14 +130,42 @@ func TestSpinnerLayoutUsesSelectedSize(t *testing.T) {
 
 func TestSpinnerPhaseUsesHeroUIPeriod(t *testing.T) {
 	start := time.Unix(1, 0)
-	if got := spinnerPhase(time.Time{}); got != 0 {
+	if got := spinnerPhase(time.Time{}, spinnerPeriod); got != 0 {
 		t.Fatalf("zero phase = %v, want 0", got)
 	}
-	if got, want := spinnerPhase(start.Add(spinnerPeriod/4)), spinnerPhase(start)+float32(math.Pi/2); math.Abs(float64(got-want)) > 0.0001 {
+	if got, want := spinnerPhase(start.Add(spinnerPeriod/4), spinnerPeriod), spinnerPhase(start, spinnerPeriod)+float32(math.Pi/2); math.Abs(float64(got-want)) > 0.0001 {
 		t.Fatalf("quarter phase = %v, want %v", got, want)
 	}
-	if got := spinnerPhase(start.Add(spinnerPeriod)); math.Abs(float64(got-spinnerPhase(start))) > 0.0001 {
-		t.Fatalf("period phase = %v, want %v", got, spinnerPhase(start))
+	if got := spinnerPhase(start.Add(spinnerPeriod), spinnerPeriod); math.Abs(float64(got-spinnerPhase(start, spinnerPeriod))) > 0.0001 {
+		t.Fatalf("period phase = %v, want %v", got, spinnerPhase(start, spinnerPeriod))
+	}
+	if got := spinnerPhase(start, 0); got != 0 {
+		t.Fatalf("disabled motion phase = %v, want 0", got)
+	}
+}
+
+func TestSpinnerRespectsMotionTheme(t *testing.T) {
+	wakes := func(enabled bool) bool {
+		themeValue := theme.DefaultTheme()
+		themeValue.Motion.Enabled = enabled
+		ctx := frame.New(nil, &themeValue, locale.LanguageAuto)
+		var router input.Router
+		var ops op.Ops
+		Spinner().Layout(ctx, layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+			Source:      router.Source(),
+			Ops:         &ops,
+			Now:         time.Unix(1, 0),
+		})
+		router.Frame(&ops)
+		_, wake := router.WakeupTime()
+		return wake
+	}
+	if !wakes(true) {
+		t.Fatal("enabled spinner did not request redraw")
+	}
+	if wakes(false) {
+		t.Fatal("spinner requested redraw with motion disabled")
 	}
 }
 

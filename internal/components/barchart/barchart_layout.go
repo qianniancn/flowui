@@ -32,7 +32,7 @@ type columnLayout struct {
 type chartGeometry struct {
 	size          image.Point
 	plot          image.Rectangle
-	yScale        linearScale
+	yScale        chart.LinearScale
 	yTicks        []axisTick
 	xTicks        []categoryTick
 	bandWidth     float32
@@ -227,9 +227,9 @@ func (w Widget) axisLabels() (x, y string) {
 func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rectangle) chartGeometry {
 	yScale := w.resolveYScale(data)
 	geometry := chartGeometry{size: size, plot: plot, yScale: yScale, horizontal: w.orientation == Horizontal}
-	geometry.yTicks = make([]axisTick, 0, len(yScale.ticks))
-	for _, value := range yScale.ticks {
-		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, yScale.interval), pixel: geometry.mapY(value)})
+	geometry.yTicks = make([]axisTick, 0, len(yScale.Ticks))
+	for _, value := range yScale.Ticks {
+		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, yScale.Interval), pixel: geometry.mapY(value)})
 	}
 	if data.categories > 0 {
 		geometry.categoryStart, geometry.categoryEnd = visibleCategoryRange(data.categories, w.effectiveDataWindow())
@@ -256,12 +256,12 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 	return geometry
 }
 
-func (w Widget) resolveYScale(data chartData) linearScale {
+func (w Widget) resolveYScale(data chartData) chart.LinearScale {
 	minimum, maximum := data.yExtent.Minimum, data.yExtent.Maximum
 	if w.hasYRange {
 		minimum, maximum = w.yMin, w.yMax
 	}
-	return newLinearScale(minimum, maximum, w.yTickCount, w.includeZero && !w.hasYRange, w.hasYRange)
+	return chart.NewLinearScale(minimum, maximum, w.yTickCount, w.includeZero && !w.hasYRange, w.hasYRange)
 }
 
 func (g chartGeometry) categoryCenter(index int) float32 {
@@ -274,9 +274,9 @@ func (g chartGeometry) categoryCenter(index int) float32 {
 
 func (g chartGeometry) mapY(value float64) float32 {
 	if g.horizontal {
-		return float32(g.plot.Min.X) + float32(g.yScale.ratio(value))*float32(g.plot.Dx())
+		return float32(g.plot.Min.X) + float32(g.yScale.Ratio(value))*float32(g.plot.Dx())
 	}
-	return float32(g.plot.Max.Y) - float32(g.yScale.ratio(value))*float32(g.plot.Dy())
+	return float32(g.plot.Max.Y) - float32(g.yScale.Ratio(value))*float32(g.plot.Dy())
 }
 
 func (w Widget) resolveSelection(data chartData, geometry chartGeometry, index int, selected bool) chartSelection {

@@ -28,7 +28,7 @@ type categoryTick struct {
 type chartGeometry struct {
 	size          image.Point
 	plot          image.Rectangle
-	yScale        linearScale
+	yScale        chart.LinearScale
 	yTicks        []axisTick
 	xTicks        []categoryTick
 	categoryStart int
@@ -159,7 +159,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		w.layoutEmpty(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, state.tooltipSelection, geometry.yScale.interval, tooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, state.tooltipSelection, geometry.yScale.Interval, tooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		placeChartText(gtx, xName, image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0)))
@@ -168,10 +168,10 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 	state.addPointerInput(gtx, geometry.plot, enabled && (selectionEnabled || w.onDataWindowChange != nil))
 }
 
-func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rectangle, scale linearScale, dp func(unit.Dp) int) chartGeometry {
+func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rectangle, scale chart.LinearScale, dp func(unit.Dp) int) chartGeometry {
 	geometry := chartGeometry{size: size, plot: plot, yScale: scale}
-	for _, value := range scale.ticks {
-		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, scale.interval), pixel: geometry.mapY(value)})
+	for _, value := range scale.Ticks {
+		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, scale.Interval), pixel: geometry.mapY(value)})
 	}
 	if len(data.candles) > 0 {
 		geometry.categoryStart, geometry.categoryEnd = visibleCategoryRange(len(data.candles), w.effectiveDataWindow())
@@ -187,7 +187,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 	return geometry
 }
 
-func (w Widget) resolveYScale(data chartData) linearScale {
+func (w Widget) resolveYScale(data chartData) chart.LinearScale {
 	minimum, maximum := data.extent.Minimum, data.extent.Maximum
 	if !w.hasYRange && !w.effectiveDataWindow().IsFull() {
 		start, end := visibleCategoryRange(len(data.candles), w.effectiveDataWindow())
@@ -209,7 +209,7 @@ func (w Widget) resolveYScale(data chartData) linearScale {
 	if w.hasYRange {
 		minimum, maximum = w.yMin, w.yMax
 	}
-	return newLinearScale(minimum, maximum, w.yTickCount, w.hasYRange)
+	return chart.NewLinearScale(minimum, maximum, w.yTickCount, false, w.hasYRange)
 }
 
 func (w Widget) resolveCandleWidth(bandWidth float32, dp func(unit.Dp) int) float32 {
@@ -228,7 +228,7 @@ func (w Widget) resolveCandleWidth(bandWidth float32, dp func(unit.Dp) int) floa
 }
 
 func (g chartGeometry) mapY(value float64) float32 {
-	return float32(g.plot.Max.Y) - float32(g.yScale.ratio(value))*float32(g.plot.Dy())
+	return float32(g.plot.Max.Y) - float32(g.yScale.Ratio(value))*float32(g.plot.Dy())
 }
 
 func (g chartGeometry) categoryCenter(index int) float32 {

@@ -60,14 +60,14 @@ func (s *chartState) clearSelection() {
 	s.tooltipSelection = chartSelection{}
 }
 
-func visibleXValues(values []float64, scale linearScale) []float64 {
-	start := sort.Search(len(values), func(index int) bool { return values[index] >= scale.minimum })
-	end := sort.Search(len(values), func(index int) bool { return values[index] > scale.maximum })
+func visibleXValues(values []float64, scale chart.LinearScale) []float64 {
+	start := sort.Search(len(values), func(index int) bool { return values[index] >= scale.Minimum })
+	end := sort.Search(len(values), func(index int) bool { return values[index] > scale.Maximum })
 	return values[start:end]
 }
 
-func (s *chartState) selectedX(values []float64, scale linearScale, plot image.Rectangle) (float64, bool) {
-	return chart.NearestX(s.pointer, s.hovered, values, scale.minimum, scale.maximum, plot)
+func (s *chartState) selectedX(values []float64, scale chart.LinearScale, plot image.Rectangle) (float64, bool) {
+	return chart.NearestX(s.pointer, s.hovered, values, scale.Minimum, scale.Maximum, plot)
 }
 
 func (s *chartState) updateClicks(gtx layout.Context, enabled bool) (bool, bool) {

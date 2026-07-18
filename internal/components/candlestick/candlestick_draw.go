@@ -86,8 +86,8 @@ func (w Widget) drawCrosshair(ctx *frame.Context, gtx layout.Context, geometry c
 	y := min(geometry.plot.Max.Y, max(geometry.size.Y-xSize.Y, 0))
 	drawCrosshairLabel(gtx, xLabel, image.Pt(x, y), xSize, padding, radius, background)
 
-	value := geometry.yScale.valueAt(float64(float32(geometry.plot.Max.Y)-pointerY) / float64(max(geometry.plot.Dy(), 1)))
-	yLabel := recordChartText(ctx, gtx, w.yLabel(value, geometry.yScale.interval), tokens.AxisTextSize, font.Normal, foreground, max(geometry.plot.Min.X-padding*2, 1))
+	value := geometry.yScale.ValueAt(float64(float32(geometry.plot.Max.Y)-pointerY) / float64(max(geometry.plot.Dy(), 1)))
+	yLabel := recordChartText(ctx, gtx, w.yLabel(value, geometry.yScale.Interval), tokens.AxisTextSize, font.Normal, foreground, max(geometry.plot.Min.X-padding*2, 1))
 	ySize := yLabel.dims.Size.Add(image.Pt(padding*2, padding*2))
 	y = int(math.Round(float64(pointerY))) - ySize.Y/2
 	y = min(max(y, geometry.plot.Min.Y), max(geometry.plot.Max.Y-ySize.Y, geometry.plot.Min.Y))
@@ -165,11 +165,11 @@ func (w Widget) layoutAxisLabels(ctx *frame.Context, gtx layout.Context, geometr
 	}
 }
 
-func (w Widget) measureYLabelWidth(ctx *frame.Context, gtx layout.Context, scale linearScale, maxWidth int) int {
+func (w Widget) measureYLabelWidth(ctx *frame.Context, gtx layout.Context, scale chart.LinearScale, maxWidth int) int {
 	tokens := frame.ActiveTheme(ctx).Components.CandlestickChart
 	width := 0
-	for _, value := range scale.ticks {
-		label := recordChartText(ctx, gtx, w.yLabel(value, scale.interval), tokens.AxisTextSize, font.Normal, color.NRGBA{A: 0xff}, maxWidth)
+	for _, value := range scale.Ticks {
+		label := recordChartText(ctx, gtx, w.yLabel(value, scale.Interval), tokens.AxisTextSize, font.Normal, color.NRGBA{A: 0xff}, maxWidth)
 		width = max(width, label.dims.Size.X)
 	}
 	return width

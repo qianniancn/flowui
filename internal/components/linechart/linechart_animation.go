@@ -102,7 +102,7 @@ func lineTransitionFrom(previous, target chartData, baseline float64) chartData 
 
 func (w Widget) animationBaseline(target chartData) float64 {
 	scale := w.resolveYScale(target)
-	return min(max(float64(0), scale.minimum), scale.maximum)
+	return min(max(float64(0), scale.Minimum), scale.Maximum)
 }
 
 func interpolateLineData(from, target chartData, progress float32, baseline float64) chartData {

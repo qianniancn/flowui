@@ -57,8 +57,8 @@ func (w Widget) measureYAxisLabelWidth(ctx *frame.Context, gtx layout.Context, d
 	scale := w.resolveYScale(data)
 	tokens := frame.ActiveTheme(ctx).Components.BarChart
 	width := 0
-	for _, value := range scale.ticks {
-		label := recordChartText(ctx, gtx, w.yLabel(value, scale.interval), tokens.AxisTextSize, font.Normal, frame.ActiveTheme(ctx).Palette.MutedForeground, maxWidth)
+	for _, value := range scale.Ticks {
+		label := recordChartText(ctx, gtx, w.yLabel(value, scale.Interval), tokens.AxisTextSize, font.Normal, frame.ActiveTheme(ctx).Palette.MutedForeground, maxWidth)
 		width = max(width, label.dims.Size.X)
 	}
 	return width

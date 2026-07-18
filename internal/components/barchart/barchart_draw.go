@@ -102,7 +102,7 @@ func drawChartSeries(ctx *frame.Context, gtx layout.Context, data chartData, geo
 }
 
 func drawBarLabel(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, rect image.Rectangle, series resolvedSeries, bar resolvedBar, style chartStyle, tokens theme.BarChartTheme) {
-	text := formatAxisNumber(bar.value, 1)
+	text := chart.FormatAxisNumber(bar.value, 1)
 	if series.formatLabel != nil {
 		text = series.formatLabel(bar.value)
 	}

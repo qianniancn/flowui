@@ -23,8 +23,8 @@ type axisTick struct {
 type chartGeometry struct {
 	size   image.Point
 	plot   image.Rectangle
-	xScale linearScale
-	yScale linearScale
+	xScale chart.LinearScale
+	yScale chart.LinearScale
 	xTicks []axisTick
 	yTicks []axisTick
 }
@@ -189,18 +189,18 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 	yScale := w.resolveYScale(data)
 	geometry := chartGeometry{size: size, plot: plot, xScale: xScale, yScale: yScale}
 	geometry.xTicks = w.resolveXTicks(geometry)
-	geometry.yTicks = make([]axisTick, 0, len(yScale.ticks))
-	for _, value := range yScale.ticks {
+	geometry.yTicks = make([]axisTick, 0, len(yScale.Ticks))
+	for _, value := range yScale.Ticks {
 		geometry.yTicks = append(geometry.yTicks, axisTick{
 			value: value,
-			label: w.yLabel(value, yScale.interval),
+			label: w.yLabel(value, yScale.Interval),
 			pixel: geometry.mapY(value),
 		})
 	}
 	return geometry
 }
 
-func (w Widget) resolveXScale(data chartData) linearScale {
+func (w Widget) resolveXScale(data chartData) chart.LinearScale {
 	minimum, maximum := data.xExtent.Minimum, data.xExtent.Maximum
 	if w.hasXRange {
 		minimum, maximum = w.xMin, w.xMax
@@ -213,22 +213,22 @@ func (w Widget) resolveXScale(data chartData) linearScale {
 		maximum = base + float64(window.End)*span
 	}
 	fixed := w.hasXRange || len(w.categories) > 0 || !window.IsFull()
-	return newLinearScale(minimum, maximum, w.xTickCount, false, fixed)
+	return chart.NewLinearScale(minimum, maximum, w.xTickCount, false, fixed)
 }
 
-func (w Widget) resolveYScale(data chartData) linearScale {
+func (w Widget) resolveYScale(data chartData) chart.LinearScale {
 	yMinimum, yMaximum := data.yExtent.Minimum, data.yExtent.Maximum
 	if w.hasYRange {
 		yMinimum, yMaximum = w.yMin, w.yMax
 	}
-	return newLinearScale(yMinimum, yMaximum, w.yTickCount, w.includeZero && !w.hasYRange, w.hasYRange)
+	return chart.NewLinearScale(yMinimum, yMaximum, w.yTickCount, w.includeZero && !w.hasYRange, w.hasYRange)
 }
 
 func (w Widget) resolveXTicks(geometry chartGeometry) []axisTick {
 	if len(w.categories) == 0 {
-		ticks := make([]axisTick, 0, len(geometry.xScale.ticks))
-		for _, value := range geometry.xScale.ticks {
-			ticks = append(ticks, axisTick{value: value, label: w.xLabel(value, geometry.xScale.interval), pixel: geometry.mapX(value)})
+		ticks := make([]axisTick, 0, len(geometry.xScale.Ticks))
+		for _, value := range geometry.xScale.Ticks {
+			ticks = append(ticks, axisTick{value: value, label: w.xLabel(value, geometry.xScale.Interval), pixel: geometry.mapX(value)})
 		}
 		return ticks
 	}
@@ -237,7 +237,7 @@ func (w Widget) resolveXTicks(geometry chartGeometry) []axisTick {
 	ticks := make([]axisTick, 0, maximumLabels+1)
 	appendIndex := func(index int) {
 		value := float64(index)
-		if !geometry.xScale.contains(value) {
+		if !geometry.xScale.Contains(value) {
 			return
 		}
 		ticks = append(ticks, axisTick{value: value, label: w.xLabel(value, 1), pixel: geometry.mapX(value)})
@@ -253,21 +253,21 @@ func (w Widget) resolveXTicks(geometry chartGeometry) []axisTick {
 }
 
 func (g chartGeometry) mapX(value float64) float32 {
-	return float32(g.plot.Min.X) + float32(g.xScale.ratio(value))*float32(g.plot.Dx())
+	return float32(g.plot.Min.X) + float32(g.xScale.Ratio(value))*float32(g.plot.Dx())
 }
 
 func (g chartGeometry) mapY(value float64) float32 {
-	return float32(g.plot.Max.Y) - float32(g.yScale.ratio(value))*float32(g.plot.Dy())
+	return float32(g.plot.Max.Y) - float32(g.yScale.Ratio(value))*float32(g.plot.Dy())
 }
 
 func (w Widget) resolveSelection(data chartData, geometry chartGeometry, selectedX float64, selected bool) chartSelection {
-	if !selected || !geometry.xScale.contains(selectedX) {
+	if !selected || !geometry.xScale.Contains(selectedX) {
 		return chartSelection{}
 	}
 	selection := chartSelection{x: selectedX, pixelX: geometry.mapX(selectedX)}
 	for _, series := range data.series {
 		for _, point := range series.points {
-			if !point.valid || point.X != selectedX || !geometry.yScale.contains(point.Y) {
+			if !point.valid || point.X != selectedX || !geometry.yScale.Contains(point.Y) {
 				continue
 			}
 			selection.entries = append(selection.entries, chartSelectionEntry{
@@ -290,7 +290,7 @@ func (w Widget) publicSelection(selection chartSelection, geometry chartGeometry
 		}
 	}
 	result := chart.Selection{
-		Label: w.xLabel(selection.x, geometry.xScale.interval),
+		Label: w.xLabel(selection.x, geometry.xScale.Interval),
 		Index: index,
 		X:     selection.x,
 		Items: make([]chart.Datum, 0, len(selection.entries)),

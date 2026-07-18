@@ -52,7 +52,7 @@ func (w Widget) layoutTooltipContent(ctx *frame.Context, gtx layout.Context, geo
 	rows := make([]chart.TooltipRow, 0, limit+1)
 	for index := 0; index < limit; index++ {
 		entry := selection.entries[index]
-		value := fmt.Sprintf("%s  %s", entry.series.label, w.yLabel(entry.bar.value, geometry.yScale.interval))
+		value := fmt.Sprintf("%s  %s", entry.series.label, w.yLabel(entry.bar.value, geometry.yScale.Interval))
 		rows = append(rows, chart.TooltipRow{Text: value, Color: entry.bar.color})
 	}
 	if len(selection.entries) > limit {

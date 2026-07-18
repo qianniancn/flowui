@@ -25,7 +25,7 @@ func seriesPixelSegments(series resolvedSeries, geometry chartGeometry) []linePi
 	})
 	var baseSegments [][]f32.Point
 	if series.area {
-		baseline := min(max(float64(0), geometry.yScale.minimum), geometry.yScale.maximum)
+		baseline := min(max(float64(0), geometry.yScale.Minimum), geometry.yScale.Maximum)
 		baseSegments = splitSmoothLine(series.points, series.connectNulls, func(point resolvedPoint) f32.Point {
 			return f32.Pt(geometry.mapX(point.X), geometry.mapY(linePointStackBase(point, baseline)))
 		})

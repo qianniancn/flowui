@@ -499,14 +499,14 @@ func (w Widget) xLabel(value float64, interval float64) string {
 			return w.categories[index]
 		}
 	}
-	return formatAxisNumber(value, interval)
+	return chart.FormatAxisNumber(value, interval)
 }
 
 func (w Widget) yLabel(value float64, interval float64) string {
 	if w.formatY != nil {
 		return w.formatY(value)
 	}
-	return formatAxisNumber(value, interval)
+	return chart.FormatAxisNumber(value, interval)
 }
 
 func validateChartRange(axis string, minimum, maximum float64) {

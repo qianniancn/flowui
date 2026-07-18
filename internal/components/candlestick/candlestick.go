@@ -386,7 +386,7 @@ func (w Widget) yLabel(value, interval float64) string {
 	if w.formatY != nil {
 		return w.formatY(value)
 	}
-	return formatAxisNumber(value, interval)
+	return chart.FormatAxisNumber(value, interval)
 }
 
 func finite(value float64) bool {

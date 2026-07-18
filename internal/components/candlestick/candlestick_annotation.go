@@ -69,7 +69,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 
 	pointFallback := activeTheme.Palette.Warning
 	for _, mark := range w.markPoints {
-		if mark.X < float64(geometry.categoryStart) || mark.X >= float64(geometry.categoryEnd) || !geometry.yScale.contains(mark.Y) {
+		if mark.X < float64(geometry.categoryStart) || mark.X >= float64(geometry.categoryEnd) || !geometry.yScale.Contains(mark.Y) {
 			continue
 		}
 		center := f32.Pt(candlestickCategoryX(geometry, mark.X), geometry.mapY(mark.Y))
@@ -95,8 +95,8 @@ func candlestickMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image
 		}
 		return image.Rect(int(math.Floor(float64(candlestickCategoryX(geometry, start)))), geometry.plot.Min.Y, int(math.Ceil(float64(candlestickCategoryX(geometry, end)))), geometry.plot.Max.Y), true
 	}
-	start := max(mark.Start, geometry.yScale.minimum)
-	end := min(mark.End, geometry.yScale.maximum)
+	start := max(mark.Start, geometry.yScale.Minimum)
+	end := min(mark.End, geometry.yScale.Maximum)
 	if end <= start {
 		return image.Rectangle{}, false
 	}
@@ -111,7 +111,7 @@ func candlestickMarkEndpoints(mark chart.MarkLine, geometry chartGeometry) (from
 		x := candlestickCategoryX(geometry, mark.Value)
 		return f32.Pt(x, float32(geometry.plot.Min.Y)), f32.Pt(x, float32(geometry.plot.Max.Y)), true
 	}
-	if !geometry.yScale.contains(mark.Value) {
+	if !geometry.yScale.Contains(mark.Value) {
 		return from, to, false
 	}
 	y := geometry.mapY(mark.Value)

@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -149,8 +150,8 @@ func TestLineChartStackAreaUsesPreviousCumulativeBaseline(t *testing.T) {
 	}, true)
 	geometry := chartGeometry{
 		plot:   image.Rect(0, 0, 100, 100),
-		xScale: newLinearScale(0, 1, 2, false, true),
-		yScale: newLinearScale(0, 30, 3, false, true),
+		xScale: chart.NewLinearScale(0, 1, 2, false, true),
+		yScale: chart.NewLinearScale(0, 30, 3, false, true),
 	}
 	segments := seriesPixelSegments(data.series[1], geometry)
 	if len(segments) != 1 || len(segments[0].points) != 2 || len(segments[0].stackedOn) != 13 {
@@ -178,8 +179,8 @@ func TestLineChartStackAnimationAndSelectionPreserveRawValues(t *testing.T) {
 
 	geometry := chartGeometry{
 		plot:   image.Rect(0, 0, 100, 100),
-		xScale: newLinearScale(0, 1, 2, false, true),
-		yScale: newLinearScale(0, 20, 4, false, true),
+		xScale: chart.NewLinearScale(0, 1, 2, false, true),
+		yScale: chart.NewLinearScale(0, 20, 4, false, true),
 	}
 	selection := widget.resolveSelection(target, geometry, 0, true)
 	public := widget.publicSelection(selection, geometry)

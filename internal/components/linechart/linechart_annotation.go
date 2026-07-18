@@ -70,7 +70,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 
 	pointFallback := activeTheme.Palette.Warning
 	for _, mark := range w.markPoints {
-		if !geometry.xScale.contains(mark.X) || !geometry.yScale.contains(mark.Y) {
+		if !geometry.xScale.Contains(mark.X) || !geometry.yScale.Contains(mark.Y) {
 			continue
 		}
 		center := image.Pt(int(math.Round(float64(geometry.mapX(mark.X)))), int(math.Round(float64(geometry.mapY(mark.Y)))))
@@ -93,15 +93,15 @@ func clampLineAnnotationLabel(position, size image.Point, plot image.Rectangle) 
 
 func lineMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image.Rectangle, bool) {
 	if mark.Axis == chart.AxisX {
-		start := max(mark.Start, geometry.xScale.minimum)
-		end := min(mark.End, geometry.xScale.maximum)
+		start := max(mark.Start, geometry.xScale.Minimum)
+		end := min(mark.End, geometry.xScale.Maximum)
 		if end <= start {
 			return image.Rectangle{}, false
 		}
 		return image.Rect(int(math.Floor(float64(geometry.mapX(start)))), geometry.plot.Min.Y, int(math.Ceil(float64(geometry.mapX(end)))), geometry.plot.Max.Y), true
 	}
-	start := max(mark.Start, geometry.yScale.minimum)
-	end := min(mark.End, geometry.yScale.maximum)
+	start := max(mark.Start, geometry.yScale.Minimum)
+	end := min(mark.End, geometry.yScale.Maximum)
 	if end <= start {
 		return image.Rectangle{}, false
 	}
@@ -110,13 +110,13 @@ func lineMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image.Rectan
 
 func lineMarkEndpoints(mark chart.MarkLine, geometry chartGeometry) (from, to f32.Point, ok bool) {
 	if mark.Axis == chart.AxisX {
-		if !geometry.xScale.contains(mark.Value) {
+		if !geometry.xScale.Contains(mark.Value) {
 			return from, to, false
 		}
 		x := geometry.mapX(mark.Value)
 		return f32.Pt(x, float32(geometry.plot.Min.Y)), f32.Pt(x, float32(geometry.plot.Max.Y)), true
 	}
-	if !geometry.yScale.contains(mark.Value) {
+	if !geometry.yScale.Contains(mark.Value) {
 		return from, to, false
 	}
 	y := geometry.mapY(mark.Value)

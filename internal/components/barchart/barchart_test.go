@@ -188,7 +188,7 @@ func TestBarChartResolvesCategoryLabelsAfterPruning(t *testing.T) {
 func TestBarChartAnnotationGeometryUsesVisibleScales(t *testing.T) {
 	geometry := chartGeometry{
 		plot:          image.Rect(10, 20, 110, 120),
-		yScale:        newLinearScale(0, 100, 5, false, true),
+		yScale:        chart.NewLinearScale(0, 100, 5, false, true),
 		bandWidth:     25,
 		categoryStart: 2,
 		categoryEnd:   6,
@@ -365,7 +365,7 @@ func TestColumnLayoutUsesEChartsCategoryAndBarGaps(t *testing.T) {
 func TestBarRectangleHonorsMinimumHeight(t *testing.T) {
 	geometry := chartGeometry{
 		plot:      image.Rect(0, 0, 100, 100),
-		yScale:    newLinearScale(-10, 10, 4, false, true),
+		yScale:    chart.NewLinearScale(-10, 10, 4, false, true),
 		bandWidth: 100,
 	}
 	column := columnLayout{offset: -10, width: 20}

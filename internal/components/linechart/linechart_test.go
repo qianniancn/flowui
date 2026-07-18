@@ -236,7 +236,7 @@ func TestLineChartDataWindowConstrainsXScale(t *testing.T) {
 		DataWindow(0.25, 0.75)
 	data := resolveChartData(widget, &activeTheme, testDp)
 	scale := widget.resolveXScale(data)
-	if scale.minimum != 1 || scale.maximum != 3 {
+	if scale.Minimum != 1 || scale.Maximum != 3 {
 		t.Fatalf("LineChart windowed X scale = %#v", scale)
 	}
 }
@@ -244,8 +244,8 @@ func TestLineChartDataWindowConstrainsXScale(t *testing.T) {
 func TestLineChartAnnotationGeometryUsesVisibleScales(t *testing.T) {
 	geometry := chartGeometry{
 		plot:   image.Rect(10, 20, 110, 120),
-		xScale: newLinearScale(0, 10, 5, false, true),
-		yScale: newLinearScale(0, 100, 5, false, true),
+		xScale: chart.NewLinearScale(0, 10, 5, false, true),
+		yScale: chart.NewLinearScale(0, 100, 5, false, true),
 	}
 	rect, ok := lineMarkAreaRect(chart.NewMarkArea(chart.AxisY, 20, 40), geometry)
 	if !ok || rect != image.Rect(10, 80, 110, 100) {
@@ -291,7 +291,7 @@ func TestLineChartAnimationBaselineUsesVisibleYRange(t *testing.T) {
 	widget := New("chart", []Series{Values("series", "Series", []float64{10, 20})}).IncludeZero(false)
 	target := resolveChartData(widget, &activeTheme, testDp)
 	baseline := widget.animationBaseline(target)
-	if baseline != widget.resolveYScale(target).minimum || baseline == 0 {
+	if baseline != widget.resolveYScale(target).Minimum || baseline == 0 {
 		t.Fatalf("non-zero animation baseline = %v", baseline)
 	}
 }
@@ -337,46 +337,46 @@ func TestResolveChartDataRejectsSeriesKeys(t *testing.T) {
 }
 
 func TestLinearScaleUsesEChartsStyleNiceTicks(t *testing.T) {
-	scale := newLinearScale(0, 980, 5, true, false)
-	if scale.minimum != 0 || scale.maximum != 1000 || scale.interval != 200 {
+	scale := chart.NewLinearScale(0, 980, 5, true, false)
+	if scale.Minimum != 0 || scale.Maximum != 1000 || scale.Interval != 200 {
 		t.Fatalf("nice scale = %#v", scale)
 	}
 	want := []float64{0, 200, 400, 600, 800, 1000}
-	if len(scale.ticks) != len(want) {
-		t.Fatalf("nice ticks = %v", scale.ticks)
+	if len(scale.Ticks) != len(want) {
+		t.Fatalf("nice ticks = %v", scale.Ticks)
 	}
 	for index := range want {
-		if scale.ticks[index] != want[index] {
-			t.Fatalf("nice ticks = %v", scale.ticks)
+		if scale.Ticks[index] != want[index] {
+			t.Fatalf("nice ticks = %v", scale.Ticks)
 		}
 	}
 
-	decimal := newLinearScale(5.2, 5.8, 5, false, false)
-	if math.Abs(decimal.interval-0.1) > 1e-9 || decimal.minimum != 5.2 || decimal.maximum != 5.8 {
+	decimal := chart.NewLinearScale(5.2, 5.8, 5, false, false)
+	if math.Abs(decimal.Interval-0.1) > 1e-9 || decimal.Minimum != 5.2 || decimal.Maximum != 5.8 {
 		t.Fatalf("decimal nice scale = %#v", decimal)
 	}
-	constant := newLinearScale(5, 5, 5, false, false)
-	if !constant.contains(5) || constant.minimum == constant.maximum {
+	constant := chart.NewLinearScale(5, 5, 5, false, false)
+	if !constant.Contains(5) || constant.Minimum == constant.Maximum {
 		t.Fatalf("constant scale = %#v", constant)
 	}
 }
 
 func TestLinearScaleHandlesExtremeFiniteValues(t *testing.T) {
-	scale := newLinearScale(-1e308, 1e308, 5, false, false)
-	if !finite(scale.minimum) || !finite(scale.maximum) || !finite(scale.interval) || len(scale.ticks) < 2 {
+	scale := chart.NewLinearScale(-1e308, 1e308, 5, false, false)
+	if !finite(scale.Minimum) || !finite(scale.Maximum) || !finite(scale.Interval) || len(scale.Ticks) < 2 {
 		t.Fatalf("extreme scale = %#v", scale)
 	}
-	for index := 1; index < len(scale.ticks); index++ {
-		if scale.ticks[index] <= scale.ticks[index-1] {
-			t.Fatalf("extreme ticks are not strictly increasing: %v", scale.ticks)
+	for index := 1; index < len(scale.Ticks); index++ {
+		if scale.Ticks[index] <= scale.Ticks[index-1] {
+			t.Fatalf("extreme ticks are not strictly increasing: %v", scale.Ticks)
 		}
 	}
-	if ratio := scale.ratio(0); math.Abs(ratio-0.5) > 1e-9 {
+	if ratio := scale.Ratio(0); math.Abs(ratio-0.5) > 1e-9 {
 		t.Fatalf("extreme scale midpoint ratio = %v", ratio)
 	}
 
-	tiny := newLinearScale(1e-12, 5e-12, 4, false, false)
-	if len(tiny.ticks) < 2 || !finite(tiny.interval) || formatAxisNumber(tiny.ticks[0], tiny.interval) == "" {
+	tiny := chart.NewLinearScale(1e-12, 5e-12, 4, false, false)
+	if len(tiny.Ticks) < 2 || !finite(tiny.Interval) || chart.FormatAxisNumber(tiny.Ticks[0], tiny.Interval) == "" {
 		t.Fatalf("tiny scale = %#v", tiny)
 	}
 }
@@ -391,7 +391,7 @@ func TestAxisNumberFormatting(t *testing.T) {
 		{-1234.5, 0.5, "-1,234.5"},
 		{0.00000001, 0.1, "0"},
 	} {
-		if got := formatAxisNumber(test.value, test.interval); got != test.want {
+		if got := chart.FormatAxisNumber(test.value, test.interval); got != test.want {
 			t.Fatalf("formatAxisNumber(%v, %v) = %q, want %q", test.value, test.interval, got, test.want)
 		}
 	}
@@ -470,8 +470,8 @@ func TestLineChartSelectionUsesSharedNearestX(t *testing.T) {
 	data := resolveChartData(widget, &activeTheme, testDp)
 	geometry := chartGeometry{
 		plot:   image.Rect(0, 0, 100, 100),
-		xScale: newLinearScale(0, 1, 2, false, true),
-		yScale: newLinearScale(0, 30, 3, false, true),
+		xScale: chart.NewLinearScale(0, 1, 2, false, true),
+		yScale: chart.NewLinearScale(0, 30, 3, false, true),
 	}
 	selection := widget.resolveSelection(data, geometry, 1, true)
 	if selection.pixelX != 100 || len(selection.entries) != 2 || selection.entries[0].point.Y != 20 || selection.entries[1].point.Y != 24 {

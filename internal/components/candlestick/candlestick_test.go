@@ -189,11 +189,11 @@ func TestCandlestickChartAutoScalesVisibleWindow(t *testing.T) {
 	}).DataWindow(.5, 1)
 	data := resolveChartData(widget, &activeTheme)
 	scale := widget.resolveYScale(data)
-	if scale.minimum > 40 || scale.maximum < 50 || scale.maximum >= 80 {
+	if scale.Minimum > 40 || scale.Maximum < 50 || scale.Maximum >= 80 {
 		t.Fatalf("visible CandlestickChart Y scale = %#v", scale)
 	}
 	fixed := widget.YRange(0, 120).resolveYScale(data)
-	if fixed.minimum != 0 || fixed.maximum != 120 {
+	if fixed.Minimum != 0 || fixed.Maximum != 120 {
 		t.Fatalf("fixed CandlestickChart Y scale = %#v", fixed)
 	}
 }
@@ -228,14 +228,14 @@ func TestCandlestickChartFormatsVisibleTimePeriods(t *testing.T) {
 }
 
 func TestCandlestickChartScaleHandlesExtremeFiniteValues(t *testing.T) {
-	scale := newLinearScale(-1e308, 1e308, 5, false)
-	if !finite(scale.minimum) || !finite(scale.maximum) || !finite(scale.interval) || len(scale.ticks) < 2 {
+	scale := chart.NewLinearScale(-1e308, 1e308, 5, false, false)
+	if !finite(scale.Minimum) || !finite(scale.Maximum) || !finite(scale.Interval) || len(scale.Ticks) < 2 {
 		t.Fatalf("extreme CandlestickChart scale = %#v", scale)
 	}
-	if ratio := scale.ratio(0); math.Abs(ratio-.5) > 1e-9 {
+	if ratio := scale.Ratio(0); math.Abs(ratio-.5) > 1e-9 {
 		t.Fatalf("extreme CandlestickChart midpoint ratio = %v", ratio)
 	}
-	if value := scale.valueAt(.5); math.Abs(value) > 1e292 {
+	if value := scale.ValueAt(.5); math.Abs(value) > 1e292 {
 		t.Fatalf("extreme CandlestickChart midpoint value = %v", value)
 	}
 }

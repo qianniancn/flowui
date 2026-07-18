@@ -8,6 +8,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotTween = "tween"
@@ -157,15 +158,11 @@ func (t TweenValue) resolveMotion(ctx *frame.Context) (time.Duration, bool) {
 	if t.hasDuration {
 		duration = t.duration
 	}
-	scale := motion.DurationScale
-	if t.disabled || !motion.Enabled || duration <= 0 || scale <= 0 || math.IsNaN(float64(scale)) || math.IsInf(float64(scale), 0) {
+	if t.disabled {
 		return 0, false
 	}
-	scaled := time.Duration(float64(duration) * float64(scale))
-	if scaled <= 0 {
-		return 0, false
-	}
-	return scaled, true
+	duration = theme.ResolveMotionDuration(motion, duration)
+	return duration, duration > 0
 }
 
 func (s *tweenState) advance(now time.Time) bool {

@@ -777,7 +777,7 @@ func TestTreeGeometryAndStyleMatchHeroUIPatterns(t *testing.T) {
 	if tokens.Padding != 4 || tokens.Gap != 4 || tokens.RowHeight != 36 || tokens.RowRadius != 16 || tokens.RowPaddingX != 8 || tokens.RowPaddingY != 6 {
 		t.Fatalf("Tree geometry = %+v", tokens)
 	}
-	if tokens.Indent != 20 || tokens.ChevronSlotSize != 20 || tokens.ChevronIconSize != 16 || tokens.ContentGap != 8 {
+	if tokens.Indent != 20 || tokens.ChevronSlotSize != 20 || tokens.ChevronIconSize != 16 || tokens.ContentGap != 8 || tokens.SmallRowRadius != 4 || tokens.SmallItemTextSize != 13 {
 		t.Fatalf("Tree hierarchy geometry = %+v", tokens)
 	}
 	selected := treeItemStyleFor(&activeTheme, true, false, false)
@@ -787,6 +787,16 @@ func TestTreeGeometryAndStyleMatchHeroUIPatterns(t *testing.T) {
 	hovered := treeItemStyleFor(&activeTheme, false, true, false)
 	if hovered.background != activeTheme.Palette.SurfaceTertiary {
 		t.Fatalf("hover background = %#v, want SurfaceTertiary", hovered.background)
+	}
+}
+
+func TestTreeSmallSizeUsesThemeTokens(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	activeTheme.Components.Tree.SmallRowRadius = 9
+	activeTheme.Components.Tree.SmallItemTextSize = 15
+	tokens := treeTokensFor(&activeTheme, SizeSmall)
+	if tokens.RowRadius != 9 || tokens.ItemTextSize != 15 {
+		t.Fatalf("small Tree tokens = radius %v text %v, want 9/15", tokens.RowRadius, tokens.ItemTextSize)
 	}
 }
 

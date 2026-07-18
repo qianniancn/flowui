@@ -108,7 +108,7 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 	rowGtx.Constraints = layout.Exact(size)
 
 	focusVisible := frame.FocusVisible(ctx, &itemState.clickable, rowGtx.Focused(&itemState.clickable))
-	focus := itemState.focus.Opacity(animGtx, focusVisible && !disabled)
+	focus := itemState.focus.Opacity(animGtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 	hovered := (itemState.clickable.Hovered() || itemState.toggle.Hovered()) && !disabled
 	style := treeItemStyleFor(frame.ActiveTheme(ctx), selected, hovered, disabled)
 	if treeContainsKey(treeStateValue.dragSources, entry.item.Key) {
@@ -118,7 +118,7 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 	if expanded {
 		expansionTarget = 1
 	}
-	expansion := itemState.expansion.Value(animGtx, expansionTarget, treeExpandDuration, animation.EaseSmoothstep)
+	expansion := itemState.expansion.Value(animGtx, expansionTarget, treeExpandDuration, animation.EaseSmoothstep, frame.ActiveTheme(ctx).Motion)
 
 	macro := op.Record(gtx.Ops)
 	func() {

@@ -35,7 +35,7 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	state.updateInteractions(ctx, gtx, m)
 	openKey = state.current(m)
 	state.observeOpen(ctx, openKey)
-	progress := state.progress(gtx, openKey != "")
+	progress := state.progress(gtx, openKey != "", frame.ActiveTheme(ctx).Motion)
 
 	macro := op.Record(gtx.Ops)
 	dims, triggerRects := m.layoutTriggers(ctx, gtx, state, openKey)
@@ -136,7 +136,7 @@ func (m Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *men
 			disabled,
 		)
 		focusVisible := frame.FocusVisible(ctx, &triggerState.clickable, gtx.Focused(&triggerState.clickable))
-		focus := triggerState.focus.Opacity(animGtx, focusVisible && !disabled)
+		focus := triggerState.focus.Opacity(animGtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 		padding := max(gtx.Dp(tokens.TriggerPaddingX), 0)
 		contentGtx := gtx
 		contentGtx.Constraints.Min = image.Point{}

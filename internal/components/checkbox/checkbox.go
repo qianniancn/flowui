@@ -137,8 +137,9 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			frame.FocusOnPress(ctx, valueState, valueState.History(), presses)
 		}
 		focusVisible := frame.FocusVisible(ctx, valueState, gtx.Focused(valueState))
-		selection := anim.selection(animGtx, c.checked || c.indeterminate)
-		focus := anim.focusOpacity(animGtx, focusVisible && !disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		selection := anim.selection(animGtx, c.checked || c.indeterminate, motion)
+		focus := anim.focusOpacity(animGtx, focusVisible && !disabled, motion)
 		indicatorState := IndicatorState{
 			Checked: c.checked, Indeterminate: c.indeterminate,
 			Disabled: disabled, Invalid: c.invalid,

@@ -109,8 +109,9 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 
 	focused := gtx.Focused(editor)
 	style := inputGroupStyleFor(frame.ActiveTheme(ctx), g.variant, state.Hovered, focused, disabled, g.invalid)
-	style.Background = state.Background(gtx, style.Background)
-	style.Ring = state.BorderColor(gtx, style.Ring)
+	motion := frame.ActiveTheme(ctx).Motion
+	style.Background = state.Background(gtx, style.Background, motion)
+	style.Ring = state.BorderColor(gtx, style.Ring, motion)
 
 	inputStyle := inputStyle{
 		Foreground:  style.Foreground,

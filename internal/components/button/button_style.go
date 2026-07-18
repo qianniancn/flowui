@@ -10,17 +10,19 @@ import (
 )
 
 type buttonStyle struct {
-	height     unit.Dp
-	inset      layout.Inset
-	textSize   float32
-	bg         color.NRGBA
-	fg         color.NRGBA
-	border     color.NRGBA
-	hasBorder  bool
-	focus      float32
-	focusColor color.NRGBA
-	focusWidth unit.Dp
-	corners    buttonCorners
+	height      unit.Dp
+	inset       layout.Inset
+	textSize    float32
+	bg          color.NRGBA
+	fg          color.NRGBA
+	border      color.NRGBA
+	hasBorder   bool
+	radius      unit.Dp
+	borderWidth unit.Dp
+	focus       float32
+	focusColor  color.NRGBA
+	focusWidth  unit.Dp
+	corners     buttonCorners
 }
 
 type buttonPalette struct {
@@ -49,6 +51,8 @@ func (b ButtonWidget) style(theme *theme.Theme, clickable *widget.Clickable) but
 	style.fg = colors.fg
 	style.border = colors.border
 	style.hasBorder = colors.hasBorder
+	style.radius = theme.Components.Button.Radius
+	style.borderWidth = theme.Components.Button.BorderWidth
 	style.focusColor = theme.Palette.Focus
 	style.focusWidth = theme.Components.Button.FocusRingWidth
 	style.corners = buttonGroupCorners(b.group)

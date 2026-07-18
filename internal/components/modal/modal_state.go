@@ -9,6 +9,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotModal = "modal"
@@ -46,7 +47,7 @@ type modalState struct {
 // addresses when used as Gio event tags.
 type modalFocusTag struct{ _ byte }
 
-func (s *modalState) progress(gtx layout.Context, open bool) float32 {
+func (s *modalState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
@@ -55,7 +56,7 @@ func (s *modalState) progress(gtx layout.Context, open bool) float32 {
 	if target != s.transition.Target() {
 		s.focusPending = open
 	}
-	return s.transition.Value(gtx, target, modalEnterDuration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, modalEnterDuration, animation.EaseSmoothstep, motions...)
 }
 
 func (s *modalState) visible() bool {

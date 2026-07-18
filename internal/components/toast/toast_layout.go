@@ -42,7 +42,8 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 	p.handleEvents(gtx, providerState)
 	providerState.updateRegionEvents(gtx)
 	expanded := providerState.regionHovered || providerState.paused(gtx)
-	expansion := providerState.expansionProgress(gtx, expanded, frame.ActiveTheme(ctx).Components.Toast.AnimationDuration)
+	motion := frame.ActiveTheme(ctx).Motion
+	expansion := providerState.expansionProgress(gtx, expanded, frame.ActiveTheme(ctx).Components.Toast.AnimationDuration, motion)
 	providerState.updateTimers(gtx, p.paused || expanded || expansion > 0, func(entry *toastEntryState) {
 		entry.requestClose(p.onClose)
 	})
@@ -74,8 +75,8 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 		} else if !entry.stack.Ready() {
 			targetIndex = float32(presentIndex)
 		}
-		stackPosition := entry.stackPosition(gtx, targetIndex, tokens.AnimationDuration)
-		progress := entry.progress(gtx, tokens.AnimationDuration)
+		stackPosition := entry.stackPosition(gtx, targetIndex, tokens.AnimationDuration, motion)
+		progress := entry.progress(gtx, tokens.AnimationDuration, motion)
 		if progress <= 0 && (!entry.present || entry.closeRequested) {
 			continue
 		}
@@ -284,7 +285,7 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 	entry.addRootInput(gtx, size)
 	semanticClip.Pop()
 	focusVisible := frame.FocusVisible(ctx, &entry.root, gtx.Focused(&entry.root))
-	focusOpacity := entry.rootFocus.Opacity(gtx, focusVisible)
+	focusOpacity := entry.rootFocus.Opacity(gtx, focusVisible, frame.ActiveTheme(ctx).Motion)
 	drawToastFocus(gtx, rect, radius, style.focus, frame.ActiveTheme(ctx).Components.Toast.FocusRingWidth, focusOpacity)
 	p.layoutToastClose(ctx, gtx, entry, size, style, mobile || expanded)
 	return layout.Dimensions{Size: size}
@@ -410,7 +411,7 @@ func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Con
 		return layout.Dimensions{Size: image.Pt(size, size)}
 	})
 	focusVisible := frame.FocusVisible(ctx, &entry.close, gtx.Focused(&entry.close))
-	focusOpacity := entry.closeFocus.Opacity(gtx, focusVisible)
+	focusOpacity := entry.closeFocus.Opacity(gtx, focusVisible, frame.ActiveTheme(ctx).Motion)
 	drawToastFocus(gtx, image.Rectangle{Max: dims.Size}, size/2, style.focus, tokens.FocusRingWidth, focusOpacity)
 	offset.Pop()
 }

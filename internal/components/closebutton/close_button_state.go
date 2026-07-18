@@ -7,6 +7,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotCloseButton = "close-button"
@@ -21,8 +22,8 @@ func closeButtonStateFor(ctx *frame.Context, key string) *closeButtonState {
 	return frame.UseState[closeButtonState](ctx, key, stateSlotCloseButton)
 }
 
-func (s *closeButtonState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return s.backgroundTransition.Value(gtx, target, closeButtonColorDuration, animation.EaseSmoothstep)
+func (s *closeButtonState) background(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
+	return s.backgroundTransition.Value(gtx, target, closeButtonColorDuration, animation.EaseSmoothstep, motions...)
 }
 
 func closeButtonPressedScale(pressedScale float32) float32 {
@@ -32,6 +33,6 @@ func closeButtonPressedScale(pressedScale float32) float32 {
 	return pressedScale
 }
 
-func (s *closeButtonState) scale(gtx layout.Context, target float32) float32 {
-	return s.scaleTransition.Value(gtx, target, closeButtonScaleDuration, animation.EaseQuarticOut)
+func (s *closeButtonState) scale(gtx layout.Context, target float32, motions ...theme.MotionTheme) float32 {
+	return s.scaleTransition.Value(gtx, target, closeButtonScaleDuration, animation.EaseQuarticOut, motions...)
 }

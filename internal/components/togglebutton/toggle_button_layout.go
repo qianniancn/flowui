@@ -42,13 +42,14 @@ func (b ToggleButtonWidget) layout(ctx *frame.Context, gtx layout.Context) layou
 		clickable.Pressed() && enabled,
 		!enabled,
 	)
-	style.background = componentState.animateBackground(animGtx, style.background)
-	style.focus = componentState.focus.Opacity(animGtx, focusVisible && enabled)
+	motion := frame.ActiveTheme(ctx).Motion
+	style.background = componentState.animateBackground(animGtx, style.background, motion)
+	style.focus = componentState.focus.Opacity(animGtx, focusVisible && enabled, motion)
 	targetScale := float32(1)
 	if clickable.Pressed() && enabled {
 		targetScale = resolvedToggleButtonPressedScale(sizeStyle.pressedScale, b.size)
 	}
-	scale := componentState.animateScale(animGtx, targetScale)
+	scale := componentState.animateScale(animGtx, targetScale, motion)
 
 	if !enabled {
 		disabledGtx := gtx.Disabled()

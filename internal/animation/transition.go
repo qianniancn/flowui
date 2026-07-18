@@ -6,6 +6,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // FloatTransition stores a component-local float transition.
@@ -36,7 +37,10 @@ func (t *FloatTransition) Set(value, target float32, now time.Time) {
 	t.ready = true
 }
 
-func (t *FloatTransition) Value(gtx layout.Context, target float32, duration time.Duration, easing Easing) float32 {
+func (t *FloatTransition) Value(gtx layout.Context, target float32, duration time.Duration, easing Easing, motions ...theme.MotionTheme) float32 {
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
 	if !t.ready {
 		t.value = target
 		t.from = target
@@ -49,6 +53,13 @@ func (t *FloatTransition) Value(gtx layout.Context, target float32, duration tim
 		t.from = t.value
 		t.to = target
 		t.at = gtx.Now
+	}
+	if duration <= 0 {
+		t.value = target
+		t.from = target
+		t.to = target
+		t.at = gtx.Now
+		return target
 	}
 	if t.from == t.to {
 		t.value = t.to
@@ -80,7 +91,10 @@ type ColorTransition struct {
 	ready bool
 }
 
-func (t *ColorTransition) Value(gtx layout.Context, target color.NRGBA, duration time.Duration, easing Easing) color.NRGBA {
+func (t *ColorTransition) Value(gtx layout.Context, target color.NRGBA, duration time.Duration, easing Easing, motions ...theme.MotionTheme) color.NRGBA {
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
 	if !t.ready {
 		t.value = target
 		t.from = target
@@ -93,6 +107,13 @@ func (t *ColorTransition) Value(gtx layout.Context, target color.NRGBA, duration
 		t.from = t.value
 		t.to = target
 		t.at = gtx.Now
+	}
+	if duration <= 0 {
+		t.value = target
+		t.from = target
+		t.to = target
+		t.at = gtx.Now
+		return target
 	}
 	if t.from == t.to {
 		t.value = t.to

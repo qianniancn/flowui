@@ -34,8 +34,9 @@ func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, gro
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
 		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
 		style := radioStyleFor(frame.ActiveTheme(ctx), r.variant, itemState.clickable.Hovered(), itemState.clickable.Pressed(), disabled, invalid)
-		style.selected = itemState.selection(animGtx, selected)
-		style.focus = itemState.focusOpacity(animGtx, focusVisible && !disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.selected = itemState.selection(animGtx, selected, motion)
+		style.focus = itemState.focusOpacity(animGtx, focusVisible && !disabled, motion)
 		scale := radioPressScale(animGtx, itemState.clickable.History(), frame.ActiveTheme(ctx), disabled)
 		return r.layoutItemContent(ctx, gtx, item, style, scale)
 	})

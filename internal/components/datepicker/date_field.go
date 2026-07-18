@@ -164,8 +164,8 @@ func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	hovered := componentState.hover.hovered || componentState.segments.hovered()
 	invalid := d.invalid || !componentState.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
 	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, hovered, focused, !enabled, invalid)
-	style.Background = componentState.input.Background(gtx, style.Background)
-	style.Border = componentState.input.BorderColor(gtx, style.Border)
+	style.Background = componentState.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
+	style.Border = componentState.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
 
 	var children [3]layout.FlexChild
 	count := 0

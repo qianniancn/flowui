@@ -263,7 +263,7 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		minHeight := min(gtx.Dp(tokens.ItemMinHeight), gtx.Constraints.Max.Y)
 		focusVisible := menuItemFocusVisible(ctx, itemState, gtx.Focused(&itemState.clickable))
 		style := menuItemStyle(frame.ActiveTheme(ctx), item.Variant, itemState.clickable.Hovered(), disabled)
-		style.focus = itemState.focus.Opacity(animGtx, focusVisible && !disabled)
+		style.focus = itemState.focus.Opacity(animGtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 		scale := menuItemScale(animGtx, itemState.clickable.History(), frame.ActiveTheme(ctx), disabled)
 		macro := op.Record(gtx.Ops)
 		contentGtx := gtx

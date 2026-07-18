@@ -7,6 +7,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotPopover = "popover"
@@ -32,7 +33,7 @@ type popoverState struct {
 	transition animation.FloatTransition
 }
 
-func (s *popoverState) progress(gtx layout.Context, open bool) float32 {
+func (s *popoverState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
@@ -42,7 +43,7 @@ func (s *popoverState) progress(gtx layout.Context, open bool) float32 {
 		duration = popoverExitDuration
 	}
 	s.transition.Initialize(0, gtx.Now)
-	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
 func (s *popoverState) visible() bool {

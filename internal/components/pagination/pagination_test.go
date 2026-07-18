@@ -86,7 +86,7 @@ func TestPaginationControlledPageClick(t *testing.T) {
 
 func TestPaginationThemeMatchesHeroUI(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.Pagination
-	if tokens.SmallSize != 28 || tokens.MediumSize != 32 || tokens.LargeSize != 36 || tokens.ItemGap != 4 || tokens.FocusRingWidth != 2 {
+	if tokens.SmallSize != 28 || tokens.MediumSize != 32 || tokens.LargeSize != 36 || tokens.Radius != 24 || tokens.NavGap != 6 || tokens.ItemGap != 4 || tokens.FocusRingWidth != 2 {
 		t.Fatalf("Pagination theme = %+v", tokens)
 	}
 }

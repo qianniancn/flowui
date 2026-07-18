@@ -138,14 +138,15 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 		focusVisible := frame.FocusVisible(ctx, &itemState.Clickable, gtx.Focused(&itemState.Clickable))
 		activeTheme := frame.ActiveTheme(ctx)
 		style := listBoxItemStyleFor(activeTheme, item.Variant, itemState.Clickable.Hovered(), itemState.Clickable.Pressed(), disabled)
-		style.bg = itemState.Background(animGtx, style.bg, listBoxItemColorDuration)
-		style.selected = itemState.Selection(animGtx, selected, listBoxItemSelectDuration)
-		style.focus = itemState.FocusOpacity(animGtx, focusVisible && !disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.bg = itemState.Background(animGtx, style.bg, listBoxItemColorDuration, motion)
+		style.selected = itemState.Selection(animGtx, selected, listBoxItemSelectDuration, motion)
+		style.focus = itemState.FocusOpacity(animGtx, focusVisible && !disabled, motion)
 		pressedScale := activeTheme.Components.ListBox.PressedScale
 		if pressedScale <= 0 || pressedScale > 1 {
 			pressedScale = 0.98
 		}
-		scale := optionrow.PressScale(animGtx, itemState.Clickable.History(), disabled, pressedScale, listBoxItemPressInDuration, listBoxItemPressOutDuration)
+		scale := optionrow.PressScale(animGtx, itemState.Clickable.History(), disabled, pressedScale, listBoxItemPressInDuration, listBoxItemPressOutDuration, motion)
 
 		macro := op.Record(gtx.Ops)
 		contentGtx := gtx

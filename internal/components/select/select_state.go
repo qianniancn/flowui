@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotSelect = "select"
@@ -291,7 +292,7 @@ func (s *selectState) observeOpen(ctx *frame.Context, open, restoreFocus bool) {
 	s.wasOpen = open
 }
 
-func (s *selectState) progress(gtx layout.Context, open bool) float32 {
+func (s *selectState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
@@ -301,14 +302,14 @@ func (s *selectState) progress(gtx layout.Context, open bool) float32 {
 		duration = selectExitDuration
 	}
 	s.transition.Initialize(0, gtx.Now)
-	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *selectState) iconProgress(gtx layout.Context, open bool) float32 {
+func (s *selectState) iconProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
 	}
 	s.iconTransition.Initialize(0, gtx.Now)
-	return s.iconTransition.Value(gtx, target, selectIndicatorDuration, animation.EaseSmoothstep)
+	return s.iconTransition.Value(gtx, target, selectIndicatorDuration, animation.EaseSmoothstep, motions...)
 }

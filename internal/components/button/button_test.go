@@ -187,6 +187,10 @@ func TestButtonSizeStyle(t *testing.T) {
 	if icon.inset.Left != 0 || icon.inset.Right != 0 {
 		t.Fatalf("icon inset = %+v, want horizontal zero", icon.inset)
 	}
+	styled := Button("shape", text.New("Shape")).style(&theme, new(widget.Clickable))
+	if styled.radius != 24 || styled.borderWidth != 1 {
+		t.Fatalf("button shape = radius %v border %v, want 24/1", styled.radius, styled.borderWidth)
+	}
 }
 
 func TestButtonSpinnerSize(t *testing.T) {

@@ -134,7 +134,7 @@ func (p Widget) layoutNav(ctx *frame.Context, gtx layout.Context, stateValue *pa
 			if next {
 				children[0], children[1] = children[1], children[0]
 			}
-			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle, Gap: gtx.Dp(6)}.Layout(gtx, children...)
+			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle, Gap: gtx.Dp(frame.ActiveTheme(ctx).Components.Pagination.NavGap)}.Layout(gtx, children...)
 		})
 	})
 }
@@ -180,7 +180,7 @@ func (p Widget) layoutButton(ctx *frame.Context, gtx layout.Context, item *pagin
 			foreground = activeTheme.DisabledColor(foreground)
 		}
 		focusVisible := frame.FocusVisible(ctx, &item.clickable, gtx.Focused(&item.clickable))
-		focus := item.focus.Opacity(gtx, focusVisible && !disabled)
+		focus := item.focus.Opacity(gtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 
 		macro := op.Record(gtx.Ops)
 		dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -192,7 +192,7 @@ func (p Widget) layoutButton(ctx *frame.Context, gtx layout.Context, item *pagin
 			scale = 0.97
 		}
 		transform := render.Scale(dims.Size, scale).Push(gtx.Ops)
-		drawPaginationButton(gtx, dims.Size, background, activeTheme.Palette.Focus, focus, activeTheme.Components.Pagination.FocusRingWidth)
+		drawPaginationButton(gtx, dims.Size, background, activeTheme.Palette.Focus, focus, activeTheme.Components.Pagination.FocusRingWidth, activeTheme.Components.Pagination.Radius)
 		call.Add(gtx.Ops)
 		transform.Pop()
 		return dims
@@ -218,9 +218,9 @@ func paginationSize(activeTheme *theme.Theme, size Size) paginationSizeStyle {
 	return style
 }
 
-func drawPaginationButton(gtx layout.Context, size image.Point, background, focusColor color.NRGBA, focus float32, focusWidth unit.Dp) {
+func drawPaginationButton(gtx layout.Context, size image.Point, background, focusColor color.NRGBA, focus float32, focusWidth, radiusDp unit.Dp) {
 	rect := image.Rectangle{Max: size}
-	radius := min(size.X, size.Y) / 2
+	radius := min(max(gtx.Dp(radiusDp), 0), min(size.X, size.Y)/2)
 	if background.A != 0 {
 		paint.FillShape(gtx.Ops, background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 	}

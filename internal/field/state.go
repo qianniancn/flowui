@@ -11,6 +11,7 @@ import (
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const colorDuration = 150 * time.Millisecond
@@ -65,10 +66,10 @@ func (s *State) AddPointer(gtx layout.Context, size image.Point, disabled bool) 
 	area.Pop()
 }
 
-func (s *State) Background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return s.bg.Value(gtx, target, colorDuration, animation.EaseSmoothstep)
+func (s *State) Background(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
+	return s.bg.Value(gtx, target, colorDuration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *State) BorderColor(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return s.border.Value(gtx, target, colorDuration, animation.EaseSmoothstep)
+func (s *State) BorderColor(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
+	return s.border.Value(gtx, target, colorDuration, animation.EaseSmoothstep, motions...)
 }

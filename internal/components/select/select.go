@@ -260,7 +260,7 @@ func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 		eventGtx = eventGtx.Disabled()
 	}
 
-	progress := state.progress(gtx, open && !s.disabled)
+	progress := state.progress(gtx, open && !s.disabled, frame.ActiveTheme(ctx).Motion)
 	dims := s.layout(ctx, eventGtx, state, open)
 	if progress == 0 {
 		return dims

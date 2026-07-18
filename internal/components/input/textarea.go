@@ -100,8 +100,9 @@ func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 
 	focused := gtx.Focused(editor)
 	style := textAreaStyleFor(frame.ActiveTheme(ctx), t.variant, state.Hovered, focused, disabled, t.invalid)
-	style.Background = state.Background(gtx, style.Background)
-	style.Ring = state.BorderColor(gtx, style.Ring)
+	motion := frame.ActiveTheme(ctx).Motion
+	style.Background = state.Background(gtx, style.Background, motion)
+	style.Ring = state.BorderColor(gtx, style.Ring, motion)
 
 	return t.layoutFrame(ctx, gtx, state, style, enabled, t.editorLayout(ctx, key, enabled, editor, style))
 }

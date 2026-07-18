@@ -163,11 +163,12 @@ func (picker ColorSwatchPickerWidget) recordItem(ctx *frame.Context, gtx layout.
 		semantic.LabelOp(formatHexColor(value, value.A != 255)).Add(gtx.Ops)
 		semantic.SelectedOp(value == picker.value).Add(gtx.Ops)
 		semantic.EnabledOp(enabled).Add(gtx.Ops)
-		selection := itemState.selection.Value(gtx, boolFloat(value == picker.value), colorSwatchTransition, animation.EaseSmoothstep)
-		check := itemState.check.Value(gtx, boolFloat(value == picker.value), colorSwatchCheckTransition, animation.EaseSmoothstep)
-		hover := itemState.hover.Value(gtx, boolFloat(itemState.clickable.Hovered() && enabled), colorSwatchTransition, animation.EaseSmoothstep)
+		motion := frame.ActiveTheme(ctx).Motion
+		selection := itemState.selection.Value(gtx, boolFloat(value == picker.value), colorSwatchTransition, animation.EaseSmoothstep, motion)
+		check := itemState.check.Value(gtx, boolFloat(value == picker.value), colorSwatchCheckTransition, animation.EaseSmoothstep, motion)
+		hover := itemState.hover.Value(gtx, boolFloat(itemState.clickable.Hovered() && enabled), colorSwatchTransition, animation.EaseSmoothstep, motion)
 		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
-		focus := itemState.focus.Opacity(gtx, focusVisible && enabled)
+		focus := itemState.focus.Opacity(gtx, focusVisible && enabled, motion)
 		opacity := paint.PushOpacity(gtx.Ops, func() float32 {
 			if enabled {
 				return 1

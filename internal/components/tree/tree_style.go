@@ -9,19 +9,19 @@ import (
 func treeTokensFor(activeTheme *theme.Theme, size Size) theme.TreeTheme {
 	tokens := activeTheme.Components.Tree
 	if size == SizeSmall {
-		tokens.Padding = 2
-		tokens.Gap = 1
-		tokens.RowHeight = 24
-		tokens.DescriptionRowHeight = 40
-		tokens.RowRadius = 4
-		tokens.RowPaddingX = 4
-		tokens.RowPaddingY = 2
-		tokens.Indent = 12
-		tokens.ChevronSlotSize = 16
-		tokens.ChevronIconSize = 12
-		tokens.ContentGap = 5
-		tokens.ItemTextSize = 13
-		tokens.ItemDescriptionSize = 11
+		tokens.Padding = tokens.SmallPadding
+		tokens.Gap = tokens.SmallGap
+		tokens.RowHeight = tokens.SmallRowHeight
+		tokens.DescriptionRowHeight = tokens.SmallDescriptionRowHeight
+		tokens.RowRadius = tokens.SmallRowRadius
+		tokens.RowPaddingX = tokens.SmallRowPaddingX
+		tokens.RowPaddingY = tokens.SmallRowPaddingY
+		tokens.Indent = tokens.SmallIndent
+		tokens.ChevronSlotSize = tokens.SmallChevronSlotSize
+		tokens.ChevronIconSize = tokens.SmallChevronIconSize
+		tokens.ContentGap = tokens.SmallContentGap
+		tokens.ItemTextSize = tokens.SmallItemTextSize
+		tokens.ItemDescriptionSize = tokens.SmallItemDescriptionSize
 	}
 	return tokens
 }

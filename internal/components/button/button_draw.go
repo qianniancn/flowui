@@ -14,17 +14,17 @@ import (
 )
 
 func drawButton(gtx layout.Context, size image.Point, style buttonStyle) {
-	radius := min(size.X, size.Y) / 2
+	radius := min(max(gtx.Dp(style.radius), 0), min(size.X, size.Y)/2)
 	rect := image.Rectangle{Max: size}
 	rr := buttonRoundedRect(rect, radius, style.corners)
 
 	if style.bg.A != 0 {
 		paint.FillShape(gtx.Ops, style.bg, rr.Op(gtx.Ops))
 	}
-	if style.hasBorder {
+	if style.hasBorder && style.borderWidth > 0 {
 		stroke := clip.Stroke{
 			Path:  rr.Path(gtx.Ops),
-			Width: float32(max(gtx.Dp(unit.Dp(1)), 1)),
+			Width: float32(max(gtx.Dp(style.borderWidth), 1)),
 		}.Op().Push(gtx.Ops)
 		paint.Fill(gtx.Ops, style.border)
 		stroke.Pop()

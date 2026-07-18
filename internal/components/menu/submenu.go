@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const menuSubmenuOpenDelay = 100 * time.Millisecond
@@ -61,7 +62,7 @@ func (m Widget) registerSubmenus(ctx *frame.Context, gtx layout.Context, state *
 			childState.requestedFocusVisible = state.submenuFocusVisible
 		}
 		childState.submenuWasOpen = open
-		progress := childState.submenuProgress(gtx, open)
+		progress := childState.submenuProgress(gtx, open, frame.ActiveTheme(ctx).Motion)
 		if progress <= 0 {
 			continue
 		}
@@ -70,7 +71,7 @@ func (m Widget) registerSubmenus(ctx *frame.Context, gtx layout.Context, state *
 	}
 }
 
-func (s *menuState) submenuProgress(gtx layout.Context, open bool) float32 {
+func (s *menuState) submenuProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	duration := contextMenuExitDuration
 	if open {
@@ -78,7 +79,7 @@ func (s *menuState) submenuProgress(gtx layout.Context, open bool) float32 {
 		duration = contextMenuEnterDuration
 	}
 	s.transition.Initialize(0, gtx.Now)
-	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
 func (m Widget) registerSubmenuOverlay(ctx *frame.Context, gtx layout.Context, state *menuState, anchor image.Rectangle, open bool, progress float32) {

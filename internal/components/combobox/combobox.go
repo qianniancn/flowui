@@ -147,8 +147,8 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 
 	focused := gtx.Focused(editor)
 	style := field.ResolveStyle(frame.ActiveTheme(ctx), c.variant, state.input.Hovered, focused, c.disabled, c.invalid)
-	style.Background = state.input.Background(gtx, style.Background)
-	style.Border = state.input.BorderColor(gtx, style.Border)
+	style.Background = state.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
+	style.Border = state.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
 
 	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, c.hint)
 	editorStyle.TextSize = frame.ActiveTheme(ctx).Components.ComboBox.TextSize
@@ -157,7 +157,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	editorStyle.SelectionColor = style.Selection
 
 	dims := c.layoutInput(ctx, eventGtx, state, editor, style, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
-	progress := state.popoverProgress(gtx, state.open && !c.disabled)
+	progress := state.popoverProgress(gtx, state.open && !c.disabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 {
 		state.endFrame()
 		return dims

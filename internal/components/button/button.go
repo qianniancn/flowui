@@ -164,8 +164,9 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		if b.loading && !b.iconOnly && !b.fullWidth {
 			style.inset = buttonLoadingInset(gtx, frame.ActiveTheme(ctx), b.size, style.inset)
 		}
-		style.bg = buttonState.background(animGtx, style.bg)
-		style.focus = buttonState.focusOpacity(animGtx, focusVisible && !b.disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.bg = buttonState.background(animGtx, style.bg, motion)
+		style.focus = buttonState.focusOpacity(animGtx, focusVisible && !b.disabled, motion)
 		child := b.styleChild(style)
 		if b.loading {
 			animGtx.Execute(op.InvalidateCmd{})

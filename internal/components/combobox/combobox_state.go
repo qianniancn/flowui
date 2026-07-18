@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotComboBox = "combobox"
@@ -267,20 +268,20 @@ func (s *comboBoxState) clampHighlight(items []ComboBoxItem, visible []int) {
 	s.highlight = comboBoxFirstEnabled(items, visible)
 }
 
-func (s *comboBoxState) popoverProgress(gtx layout.Context, open bool) float32 {
+func (s *comboBoxState) popoverProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
 	}
-	return s.popoverTransition.Value(gtx, target, comboBoxAnimationDuration, animation.EaseSmoothstep)
+	return s.popoverTransition.Value(gtx, target, comboBoxAnimationDuration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *comboBoxState) iconProgress(gtx layout.Context, open bool) float32 {
+func (s *comboBoxState) iconProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if open {
 		target = 1
 	}
-	return s.iconTransition.Value(gtx, target, comboBoxAnimationDuration, animation.EaseSmoothstep)
+	return s.iconTransition.Value(gtx, target, comboBoxAnimationDuration, animation.EaseSmoothstep, motions...)
 }
 
 type comboBoxItemState = optionrow.State

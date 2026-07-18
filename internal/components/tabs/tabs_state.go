@@ -15,6 +15,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -299,12 +300,12 @@ func (s *tabsIndicatorState) current(gtx layout.Context) image.Rectangle {
 	)
 }
 
-func (s *tabsItemState) selectionProgress(gtx layout.Context, selected bool) float32 {
+func (s *tabsItemState) selectionProgress(gtx layout.Context, selected bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if selected {
 		target = 1
 	}
-	return s.selection.Value(gtx, target, tabsColorDuration, animation.EaseSmoothstep)
+	return s.selection.Value(gtx, target, tabsColorDuration, animation.EaseSmoothstep, motions...)
 }
 
 func tabsIndexByKey(items []TabItem, key string) int {

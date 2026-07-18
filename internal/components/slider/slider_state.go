@@ -191,10 +191,10 @@ func (s *sliderState) dragging(index int) bool {
 
 func (t *sliderThumbState) focusOpacity(ctx *frame.Context, gtx layout.Context, focused bool) float32 {
 	visible := frame.FocusVisible(ctx, &t.clickable, focused)
-	return t.focus.Opacity(gtx, visible)
+	return t.focus.Opacity(gtx, visible, frame.ActiveTheme(ctx).Motion)
 }
 
-func (t *sliderThumbState) draggingScale(gtx layout.Context, dragging bool, targetScale float32) float32 {
+func (t *sliderThumbState) draggingScale(ctx *frame.Context, gtx layout.Context, dragging bool, targetScale float32) float32 {
 	if targetScale <= 0 || targetScale > 1 {
 		targetScale = 0.9
 	}
@@ -202,5 +202,5 @@ func (t *sliderThumbState) draggingScale(gtx layout.Context, dragging bool, targ
 	if dragging {
 		target = targetScale
 	}
-	return t.scale.Value(gtx, target, sliderThumbScaleDuration, animation.EaseSmoothstep)
+	return t.scale.Value(gtx, target, sliderThumbScaleDuration, animation.EaseSmoothstep, frame.ActiveTheme(ctx).Motion)
 }

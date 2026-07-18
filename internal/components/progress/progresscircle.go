@@ -96,7 +96,7 @@ func (p ProgressCircleWidget) Disabled(disabled bool) ProgressCircleWidget {
 func (p ProgressCircleWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
 	progressState := progressCircleStateFor(ctx, p.key)
-	progress := progressState.progress(gtx, p.ratio(), p.indeterminate)
+	progress := progressState.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)
 	style := progressCircleStyleFor(activeTheme, p.color, p.disabled)
 	diameter := max(gtx.Dp(progressCircleSizeFor(activeTheme, p.size)), 1)
 	size := gtx.Constraints.Constrain(image.Pt(diameter, diameter))

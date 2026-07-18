@@ -40,7 +40,7 @@ func (t TextAreaWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, stat
 
 	rect := image.Rectangle{Max: size}
 	radius := min(max(gtx.Dp(tokens.Radius), 1), min(size.X, size.Y)/2)
-	ringWidth := state.RingWidth(gtx, style.RingWidth)
+	ringWidth := state.RingWidth(gtx, style.RingWidth, frame.ActiveTheme(ctx).Motion)
 
 	opacity := paint.PushOpacity(gtx.Ops, style.Opacity)
 	drawTextAreaFrame(gtx, activeTheme, rect, radius, style, ringWidth)

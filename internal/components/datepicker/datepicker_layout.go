@@ -414,8 +414,9 @@ func (d DatePickerWidget) layoutNavButton(ctx *frame.Context, gtx layout.Context
 	gtx.Constraints = layout.Exact(size)
 	return clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		style := datePickerNavStyle(frame.ActiveTheme(ctx), clickable.Hovered(), clickable.Pressed(), disabled)
-		style.bg = pickerState.navBackground(gtx, delta, style.bg)
-		scale := datePickerPressScale(gtx, clickable.History(), disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.bg = pickerState.navBackground(gtx, delta, style.bg, motion)
+		scale := datePickerPressScale(gtx, clickable.History(), disabled, motion)
 		stack := render.Scale(size, scale).Push(gtx.Ops)
 		drawDatePickerNavButton(gtx, size, delta, style)
 		stack.Pop()
@@ -636,8 +637,9 @@ func (d DatePickerWidget) layoutPickerCell(ctx *frame.Context, gtx layout.Contex
 				style.fg = frame.ActiveTheme(ctx).Palette.AccentSoftForeground
 			}
 		}
-		style.bg = state.background(gtx, style.bg)
-		scale := datePickerPressScale(gtx, state.clickable.History(), disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.bg = state.background(gtx, style.bg, motion)
+		scale := datePickerPressScale(gtx, state.clickable.History(), disabled, motion)
 		stack := render.Scale(size, scale).Push(gtx.Ops)
 		drawDatePickerCell(gtx, size, style)
 		layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -720,20 +722,21 @@ func (d DatePickerWidget) layoutDay(ctx *frame.Context, gtx layout.Context, pick
 				style.fg = frame.ActiveTheme(ctx).Palette.AccentSoftForeground
 			}
 		}
-		style.bg = dayState.background(gtx, style.bg)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.bg = dayState.background(gtx, style.bg, motion)
 		if rangeSelected {
 			startRadius, endRadius := 0, 0
 			if column == 0 {
-				startRadius = gtx.Dp(unit.Dp(8))
+				startRadius = gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.RangeRadius)
 			}
 			if column == 6 {
-				endRadius = gtx.Dp(unit.Dp(8))
+				endRadius = gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.RangeRadius)
 			}
 			if !day.outside && previousOutside {
-				startRadius = gtx.Dp(unit.Dp(8))
+				startRadius = gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.RangeRadius)
 			}
 			if !day.outside && nextOutside {
-				endRadius = gtx.Dp(unit.Dp(8))
+				endRadius = gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.RangeRadius)
 			}
 			if selectionStart {
 				startRadius = size.Y / 2
@@ -748,7 +751,7 @@ func (d DatePickerWidget) layoutDay(ctx *frame.Context, gtx layout.Context, pick
 			}
 			drawDatePickerRangeTrack(gtx, trackColor, size, startRadius, endRadius)
 		}
-		scale := datePickerPressScale(gtx, dayState.clickable.History(), disabled)
+		scale := datePickerPressScale(gtx, dayState.clickable.History(), disabled, motion)
 		stack := render.Scale(size, scale).Push(gtx.Ops)
 		drawDatePickerCell(gtx, size, style)
 		layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {

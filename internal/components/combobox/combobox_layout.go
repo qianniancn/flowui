@@ -77,7 +77,7 @@ func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, co
 		if !c.disabled {
 			pointer.CursorPointer.Add(gtx.Ops)
 		}
-		drawComboBoxChevron(gtx, frame.ActiveTheme(ctx), triggerSize, comboState.iconProgress(gtx, comboState.open), style.Placeholder)
+		drawComboBoxChevron(gtx, frame.ActiveTheme(ctx), triggerSize, comboState.iconProgress(gtx, comboState.open, frame.ActiveTheme(ctx).Motion), style.Placeholder)
 		return layout.Dimensions{Size: triggerSize}
 	})
 	stack.Pop()
@@ -234,15 +234,16 @@ func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, combo
 		macro := op.Record(gtx.Ops)
 		contentGtx := gtx
 		contentGtx.Constraints.Min.Y = 0
-		contentDims := c.layoutItemContent(ctx, contentGtx, item, itemState.Selection(gtx, selected, comboBoxItemSelectDuration))
+		motion := frame.ActiveTheme(ctx).Motion
+		contentDims := c.layoutItemContent(ctx, contentGtx, item, itemState.Selection(gtx, selected, comboBoxItemSelectDuration, motion))
 		call := macro.Stop()
 		size, contentOffset := comboBoxItemFrame(gtx.Constraints, minHeight, contentDims.Size)
 		dims := contentDims
 		dims.Size = size
 		dims.Baseline += max(size.Y-contentOffset.Y-contentDims.Size.Y, 0)
 		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.Clickable.Hovered() || highlighted, itemState.Clickable.Pressed(), item.Disabled)
-		style.bg = itemState.Background(gtx, style.bg, comboBoxItemColorDuration)
-		scale := optionrow.PressScale(gtx, itemState.Clickable.History(), item.Disabled, 0.98, comboBoxItemPressInDuration, comboBoxItemPressDuration)
+		style.bg = itemState.Background(gtx, style.bg, comboBoxItemColorDuration, motion)
+		scale := optionrow.PressScale(gtx, itemState.Clickable.History(), item.Disabled, 0.98, comboBoxItemPressInDuration, comboBoxItemPressDuration, motion)
 		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
 		drawComboBoxItem(gtx, frame.ActiveTheme(ctx), dims.Size, style)
 		offset := op.Offset(contentOffset).Push(gtx.Ops)

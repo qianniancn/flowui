@@ -72,7 +72,7 @@ func (picker ColorPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) l
 		triggerGtx = triggerGtx.Disabled()
 	}
 	dimensions := picker.layoutTrigger(ctx, triggerGtx, pickerState, enabled)
-	progress := pickerState.popoverProgress(gtx, pickerState.open && enabled)
+	progress := pickerState.popoverProgress(gtx, pickerState.open && enabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 && !pickerState.open {
 		return dimensions
 	}

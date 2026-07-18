@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotColorPicker = "color-picker"
@@ -40,14 +41,14 @@ type colorControlState struct {
 	focus    state.FocusAnimation
 }
 
-func (pickerState *colorPickerState) popoverProgress(gtx layout.Context, open bool) float32 {
+func (pickerState *colorPickerState) popoverProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	duration := colorPickerExitDuration
 	if open {
 		target = 1
 		duration = colorPickerEnterDuration
 	}
-	return pickerState.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return pickerState.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
 func (pickerState *colorPickerState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context) {
@@ -247,7 +248,7 @@ func (control *colorControlState) updateAxis(ctx *frame.Context, gtx layout.Cont
 
 func (control *colorControlState) focusOpacity(ctx *frame.Context, gtx layout.Context) float32 {
 	visible := frame.FocusVisible(ctx, control, gtx.Focused(control))
-	return control.focus.Opacity(gtx, visible)
+	return control.focus.Opacity(gtx, visible, frame.ActiveTheme(ctx).Motion)
 }
 
 func colorAreaPosition(position f32.Point, size image.Point) (float64, float64) {

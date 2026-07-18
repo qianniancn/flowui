@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -179,7 +180,7 @@ func (s *menubarState) observeOpen(ctx *frame.Context, key string) {
 	s.wasOpen = open
 }
 
-func (s *menubarState) progress(gtx layout.Context, open bool) float32 {
+func (s *menubarState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	duration := menubarExit
 	if open {
@@ -187,7 +188,7 @@ func (s *menubarState) progress(gtx layout.Context, open bool) float32 {
 		duration = menubarEnter
 	}
 	s.transition.Initialize(0, gtx.Now)
-	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
 func (s *menubarState) updateInteractions(ctx *frame.Context, gtx layout.Context, widget Widget) {

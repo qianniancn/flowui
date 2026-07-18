@@ -103,7 +103,7 @@ func (p PopoverWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	}
 
 	state := popoverStateFor(ctx, p.key)
-	progress := state.progress(gtx, p.open)
+	progress := state.progress(gtx, p.open, frame.ActiveTheme(ctx).Motion)
 	if !p.open && progress <= 0 {
 		deletePopoverState(ctx, fullKey)
 		return triggerDims

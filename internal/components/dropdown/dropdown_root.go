@@ -49,7 +49,7 @@ func (d Widget) layoutRoot(ctx *frame.Context, gtx layout.Context) layout.Dimens
 		})
 	}
 
-	progress := state.progress(gtx, open && !d.disabled)
+	progress := state.progress(gtx, open && !d.disabled, frame.ActiveTheme(ctx).Motion)
 	if progress > 0 && !state.triggerRect.Empty() {
 		d.registerRootOverlay(ctx, state, open, progress, !gtx.Enabled())
 	}
@@ -211,7 +211,7 @@ func (d Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *dro
 		call := macro.Stop()
 		size := gtx.Constraints.Constrain(childDims.Size)
 		focusVisible := frame.FocusVisible(ctx, &state.trigger, gtx.Focused(&state.trigger))
-		focus := state.triggerFocus.Opacity(animGtx, focusVisible && !d.disabled)
+		focus := state.triggerFocus.Opacity(animGtx, focusVisible && !d.disabled, frame.ActiveTheme(ctx).Motion)
 		scale := dropdownTriggerScale(animGtx, state.trigger.History(), frame.ActiveTheme(ctx), d.disabled)
 		transform := render.Scale(size, scale).Push(gtx.Ops)
 		call.Add(gtx.Ops)

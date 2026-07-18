@@ -110,8 +110,9 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 		}
 		focusVisible := frame.FocusVisible(ctx, &componentState.value, gtx.Focused(&componentState.value))
 		style := switchStyleFor(frame.ActiveTheme(ctx), componentState.value.Hovered(), componentState.value.Pressed(), disabled, s.invalid)
-		style.selected = componentState.selection(animGtx, componentState.value.Value)
-		style.focus = componentState.focusOpacity(animGtx, focusVisible && !disabled)
+		motion := frame.ActiveTheme(ctx).Motion
+		style.selected = componentState.selection(animGtx, componentState.value.Value, motion)
+		style.focus = componentState.focusOpacity(animGtx, focusVisible && !disabled, motion)
 		return s.layoutContent(ctx, gtx, style, switchSizeStyleFor(frame.ActiveTheme(ctx), s.size), componentState.value.Value)
 	})
 	if !disabled && componentState.value.Value != s.checked && s.onChange != nil {

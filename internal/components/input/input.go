@@ -115,8 +115,9 @@ func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 
 	focused := gtx.Focused(editor)
 	style := inputStyleFor(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, disabled, i.invalid)
-	style.Background = state.Background(gtx, style.Background)
-	style.Ring = state.BorderColor(gtx, style.Ring)
+	motion := frame.ActiveTheme(ctx).Motion
+	style.Background = state.Background(gtx, style.Background, motion)
+	style.Ring = state.BorderColor(gtx, style.Ring, motion)
 
 	return i.layoutFrame(ctx, gtx, state, style, enabled, i.editorLayout(ctx, key, enabled, editor, style))
 }

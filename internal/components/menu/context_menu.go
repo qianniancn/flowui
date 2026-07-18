@@ -99,7 +99,7 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 		})
 	}
 
-	progress := state.progress(gtx, open && !c.disabled)
+	progress := state.progress(gtx, open && !c.disabled, frame.ActiveTheme(ctx).Motion)
 	if progress > 0 && state.hasAnchor {
 		c.registerOverlay(ctx, state, open, progress, !gtx.Enabled())
 	}

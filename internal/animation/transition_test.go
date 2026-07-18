@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func TestLocalTransitionsTrackTargets(t *testing.T) {
@@ -36,5 +37,25 @@ func TestLocalTransitionsTrackTargets(t *testing.T) {
 	gtx.Now = start.Add(501 * time.Millisecond)
 	if got := colors.Value(gtx, to, time.Second, EaseLinear); got.R != 60 {
 		t.Fatalf("mid color = %#v, want red 60", got)
+	}
+}
+
+func TestLocalTransitionsRespectMotionTheme(t *testing.T) {
+	start := time.Unix(1, 0)
+	gtx := layout.Context{Ops: new(op.Ops), Now: start}
+	motion := theme.MotionTheme{Enabled: false, DurationScale: 1}
+	var scalar FloatTransition
+	scalar.Value(gtx, 0, time.Second, EaseLinear, motion)
+	gtx.Now = start.Add(time.Millisecond)
+	if got := scalar.Value(gtx, 1, time.Second, EaseLinear, motion); got != 1 {
+		t.Fatalf("disabled motion float = %v, want 1", got)
+	}
+
+	var colors ColorTransition
+	from := color.NRGBA{R: 10, A: 255}
+	to := color.NRGBA{R: 110, A: 255}
+	colors.Value(gtx, from, time.Second, EaseLinear, motion)
+	if got := colors.Value(gtx, to, time.Second, EaseLinear, motion); got != to {
+		t.Fatalf("disabled motion color = %#v, want %#v", got, to)
 	}
 }

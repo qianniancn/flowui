@@ -157,7 +157,7 @@ func (s SplitPaneWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	s.layoutChild(ctx, gtx, s.second, secondSize, secondOffset)
 
 	focusVisible := frame.FocusVisible(ctx, value, gtx.Focused(value))
-	focusOpacity := value.focus.Opacity(gtx, focusVisible && enabled)
+	focusOpacity := value.focus.Opacity(gtx, focusVisible && enabled, frame.ActiveTheme(ctx).Motion)
 	drawSplitPaneDivider(ctx, gtx, axis, size, first, divider, value.hovered, value.dragging, focusOpacity, s.disabled || !gtx.Enabled())
 	s.addHandle(gtx, value, enabled, axis, size, first, divider, max(gtx.Dp(tokens.HitSize), divider))
 	return layout.Dimensions{Size: size}

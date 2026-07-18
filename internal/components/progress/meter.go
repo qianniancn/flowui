@@ -111,7 +111,7 @@ func (m MeterWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	meterState := meterStateFor(ctx, m.key)
 	style := meterStyleFor(frame.ActiveTheme(ctx), m.color, m.disabled)
 	sizeStyle := meterSizeStyleFor(frame.ActiveTheme(ctx), m.size)
-	progress := meterState.progress(gtx, m.ratio(), false)
+	progress := meterState.progress(gtx, m.ratio(), false, frame.ActiveTheme(ctx).Motion)
 	output := m.outputText()
 
 	macro := op.Record(gtx.Ops)

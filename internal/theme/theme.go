@@ -2,6 +2,7 @@ package theme
 
 import (
 	"image/color"
+	"math"
 	"time"
 
 	"gioui.org/unit"
@@ -28,6 +29,20 @@ type MotionTheme struct {
 	DefaultDuration time.Duration
 	// DurationScale scales animation time globally. Zero disables motion.
 	DurationScale float32
+}
+
+// ResolveMotionDuration applies the active motion policy to a transition.
+// A non-positive result means the transition should snap to its target.
+func ResolveMotionDuration(motion MotionTheme, duration time.Duration) time.Duration {
+	if !motion.Enabled || duration <= 0 || motion.DurationScale <= 0 ||
+		math.IsNaN(float64(motion.DurationScale)) || math.IsInf(float64(motion.DurationScale), 0) {
+		return 0
+	}
+	scaled := time.Duration(float64(duration) * float64(motion.DurationScale))
+	if scaled <= 0 {
+		return 0
+	}
+	return scaled
 }
 
 type Palette struct {
@@ -208,6 +223,8 @@ type LabelTheme struct {
 }
 
 type ButtonTheme struct {
+	Radius             unit.Dp
+	BorderWidth        unit.Dp
 	ContentGap         unit.Dp
 	FocusRingWidth     unit.Dp
 	SpinnerSmall       unit.Dp
@@ -470,23 +487,36 @@ type ListBoxTheme struct {
 }
 
 type TreeTheme struct {
-	Padding              unit.Dp
-	Gap                  unit.Dp
-	MaxHeight            unit.Dp
-	RowHeight            unit.Dp
-	DescriptionRowHeight unit.Dp
-	RowRadius            unit.Dp
-	RowPaddingX          unit.Dp
-	RowPaddingY          unit.Dp
-	Indent               unit.Dp
-	ChevronSlotSize      unit.Dp
-	ChevronIconSize      unit.Dp
-	ContentGap           unit.Dp
-	ItemTextSize         unit.Sp
-	ItemDescriptionSize  unit.Sp
-	FocusRingWidth       unit.Dp
-	PressedScale         float32 // Deprecated: Tree rows no longer scale when pressed.
-	SurfaceRadius        unit.Dp
+	Padding                   unit.Dp
+	Gap                       unit.Dp
+	MaxHeight                 unit.Dp
+	RowHeight                 unit.Dp
+	DescriptionRowHeight      unit.Dp
+	RowRadius                 unit.Dp
+	RowPaddingX               unit.Dp
+	RowPaddingY               unit.Dp
+	Indent                    unit.Dp
+	ChevronSlotSize           unit.Dp
+	ChevronIconSize           unit.Dp
+	ContentGap                unit.Dp
+	ItemTextSize              unit.Sp
+	ItemDescriptionSize       unit.Sp
+	FocusRingWidth            unit.Dp
+	PressedScale              float32 // Deprecated: Tree rows no longer scale when pressed.
+	SurfaceRadius             unit.Dp
+	SmallPadding              unit.Dp
+	SmallGap                  unit.Dp
+	SmallRowHeight            unit.Dp
+	SmallDescriptionRowHeight unit.Dp
+	SmallRowRadius            unit.Dp
+	SmallRowPaddingX          unit.Dp
+	SmallRowPaddingY          unit.Dp
+	SmallIndent               unit.Dp
+	SmallChevronSlotSize      unit.Dp
+	SmallChevronIconSize      unit.Dp
+	SmallContentGap           unit.Dp
+	SmallItemTextSize         unit.Sp
+	SmallItemDescriptionSize  unit.Sp
 }
 
 type SidebarTheme struct {
@@ -586,6 +616,7 @@ type PaginationTheme struct {
 	SmallSize      unit.Dp
 	MediumSize     unit.Dp
 	LargeSize      unit.Dp
+	Radius         unit.Dp
 	SmallTextSize  unit.Sp
 	MediumTextSize unit.Sp
 	LargeTextSize  unit.Sp
@@ -595,6 +626,7 @@ type PaginationTheme struct {
 	IconSize       unit.Dp
 	ItemGap        unit.Dp
 	ContentGap     unit.Dp
+	NavGap         unit.Dp
 	FocusRingWidth unit.Dp
 	CompactWidth   unit.Dp
 }
@@ -922,6 +954,7 @@ type ComboBoxTheme struct {
 type DatePickerTheme struct {
 	Height             unit.Dp
 	Radius             unit.Dp
+	RangeRadius        unit.Dp
 	TextSize           unit.Sp
 	FieldGap           unit.Dp
 	SegmentHeight      unit.Dp
@@ -1093,6 +1126,8 @@ func DefaultTheme() Theme {
 		},
 		Components: ComponentsTheme{
 			Button: ButtonTheme{
+				Radius:             24,
+				BorderWidth:        1,
 				ContentGap:         8,
 				FocusRingWidth:     2,
 				SpinnerSmall:       14,
@@ -1373,23 +1408,36 @@ func DefaultTheme() Theme {
 				PressedScale:          0.98,
 			},
 			Tree: TreeTheme{
-				Padding:              4,
-				Gap:                  4,
-				MaxHeight:            320,
-				RowHeight:            36,
-				DescriptionRowHeight: 52,
-				RowRadius:            16,
-				RowPaddingX:          8,
-				RowPaddingY:          6,
-				Indent:               20,
-				ChevronSlotSize:      20,
-				ChevronIconSize:      16,
-				ContentGap:           8,
-				ItemTextSize:         14,
-				ItemDescriptionSize:  12,
-				FocusRingWidth:       2,
-				PressedScale:         0.98,
-				SurfaceRadius:        24,
+				Padding:                   4,
+				Gap:                       4,
+				MaxHeight:                 320,
+				RowHeight:                 36,
+				DescriptionRowHeight:      52,
+				RowRadius:                 16,
+				RowPaddingX:               8,
+				RowPaddingY:               6,
+				Indent:                    20,
+				ChevronSlotSize:           20,
+				ChevronIconSize:           16,
+				ContentGap:                8,
+				ItemTextSize:              14,
+				ItemDescriptionSize:       12,
+				FocusRingWidth:            2,
+				PressedScale:              0.98,
+				SurfaceRadius:             24,
+				SmallPadding:              2,
+				SmallGap:                  1,
+				SmallRowHeight:            24,
+				SmallDescriptionRowHeight: 40,
+				SmallRowRadius:            4,
+				SmallRowPaddingX:          4,
+				SmallRowPaddingY:          2,
+				SmallIndent:               12,
+				SmallChevronSlotSize:      16,
+				SmallChevronIconSize:      12,
+				SmallContentGap:           5,
+				SmallItemTextSize:         13,
+				SmallItemDescriptionSize:  11,
 			},
 			Sidebar: SidebarTheme{
 				Width:                 248,
@@ -1481,6 +1529,7 @@ func DefaultTheme() Theme {
 				SmallSize:      28,
 				MediumSize:     32,
 				LargeSize:      36,
+				Radius:         24,
 				SmallTextSize:  12,
 				MediumTextSize: 14,
 				LargeTextSize:  16,
@@ -1490,6 +1539,7 @@ func DefaultTheme() Theme {
 				IconSize:       14,
 				ItemGap:        4,
 				ContentGap:     16,
+				NavGap:         6,
 				FocusRingWidth: 2,
 				CompactWidth:   520,
 			},
@@ -1829,6 +1879,7 @@ func DefaultTheme() Theme {
 			DatePicker: DatePickerTheme{
 				Height:             36,
 				Radius:             12,
+				RangeRadius:        8,
 				TextSize:           14,
 				FieldGap:           4,
 				SegmentHeight:      24,

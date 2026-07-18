@@ -150,11 +150,11 @@ func (d DateRangePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) la
 		!componentState.end.valid ||
 		invalidDateRange(d.value, d.minDate, d.maxDate)
 	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, componentState.hovered() && !focused, inputFocused, !enabled, invalid)
-	style.Background = componentState.input.Background(gtx, style.Background)
-	style.Border = componentState.input.BorderColor(gtx, style.Border)
+	style.Background = componentState.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
+	style.Border = componentState.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
 	dims, anchor := d.layoutField(ctx, gtx, componentState, style, enabled, invalid)
 
-	progress := componentState.calendar.popoverProgress(gtx, componentState.calendar.open && enabled)
+	progress := componentState.calendar.popoverProgress(gtx, componentState.calendar.open && enabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 && (!componentState.calendar.open || !enabled) {
 		componentState.calendar.endFrame()
 		return dims

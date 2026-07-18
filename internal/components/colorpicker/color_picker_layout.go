@@ -44,7 +44,7 @@ func (picker ColorPickerWidget) layoutTrigger(ctx *frame.Context, gtx layout.Con
 			call.Add(gtx.Ops)
 		}
 		focusVisible := frame.FocusVisible(ctx, &pickerState.trigger, gtx.Focused(&pickerState.trigger))
-		focus := pickerState.triggerFocus.Opacity(gtx, focusVisible && enabled)
+		focus := pickerState.triggerFocus.Opacity(gtx, focusVisible && enabled, frame.ActiveTheme(ctx).Motion)
 		tokens := frame.ActiveTheme(ctx).Components.ColorPicker
 		drawTriggerFocus(
 			gtx,

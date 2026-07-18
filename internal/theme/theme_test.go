@@ -15,6 +15,15 @@ func TestDefaultMotionTheme(t *testing.T) {
 	}
 }
 
+func TestResolveMotionDuration(t *testing.T) {
+	if got := theme.ResolveMotionDuration(theme.MotionTheme{Enabled: true, DurationScale: 0.5}, time.Second); got != 500*time.Millisecond {
+		t.Fatalf("scaled duration = %v, want 500ms", got)
+	}
+	if got := theme.ResolveMotionDuration(theme.MotionTheme{Enabled: false, DurationScale: 1}, time.Second); got != 0 {
+		t.Fatalf("disabled duration = %v, want 0", got)
+	}
+}
+
 func TestDisabledColorUsesOpacity(t *testing.T) {
 	theme := theme.DefaultTheme()
 	theme.DisabledOpacity = 0.25

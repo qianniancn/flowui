@@ -20,7 +20,7 @@ func buttonStateFor(ctx *frame.Context, key string) *buttonState {
 
 func buttonAnimationScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, size ButtonSize, disabled bool) float32 {
 	target := buttonPressedScale(theme, size)
-	return optionrow.PressScale(gtx, history, disabled, target, buttonPressInDuration, buttonPressOutDuration)
+	return optionrow.PressScale(gtx, history, disabled, target, buttonPressInDuration, buttonPressOutDuration, theme.Motion)
 }
 
 func buttonPressedScale(theme *theme.Theme, size ButtonSize) float32 {
@@ -39,10 +39,10 @@ type buttonState struct {
 	focus                state.FocusAnimation
 }
 
-func (s *buttonState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return s.backgroundTransition.Value(gtx, target, buttonColorDuration, animation.EaseSmoothstep)
+func (s *buttonState) background(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
+	return s.backgroundTransition.Value(gtx, target, buttonColorDuration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *buttonState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	return s.focus.Opacity(gtx, focused)
+func (s *buttonState) focusOpacity(gtx layout.Context, focused bool, motions ...theme.MotionTheme) float32 {
+	return s.focus.Opacity(gtx, focused, motions...)
 }

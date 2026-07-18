@@ -38,7 +38,7 @@ func (i InputWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *
 
 	rect := image.Rectangle{Max: size}
 	radius := min(max(gtx.Dp(tokens.Radius), 1), min(size.X, size.Y)/2)
-	ringWidth := state.RingWidth(gtx, style.RingWidth)
+	ringWidth := state.RingWidth(gtx, style.RingWidth, frame.ActiveTheme(ctx).Motion)
 
 	opacity := paint.PushOpacity(gtx.Ops, style.Opacity)
 	drawInputFrame(gtx, activeTheme, rect, radius, style, ringWidth)

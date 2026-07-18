@@ -176,7 +176,8 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 		cellGtx.Constraints = layout.Exact(image.Pt(columns.selection, size.Y))
 		if t.selectionMode == SelectionMultiple {
 			all, some := t.selectionSummary()
-			selection := stateValue.selectAllSelection.Progress(gtx, all || some)
+			motion := frame.ActiveTheme(ctx).Motion
+			selection := stateValue.selectAllSelection.Progress(gtx, all || some, motion)
 			presses := state.ActivePresses(stateValue.selectAll.History())
 			frame.FocusOnPress(ctx, &stateValue.selectAll, stateValue.selectAll.History(), presses)
 			stateValue.selectAll.Layout(cellGtx, func(gtx layout.Context) layout.Dimensions {
@@ -184,7 +185,7 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 				semantic.LabelOp("Select all rows").Add(gtx.Ops)
 				semantic.SelectedOp(all).Add(gtx.Ops)
 				focusVisible := frame.FocusVisible(ctx, &stateValue.selectAll, gtx.Focused(&stateValue.selectAll))
-				focus := stateValue.selectAllFocus.Opacity(gtx, focusVisible && !t.disabled)
+				focus := stateValue.selectAllFocus.Opacity(gtx, focusVisible && !t.disabled, motion)
 				checkbox.DrawControl(ctx, gtx, checkbox.ControlOptions{
 					Variant: checkbox.CheckboxPrimary, Selection: selection,
 					Indeterminate: some, Hovered: stateValue.selectAll.Hovered(),
@@ -235,7 +236,7 @@ func (t Widget) layoutColumnResizers(ctx *frame.Context, gtx layout.Context, sta
 		}
 		resize := &stateValue.column(column.Key).resize
 		focusVisible := frame.FocusVisible(ctx, resize, gtx.Focused(resize))
-		focus := resize.focus.Opacity(gtx, focusVisible && enabled)
+		focus := resize.focus.Opacity(gtx, focusVisible && enabled, frame.ActiveTheme(ctx).Motion)
 		drawTableColumnResizer(gtx, x, size.Y, baseHeight, activeWidth, baseColor, frame.ActiveTheme(ctx).Palette.Accent, false, focus)
 
 		hit := image.Rect(max(x-hitSize/2, 0), 0, min(x+(hitSize+1)/2, size.X), size.Y)
@@ -278,7 +279,7 @@ func (t Widget) layoutHeaderCell(ctx *frame.Context, gtx layout.Context, stateVa
 			foreground = style.foreground
 		}
 		focused := frame.FocusVisible(ctx, &columnState.clickable, gtx.Focused(&columnState.clickable))
-		focus := columnState.focus.Opacity(gtx, focused && !t.disabled)
+		focus := columnState.focus.Opacity(gtx, focused && !t.disabled, frame.ActiveTheme(ctx).Motion)
 		drawTableCellFocus(gtx, frame.ActiveTheme(ctx), gtx.Constraints.Max, focus, style.focus)
 		return content(gtx, func(gtx layout.Context) layout.Dimensions {
 			return t.layoutSortableHeaderContent(ctx, gtx, column, foreground)
@@ -425,7 +426,8 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 			semantic.SelectedOp(selected).Add(gtx.Ops)
 			semantic.EnabledOp(!disabled).Add(gtx.Ops)
 			rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
-			rowStyle.background = rowState.background.Value(animGtx, rowStyle.background, tableColorDuration, animation.EaseSmoothstep)
+			motion := frame.ActiveTheme(ctx).Motion
+			rowStyle.background = rowState.background.Value(animGtx, rowStyle.background, tableColorDuration, animation.EaseSmoothstep, motion)
 			background := rowStyle.background
 			if background.A == 0 {
 				background = style.body
@@ -439,7 +441,7 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 			recorded := make([]recordedCell, 0, len(row.Cells)+1)
 			rowHeight := t.rowMinHeight(gtx, ctx)
 			if columns.selection > 0 {
-				selection := rowState.selection.Progress(animGtx, selected)
+				selection := rowState.selection.Progress(animGtx, selected, motion)
 				recorded = append(recorded, t.recordSelectionCell(ctx, gtx, columns.selection, selection))
 				rowHeight = max(rowHeight, recorded[len(recorded)-1].dims.Size.Y)
 			}
@@ -450,7 +452,7 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 			rowHeight = min(rowHeight, gtx.Constraints.Max.Y)
 			size := image.Pt(columns.width, rowHeight)
 			focused := frame.FocusVisible(ctx, &rowState.clickable, gtx.Focused(&rowState.clickable))
-			focus := rowState.focus.Opacity(animGtx, focused && !disabled)
+			focus := rowState.focus.Opacity(animGtx, focused && !disabled, motion)
 			opacity := paint.PushOpacity(gtx.Ops, rowStyle.opacity)
 			showSeparator := t.variant == VariantSecondary || !last
 			if t.gridLinesSet {

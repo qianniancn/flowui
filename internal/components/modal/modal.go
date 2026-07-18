@@ -207,7 +207,7 @@ func (m ModalWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 		return layout.Dimensions{}
 	}
 	state := modalStateFor(ctx, m.key)
-	progress := state.progress(gtx, m.open)
+	progress := state.progress(gtx, m.open, frame.ActiveTheme(ctx).Motion)
 	if m.open && naturallyDisabled {
 		state.focusPending = true
 	}

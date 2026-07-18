@@ -179,7 +179,7 @@ func (w Widget) layoutItem(ctx *frame.Context, gtx layout.Context, sidebarState 
 	selected := item.Key == w.selectedKey
 	style := sidebarItemStyleFor(activeTheme, selected, itemState.clickable.Hovered() && !disabled, itemState.clickable.Pressed() && !disabled, disabled)
 	focusVisible := frame.FocusVisible(ctx, &itemState.clickable, itemGtx.Focused(&itemState.clickable))
-	focus := itemState.focus.Opacity(gtx, focusVisible && !disabled)
+		focus := itemState.focus.Opacity(gtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 
 	trigger := frame.WidgetFunc(func(ctx *frame.Context, triggerGtx layout.Context) layout.Dimensions {
 		triggerGtx.Constraints = layout.Exact(size)

@@ -188,22 +188,22 @@ type radioItemState struct {
 	focus     state.FocusAnimation
 }
 
-func (s *radioItemState) selection(gtx layout.Context, selected bool) float32 {
+func (s *radioItemState) selection(gtx layout.Context, selected bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if selected {
 		target = 1
 	}
-	return s.selected.Value(gtx, target, radioSelectDuration, animation.EaseSmoothstep)
+	return s.selected.Value(gtx, target, radioSelectDuration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *radioItemState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	return s.focus.Opacity(gtx, focused)
+func (s *radioItemState) focusOpacity(gtx layout.Context, focused bool, motions ...theme.MotionTheme) float32 {
+	return s.focus.Opacity(gtx, focused, motions...)
 }
 
-func radioPressScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, disabled bool) float32 {
-	target := theme.Components.RadioGroup.PressedScale
+func radioPressScale(gtx layout.Context, history []widget.Press, activeTheme *theme.Theme, disabled bool) float32 {
+	target := activeTheme.Components.RadioGroup.PressedScale
 	if target <= 0 || target > 1 {
 		target = 0.95
 	}
-	return optionrow.PressScale(gtx, history, disabled, target, radioPressInDuration, radioPressOutDuration)
+	return optionrow.PressScale(gtx, history, disabled, target, radioPressInDuration, radioPressOutDuration, activeTheme.Motion)
 }

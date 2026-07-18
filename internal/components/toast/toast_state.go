@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotToast = "toast"
@@ -201,12 +202,12 @@ func (s *toastProviderState) addRegionInput(gtx layout.Context, bounds image.Rec
 	area.Pop()
 }
 
-func (s *toastProviderState) expansionProgress(gtx layout.Context, expanded bool, duration time.Duration) float32 {
+func (s *toastProviderState) expansionProgress(gtx layout.Context, expanded bool, duration time.Duration, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if expanded {
 		target = 1
 	}
-	s.expansionValue = s.expansion.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
+	s.expansionValue = s.expansion.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep, motions...)
 	return s.expansionValue
 }
 
@@ -287,7 +288,7 @@ func (e *toastEntryState) requestClose(providerClose func(string)) {
 	}
 }
 
-func (e *toastEntryState) progress(gtx layout.Context, duration time.Duration) float32 {
+func (e *toastEntryState) progress(gtx layout.Context, duration time.Duration, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if e.present && !e.closeRequested {
 		target = 1
@@ -295,10 +296,10 @@ func (e *toastEntryState) progress(gtx layout.Context, duration time.Duration) f
 	if !e.progressTransition.Ready() {
 		e.progressTransition.Initialize(0, gtx.Now)
 	}
-	e.value = e.progressTransition.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
+	e.value = e.progressTransition.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep, motions...)
 	return e.value
 }
 
-func (e *toastEntryState) stackPosition(gtx layout.Context, target float32, duration time.Duration) float32 {
-	return e.stack.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
+func (e *toastEntryState) stackPosition(gtx layout.Context, target float32, duration time.Duration, motions ...theme.MotionTheme) float32 {
+	return e.stack.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep, motions...)
 }

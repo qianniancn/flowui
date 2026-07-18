@@ -72,13 +72,14 @@ func (b CloseButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	focused := gtx.Focused(clickable)
 	focusVisible := frame.FocusVisible(ctx, clickable, focused)
 	style := closeButtonStyleFor(frame.ActiveTheme(ctx), clickable.Hovered(), !enabled)
-	style.background = buttonState.background(animGtx, style.background)
-	style.focusOpacity = buttonState.focus.Opacity(animGtx, focusVisible && enabled)
+	motion := frame.ActiveTheme(ctx).Motion
+	style.background = buttonState.background(animGtx, style.background, motion)
+	style.focusOpacity = buttonState.focus.Opacity(animGtx, focusVisible && enabled, motion)
 	targetScale := float32(1)
 	if clickable.Pressed() && enabled {
 		targetScale = closeButtonPressedScale(style.pressedScale)
 	}
-	scale := buttonState.scale(animGtx, targetScale)
+	scale := buttonState.scale(animGtx, targetScale, motion)
 
 	if !enabled {
 		semanticClip := clip.Rect{Max: size}.Push(gtx.Ops)

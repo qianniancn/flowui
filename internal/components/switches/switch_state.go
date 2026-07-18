@@ -6,6 +6,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotSwitch = "switch"
@@ -21,14 +22,14 @@ type switchState struct {
 	focus    state.FocusAnimation
 }
 
-func (s *switchState) selection(gtx layout.Context, checked bool) float32 {
+func (s *switchState) selection(gtx layout.Context, checked bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if checked {
 		target = 1
 	}
-	return s.selected.Value(gtx, target, switchSelectDuration, animation.EaseSmoothstep)
+	return s.selected.Value(gtx, target, switchSelectDuration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *switchState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	return s.focus.Opacity(gtx, focused)
+func (s *switchState) focusOpacity(gtx layout.Context, focused bool, motions ...theme.MotionTheme) float32 {
+	return s.focus.Opacity(gtx, focused, motions...)
 }

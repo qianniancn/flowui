@@ -16,5 +16,5 @@ func menuItemScale(gtx layout.Context, history []widget.Press, activeTheme *them
 	if target == 0 {
 		target = 0.98
 	}
-	return optionrow.PressScale(gtx, history, disabled, target, menuItemPressDuration, menuItemPressDuration)
+	return optionrow.PressScale(gtx, history, disabled, target, menuItemPressDuration, menuItemPressDuration, activeTheme.Motion)
 }

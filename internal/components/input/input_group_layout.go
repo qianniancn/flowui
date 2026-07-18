@@ -87,7 +87,7 @@ func (g InputGroupWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, st
 	)
 	size = constraints.Constrain(size)
 	radius := min(max(gtx.Dp(tokens.Radius), 1), min(size.X, size.Y)/2)
-	ringWidth := state.RingWidth(gtx, style.RingWidth)
+	ringWidth := state.RingWidth(gtx, style.RingWidth, frame.ActiveTheme(ctx).Motion)
 
 	opacity := paint.PushOpacity(gtx.Ops, style.Opacity)
 	drawInputGroupFrame(gtx, frame.ActiveTheme(ctx), image.Rectangle{Max: size}, radius, style, ringWidth)

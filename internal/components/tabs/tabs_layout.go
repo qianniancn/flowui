@@ -257,8 +257,9 @@ func (t TabsWidget) layoutTab(ctx *frame.Context, gtx layout.Context, componentS
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
 
 		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
-		focus := itemState.interaction.Opacity(animGtx, focusVisible && !disabled)
-		progress := itemState.selectionProgress(animGtx, selected)
+		motion := frame.ActiveTheme(ctx).Motion
+		focus := itemState.interaction.Opacity(animGtx, focusVisible && !disabled, motion)
+		progress := itemState.selectionProgress(animGtx, selected, motion)
 		style := tabsItemStyleFor(frame.ActiveTheme(ctx), t.variant, t.color, itemState.clickable.Hovered() && !selected, disabled)
 		if t.separators && t.variant != TabsSecondary && index > 0 && !selected && t.items[index-1].Key != selectedKey {
 			drawTabSeparator(gtx, frame.ActiveTheme(ctx), size, t.orientation, style.separator)

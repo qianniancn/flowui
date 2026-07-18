@@ -106,7 +106,7 @@ func (p ProgressBarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	state := progressBarStateFor(ctx, p.key)
 	style := progressBarStyleFor(frame.ActiveTheme(ctx), p.color, p.disabled)
 	sizeStyle := progressBarSizeStyleFor(frame.ActiveTheme(ctx), p.size)
-	progress := state.progress(gtx, p.ratio(), p.indeterminate)
+	progress := state.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)
 
 	macro := op.Record(gtx.Ops)
 	dims := p.layout(ctx, gtx, style, sizeStyle, progress)

@@ -162,11 +162,11 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	invalid := d.invalid || !state.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
 	hovered := state.hover.hovered || state.segments.hovered() || state.trigger.Hovered()
 	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, hovered && !focused, inputFocused, !enabled, invalid)
-	style.Background = state.input.Background(gtx, style.Background)
-	style.Border = state.input.BorderColor(gtx, style.Border)
+	style.Background = state.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
+	style.Border = state.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
 	dims, anchor := d.layoutField(ctx, gtx, state, style, enabled, invalid)
 
-	progress := state.popoverProgress(gtx, state.open && enabled)
+	progress := state.popoverProgress(gtx, state.open && enabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 && (!state.open || !enabled) {
 		state.endFrame()
 		return dims

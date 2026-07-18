@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotDatePicker = "datepicker"
@@ -159,21 +160,21 @@ func (s *datePickerState) year(key string) *datePickerCellState {
 	return state.UseFrameMap(&s.years, &s.frameYears, key)
 }
 
-func (s *datePickerState) popoverProgress(gtx layout.Context, open bool) float32 {
+func (s *datePickerState) popoverProgress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	duration := datePickerPopoverOutDuration
 	if open {
 		target = 1
 		duration = datePickerPopoverInDuration
 	}
-	return s.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *datePickerState) navBackground(gtx layout.Context, delta int, target color.NRGBA) color.NRGBA {
+func (s *datePickerState) navBackground(gtx layout.Context, delta int, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
 	if delta < 0 {
-		return s.prevBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
+		return s.prevBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep, motions...)
 	}
-	return s.nextBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
+	return s.nextBackground.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep, motions...)
 }
 
 type datePickerCellState struct {
@@ -182,8 +183,8 @@ type datePickerCellState struct {
 	backgroundTransition animation.ColorTransition
 }
 
-func (s *datePickerCellState) background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return s.backgroundTransition.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep)
+func (s *datePickerCellState) background(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
+	return s.backgroundTransition.Value(gtx, target, datePickerCellColorDuration, animation.EaseSmoothstep, motions...)
 }
 
 func (s *datePickerState) hoveredDay() time.Time {
@@ -243,7 +244,7 @@ func datePickerEscapePressed(gtx layout.Context, target event.Tag) bool {
 	}
 }
 
-func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool) float32 {
+func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0.95)
-	return optionrow.PressScale(gtx, history, disabled, target, datePickerPressInDuration, datePickerPressOutDuration)
+	return optionrow.PressScale(gtx, history, disabled, target, datePickerPressInDuration, datePickerPressOutDuration, motions...)
 }

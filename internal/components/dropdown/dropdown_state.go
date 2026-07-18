@@ -12,6 +12,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -137,7 +138,7 @@ func (s *dropdownState) observeOpen(open bool) {
 	s.wasOpen = open
 }
 
-func (s *dropdownState) progress(gtx layout.Context, open bool) float32 {
+func (s *dropdownState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	duration := dropdownExitDuration
 	if open {
@@ -145,5 +146,5 @@ func (s *dropdownState) progress(gtx layout.Context, open bool) float32 {
 		duration = dropdownEnterDuration
 	}
 	s.transition.Initialize(0, gtx.Now)
-	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.transition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }

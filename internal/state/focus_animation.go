@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const focusAnimationDuration = 100 * time.Millisecond
@@ -19,7 +20,7 @@ type FocusAnimation struct {
 	ready bool
 }
 
-func (s *FocusAnimation) Opacity(gtx layout.Context, visible bool) float32 {
+func (s *FocusAnimation) Opacity(gtx layout.Context, visible bool, motions ...theme.MotionTheme) float32 {
 	if !visible {
 		s.value = 0
 		s.from = 0
@@ -46,7 +47,16 @@ func (s *FocusAnimation) Opacity(gtx layout.Context, visible bool) float32 {
 		s.value = s.to
 		return s.value
 	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), focusAnimationDuration))
+	duration := focusAnimationDuration
+	if len(motions) > 0 {
+		duration = theme.ResolveMotionDuration(motions[0], duration)
+	}
+	if duration <= 0 {
+		s.value = s.to
+		s.from = s.to
+		return s.value
+	}
+	progress := render.Ease(render.Progress(gtx.Now.Sub(s.at), duration))
 	if progress < 1 {
 		gtx.Execute(op.InvalidateCmd{})
 	}

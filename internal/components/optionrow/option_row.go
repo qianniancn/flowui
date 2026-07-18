@@ -18,6 +18,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type State struct {
@@ -31,37 +32,47 @@ type FocusableState struct {
 	focus stateutil.FocusAnimation
 }
 
-func (s *State) Background(gtx layout.Context, target color.NRGBA, duration time.Duration) color.NRGBA {
-	return s.background.Value(gtx, target, duration, animation.EaseSmoothstep)
+func (s *State) Background(gtx layout.Context, target color.NRGBA, duration time.Duration, motions ...theme.MotionTheme) color.NRGBA {
+	return s.background.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *State) Selection(gtx layout.Context, selected bool, duration time.Duration) float32 {
+func (s *State) Selection(gtx layout.Context, selected bool, duration time.Duration, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if selected {
 		target = 1
 	}
-	return s.selection.Value(gtx, target, duration, animation.EaseSmoothstep)
+	return s.selection.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
-func (s *FocusableState) FocusOpacity(gtx layout.Context, focused bool) float32 {
-	return s.focus.Opacity(gtx, focused)
+func (s *FocusableState) FocusOpacity(gtx layout.Context, focused bool, motions ...theme.MotionTheme) float32 {
+	return s.focus.Opacity(gtx, focused, motions...)
 }
 
 func (s *FocusableState) FocusTargetOpacity() float32 {
 	return s.focus.TargetOpacity()
 }
 
-func PressScale(gtx layout.Context, history []widget.Press, disabled bool, target float32, pressIn, pressOut time.Duration) float32 {
+func PressScale(gtx layout.Context, history []widget.Press, disabled bool, target float32, pressIn, pressOut time.Duration, motions ...theme.MotionTheme) float32 {
 	if disabled || len(history) == 0 {
 		return 1
 	}
+	if len(motions) > 0 {
+		pressIn = theme.ResolveMotionDuration(motions[0], pressIn)
+		pressOut = theme.ResolveMotionDuration(motions[0], pressOut)
+	}
 	press := history[len(history)-1]
 	if press.End.IsZero() {
+		if pressIn <= 0 {
+			return target
+		}
 		progress := render.Ease(render.Progress(gtx.Now.Sub(press.Start), pressIn))
 		if progress < 1 {
 			gtx.Execute(op.InvalidateCmd{})
 		}
 		return render.Lerp(1, target, progress)
+	}
+	if pressOut <= 0 {
+		return 1
 	}
 	progress := render.Ease(render.Progress(gtx.Now.Sub(press.End), pressOut))
 	if progress < 1 {

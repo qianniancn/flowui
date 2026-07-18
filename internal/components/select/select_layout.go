@@ -98,8 +98,8 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 		value, selected := s.displayValueCached(state)
 		focusVisible := frame.FocusVisible(ctx, &state.trigger, gtx.Focused(&state.trigger))
 		style := selectStyleFor(frame.ActiveTheme(ctx), s.variant, state.trigger.Hovered(), focusVisible, s.disabled, s.invalid)
-		style.field.Background = state.field.Background(animGtx, style.field.Background)
-		style.field.Border = state.field.BorderColor(animGtx, style.field.Border)
+		style.field.Background = state.field.Background(animGtx, style.field.Background, frame.ActiveTheme(ctx).Motion)
+		style.field.Border = state.field.BorderColor(animGtx, style.field.Border, frame.ActiveTheme(ctx).Motion)
 
 		semantic.Button.Add(gtx.Ops)
 		label := s.label
@@ -143,7 +143,7 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 
 		indicatorSize := image.Pt(min(right, size.X), size.Y)
 		indicatorOffset := op.Offset(image.Pt(max(size.X-indicatorSize.X, 0), 0)).Push(gtx.Ops)
-		s.layoutIndicator(ctx, animGtx, indicatorSize, state.iconProgress(animGtx, open), style.field.Placeholder)
+		s.layoutIndicator(ctx, animGtx, indicatorSize, state.iconProgress(animGtx, open, frame.ActiveTheme(ctx).Motion), style.field.Placeholder)
 		indicatorOffset.Pop()
 		return layout.Dimensions{Size: size}
 	})

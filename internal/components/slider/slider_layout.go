@@ -161,7 +161,7 @@ func (s SliderWidget) layoutThumb(ctx *frame.Context, gtx layout.Context, state 
 	thumb := state.thumb(index)
 	rect := geometry.thumbRects[index]
 	focus := thumb.focusOpacity(ctx, gtx, gtx.Focused(&thumb.clickable))
-	scale := thumb.draggingScale(gtx, state.dragging(index), frame.ActiveTheme(ctx).Components.Slider.DraggingScale)
+	scale := thumb.draggingScale(ctx, gtx, state.dragging(index), frame.ActiveTheme(ctx).Components.Slider.DraggingScale)
 	drawSliderThumb(gtx, frame.ActiveTheme(ctx), style, rect, s.axis(), focus, scale)
 
 	stack := op.Offset(rect.Min).Push(gtx.Ops)

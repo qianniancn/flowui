@@ -148,7 +148,7 @@ func TestBarChartDataVersionCachesResolvedData(t *testing.T) {
 }
 
 func TestBarChartDataWindowConstrainsVisibleCategories(t *testing.T) {
-	start, end := visibleCategoryRange(10, chart.DataWindow{Start: 0.25, End: 0.75})
+	start, end := chart.VisibleCategoryRange(10, chart.DataWindow{Start: 0.25, End: 0.75})
 	if start != 2 || end != 8 {
 		t.Fatalf("BarChart visible category range = %d:%d, want 2:8", start, end)
 	}
@@ -547,7 +547,7 @@ func TestBarChartTooltipDisabledClearsInteraction(t *testing.T) {
 }
 
 func TestBarChartTooltipAnchorTracksPointer(t *testing.T) {
-	if got := barTooltipAnchor(f32.Pt(100.4, 79.6)); got != image.Rect(100, 80, 101, 81) {
+	if got := chart.TooltipAnchor(f32.Pt(100.4, 79.6)); got != image.Rect(100, 80, 101, 81) {
 		t.Fatalf("BarChart tooltip anchor = %v", got)
 	}
 }

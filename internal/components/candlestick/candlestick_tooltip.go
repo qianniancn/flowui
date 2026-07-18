@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 
-	"gioui.org/f32"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
@@ -56,8 +55,4 @@ func (w Widget) candlestickTooltipRows(selection chartSelection, interval float6
 		fmt.Sprintf("Low  %s", w.yLabel(selection.candle.low, interval)),
 		fmt.Sprintf("Close  %s", w.yLabel(selection.candle.close, interval)),
 	}
-}
-
-func tooltipAnchor(pointerPosition f32.Point) image.Rectangle {
-	return chart.TooltipAnchor(pointerPosition)
 }

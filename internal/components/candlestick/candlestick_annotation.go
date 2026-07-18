@@ -64,7 +64,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 		if mark.Axis == chart.AxisY {
 			position = image.Pt(max(geometry.plot.Max.X-label.dims.Size.X-4, geometry.plot.Min.X), max(int(from.Y)-label.dims.Size.Y-3, geometry.plot.Min.Y))
 		}
-		placeChartText(gtx, label, clampCandlestickAnnotationLabel(position, label.dims.Size, geometry.plot))
+		placeChartText(gtx, label, chart.ClampLabelPosition(position, label.dims.Size, geometry.plot))
 	}
 
 	pointFallback := activeTheme.Palette.Warning
@@ -76,12 +76,12 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 		pointColor := mark.ResolvedColor(pointFallback)
 		size, custom := chart.LayoutMarkPointContent(ctx, gtx, mark, center, geometry.plot, unit.Dp(9), pointFallback)
 		if !custom {
-			paint.FillShape(gtx.Ops, pointColor, clip.Ellipse(candlestickMarkPointRect(center, size)).Op(gtx.Ops))
+			paint.FillShape(gtx.Ops, pointColor, clip.Ellipse(chart.PointRect(center, size)).Op(gtx.Ops))
 		}
 		if mark.Label != "" {
 			label := recordChartText(ctx, gtx, mark.Label, activeTheme.Components.CandlestickChart.AxisTextSize, font.Medium, style.axisLabel, max(geometry.plot.Dx()/2, 1))
 			position := image.Pt(int(center.X)+size/2+4, int(center.Y)-label.dims.Size.Y/2)
-			placeChartText(gtx, label, clampCandlestickAnnotationLabel(position, label.dims.Size, geometry.plot))
+			placeChartText(gtx, label, chart.ClampLabelPosition(position, label.dims.Size, geometry.plot))
 		}
 	}
 }
@@ -120,12 +120,4 @@ func candlestickMarkEndpoints(mark chart.MarkLine, geometry chartGeometry) (from
 
 func candlestickCategoryX(geometry chartGeometry, value float64) float32 {
 	return float32(geometry.plot.Min.X) + (float32(value)-float32(geometry.categoryStart)+.5)*geometry.bandWidth
-}
-
-func candlestickMarkPointRect(center f32.Point, diameter int) image.Rectangle {
-	return chart.PointRect(center, diameter)
-}
-
-func clampCandlestickAnnotationLabel(position, size image.Point, plot image.Rectangle) image.Point {
-	return chart.ClampLabelPosition(position, size, plot)
 }

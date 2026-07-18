@@ -1,7 +1,6 @@
 package linechart
 
 import (
-	"image"
 	"image/color"
 
 	"gioui.org/f32"
@@ -153,20 +152,16 @@ func drawChartLine(gtx layout.Context, from, to f32.Point, width float32, col co
 }
 
 func drawChartHollowPoint(gtx layout.Context, center f32.Point, diameter int, col, background color.NRGBA) {
-	outer := chartPointRect(center, diameter)
+	outer := chart.PointRect(center, diameter)
 	paint.FillShape(gtx.Ops, col, clip.Ellipse(outer).Op(gtx.Ops))
 	innerSize := max(diameter-4, 2)
-	inner := chartPointRect(center, innerSize)
+	inner := chart.PointRect(center, innerSize)
 	paint.FillShape(gtx.Ops, background, clip.Ellipse(inner).Op(gtx.Ops))
 }
 
 func drawChartEmphasisPoint(gtx layout.Context, center f32.Point, diameter int, col, background color.NRGBA) {
-	outer := chartPointRect(center, diameter+4)
+	outer := chart.PointRect(center, diameter+4)
 	paint.FillShape(gtx.Ops, background, clip.Ellipse(outer).Op(gtx.Ops))
-	inner := chartPointRect(center, diameter)
+	inner := chart.PointRect(center, diameter)
 	paint.FillShape(gtx.Ops, col, clip.Ellipse(inner).Op(gtx.Ops))
-}
-
-func chartPointRect(center f32.Point, diameter int) image.Rectangle {
-	return chart.PointRect(center, diameter)
 }

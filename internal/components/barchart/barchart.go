@@ -323,28 +323,28 @@ func (w Widget) Animation(enabled bool) Widget {
 
 // AnimationDuration sets the initial transition duration.
 func (w Widget) AnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "bar chart")
 	w.animationDuration = duration
 	return w
 }
 
 // AnimationEasing sets the initial transition timing curve.
 func (w Widget) AnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "bar chart")
 	w.animationEasing = easing
 	return w
 }
 
 // UpdateAnimationDuration sets the data-update transition duration.
 func (w Widget) UpdateAnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "bar chart")
 	w.updateAnimationDuration = duration
 	return w
 }
 
 // UpdateAnimationEasing sets the data-update transition timing curve.
 func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "bar chart")
 	w.updateAnimationEasing = easing
 	return w
 }
@@ -458,7 +458,7 @@ func (w Widget) yLabel(value, interval float64) string {
 }
 
 func validateChartRange(minimum, maximum float64) {
-	if !finite(minimum) || !finite(maximum) || maximum <= minimum {
+	if !chart.Finite(minimum) || !chart.Finite(maximum) || maximum <= minimum {
 		panic("flowui: bar chart Y maximum must be greater than minimum")
 	}
 }
@@ -472,17 +472,5 @@ func validateRatio(name string, value float32) {
 func validateNonnegative(name string, value float32) {
 	if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) || value < 0 {
 		panic(fmt.Sprintf("flowui: bar chart %s must be finite and nonnegative", name))
-	}
-}
-
-func validateAnimationDuration(duration time.Duration) {
-	if duration < 0 {
-		panic("flowui: bar chart animation duration must not be negative")
-	}
-}
-
-func validateAnimationEasing(easing animation.Easing) {
-	if easing == nil {
-		panic("flowui: bar chart animation easing must not be nil")
 	}
 }

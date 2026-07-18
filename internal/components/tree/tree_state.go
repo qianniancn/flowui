@@ -17,9 +17,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -415,7 +415,7 @@ type treeItemState struct {
 	clickable widget.Clickable
 	toggle    overlay.ClickArea
 	focus     state.FocusAnimation
-	expansion treeFloatAnimation
+	expansion animation.FloatTransition
 	drag      widget.Draggable
 	dragPress f32.Point
 	dragTag   byte
@@ -752,34 +752,6 @@ func (s *treeState) finishRename(tree Widget, commit bool) {
 	if commit && value != "" && value != original && tree.onRename != nil {
 		tree.onRename(itemKey, value)
 	}
-}
-
-type treeFloatAnimation struct {
-	value float32
-	from  float32
-	to    float32
-	at    time.Time
-	ready bool
-}
-
-func (a *treeFloatAnimation) update(gtx layout.Context, target float32, duration time.Duration) float32 {
-	if !a.ready {
-		a.value, a.from, a.to, a.at, a.ready = target, target, target, gtx.Now, true
-		return target
-	}
-	if target != a.to {
-		a.from, a.to, a.at = a.value, target, gtx.Now
-	}
-	if a.from == a.to {
-		a.value = a.to
-		return a.value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(a.at), duration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	a.value = render.Lerp(a.from, a.to, progress)
-	return a.value
 }
 
 func treeVisibleIndex(visible []flatItem, key string) int {

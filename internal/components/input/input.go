@@ -5,7 +5,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
@@ -158,13 +157,7 @@ func (i InputWidget) editorLayout(ctx *frame.Context, key string, enabled bool, 
 }
 
 func (i InputWidget) editorLayoutWithTypography(ctx *frame.Context, key string, enabled bool, editor *widget.Editor, style inputStyle, textSize, lineHeight unit.Sp) layout.Widget {
-	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, i.hint)
-	editorStyle.TextSize = textSize
-	editorStyle.LineHeight = lineHeight
-	editorStyle.Color = style.Foreground
-	editorStyle.HintColor = style.Placeholder
-	editorStyle.SelectionColor = style.Selection
-	return i.withSemantics(ctx, key, enabled, editorStyle.Layout)
+	return i.withSemantics(ctx, key, enabled, editorLayoutFor(ctx, editor, i.hint, style, textSize, lineHeight))
 }
 
 func inputTypeConfig(inputType InputType) (rune, key.InputHint, string) {

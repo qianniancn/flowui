@@ -187,25 +187,25 @@ func (w Widget) Animation(enabled bool) Widget {
 }
 
 func (w Widget) AnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "pie chart")
 	w.animationDuration = duration
 	return w
 }
 
 func (w Widget) AnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "pie chart")
 	w.animationEasing = easing
 	return w
 }
 
 func (w Widget) UpdateAnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "pie chart")
 	w.updateAnimationDuration = duration
 	return w
 }
 
 func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "pie chart")
 	w.updateAnimationEasing = easing
 	return w
 }
@@ -276,17 +276,5 @@ func validateNonnegativeAngle(name string, value float32) {
 func validateFinite(name string, value float32) {
 	if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
 		panic(fmt.Sprintf("flowui: pie chart %s must be finite", name))
-	}
-}
-
-func validateAnimationDuration(duration time.Duration) {
-	if duration < 0 {
-		panic("flowui: pie chart animation duration must not be negative")
-	}
-}
-
-func validateAnimationEasing(easing animation.Easing) {
-	if easing == nil {
-		panic("flowui: pie chart animation easing must not be nil")
 	}
 }

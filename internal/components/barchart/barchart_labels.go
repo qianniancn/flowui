@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -43,7 +44,7 @@ func (w Widget) layoutAxisLabels(ctx *frame.Context, gtx layout.Context, geometr
 }
 
 func (w Widget) measureCategoryLabelWidth(ctx *frame.Context, gtx layout.Context, data chartData, maxWidth int) int {
-	start, end := visibleCategoryRange(data.categories, w.effectiveDataWindow())
+	start, end := chart.VisibleCategoryRange(data.categories, w.effectiveDataWindow())
 	tokens := frame.ActiveTheme(ctx).Components.BarChart
 	width := 0
 	for index := start; index < end; index++ {

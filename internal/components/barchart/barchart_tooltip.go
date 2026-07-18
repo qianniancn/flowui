@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 
-	"gioui.org/f32"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
@@ -59,8 +58,4 @@ func (w Widget) layoutTooltipContent(ctx *frame.Context, gtx layout.Context, geo
 		rows = append(rows, chart.TooltipRow{Text: fmt.Sprintf("+%d series", len(selection.entries)-limit)})
 	}
 	return chart.LayoutTooltipRows(ctx, gtx, w.categoryLabel(selection.index), rows, tooltipTokens.TextSize, textColor, markerSize, rowGap, chart.TooltipMarkerSquare)
-}
-
-func barTooltipAnchor(pointer f32.Point) image.Rectangle {
-	return chart.TooltipAnchor(pointer)
 }

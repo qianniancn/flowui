@@ -22,7 +22,7 @@ type chartState struct {
 	pointerTag        struct{}
 	hovered           bool
 	pointer           f32.Point
-	animation         pieChartAnimation
+	animation         chart.DataAnimation[chartData]
 	dataCache         chartDataCache
 	legendItems       map[string]*chart.LegendItem
 	legendFrame       map[string]struct{}
@@ -133,9 +133,4 @@ func (s *chartState) clearTooltip() {
 	s.hovered = false
 	s.tooltipTransition.Reset()
 	s.tooltipSlice = resolvedSlice{}
-}
-
-func pieTooltipAnchor(pointerPosition f32.Point) image.Rectangle {
-	position := pointerPosition.Round()
-	return image.Rectangle{Min: position, Max: position.Add(image.Pt(1, 1))}
 }

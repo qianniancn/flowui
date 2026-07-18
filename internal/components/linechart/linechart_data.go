@@ -124,8 +124,8 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 		points := source.resolvedPoints()
 		resolved.points = make([]resolvedPoint, len(points))
 		for pointIndex, point := range points {
-			validX := finite(point.X)
-			valid := validX && finite(point.Y)
+			validX := chart.Finite(point.X)
+			valid := validX && chart.Finite(point.Y)
 			resolved.points[pointIndex] = resolvedPoint{Point: point, rawY: point.Y, valid: valid}
 			if !valid {
 				continue
@@ -169,8 +169,4 @@ func (s Series) resolvedPoints() []Point {
 		points[index] = Point{X: float64(index), Y: value}
 	}
 	return points
-}
-
-func finite(value float64) bool {
-	return chart.Finite(value)
 }

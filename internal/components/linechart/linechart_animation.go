@@ -2,56 +2,23 @@ package linechart
 
 import (
 	"math"
-	"time"
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
-type lineChartAnimation struct {
-	ready     bool
-	revision  uint64
-	from      chartData
-	target    chartData
-	displayed chartData
-	duration  time.Duration
-	easing    animation.Easing
-}
-
 func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *chartState, target chartData) chartData {
-	transition := &state.animation
-	if !transition.ready {
-		transition.ready = true
-		transition.revision = 1
-		transition.from = lineBaselineData(target, w.animationBaseline(target))
-		transition.target = target
-		transition.duration = w.animationDuration
-		transition.easing = w.animationEasing
-	} else if !sameLineTarget(transition.target, target) {
-		transition.revision++
-		transition.from = lineTransitionFrom(transition.displayed, target, w.animationBaseline(target))
-		transition.target = target
-		transition.duration = w.updateAnimationDuration
-		transition.easing = w.updateAnimationEasing
-	} else {
-		transition.target = target
-	}
-
-	progress, running := animation.Tween("data", 1).
-		Initial(0).
-		Revision(transition.revision).
-		Duration(transition.duration).
-		Easing(transition.easing).
-		Disabled(!w.animation || !target.yExtent.Valid).
-		Sample(ctx, gtx)
-	if !running && progress == 1 {
-		transition.from = chartData{}
-		transition.displayed = target
-		return target
-	}
-	transition.displayed = interpolateLineData(transition.from, target, progress, w.animationBaseline(target))
-	return transition.displayed
+	baseline := w.animationBaseline(target)
+	return state.animation.Update(ctx, gtx, target, w.animation && target.yExtent.Valid,
+		w.animationDuration, w.updateAnimationDuration, w.animationEasing, w.updateAnimationEasing,
+		sameLineTarget,
+		func(target chartData) chartData { return lineBaselineData(target, baseline) },
+		func(previous, target chartData) chartData { return lineTransitionFrom(previous, target, baseline) },
+		func(from, target chartData, progress float32) chartData {
+			return interpolateLineData(from, target, progress, baseline)
+		})
 }
 
 func sameLineTarget(previous, target chartData) bool {
@@ -162,7 +129,7 @@ func sameLineGeometry(first, second chartData) bool {
 }
 
 func linePointStackBase(point resolvedPoint, fallback float64) float64 {
-	if point.hasStackBase && finite(point.stackBase) {
+	if point.hasStackBase && chart.Finite(point.stackBase) {
 		return point.stackBase
 	}
 	return fallback

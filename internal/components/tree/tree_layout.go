@@ -15,6 +15,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/components/spinner"
@@ -117,7 +118,7 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 	if expanded {
 		expansionTarget = 1
 	}
-	expansion := itemState.expansion.update(animGtx, expansionTarget, treeExpandDuration)
+	expansion := itemState.expansion.Value(animGtx, expansionTarget, treeExpandDuration, animation.EaseSmoothstep)
 
 	macro := op.Record(gtx.Ops)
 	func() {

@@ -215,15 +215,6 @@ func sidebarEntryIndex(entries []entry, key string) int {
 	return -1
 }
 
-func sidebarContainsKey(keys []string, key string) bool {
-	for _, current := range keys {
-		if current == key {
-			return true
-		}
-	}
-	return false
-}
-
 func validateSidebarItems(items []Item) {
 	seen := make(map[string]struct{}, len(items))
 	for _, item := range items {

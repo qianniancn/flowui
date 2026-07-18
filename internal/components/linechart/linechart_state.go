@@ -20,7 +20,7 @@ type chartState struct {
 	pointerTag        struct{}
 	hovered           bool
 	pointer           f32.Point
-	animation         lineChartAnimation
+	animation         chart.DataAnimation[chartData]
 	dataCache         chartDataCache
 	legendItems       map[string]*chart.LegendItem
 	legendFrame       map[string]struct{}

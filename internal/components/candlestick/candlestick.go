@@ -137,7 +137,7 @@ func (w Widget) Crosshair(show bool) Widget {
 }
 
 func (w Widget) YRange(minimum, maximum float64) Widget {
-	if !finite(minimum) || !finite(maximum) || maximum <= minimum {
+	if !chart.Finite(minimum) || !chart.Finite(maximum) || maximum <= minimum {
 		panic("flowui: candlestick chart Y maximum must be greater than minimum")
 	}
 	w.yMin, w.yMax, w.hasYRange = minimum, maximum, true
@@ -212,25 +212,25 @@ func (w Widget) Animation(enabled bool) Widget {
 }
 
 func (w Widget) AnimationDuration(duration time.Duration) Widget {
-	validateDuration(duration)
+	chart.ValidateAnimationDuration(duration, "candlestick chart")
 	w.animationDuration = duration
 	return w
 }
 
 func (w Widget) AnimationEasing(easing animation.Easing) Widget {
-	validateEasing(easing)
+	chart.ValidateAnimationEasing(easing, "candlestick chart")
 	w.animationEasing = easing
 	return w
 }
 
 func (w Widget) UpdateAnimationDuration(duration time.Duration) Widget {
-	validateDuration(duration)
+	chart.ValidateAnimationDuration(duration, "candlestick chart")
 	w.updateAnimationDuration = duration
 	return w
 }
 
 func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
-	validateEasing(easing)
+	chart.ValidateAnimationEasing(easing, "candlestick chart")
 	w.updateAnimationEasing = easing
 	return w
 }
@@ -387,20 +387,4 @@ func (w Widget) yLabel(value, interval float64) string {
 		return w.formatY(value)
 	}
 	return chart.FormatAxisNumber(value, interval)
-}
-
-func finite(value float64) bool {
-	return chart.Finite(value)
-}
-
-func validateDuration(duration time.Duration) {
-	if duration < 0 {
-		panic("flowui: candlestick chart animation duration must not be negative")
-	}
-}
-
-func validateEasing(easing animation.Easing) {
-	if easing == nil {
-		panic("flowui: candlestick chart animation easing must not be nil")
-	}
 }

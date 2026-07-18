@@ -194,7 +194,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		w.layoutEmpty(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, barTooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, chart.TooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		position := image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0))
@@ -232,7 +232,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, yScale.Interval), pixel: geometry.mapY(value)})
 	}
 	if data.categories > 0 {
-		geometry.categoryStart, geometry.categoryEnd = visibleCategoryRange(data.categories, w.effectiveDataWindow())
+		geometry.categoryStart, geometry.categoryEnd = chart.VisibleCategoryRange(data.categories, w.effectiveDataWindow())
 		visibleCount := geometry.categoryEnd - geometry.categoryStart
 		bandExtent := plot.Dx()
 		if geometry.horizontal {
@@ -298,10 +298,6 @@ func (w Widget) resolveSelection(data chartData, geometry chartGeometry, index i
 		}
 	}
 	return selection
-}
-
-func visibleCategoryRange(count int, window chart.DataWindow) (int, int) {
-	return chart.VisibleCategoryRange(count, window)
 }
 
 func (w Widget) publicSelection(selection chartSelection, _ chartGeometry) chart.Selection {

@@ -8,26 +8,17 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 )
 
 const colorDuration = 150 * time.Millisecond
 
 type State struct {
-	Hovered     bool
-	bg          color.NRGBA
-	bgFrom      color.NRGBA
-	bgTo        color.NRGBA
-	bgAt        time.Time
-	bgReady     bool
-	border      color.NRGBA
-	borderFrom  color.NRGBA
-	borderTo    color.NRGBA
-	borderAt    time.Time
-	borderReady bool
+	Hovered bool
+	bg      animation.ColorTransition
+	border  animation.ColorTransition
 }
 
 func (s *State) Update(ctx *frame.Context, gtx layout.Context, disabled bool, tag event.Tag) {
@@ -75,35 +66,9 @@ func (s *State) AddPointer(gtx layout.Context, size image.Point, disabled bool) 
 }
 
 func (s *State) Background(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return animateColor(gtx, target, &s.bg, &s.bgFrom, &s.bgTo, &s.bgAt, &s.bgReady)
+	return s.bg.Value(gtx, target, colorDuration, animation.EaseSmoothstep)
 }
 
 func (s *State) BorderColor(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	return animateColor(gtx, target, &s.border, &s.borderFrom, &s.borderTo, &s.borderAt, &s.borderReady)
-}
-
-func animateColor(gtx layout.Context, target color.NRGBA, value, from, to *color.NRGBA, at *time.Time, ready *bool) color.NRGBA {
-	if !*ready {
-		*value = target
-		*from = target
-		*to = target
-		*at = gtx.Now
-		*ready = true
-		return target
-	}
-	if target != *to {
-		*from = *value
-		*to = target
-		*at = gtx.Now
-	}
-	if *from == *to {
-		*value = *to
-		return *value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(*at), colorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	*value = render.LerpColor(*from, *to, progress)
-	return *value
+	return s.border.Value(gtx, target, colorDuration, animation.EaseSmoothstep)
 }

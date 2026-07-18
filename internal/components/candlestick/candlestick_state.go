@@ -20,7 +20,7 @@ type chartState struct {
 	hovered           bool
 	pointer           f32.Point
 	windowGesture     chart.DataWindowGesture
-	animation         candlestickAnimation
+	animation         chart.DataAnimation[chartData]
 	dataCache         chartDataCache
 	tooltipTransition tooltip.PopupTransition
 	tooltipSelection  chartSelection

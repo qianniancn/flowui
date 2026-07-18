@@ -173,7 +173,7 @@ func TestCandlestickChartUsesEChartsWidthAndWindowRules(t *testing.T) {
 	if got := New("chart", nil).Width(18).resolveCandleWidth(20, testDp); got != 18 {
 		t.Fatalf("explicit candle width = %v, want 18", got)
 	}
-	start, end := visibleCategoryRange(10, chart.DataWindow{Start: .25, End: .75})
+	start, end := chart.VisibleCategoryRange(10, chart.DataWindow{Start: .25, End: .75})
 	if start != 2 || end != 8 {
 		t.Fatalf("visible candle range = %d:%d, want 2:8", start, end)
 	}
@@ -229,7 +229,7 @@ func TestCandlestickChartFormatsVisibleTimePeriods(t *testing.T) {
 
 func TestCandlestickChartScaleHandlesExtremeFiniteValues(t *testing.T) {
 	scale := chart.NewLinearScale(-1e308, 1e308, 5, false, false)
-	if !finite(scale.Minimum) || !finite(scale.Maximum) || !finite(scale.Interval) || len(scale.Ticks) < 2 {
+	if !chart.Finite(scale.Minimum) || !chart.Finite(scale.Maximum) || !chart.Finite(scale.Interval) || len(scale.Ticks) < 2 {
 		t.Fatalf("extreme CandlestickChart scale = %#v", scale)
 	}
 	if ratio := scale.Ratio(0); math.Abs(ratio-.5) > 1e-9 {

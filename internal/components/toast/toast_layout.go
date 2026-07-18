@@ -67,11 +67,11 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 			continue
 		}
 		exiting := !entry.present || entry.closeRequested
-		targetIndex := entry.stackTo
+		targetIndex := entry.stack.Target()
 		if !exiting {
 			targetIndex = float32(presentIndex)
 			presentIndex++
-		} else if !entry.stackReady {
+		} else if !entry.stack.Ready() {
 			targetIndex = float32(presentIndex)
 		}
 		stackPosition := entry.stackPosition(gtx, targetIndex, tokens.AnimationDuration)

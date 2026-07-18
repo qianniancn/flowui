@@ -249,12 +249,3 @@ func sidebarLastEnabled(items []Item, sidebar Widget) (int, bool) {
 	}
 	return -1, false
 }
-
-func sidebarItemIndex(items []Item, itemKey string) int {
-	for index, item := range items {
-		if item.Key == itemKey {
-			return index
-		}
-	}
-	return -1
-}

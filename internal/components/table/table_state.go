@@ -3,7 +3,6 @@ package table
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"math"
 	"strings"
 	"time"
@@ -13,11 +12,10 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -439,7 +437,7 @@ func (t Widget) rowLabel(row Row) string {
 type tableRowState struct {
 	clickable        widget.Clickable
 	focus            state.FocusAnimation
-	background       tableColorAnimation
+	background       animation.ColorTransition
 	selection        checkbox.SelectionAnimation
 	interactiveCells []image.Rectangle
 	focusTargets     []event.Tag
@@ -603,32 +601,4 @@ func (s *tableColumnResizeState) update(ctx *frame.Context, gtx layout.Context, 
 		s.overridden = true
 	}
 	return next, changed
-}
-
-type tableColorAnimation struct {
-	value color.NRGBA
-	from  color.NRGBA
-	to    color.NRGBA
-	at    time.Time
-	ready bool
-}
-
-func (a *tableColorAnimation) update(gtx layout.Context, target color.NRGBA) color.NRGBA {
-	if !a.ready {
-		a.value, a.from, a.to, a.at, a.ready = target, target, target, gtx.Now, true
-		return target
-	}
-	if target != a.to {
-		a.from, a.to, a.at = a.value, target, gtx.Now
-	}
-	if a.from == a.to {
-		a.value = a.to
-		return a.value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(a.at), tableColorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	a.value = render.LerpColor(a.from, a.to, progress)
-	return a.value
 }

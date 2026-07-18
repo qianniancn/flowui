@@ -291,18 +291,6 @@ func (l ListBoxWidget) entriesAndItems() ([]listBoxEntry, []ListBoxItem) {
 	return entries, items
 }
 
-func (l ListBoxWidget) hasItems() bool {
-	if len(l.sections) == 0 {
-		return len(l.items) > 0
-	}
-	for _, section := range l.sections {
-		if len(section.Items) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func (l ListBoxWidget) itemDisabled(item ListBoxItem) bool {
 	return l.disabled || item.Disabled || stateutil.StringSetContains(l.disabledKeys, l.disabledKeySet, item.Key)
 }

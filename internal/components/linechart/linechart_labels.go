@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -140,7 +141,7 @@ func (w Widget) recordLegend(ctx *frame.Context, gtx layout.Context, state *char
 			from := f32.Pt(0, float32(centerY))
 			to := f32.Pt(float32(markerWidth), float32(centerY))
 			drawChartLine(gtx, from, to, max(series.width, 2), series.color)
-			paint.FillShape(gtx.Ops, series.color, clip.Ellipse(chartPointRect(f32.Pt(float32(markerWidth/2), float32(centerY)), markerSize)).Op(gtx.Ops))
+			paint.FillShape(gtx.Ops, series.color, clip.Ellipse(chart.PointRect(f32.Pt(float32(markerWidth/2), float32(centerY)), markerSize)).Op(gtx.Ops))
 			placeChartText(gtx, label, image.Pt(markerWidth, (itemHeight-label.dims.Size.Y)/2))
 			fade.Pop()
 			return layout.Dimensions{Size: image.Pt(itemWidth, itemHeight)}

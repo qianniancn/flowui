@@ -14,6 +14,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
@@ -424,7 +425,7 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 			semantic.SelectedOp(selected).Add(gtx.Ops)
 			semantic.EnabledOp(!disabled).Add(gtx.Ops)
 			rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
-			rowStyle.background = rowState.background.update(animGtx, rowStyle.background)
+			rowStyle.background = rowState.background.Value(animGtx, rowStyle.background, tableColorDuration, animation.EaseSmoothstep)
 			background := rowStyle.background
 			if background.A == 0 {
 				background = style.body

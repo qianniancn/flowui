@@ -174,7 +174,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		drawChartSelection(ctx, gtx, selection, tokens)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, lineTooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, geometry, state.tooltipSelection, chart.TooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		position := image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0))

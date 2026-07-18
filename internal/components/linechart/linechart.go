@@ -377,28 +377,28 @@ func (w Widget) Animation(enabled bool) Widget {
 
 // AnimationDuration sets the initial transition duration.
 func (w Widget) AnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "line chart")
 	w.animationDuration = duration
 	return w
 }
 
 // AnimationEasing sets the initial transition timing curve.
 func (w Widget) AnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "line chart")
 	w.animationEasing = easing
 	return w
 }
 
 // UpdateAnimationDuration sets the data-update transition duration.
 func (w Widget) UpdateAnimationDuration(duration time.Duration) Widget {
-	validateAnimationDuration(duration)
+	chart.ValidateAnimationDuration(duration, "line chart")
 	w.updateAnimationDuration = duration
 	return w
 }
 
 // UpdateAnimationEasing sets the data-update transition timing curve.
 func (w Widget) UpdateAnimationEasing(easing animation.Easing) Widget {
-	validateAnimationEasing(easing)
+	chart.ValidateAnimationEasing(easing, "line chart")
 	w.updateAnimationEasing = easing
 	return w
 }
@@ -510,19 +510,7 @@ func (w Widget) yLabel(value float64, interval float64) string {
 }
 
 func validateChartRange(axis string, minimum, maximum float64) {
-	if !finite(minimum) || !finite(maximum) || maximum <= minimum {
+	if !chart.Finite(minimum) || !chart.Finite(maximum) || maximum <= minimum {
 		panic(fmt.Sprintf("flowui: line chart %s maximum must be greater than minimum", axis))
-	}
-}
-
-func validateAnimationDuration(duration time.Duration) {
-	if duration < 0 {
-		panic("flowui: line chart animation duration must not be negative")
-	}
-}
-
-func validateAnimationEasing(easing animation.Easing) {
-	if easing == nil {
-		panic("flowui: line chart animation easing must not be nil")
 	}
 }

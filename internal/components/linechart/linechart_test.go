@@ -363,7 +363,7 @@ func TestLinearScaleUsesEChartsStyleNiceTicks(t *testing.T) {
 
 func TestLinearScaleHandlesExtremeFiniteValues(t *testing.T) {
 	scale := chart.NewLinearScale(-1e308, 1e308, 5, false, false)
-	if !finite(scale.Minimum) || !finite(scale.Maximum) || !finite(scale.Interval) || len(scale.Ticks) < 2 {
+	if !chart.Finite(scale.Minimum) || !chart.Finite(scale.Maximum) || !chart.Finite(scale.Interval) || len(scale.Ticks) < 2 {
 		t.Fatalf("extreme scale = %#v", scale)
 	}
 	for index := 1; index < len(scale.Ticks); index++ {
@@ -376,7 +376,7 @@ func TestLinearScaleHandlesExtremeFiniteValues(t *testing.T) {
 	}
 
 	tiny := chart.NewLinearScale(1e-12, 5e-12, 4, false, false)
-	if len(tiny.Ticks) < 2 || !finite(tiny.Interval) || chart.FormatAxisNumber(tiny.Ticks[0], tiny.Interval) == "" {
+	if len(tiny.Ticks) < 2 || !chart.Finite(tiny.Interval) || chart.FormatAxisNumber(tiny.Ticks[0], tiny.Interval) == "" {
 		t.Fatalf("tiny scale = %#v", tiny)
 	}
 }
@@ -635,7 +635,7 @@ func TestLineChartTooltipDisabledClearsInteraction(t *testing.T) {
 }
 
 func TestLineChartTooltipAnchorTracksPointer(t *testing.T) {
-	if got := lineTooltipAnchor(f32.Pt(100.4, 79.6)); got != image.Rect(100, 80, 101, 81) {
+	if got := chart.TooltipAnchor(f32.Pt(100.4, 79.6)); got != image.Rect(100, 80, 101, 81) {
 		t.Fatalf("LineChart tooltip anchor = %v", got)
 	}
 }

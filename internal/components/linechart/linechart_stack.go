@@ -4,6 +4,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 )
 
 func applyLineStacks(data *chartData, stackByX bool) {
@@ -54,7 +56,7 @@ func applyLineStacks(data *chartData, stackByX bool) {
 					point.stackBase = previousValue
 					point.hasStackBase = true
 					point.Y = addLineStackValue(point.rawY, previousValue)
-					point.valid = finite(point.Y)
+					point.valid = chart.Finite(point.Y)
 					break
 				}
 			}
@@ -70,7 +72,7 @@ func lineStackLookups(series []resolvedSeries, indices []int, stackByX bool) map
 	for _, seriesIndex := range indices {
 		lookup := make(map[uint64]int, len(series[seriesIndex].points))
 		for pointIndex, point := range series[seriesIndex].points {
-			if finite(point.X) {
+			if chart.Finite(point.X) {
 				lookup[lineStackXKey(point.X)] = pointIndex
 			}
 		}
@@ -120,7 +122,7 @@ func addLineStackValue(first, second float64) float64 {
 		return sum
 	}
 	power := math.Pow10(precision)
-	if !finite(power) || math.Abs(sum) > math.MaxFloat64/power {
+	if !chart.Finite(power) || math.Abs(sum) > math.MaxFloat64/power {
 		return sum
 	}
 	return math.Round(sum*power) / power

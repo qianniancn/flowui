@@ -1,56 +1,15 @@
 package barchart
 
 import (
-	"time"
-
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
-type barChartAnimation struct {
-	ready     bool
-	revision  uint64
-	from      chartData
-	target    chartData
-	displayed chartData
-	duration  time.Duration
-	easing    animation.Easing
-}
-
 func (w Widget) animatedData(ctx *frame.Context, gtx layout.Context, state *chartState, target chartData) chartData {
-	transition := &state.animation
-	if !transition.ready {
-		transition.ready = true
-		transition.revision = 1
-		transition.from = barBaselineData(target)
-		transition.target = target
-		transition.duration = w.animationDuration
-		transition.easing = w.animationEasing
-	} else if !sameBarTarget(transition.target, target) {
-		transition.revision++
-		transition.from = barTransitionFrom(transition.displayed, target)
-		transition.target = target
-		transition.duration = w.updateAnimationDuration
-		transition.easing = w.updateAnimationEasing
-	} else {
-		transition.target = target
-	}
-
-	progress, running := animation.Tween("data", 1).
-		Initial(0).
-		Revision(transition.revision).
-		Duration(transition.duration).
-		Easing(transition.easing).
-		Disabled(!w.animation || !target.yExtent.Valid).
-		Sample(ctx, gtx)
-	if !running && progress == 1 {
-		transition.from = chartData{}
-		transition.displayed = target
-		return target
-	}
-	transition.displayed = interpolateBarData(transition.from, target, progress)
-	return transition.displayed
+	return state.animation.Update(ctx, gtx, target, w.animation && target.yExtent.Valid,
+		w.animationDuration, w.updateAnimationDuration, w.animationEasing, w.updateAnimationEasing,
+		sameBarTarget, barBaselineData, barTransitionFrom, interpolateBarData)
 }
 
 func sameBarTarget(previous, target chartData) bool {

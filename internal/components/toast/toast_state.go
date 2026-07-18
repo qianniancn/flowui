@@ -11,8 +11,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -29,37 +29,27 @@ type toastProviderState struct {
 	region         toastRegionTag
 	regionHovered  bool
 	touchMode      bool
+	expansion      animation.FloatTransition
 	expansionValue float32
-	expansionFrom  float32
-	expansionTo    float32
-	expansionAt    time.Time
-	expansionReady bool
 }
 
 type toastEntryState struct {
-	item              ToastItem
-	present           bool
-	closeRequested    bool
-	root              toastRootTag
-	hovered           bool
-	close             widget.Clickable
-	action            widget.Clickable
-	rootFocus         state.FocusAnimation
-	closeFocus        state.FocusAnimation
-	remaining         time.Duration
-	configuredTimeout time.Duration
-	deadline          time.Time
-	timerRunning      bool
-	value             float32
-	from              float32
-	to                float32
-	at                time.Time
-	ready             bool
-	stackValue        float32
-	stackFrom         float32
-	stackTo           float32
-	stackAt           time.Time
-	stackReady        bool
+	item               ToastItem
+	present            bool
+	closeRequested     bool
+	root               toastRootTag
+	hovered            bool
+	close              widget.Clickable
+	action             widget.Clickable
+	rootFocus          state.FocusAnimation
+	closeFocus         state.FocusAnimation
+	remaining          time.Duration
+	configuredTimeout  time.Duration
+	deadline           time.Time
+	timerRunning       bool
+	value              float32
+	progressTransition animation.FloatTransition
+	stack              animation.FloatTransition
 }
 
 type toastRootTag struct{ _ byte }
@@ -139,10 +129,8 @@ func (s *toastProviderState) visible() bool {
 
 func (s *toastProviderState) resetRegion() {
 	s.regionHovered = false
+	s.expansion.Reset()
 	s.expansionValue = 0
-	s.expansionFrom = 0
-	s.expansionTo = 0
-	s.expansionReady = false
 }
 
 func (s *toastProviderState) cleanup() {
@@ -218,28 +206,7 @@ func (s *toastProviderState) expansionProgress(gtx layout.Context, expanded bool
 	if expanded {
 		target = 1
 	}
-	if !s.expansionReady {
-		s.expansionValue = target
-		s.expansionFrom = target
-		s.expansionTo = target
-		s.expansionAt = gtx.Now
-		s.expansionReady = true
-		return target
-	}
-	if target != s.expansionTo {
-		s.expansionFrom = s.expansionValue
-		s.expansionTo = target
-		s.expansionAt = gtx.Now
-	}
-	if s.expansionFrom == s.expansionTo {
-		s.expansionValue = s.expansionTo
-		return s.expansionValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.expansionAt), max(duration, time.Millisecond)))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.expansionValue = render.Lerp(s.expansionFrom, s.expansionTo, progress)
+	s.expansionValue = s.expansion.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
 	return s.expansionValue
 }
 
@@ -325,52 +292,13 @@ func (e *toastEntryState) progress(gtx layout.Context, duration time.Duration) f
 	if e.present && !e.closeRequested {
 		target = 1
 	}
-	if !e.ready {
-		e.value = 0
-		e.from = 0
-		e.to = 0
-		e.at = gtx.Now
-		e.ready = true
+	if !e.progressTransition.Ready() {
+		e.progressTransition.Initialize(0, gtx.Now)
 	}
-	if target != e.to {
-		e.from = e.value
-		e.to = target
-		e.at = gtx.Now
-	}
-	if e.from == e.to {
-		e.value = e.to
-		return e.value
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(e.at), max(duration, time.Millisecond)))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	e.value = render.Lerp(e.from, e.to, progress)
+	e.value = e.progressTransition.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
 	return e.value
 }
 
 func (e *toastEntryState) stackPosition(gtx layout.Context, target float32, duration time.Duration) float32 {
-	if !e.stackReady {
-		e.stackValue = target
-		e.stackFrom = target
-		e.stackTo = target
-		e.stackAt = gtx.Now
-		e.stackReady = true
-		return target
-	}
-	if target != e.stackTo {
-		e.stackFrom = e.stackValue
-		e.stackTo = target
-		e.stackAt = gtx.Now
-	}
-	if e.stackFrom == e.stackTo {
-		e.stackValue = e.stackTo
-		return e.stackValue
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(e.stackAt), max(duration, time.Millisecond)))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	e.stackValue = render.Lerp(e.stackFrom, e.stackTo, progress)
-	return e.stackValue
+	return e.stack.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep)
 }

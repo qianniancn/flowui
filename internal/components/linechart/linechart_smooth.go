@@ -4,28 +4,12 @@ import (
 	"math"
 
 	"gioui.org/f32"
-	"gioui.org/op/clip"
 )
 
 type cubicLineSegment struct {
 	control0 f32.Point
 	control1 f32.Point
 	to       f32.Point
-}
-
-func drawSmoothChartPath(path *clip.Path, points []resolvedPoint, connectNulls bool, smooth float32, geometry chartGeometry) {
-	segments := splitSmoothLine(points, connectNulls, func(point resolvedPoint) f32.Point {
-		return f32.Pt(geometry.mapX(point.X), geometry.mapY(point.Y))
-	})
-	for _, segment := range segments {
-		if len(segment) == 0 {
-			continue
-		}
-		path.MoveTo(segment[0])
-		for _, cubic := range smoothCubics(segment, smooth) {
-			path.CubeTo(cubic.control0, cubic.control1, cubic.to)
-		}
-	}
 }
 
 func splitSmoothLine(points []resolvedPoint, connectNulls bool, transform func(resolvedPoint) f32.Point) [][]f32.Point {

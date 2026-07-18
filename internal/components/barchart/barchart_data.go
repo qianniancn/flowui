@@ -135,7 +135,7 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 			formatLabel:   source.formatLabel,
 		}
 		for valueIndex, value := range source.values {
-			if finite(value) {
+			if chart.Finite(value) {
 				itemColor := barColor
 				if valueIndex < len(source.itemColors) {
 					itemColor = source.itemColors[valueIndex]
@@ -173,8 +173,4 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 		}
 	}
 	return data
-}
-
-func finite(value float64) bool {
-	return chart.Finite(value)
 }

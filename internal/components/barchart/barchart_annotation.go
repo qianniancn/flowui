@@ -63,7 +63,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 			if (!geometry.horizontal && mark.Axis == chart.AxisY) || (geometry.horizontal && mark.Axis == chart.AxisX) {
 				position = image.Pt(max(geometry.plot.Max.X-label.dims.Size.X-4, geometry.plot.Min.X), max(int(from.Y)-label.dims.Size.Y-3, geometry.plot.Min.Y))
 			}
-			position = clampBarAnnotationLabel(position, label.dims.Size, geometry.plot)
+			position = chart.ClampLabelPosition(position, label.dims.Size, geometry.plot)
 			placeChartText(gtx, label, position)
 		}
 	}
@@ -80,18 +80,14 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 		color := mark.ResolvedColor(pointFallback)
 		size, custom := chart.LayoutMarkPointContent(ctx, gtx, mark, center, geometry.plot, unit.Dp(9), pointFallback)
 		if !custom {
-			paint.FillShape(gtx.Ops, color, clip.Ellipse(barMarkPointRect(center, size)).Op(gtx.Ops))
+			paint.FillShape(gtx.Ops, color, clip.Ellipse(chart.PointRect(center, size)).Op(gtx.Ops))
 		}
 		if mark.Label != "" {
 			label := recordChartText(ctx, gtx, mark.Label, activeTheme.Components.BarChart.AxisTextSize, font.Medium, style.axisLabel, max(geometry.plot.Dx()/2, 1))
-			position := clampBarAnnotationLabel(image.Pt(int(center.X)+size/2+4, int(center.Y)-label.dims.Size.Y/2), label.dims.Size, geometry.plot)
+			position := chart.ClampLabelPosition(image.Pt(int(center.X)+size/2+4, int(center.Y)-label.dims.Size.Y/2), label.dims.Size, geometry.plot)
 			placeChartText(gtx, label, position)
 		}
 	}
-}
-
-func clampBarAnnotationLabel(position, size image.Point, plot image.Rectangle) image.Point {
-	return chart.ClampLabelPosition(position, size, plot)
 }
 
 func barMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image.Rectangle, bool) {
@@ -144,8 +140,4 @@ func barCategoryX(geometry chartGeometry, value float64) float32 {
 		minimum = geometry.plot.Min.Y
 	}
 	return float32(minimum) + (float32(value)-float32(geometry.categoryStart)+0.5)*geometry.bandWidth
-}
-
-func barMarkPointRect(center f32.Point, diameter int) image.Rectangle {
-	return chart.PointRect(center, diameter)
 }

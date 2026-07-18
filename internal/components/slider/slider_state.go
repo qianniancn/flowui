@@ -6,10 +6,9 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -30,13 +29,9 @@ type sliderState struct {
 }
 
 type sliderThumbState struct {
-	clickable  widget.Clickable
-	focus      state.FocusAnimation
-	scale      float32
-	scaleFrom  float32
-	scaleTo    float32
-	scaleAt    time.Time
-	scaleReady bool
+	clickable widget.Clickable
+	focus     state.FocusAnimation
+	scale     animation.FloatTransition
 }
 
 const sliderThumbScaleDuration = 150 * time.Millisecond
@@ -207,27 +202,5 @@ func (t *sliderThumbState) draggingScale(gtx layout.Context, dragging bool, targ
 	if dragging {
 		target = targetScale
 	}
-	if !t.scaleReady {
-		t.scale = target
-		t.scaleFrom = target
-		t.scaleTo = target
-		t.scaleAt = gtx.Now
-		t.scaleReady = true
-		return target
-	}
-	if target != t.scaleTo {
-		t.scaleFrom = t.scale
-		t.scaleTo = target
-		t.scaleAt = gtx.Now
-	}
-	if t.scaleFrom == t.scaleTo {
-		t.scale = t.scaleTo
-		return t.scale
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(t.scaleAt), sliderThumbScaleDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	t.scale = render.Lerp(t.scaleFrom, t.scaleTo, progress)
-	return t.scale
+	return t.scale.Value(gtx, target, sliderThumbScaleDuration, animation.EaseSmoothstep)
 }

@@ -146,7 +146,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		w.drawEmptyText(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, state.tooltipSlice, pieTooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, state.tooltipSlice, chart.TooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	opacity.Pop()
 

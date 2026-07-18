@@ -64,7 +64,7 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme) chartData {
 	result := chartData{candles: make([]resolvedCandle, len(widget.data))}
 	for index, source := range widget.data {
 		candle := resolvedCandle{index: index, open: source.open, close: source.close, low: source.low, high: source.high}
-		candle.valid = finite(candle.open) && finite(candle.close) && finite(candle.low) && finite(candle.high)
+		candle.valid = chart.Finite(candle.open) && chart.Finite(candle.close) && chart.Finite(candle.low) && chart.Finite(candle.high)
 		if !candle.valid {
 			result.candles[index] = candle
 			continue

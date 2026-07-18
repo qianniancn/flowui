@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -226,13 +227,9 @@ func (s *tabsState) canScrollNext(count int) bool {
 }
 
 type tabsItemState struct {
-	clickable     widget.Clickable
-	interaction   state.FocusAnimation
-	selection     float32
-	selectionFrom float32
-	selectionTo   float32
-	selectionAt   time.Time
-	selectionSet  bool
+	clickable   widget.Clickable
+	interaction state.FocusAnimation
+	selection   animation.FloatTransition
 }
 
 func tabsStateFor(ctx *frame.Context, key string) *tabsState {
@@ -307,29 +304,7 @@ func (s *tabsItemState) selectionProgress(gtx layout.Context, selected bool) flo
 	if selected {
 		target = 1
 	}
-	if !s.selectionSet {
-		s.selection = target
-		s.selectionFrom = target
-		s.selectionTo = target
-		s.selectionAt = gtx.Now
-		s.selectionSet = true
-		return target
-	}
-	if target != s.selectionTo {
-		s.selectionFrom = s.selection
-		s.selectionTo = target
-		s.selectionAt = gtx.Now
-	}
-	if s.selectionFrom == s.selectionTo {
-		s.selection = s.selectionTo
-		return s.selection
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(s.selectionAt), tabsColorDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	s.selection = render.Lerp(s.selectionFrom, s.selectionTo, progress)
-	return s.selection
+	return s.selection.Value(gtx, target, tabsColorDuration, animation.EaseSmoothstep)
 }
 
 func tabsIndexByKey(items []TabItem, key string) int {

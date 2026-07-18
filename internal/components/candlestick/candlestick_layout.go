@@ -159,7 +159,7 @@ func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, state *cha
 		w.layoutEmpty(ctx, gtx, geometry, style)
 	}
 	if tooltipVisible || tooltipProgress > 0 {
-		w.drawTooltip(ctx, gtx, state.tooltipSelection, geometry.yScale.Interval, tooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
+		w.drawTooltip(ctx, gtx, state.tooltipSelection, geometry.yScale.Interval, chart.TooltipAnchor(tooltipPointer), tooltipProgress, state.tooltipTransition.Exiting())
 	}
 	if xName.dims.Size.X > 0 {
 		placeChartText(gtx, xName, image.Pt(max(geometry.plot.Max.X-xName.dims.Size.X, 0), max(size.Y-xName.dims.Size.Y, 0)))
@@ -174,7 +174,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 		geometry.yTicks = append(geometry.yTicks, axisTick{value: value, label: w.yLabel(value, scale.Interval), pixel: geometry.mapY(value)})
 	}
 	if len(data.candles) > 0 {
-		geometry.categoryStart, geometry.categoryEnd = visibleCategoryRange(len(data.candles), w.effectiveDataWindow())
+		geometry.categoryStart, geometry.categoryEnd = chart.VisibleCategoryRange(len(data.candles), w.effectiveDataWindow())
 		visible := geometry.categoryEnd - geometry.categoryStart
 		geometry.bandWidth = float32(plot.Dx()) / float32(visible)
 		geometry.candleWidth = w.resolveCandleWidth(geometry.bandWidth, dp)
@@ -190,7 +190,7 @@ func (w Widget) resolveGeometry(data chartData, size image.Point, plot image.Rec
 func (w Widget) resolveYScale(data chartData) chart.LinearScale {
 	minimum, maximum := data.extent.Minimum, data.extent.Maximum
 	if !w.hasYRange && !w.effectiveDataWindow().IsFull() {
-		start, end := visibleCategoryRange(len(data.candles), w.effectiveDataWindow())
+		start, end := chart.VisibleCategoryRange(len(data.candles), w.effectiveDataWindow())
 		visible := dataExtent{}
 		for index := start; index < end; index++ {
 			candle := data.candles[index]
@@ -265,8 +265,4 @@ func (w Widget) semanticDescription(data chartData) string {
 		label = "Candlestick chart"
 	}
 	return fmt.Sprintf("%s, %d candles", label, len(data.candles))
-}
-
-func visibleCategoryRange(count int, window chart.DataWindow) (int, int) {
-	return chart.VisibleCategoryRange(count, window)
 }

@@ -294,6 +294,11 @@ type softShadowCacheEntry struct {
 	lastUsed   uint64
 }
 
+type softShadowBuild struct {
+	done  chan struct{}
+	entry softShadowCacheEntry
+}
+
 const (
 	softShadowRendererVersion = 2
 	softShadowCacheLimit      = 256
@@ -314,8 +319,10 @@ var softShadowCache = struct {
 	tick    uint64
 	bytes   int
 	entries map[softShadowCacheKey]softShadowCacheEntry
+	builds  map[softShadowCacheKey]*softShadowBuild
 }{
 	entries: make(map[softShadowCacheKey]softShadowCacheEntry),
+	builds:  make(map[softShadowCacheKey]*softShadowBuild),
 }
 
 type cornerRadiiPx struct {
@@ -356,30 +363,47 @@ func softShadowEntry(size image.Point, shape shadowShape, blur, spread, offX, of
 
 	softShadowCache.Lock()
 	softShadowCache.tick++
-	now := softShadowCache.tick
 	if entry, ok := softShadowCache.entries[key]; ok {
-		entry.lastUsed = now
+		entry.lastUsed = softShadowCache.tick
 		softShadowCache.entries[key] = entry
 		softShadowCache.Unlock()
 		return entry
 	}
+	if build, ok := softShadowCache.builds[key]; ok {
+		softShadowCache.Unlock()
+		<-build.done
+		return build.entry
+	}
+	build := &softShadowBuild{done: make(chan struct{})}
+	softShadowCache.builds[key] = build
 	softShadowCache.Unlock()
 
 	entry := buildSoftShadowEntry(size, shape, blur, spread, offX, offY, col)
-	if entry.op.Size() == (image.Point{}) {
+	finishBuild := func(entry softShadowCacheEntry) softShadowCacheEntry {
+		softShadowCache.Lock()
+		delete(softShadowCache.builds, key)
+		build.entry = entry
+		close(build.done)
+		softShadowCache.Unlock()
 		return entry
 	}
-	entry.lastUsed = now
+	if entry.op.Size() == (image.Point{}) {
+		return finishBuild(entry)
+	}
 	if entry.bytes > softShadowCacheMaxBytes {
-		return entry
+		return finishBuild(entry)
 	}
 
 	softShadowCache.Lock()
+	entry.lastUsed = softShadowCache.tick
 	for len(softShadowCache.entries) >= softShadowCacheLimit || softShadowCache.bytes+entry.bytes > softShadowCacheMaxBytes {
 		evictOldestShadowEntryLocked()
 	}
 	softShadowCache.entries[key] = entry
 	softShadowCache.bytes += entry.bytes
+	delete(softShadowCache.builds, key)
+	build.entry = entry
+	close(build.done)
 	softShadowCache.Unlock()
 	return entry
 }

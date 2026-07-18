@@ -3,6 +3,7 @@ package render
 import (
 	"image"
 	"image/color"
+	"sync"
 	"testing"
 
 	"gioui.org/layout"
@@ -35,6 +36,35 @@ func TestSoftShadowCacheReusesEntries(t *testing.T) {
 	defer softShadowCache.Unlock()
 	if got := len(softShadowCache.entries); got != 1 {
 		t.Fatalf("cache entries = %d, want 1", got)
+	}
+}
+
+func TestSoftShadowCacheConcurrentMissesTrackBytesOnce(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	col := color.NRGBA{R: 40, G: 90, B: 220, A: 120}
+	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 20, NE: 10, SE: 24, SW: 14}}
+	start := make(chan struct{})
+	var group sync.WaitGroup
+	for range 16 {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			_ = softShadowEntry(image.Pt(320, 180), shape, 22, 4, 0, 8, col)
+		}()
+	}
+	close(start)
+	group.Wait()
+
+	softShadowCache.Lock()
+	defer softShadowCache.Unlock()
+	if len(softShadowCache.entries) != 1 {
+		t.Fatalf("cache entries = %d, want 1", len(softShadowCache.entries))
+	}
+	for _, entry := range softShadowCache.entries {
+		if softShadowCache.bytes != entry.bytes {
+			t.Fatalf("cache bytes = %d, want %d", softShadowCache.bytes, entry.bytes)
+		}
 	}
 }
 
@@ -224,5 +254,6 @@ func resetSoftShadowCacheForTest() {
 	softShadowCache.tick = 0
 	softShadowCache.bytes = 0
 	softShadowCache.entries = make(map[softShadowCacheKey]softShadowCacheEntry)
+	softShadowCache.builds = make(map[softShadowCacheKey]*softShadowBuild)
 	softShadowCache.Unlock()
 }

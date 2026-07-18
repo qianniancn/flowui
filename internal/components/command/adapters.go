@@ -74,7 +74,11 @@ func Button(keyValue string, command Command) frame.Widget {
 	if !iconOnly {
 		return trigger
 	}
-	return tooltip.Tooltip(keyValue+":tooltip", trigger, text.New(command.label)).Delay(0)
+	return frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		owner := frame.FullKey(ctx, keyValue)
+		key := frame.DerivedKey(ctx, owner, "tooltip")
+		return tooltip.Tooltip(key, trigger, text.New(command.label)).Delay(0).Layout(ctx, gtx)
+	})
 }
 
 type semanticLabel struct {

@@ -99,7 +99,8 @@ preview, where an older result should be canceled and ignored.
 
 For multiple windows, create `ui.WindowSpec` values with `ui.NewWindow`,
 `ui.NewWindowCmd`, or `ui.NewProgramWindow`, then pass them to
-`ui.RunWindows` or `ui.Application.Run`.
+`ui.RunWindows` or `ui.Application.Run`. The `NewWindow` initializers run for
+each window instance and must return independent model state.
 
 ## Components
 

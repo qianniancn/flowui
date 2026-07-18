@@ -142,7 +142,7 @@ func main() {
 	application := ui.NewApplication()
 	counter := ui.NewWindow(
 		"counter",
-		CounterModel{},
+		func() CounterModel { return CounterModel{} },
 		counterUpdate,
 		counterView(application),
 		ui.Title("Counter"),
@@ -150,7 +150,7 @@ func main() {
 	)
 	mainWindow := ui.NewWindow(
 		"main",
-		MainModel{},
+		func() MainModel { return MainModel{} },
 		mainUpdate(application),
 		mainView(application, counter),
 		ui.Title("Multi-window"),

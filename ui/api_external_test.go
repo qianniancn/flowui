@@ -772,9 +772,9 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	}
 	var _ func(ui.Program[facadeModel, facadeMsg], ...ui.Option) = ui.RunProgram[facadeModel, facadeMsg]
 	_ = ui.NewProgramWindow("program", program)
-	window := ui.NewWindow("secondary", facadeModel{}, facadeUpdate, facadeView, ui.Title("Secondary"))
-	_ = ui.NewWindowCmd("commands", facadeModel{}, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, facadeView)
-	_ = ui.NewWindowWithSubscriptions("subscriptions", facadeModel{}, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, nil, facadeView)
+	window := ui.NewWindow("secondary", func() facadeModel { return facadeModel{} }, facadeUpdate, facadeView, ui.Title("Secondary"))
+	_ = ui.NewWindowCmd("commands", func() facadeModel { return facadeModel{} }, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, facadeView)
+	_ = ui.NewWindowWithSubscriptions("subscriptions", func() facadeModel { return facadeModel{} }, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, nil, facadeView)
 	application := ui.NewApplication()
 	_ = application.Open
 	_ = application.Close

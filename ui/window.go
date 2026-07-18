@@ -79,32 +79,43 @@ func (w WindowSpec) Key() string {
 	return w.key
 }
 
-// NewWindow creates a window using a synchronous Update function.
-func NewWindow[M any, Msg any](key string, initial M, update Update[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
+// NewWindow creates a window using a synchronous Update function. Initialize
+// runs once for each window instance and must return independent model state.
+func NewWindow[M any, Msg any](key string, initialize func() M, update Update[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
 	if update == nil {
 		panic("flowui: nil window update")
 	}
-	return NewWindowCmd(key, initial, func(model *M, msg Msg) Cmd[Msg] {
+	return NewWindowCmd(key, initialize, func(model *M, msg Msg) Cmd[Msg] {
 		update(model, msg)
 		return nil
 	}, view, opts...)
 }
 
 // NewWindowCmd creates a window whose Update function may return commands.
-func NewWindowCmd[M any, Msg any](key string, initial M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
-	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initial, nil }, update, nil, view, nil, opts)
+// Initialize runs once for each window instance and must return independent
+// model state.
+func NewWindowCmd[M any, Msg any](key string, initialize func() M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
+	if initialize == nil {
+		panic("flowui: nil window initializer")
+	}
+	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initialize(), nil }, update, nil, view, nil, opts)
 }
 
 // NewWindowWithSubscriptions creates a window with commands and subscriptions.
+// Initialize runs once for each window instance and must return independent
+// model state.
 func NewWindowWithSubscriptions[M any, Msg any](
 	key string,
-	initial M,
+	initialize func() M,
 	update UpdateCmd[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
 	opts ...Option,
 ) WindowSpec {
-	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initial, nil }, update, subscriptions, view, nil, opts)
+	if initialize == nil {
+		panic("flowui: nil window initializer")
+	}
+	return newWindowSpec(key, func() (M, Cmd[Msg]) { return initialize(), nil }, update, subscriptions, view, nil, opts)
 }
 
 // NewProgramWindow creates a window from a complete MVU Program.

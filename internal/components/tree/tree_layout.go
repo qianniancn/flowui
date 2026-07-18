@@ -172,7 +172,9 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 	trigger := frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 		return interactiveRow(gtx)
 	})
-	return menu.ContextMenu(t.key+"-context-menu-"+entry.item.Key, trigger, t.contextMenu).
+	owner := frame.FullKey(ctx, t.key)
+	key := frame.DerivedKey(ctx, owner, "context-menu:"+entry.item.Key)
+	return menu.ContextMenu(key, trigger, t.contextMenu).
 		FocusTarget(&itemState.clickable).
 		OnOpenChange(func(open bool) {
 			if open && t.onContextMenu != nil {

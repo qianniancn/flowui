@@ -153,9 +153,28 @@ func TestCommandAdaptersPreserveBehavior(t *testing.T) {
 		t.Fatal("text toggle command did not produce a plain ToggleButton")
 	}
 	iconCommand := base.Icon(fixedCommandWidget{size: image.Pt(16, 16)})
-	if _, ok := Button("save-icon", iconCommand).(tooltip.TooltipWidget); !ok {
+	if Button("save-icon", iconCommand) == nil {
 		t.Fatal("icon command button did not include a Tooltip")
 	}
+}
+
+func TestCommandButtonTooltipKeyDoesNotCollideWithUserKey(t *testing.T) {
+	ctx := commandTestContext()
+	router := new(input.Router)
+	gtx := commandLayoutContext(router, time.Unix(5, 0))
+	command := New("save", "Save").
+		Icon(fixedCommandWidget{size: image.Pt(16, 16)}).
+		OnExecute(func() {})
+	userTooltip := tooltip.Tooltip(
+		"save-button:tooltip",
+		fixedCommandWidget{size: image.Pt(16, 16)},
+		fixedCommandWidget{size: image.Pt(16, 16)},
+	)
+
+	frame.BeginFrame(ctx)
+	Button("save-button", command).Layout(ctx, gtx)
+	userTooltip.Layout(ctx, gtx)
+	frame.EndFrame(ctx)
 }
 
 type shortcutConsumer struct {

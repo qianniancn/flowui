@@ -99,6 +99,10 @@ func WithTheme(theme Theme) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.themeOps = append(cfg.themeOps, func(current *Theme) {
 			*current = theme
+			if current.Material != nil {
+				materialTheme := *current.Material
+				current.Material = &materialTheme
+			}
 			syncMaterialTheme(current)
 		})
 	})

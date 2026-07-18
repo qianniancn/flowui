@@ -27,14 +27,23 @@ func TestMaterialThemeOption(t *testing.T) {
 func TestWithThemeOption(t *testing.T) {
 	want := color.NRGBA{R: 0x22, G: 0x88, B: 0xdd, A: 0xff}
 	theme := DefaultTheme()
+	sourceMaterial := theme.Material
+	sourceContrast := sourceMaterial.Palette.ContrastBg
 	theme.Palette.Accent = want
 	cfg := newRunOptions([]Option{
 		WithTheme(theme),
 	})
 
-	got := cfg.newTheme().Palette.Accent
-	if got != want {
-		t.Fatalf("accent = %#v, want %#v", got, want)
+	first := cfg.newTheme()
+	second := cfg.newTheme()
+	if first.Palette.Accent != want {
+		t.Fatalf("accent = %#v, want %#v", first.Palette.Accent, want)
+	}
+	if theme.Material != sourceMaterial || theme.Material.Palette.ContrastBg != sourceContrast {
+		t.Fatal("WithTheme mutated the source material theme")
+	}
+	if first.Material == sourceMaterial || second.Material == sourceMaterial || first.Material == second.Material {
+		t.Fatal("WithTheme reused a material theme between source or window instances")
 	}
 }
 

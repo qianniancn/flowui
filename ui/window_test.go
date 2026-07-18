@@ -10,7 +10,7 @@ import (
 )
 
 func TestWindowSpecUsesIndependentIdentity(t *testing.T) {
-	spec := NewWindow("details", 0, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return Text("Details") }, Title("Details"))
+	spec := NewWindow("details", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return Text("Details") }, Title("Details"))
 	if spec.Key() != "details" || spec.run == nil || len(spec.options) != 1 {
 		t.Fatalf("window spec = key %q run %v options %d", spec.Key(), spec.run != nil, len(spec.options))
 	}
@@ -36,9 +36,19 @@ func TestWindowSpecRejectsInvalidDefinitions(t *testing.T) {
 		name string
 		make func()
 	}{
-		{"empty key", func() { NewWindow("", 0, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil }) }},
-		{"nil update", func() { NewWindow[int, int]("main", 0, nil, func(*Context, int, Send[int]) Widget { return nil }) }},
-		{"nil view", func() { NewWindow[int, int]("main", 0, func(*int, int) {}, nil) }},
+		{"empty key", func() {
+			NewWindow("", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })
+		}},
+		{"nil initializer", func() {
+			NewWindow[int, int]("main", nil, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })
+		}},
+		{"nil subscription initializer", func() {
+			NewWindowWithSubscriptions[int, int]("main", nil, func(*int, int) Cmd[int] { return nil }, nil, func(*Context, int, Send[int]) Widget { return nil })
+		}},
+		{"nil update", func() {
+			NewWindow[int, int]("main", func() int { return 0 }, nil, func(*Context, int, Send[int]) Widget { return nil })
+		}},
+		{"nil view", func() { NewWindow[int, int]("main", func() int { return 0 }, func(*int, int) {}, nil) }},
 		{"nil program init", func() {
 			NewProgramWindow("main", Program[int, int]{Update: func(*int, int) Cmd[int] { return nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
 		}},

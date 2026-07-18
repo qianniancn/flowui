@@ -17,14 +17,14 @@ import (
 
 // Run opens a Gio window and runs an MVU application in it.
 func Run[M any, Msg any](initial M, update Update[M, Msg], view View[M, Msg], opts ...Option) {
-	RunWindows(NewWindow("main", initial, update, view, opts...))
+	RunWindows(NewWindow("main", func() M { return initial }, update, view, opts...))
 }
 
 // RunCmd opens a Gio window and runs an MVU application with commands. Update
 // runs serially on the event loop, while each returned Cmd runs concurrently;
 // see Cmd for the required capture and message-passing rules.
 func RunCmd[M any, Msg any](initial M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) {
-	RunWindows(NewWindowCmd("main", initial, update, view, opts...))
+	RunWindows(NewWindowCmd("main", func() M { return initial }, update, view, opts...))
 }
 
 // RunWithSubscriptions opens a Gio window and runs an MVU application with
@@ -36,7 +36,7 @@ func RunWithSubscriptions[M any, Msg any](
 	view View[M, Msg],
 	opts ...Option,
 ) {
-	RunWindows(NewWindowWithSubscriptions("main", initial, update, subscriptions, view, opts...))
+	RunWindows(NewWindowWithSubscriptions("main", func() M { return initial }, update, subscriptions, view, opts...))
 }
 
 // Program describes a complete MVU application. Init runs once for each

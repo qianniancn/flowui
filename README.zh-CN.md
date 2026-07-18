@@ -96,7 +96,8 @@ Command 在事件循环之外运行。捕获不可变的值，并通过 `ui.Send
 
 多窗口应用可以使用 `ui.NewWindow`、`ui.NewWindowCmd` 或
 `ui.NewProgramWindow` 创建 `ui.WindowSpec`，再交给 `ui.RunWindows` 或
-`ui.Application.Run`。
+`ui.Application.Run`。`NewWindow` 系列的初始化函数会为每个窗口实例执行，
+并且必须返回彼此独立的模型状态。
 
 ## 组件
 

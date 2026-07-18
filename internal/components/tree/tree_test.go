@@ -616,6 +616,23 @@ func TestTreeContextMenuOpensForUnselectedRow(t *testing.T) {
 	}
 }
 
+func TestTreeContextMenuKeyDoesNotCollideWithUserKey(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	gtx := treeLayoutContext(nil, image.Pt(360, 240), time.Unix(10, 0))
+	tree := New("files", "", treeTestItems()).
+		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}}))
+	userMenu := menu.ContextMenu(
+		"files-context-menu-archive",
+		&treeProbe{size: image.Pt(20, 20)},
+		menu.Menu("user-actions", []menu.Item{{Key: "open", Label: "Open"}}),
+	)
+
+	frame.BeginFrame(ctx)
+	tree.Layout(ctx, gtx)
+	userMenu.Layout(ctx, gtx)
+	frame.EndFrame(ctx)
+}
+
 func TestTreeContextMenuPreservesExistingMultipleSelection(t *testing.T) {
 	ctx := treeTestContext(nil, locale.LanguageEnglish)
 	router := new(input.Router)

@@ -271,7 +271,6 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 		clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
 		contentCall.Add(gtx.Ops)
 		clipStack.Pop()
-		entry.rootFocus.Visible(false, nil)
 		entry.hovered = false
 		return layout.Dimensions{Size: size}
 	}
@@ -284,7 +283,7 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 	contentCall.Add(gtx.Ops)
 	entry.addRootInput(gtx, size)
 	semanticClip.Pop()
-	focusVisible := entry.rootFocus.Visible(gtx.Focused(&entry.root), nil)
+	focusVisible := frame.FocusVisible(ctx, &entry.root, gtx.Focused(&entry.root))
 	focusOpacity := entry.rootFocus.Opacity(gtx, focusVisible)
 	drawToastFocus(gtx, rect, radius, style.focus, frame.ActiveTheme(ctx).Components.Toast.FocusRingWidth, focusOpacity)
 	p.layoutToastClose(ctx, gtx, entry, size, style, mobile || expanded)
@@ -390,7 +389,6 @@ func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Con
 	tokens := frame.ActiveTheme(ctx).Components.Toast
 	show := alwaysVisible || entry.hovered || entry.close.Hovered() || gtx.Focused(&entry.root) || gtx.Focused(&entry.close)
 	if !show {
-		entry.closeFocus.Visible(false, entry.close.History())
 		return
 	}
 	size := gtx.Dp(tokens.CloseSize)
@@ -411,7 +409,7 @@ func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Con
 		iconOffset.Pop()
 		return layout.Dimensions{Size: image.Pt(size, size)}
 	})
-	focusVisible := entry.closeFocus.Visible(gtx.Focused(&entry.close), entry.close.History())
+	focusVisible := frame.FocusVisible(ctx, &entry.close, gtx.Focused(&entry.close))
 	focusOpacity := entry.closeFocus.Opacity(gtx, focusVisible)
 	drawToastFocus(gtx, image.Rectangle{Max: dims.Size}, size/2, style.focus, tokens.FocusRingWidth, focusOpacity)
 	offset.Pop()

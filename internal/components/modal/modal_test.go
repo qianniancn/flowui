@@ -314,18 +314,6 @@ func TestModalNestedOverlayFocusCannotEscapeToBackground(t *testing.T) {
 	}
 }
 
-func TestModalCloseFocusRingHiddenForPointerFocus(t *testing.T) {
-	state := new(modalState)
-
-	if !state.closeFocus.Visible(true, nil) {
-		t.Fatal("keyboard focus should show modal close focus ring")
-	}
-	state.closeFocus.Visible(false, nil)
-	if state.closeFocus.Visible(true, []widget.Press{{Start: time.Unix(1, 0)}}) {
-		t.Fatal("pointer focus should hide modal close focus ring")
-	}
-}
-
 func TestModalClosedKeepsVisibleStateForExitAnimation(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	start := time.Unix(1, 0)

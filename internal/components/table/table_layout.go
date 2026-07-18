@@ -182,7 +182,7 @@ func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue 
 				semantic.CheckBox.Add(gtx.Ops)
 				semantic.LabelOp("Select all rows").Add(gtx.Ops)
 				semantic.SelectedOp(all).Add(gtx.Ops)
-				focusVisible := stateValue.selectAllFocus.Visible(gtx.Focused(&stateValue.selectAll), stateValue.selectAll.History())
+				focusVisible := frame.FocusVisible(ctx, &stateValue.selectAll, gtx.Focused(&stateValue.selectAll))
 				focus := stateValue.selectAllFocus.Opacity(gtx, focusVisible && !t.disabled)
 				checkbox.DrawControl(ctx, gtx, checkbox.ControlOptions{
 					Variant: checkbox.CheckboxPrimary, Selection: selection,
@@ -233,7 +233,7 @@ func (t Widget) layoutColumnResizers(ctx *frame.Context, gtx layout.Context, sta
 			continue
 		}
 		resize := &stateValue.column(column.Key).resize
-		focusVisible := resize.focus.Visible(gtx.Focused(resize), nil)
+		focusVisible := frame.FocusVisible(ctx, resize, gtx.Focused(resize))
 		focus := resize.focus.Opacity(gtx, focusVisible && enabled)
 		drawTableColumnResizer(gtx, x, size.Y, baseHeight, activeWidth, baseColor, frame.ActiveTheme(ctx).Palette.Accent, false, focus)
 
@@ -276,7 +276,7 @@ func (t Widget) layoutHeaderCell(ctx *frame.Context, gtx layout.Context, stateVa
 		if columnState.clickable.Hovered() || t.sort.Column == column.Key {
 			foreground = style.foreground
 		}
-		focused := columnState.focus.Visible(gtx.Focused(&columnState.clickable), columnState.clickable.History())
+		focused := frame.FocusVisible(ctx, &columnState.clickable, gtx.Focused(&columnState.clickable))
 		focus := columnState.focus.Opacity(gtx, focused && !t.disabled)
 		drawTableCellFocus(gtx, frame.ActiveTheme(ctx), gtx.Constraints.Max, focus, style.focus)
 		return content(gtx, func(gtx layout.Context) layout.Dimensions {

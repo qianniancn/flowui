@@ -557,7 +557,7 @@ func (m ModalWidget) layoutCloseButton(ctx *frame.Context, gtx layout.Context, m
 		semantic.Button.Add(gtx.Ops)
 		semantic.LabelOp(modalCloseLabel(ctx)).Add(gtx.Ops)
 		focused := gtx.Focused(&modalStateValue.close)
-		focusVisible := modalStateValue.closeFocus.Visible(focused, modalStateValue.close.History())
+		focusVisible := frame.FocusVisible(ctx, &modalStateValue.close, focused)
 		drawModalCloseButton(gtx, frame.ActiveTheme(ctx), size, modalStateValue.close.Hovered(), modalStateValue.close.Pressed(), focusVisible)
 		return layout.Dimensions{Size: size}
 	})

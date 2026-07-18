@@ -123,7 +123,6 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			c.onChange(next)
 		}
 	}
-
 	dims := valueState.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.CheckBox.Add(gtx.Ops)
 		if c.label != "" {
@@ -134,7 +133,10 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		}
 		semantic.SelectedOp(c.checked).Add(gtx.Ops)
 		semantic.EnabledOp(!disabled).Add(gtx.Ops)
-		focusVisible := anim.focusVisible(gtx.Focused(valueState), valueState.History())
+		if !disabled {
+			frame.FocusOnPress(ctx, valueState, valueState.History(), presses)
+		}
+		focusVisible := frame.FocusVisible(ctx, valueState, gtx.Focused(valueState))
 		selection := anim.selection(animGtx, c.checked || c.indeterminate)
 		focus := anim.focusOpacity(animGtx, focusVisible && !disabled)
 		indicatorState := IndicatorState{
@@ -149,9 +151,6 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			Indicator:       c.indicatorWidget(indicatorState),
 		}, indicatorState)
 	})
-	if !disabled {
-		frame.FocusOnPress(ctx, valueState, valueState.History(), presses)
-	}
 	return dims
 }
 

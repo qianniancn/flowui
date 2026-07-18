@@ -46,11 +46,3 @@ func (s *buttonState) background(gtx layout.Context, target color.NRGBA) color.N
 func (s *buttonState) focusOpacity(gtx layout.Context, focused bool) float32 {
 	return s.focus.Opacity(gtx, focused)
 }
-
-func (s *buttonState) focusVisible(focused bool, history []widget.Press) bool {
-	return s.focus.Visible(focused, history)
-}
-
-func (s *buttonState) prepareFocus(visible bool) {
-	s.focus.Prepare(visible)
-}

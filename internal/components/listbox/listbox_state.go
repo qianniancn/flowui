@@ -343,10 +343,7 @@ func focusItem(ctx *frame.Context, stateKey, itemKey string, visible bool) bool 
 	if !ok {
 		return false
 	}
-	state, _ := frame.PeekState[listBoxState](ctx, stateKey, stateSlotListBox)
-	item := state.items[itemKey]
-	item.PrepareFocus(visible)
-	frame.RequestFocus(ctx, clickable)
+	frame.RequestFocusVisible(ctx, clickable, visible)
 	return true
 }
 

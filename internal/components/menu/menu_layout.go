@@ -226,7 +226,6 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 	} else {
 		presses := stateutil.ActivePresses(itemState.clickable.History())
 		for itemState.clickable.Clicked(eventGtx) {
-			itemState.focus.Prepare(false)
 			frame.RequestFocusVisible(ctx, &itemState.clickable, false)
 			if itemHasSubmenu(item) {
 				menuState.openSubmenu = item.Key
@@ -237,7 +236,7 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		}
 		history := itemState.clickable.History()
 		if stateutil.ActivePresses(history) > presses {
-			itemState.focus.Prepare(false)
+			frame.RequestFocusVisible(ctx, &itemState.clickable, false)
 		}
 		frame.FocusOnPress(ctx, &itemState.clickable, history, presses)
 	}

@@ -132,7 +132,6 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		result := state.updateKeys(gtx, w, items)
 		if result.focusKey != "" {
 			itemState := state.item(result.focusKey)
-			itemState.focus.Prepare(true)
 			frame.RequestFocus(ctx, &itemState.clickable)
 			state.ensureVisible(sidebarEntryIndex(entries, result.focusKey))
 		}

@@ -7,7 +7,6 @@ import (
 )
 
 type ItemFocusState struct {
-	PointerOrigin bool
 	TargetOpacity float32
 }
 
@@ -26,7 +25,6 @@ func item(ctx *frame.Context, stateKey, itemKey string) (*widget.Clickable, Item
 	}
 	item := state.items[itemKey]
 	return &item.Clickable, ItemFocusState{
-		PointerOrigin: item.FocusPointerOrigin(),
 		TargetOpacity: item.FocusTargetOpacity(),
 	}, true
 }

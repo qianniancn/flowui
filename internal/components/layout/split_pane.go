@@ -156,7 +156,7 @@ func (s SplitPaneWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	s.layoutChild(ctx, gtx, s.first, firstSize, image.Point{})
 	s.layoutChild(ctx, gtx, s.second, secondSize, secondOffset)
 
-	focusVisible := value.focus.Visible(gtx.Focused(value), nil)
+	focusVisible := frame.FocusVisible(ctx, value, gtx.Focused(value))
 	focusOpacity := value.focus.Opacity(gtx, focusVisible && enabled)
 	drawSplitPaneDivider(ctx, gtx, axis, size, first, divider, value.hovered, value.dragging, focusOpacity, s.disabled || !gtx.Enabled())
 	s.addHandle(gtx, value, enabled, axis, size, first, divider, max(gtx.Dp(tokens.HitSize), divider))
@@ -295,7 +295,6 @@ func (s *splitPaneState) updatePointer(ctx *frame.Context, gtx layout.Context, a
 			s.hovered = true
 			s.pointerID = event.PointerID
 			s.dragOffset = splitPanePointerPosition(axis, event.Position) - (float32(first) + float32(divider)/2)
-			s.focus.Prepare(false)
 			frame.RequestFocusVisible(ctx, s, false)
 			gtx.Execute(pointer.GrabCmd{Tag: s, ID: event.PointerID})
 		case pointer.Drag:

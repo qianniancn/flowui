@@ -135,10 +135,10 @@ func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 
 	if enabled {
 		state.updateThumbPresses(ctx, gtx, values.rangeMode)
-		if changedValues, changed, thumb := state.update(gtx, values); changed {
+		if changedValues, changed, thumb, keyboard := state.update(gtx, values); changed {
 			values = changedValues
 			state.syncRatios(values)
-			frame.RequestFocus(ctx, state.thumbTag(thumb))
+			frame.RequestFocusVisible(ctx, state.thumbTag(thumb), keyboard)
 			s.dispatch(values)
 		}
 	}

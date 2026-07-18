@@ -325,7 +325,6 @@ func entryByKey(entries []entry, key string) (entry, bool) {
 
 func (s *menuState) focus(ctx *frame.Context, entry entry, visible bool) {
 	item := s.item(entry.item.Key)
-	item.focus.Prepare(visible)
 	frame.RequestFocusVisible(ctx, &item.clickable, visible)
 }
 

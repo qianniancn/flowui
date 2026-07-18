@@ -221,7 +221,7 @@ func TestSidebarPointerClickDoesNotShowKeyboardFocus(t *testing.T) {
 	if selected != "projects" {
 		t.Fatalf("selected = %q, want projects", selected)
 	}
-	if state.items["projects"].focus.Visible(router.Source().Focused(&state.items["projects"].clickable), state.items["projects"].clickable.History()) {
+	if frame.FocusVisible(ctx, &state.items["projects"].clickable, router.Source().Focused(&state.items["projects"].clickable)) {
 		t.Fatal("pointer click displayed a keyboard focus ring")
 	}
 }

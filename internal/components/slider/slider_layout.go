@@ -160,7 +160,7 @@ func (s SliderWidget) layoutFloatInputs(gtx layout.Context, state *sliderState, 
 func (s SliderWidget) layoutThumb(ctx *frame.Context, gtx layout.Context, state *sliderState, style sliderStyle, values sliderValues, geometry sliderGeometry, index int) {
 	thumb := state.thumb(index)
 	rect := geometry.thumbRects[index]
-	focus := thumb.focusOpacity(gtx, gtx.Focused(&thumb.clickable))
+	focus := thumb.focusOpacity(ctx, gtx, gtx.Focused(&thumb.clickable))
 	scale := thumb.draggingScale(gtx, state.dragging(index), frame.ActiveTheme(ctx).Components.Slider.DraggingScale)
 	drawSliderThumb(gtx, frame.ActiveTheme(ctx), style, rect, s.axis(), focus, scale)
 

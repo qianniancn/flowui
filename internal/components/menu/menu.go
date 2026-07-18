@@ -304,7 +304,6 @@ func (m Widget) closeToParent(ctx *frame.Context) {
 		return
 	}
 	if item := m.parentState.items[m.parentItemKey]; item != nil {
-		item.focus.Prepare(true)
 		frame.RequestFocusVisible(ctx, &item.clickable, true)
 	}
 }

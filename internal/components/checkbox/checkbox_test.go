@@ -331,27 +331,6 @@ func TestCheckboxFocusOpacityAnimation(t *testing.T) {
 	}
 }
 
-func TestCheckboxFocusVisibleIgnoresPointerFocus(t *testing.T) {
-	state := new(checkboxState)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("keyboard focus was not focus-visible")
-	}
-
-	state.focusVisible(false, nil)
-	if state.focusVisible(true, []widget.Press{{Start: time.Unix(1, 0)}}) {
-		t.Fatal("pointer focus was focus-visible")
-	}
-
-	if state.focusVisible(true, nil) {
-		t.Fatal("pointer focus became focus-visible without losing focus")
-	}
-
-	state.focusVisible(false, nil)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("focus-visible did not reset after blur")
-	}
-}
-
 func TestCheckboxFocusesOnPress(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)

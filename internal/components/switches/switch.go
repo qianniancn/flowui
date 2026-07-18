@@ -92,7 +92,6 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	if disabled {
 		gtx = gtx.Disabled()
 	}
-
 	dims := componentState.value.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.Switch.Add(gtx.Ops)
 		if s.label != "" {
@@ -106,15 +105,15 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 			semantic.DescriptionOp(description).Add(gtx.Ops)
 		}
 
-		focusVisible := componentState.focusVisible(gtx.Focused(&componentState.value), componentState.value.History())
+		if !disabled {
+			frame.FocusOnPress(ctx, &componentState.value, componentState.value.History(), presses)
+		}
+		focusVisible := frame.FocusVisible(ctx, &componentState.value, gtx.Focused(&componentState.value))
 		style := switchStyleFor(frame.ActiveTheme(ctx), componentState.value.Hovered(), componentState.value.Pressed(), disabled, s.invalid)
 		style.selected = componentState.selection(animGtx, componentState.value.Value)
 		style.focus = componentState.focusOpacity(animGtx, focusVisible && !disabled)
 		return s.layoutContent(ctx, gtx, style, switchSizeStyleFor(frame.ActiveTheme(ctx), s.size), componentState.value.Value)
 	})
-	if !disabled {
-		frame.FocusOnPress(ctx, &componentState.value, componentState.value.History(), presses)
-	}
 	if !disabled && componentState.value.Value != s.checked && s.onChange != nil {
 		s.onChange(componentState.value.Value)
 	}

@@ -30,15 +30,13 @@ type sliderState struct {
 }
 
 type sliderThumbState struct {
-	clickable           widget.Clickable
-	focus               state.FocusAnimation
-	scale               float32
-	scaleFrom           float32
-	scaleTo             float32
-	scaleAt             time.Time
-	scaleReady          bool
-	pointerFocus        bool
-	pointerFocusPending bool
+	clickable  widget.Clickable
+	focus      state.FocusAnimation
+	scale      float32
+	scaleFrom  float32
+	scaleTo    float32
+	scaleAt    time.Time
+	scaleReady bool
 }
 
 const sliderThumbScaleDuration = 150 * time.Millisecond
@@ -82,15 +80,15 @@ func (s *sliderState) updateThumbPress(ctx *frame.Context, gtx layout.Context, t
 	frame.FocusOnPress(ctx, &thumb.clickable, thumb.clickable.History(), presses)
 }
 
-func (s *sliderState) update(gtx layout.Context, values sliderValues) (sliderValues, bool, int) {
+func (s *sliderState) update(gtx layout.Context, values sliderValues) (sliderValues, bool, int, bool) {
 	if keyboardValues, changed, thumb := s.updateKeyboard(gtx, values); changed {
-		return keyboardValues, true, thumb
+		return keyboardValues, true, thumb, true
 	}
 
 	lowerChanged := s.lower.Update(gtx)
 	upperChanged := values.rangeMode && s.upper.Update(gtx)
 	if !lowerChanged && !upperChanged {
-		return values, false, 0
+		return values, false, 0, false
 	}
 
 	next := values
@@ -105,12 +103,10 @@ func (s *sliderState) update(gtx layout.Context, values sliderValues) (sliderVal
 		next.upper = max(values.value(s.upper.Value), values.lower)
 		thumb = 1
 	}
-	s.thumb(thumb).pointerFocus = true
-	s.thumb(thumb).pointerFocusPending = true
 	if !next.rangeMode {
 		next.upper = next.lower
 	}
-	return next, true, thumb
+	return next, true, thumb, false
 }
 
 func (s *sliderState) updateKeyboard(gtx layout.Context, values sliderValues) (sliderValues, bool, int) {
@@ -137,8 +133,6 @@ func (s *sliderState) updateKeyboard(gtx layout.Context, values sliderValues) (s
 			if !ok || event.State != key.Press {
 				continue
 			}
-			s.thumb(index).pointerFocus = false
-			s.thumb(index).pointerFocusPending = false
 			next := values
 			current := next.lower
 			minimum, maximum := next.minValue, next.maxValue
@@ -200,14 +194,8 @@ func (s *sliderState) dragging(index int) bool {
 	return s.lower.Dragging()
 }
 
-func (t *sliderThumbState) focusOpacity(gtx layout.Context, focused bool) float32 {
-	visible := t.focus.Visible(focused, t.clickable.History())
-	if focused {
-		t.pointerFocusPending = false
-	} else if !t.pointerFocusPending {
-		t.pointerFocus = false
-	}
-	visible = visible && !t.pointerFocus
+func (t *sliderThumbState) focusOpacity(ctx *frame.Context, gtx layout.Context, focused bool) float32 {
+	visible := frame.FocusVisible(ctx, &t.clickable, focused)
 	return t.focus.Opacity(gtx, visible)
 }
 

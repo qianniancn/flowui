@@ -200,10 +200,6 @@ func (s *radioItemState) focusOpacity(gtx layout.Context, focused bool) float32 
 	return s.focus.Opacity(gtx, focused)
 }
 
-func (s *radioItemState) focusVisible(focused bool, history []widget.Press) bool {
-	return s.focus.Visible(focused, history)
-}
-
 func radioPressScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, disabled bool) float32 {
 	target := theme.Components.RadioGroup.PressedScale
 	if target <= 0 || target > 1 {

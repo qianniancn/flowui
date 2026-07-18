@@ -23,35 +23,27 @@ const (
 )
 
 type dropdownState struct {
-	key                string
-	trigger            widget.Clickable
-	triggerFocus       state.FocusAnimation
-	prepareButtonFocus func(bool)
-	longPressTag       struct{}
-	touchTracking      bool
-	pointerID          pointer.ID
-	pointerStart       f32.Point
-	pointerAt          time.Time
-	longPressMoved     bool
-	dismiss            [16]overlay.ClickArea
-	dialog             overlay.ClickArea
-	open               bool
-	initialized        bool
-	wasOpen            bool
-	triggerRect        image.Rectangle
-	focusFirst         bool
-	focusLast          bool
-	focusVisible       bool
-	skipRestore        bool
-	transition         animation.FloatTransition
-	binding            dropdownBinding
-}
-
-func (s *dropdownState) prepareTriggerFocus(visible bool) {
-	s.triggerFocus.Prepare(visible)
-	if s.prepareButtonFocus != nil {
-		s.prepareButtonFocus(visible)
-	}
+	key            string
+	trigger        widget.Clickable
+	triggerFocus   state.FocusAnimation
+	longPressTag   struct{}
+	touchTracking  bool
+	pointerID      pointer.ID
+	pointerStart   f32.Point
+	pointerAt      time.Time
+	longPressMoved bool
+	dismiss        [16]overlay.ClickArea
+	dialog         overlay.ClickArea
+	open           bool
+	initialized    bool
+	wasOpen        bool
+	triggerRect    image.Rectangle
+	focusFirst     bool
+	focusLast      bool
+	focusVisible   bool
+	skipRestore    bool
+	transition     animation.FloatTransition
+	binding        dropdownBinding
 }
 
 type dropdownBinding struct {

@@ -77,7 +77,11 @@ func TestContextPublicFocusHelpersPreserveModality(t *testing.T) {
 	if !ctx.FocusVisible(keyboardTarget, true) {
 		t.Fatal("keyboard-originated custom focus was hidden")
 	}
+	ctx.RequestFocusVisible(keyboardTarget, false)
 	ctx.PreserveFocus()
+	if ctx.FocusVisible(keyboardTarget, true) {
+		t.Fatal("pointer-originated focus remained visible after preservation")
+	}
 }
 
 func TestContextScopesKeysWithSeparators(t *testing.T) {

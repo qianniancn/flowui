@@ -106,7 +106,7 @@ func (t Widget) layoutItem(ctx *frame.Context, gtx layout.Context, treeStateValu
 	rowGtx := gtx
 	rowGtx.Constraints = layout.Exact(size)
 
-	focusVisible := itemState.focus.Visible(rowGtx.Focused(&itemState.clickable), itemState.clickable.History())
+	focusVisible := frame.FocusVisible(ctx, &itemState.clickable, rowGtx.Focused(&itemState.clickable))
 	focus := itemState.focus.Opacity(animGtx, focusVisible && !disabled)
 	hovered := (itemState.clickable.Hovered() || itemState.toggle.Hovered()) && !disabled
 	style := treeItemStyleFor(frame.ActiveTheme(ctx), selected, hovered, disabled)

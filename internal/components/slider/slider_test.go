@@ -246,17 +246,17 @@ func TestSliderPointerFocusStaysHiddenUntilKeyboardInput(t *testing.T) {
 	layoutSliderFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(300, 100))
 
 	state := sliderTestState(ctx, "volume")
-	if !state.lowerThumb.pointerFocus || !state.lowerThumb.pointerFocusPending {
-		t.Fatal("pointer focus origin was not retained while the focus command was pending")
+	if frame.FocusVisible(ctx, &state.lowerThumb.clickable, true) {
+		t.Fatal("pointer focus was visible while the focus command was pending")
 	}
 	layoutSliderFrame(ctx, router, widget(), time.Unix(1, int64(2*time.Millisecond)), image.Pt(300, 100))
-	if !state.lowerThumb.pointerFocus || state.lowerThumb.pointerFocusPending {
-		t.Fatal("pointer focus origin was not retained after the deferred focus command")
+	if frame.FocusVisible(ctx, &state.lowerThumb.clickable, true) {
+		t.Fatal("pointer focus was visible after the deferred focus command")
 	}
 
 	router.Queue(key.Event{Name: key.NameRightArrow, State: key.Press})
 	layoutSliderFrame(ctx, router, widget(), time.Unix(1, int64(3*time.Millisecond)), image.Pt(300, 100))
-	if state.lowerThumb.pointerFocus || state.lowerThumb.pointerFocusPending {
+	if !frame.FocusVisible(ctx, &state.lowerThumb.clickable, true) {
 		t.Fatal("keyboard input did not switch the thumb to keyboard-visible focus")
 	}
 	if value != 51 {

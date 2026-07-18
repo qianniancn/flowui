@@ -132,7 +132,7 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 		theme := frame.ActiveTheme(ctx).Components.ListBox
 		minHeight := min(gtx.Dp(theme.ItemMinHeight), gtx.Constraints.Max.Y)
 
-		focusVisible := itemState.FocusVisible(gtx.Focused(&itemState.Clickable), itemState.Clickable.History())
+		focusVisible := frame.FocusVisible(ctx, &itemState.Clickable, gtx.Focused(&itemState.Clickable))
 		activeTheme := frame.ActiveTheme(ctx)
 		style := listBoxItemStyleFor(activeTheme, item.Variant, itemState.Clickable.Hovered(), itemState.Clickable.Pressed(), disabled)
 		style.bg = itemState.Background(animGtx, style.bg, listBoxItemColorDuration)

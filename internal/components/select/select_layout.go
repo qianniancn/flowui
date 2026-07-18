@@ -96,7 +96,7 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 
 	return state.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		value, selected := s.displayValue()
-		focusVisible := state.focus.Visible(gtx.Focused(&state.trigger), state.trigger.History())
+		focusVisible := frame.FocusVisible(ctx, &state.trigger, gtx.Focused(&state.trigger))
 		style := selectStyleFor(frame.ActiveTheme(ctx), s.variant, state.trigger.Hovered(), focusVisible, s.disabled, s.invalid)
 		style.field.Background = state.field.Background(animGtx, style.field.Background)
 		style.field.Border = state.field.BorderColor(animGtx, style.field.Border)

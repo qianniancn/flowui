@@ -184,9 +184,6 @@ func (w Widget) updateKeys(ctx *frame.Context, gtx layout.Context, items []frame
 		if target < 0 || target >= len(items) || target == current {
 			continue
 		}
-		if items[target].Prepare != nil {
-			items[target].Prepare(true)
-		}
 		frame.RequestFocusVisible(ctx, items[target].Tag, true)
 	}
 }

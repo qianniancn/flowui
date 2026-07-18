@@ -101,7 +101,6 @@ func (control *colorControlState) updateArea(ctx *frame.Context, gtx layout.Cont
 			frame.PreserveFocus(ctx)
 			control.dragging = true
 			control.pointer = eventValue.PointerID
-			control.focus.Prepare(false)
 			frame.RequestFocusVisible(ctx, control, false)
 			gtx.Execute(pointer.GrabCmd{Tag: control, ID: eventValue.PointerID})
 			next.s, next.v = colorAreaPosition(eventValue.Position, size)
@@ -182,7 +181,6 @@ func (control *colorControlState) updateAxis(ctx *frame.Context, gtx layout.Cont
 			frame.PreserveFocus(ctx)
 			control.dragging = true
 			control.pointer = eventValue.PointerID
-			control.focus.Prepare(false)
 			frame.RequestFocusVisible(ctx, control, false)
 			gtx.Execute(pointer.GrabCmd{Tag: control, ID: eventValue.PointerID})
 			next = colorAxisPosition(eventValue.Position, size)
@@ -247,8 +245,8 @@ func (control *colorControlState) updateAxis(ctx *frame.Context, gtx layout.Cont
 	return next, changed
 }
 
-func (control *colorControlState) focusOpacity(gtx layout.Context) float32 {
-	visible := control.focus.Visible(gtx.Focused(control), nil)
+func (control *colorControlState) focusOpacity(ctx *frame.Context, gtx layout.Context) float32 {
+	visible := frame.FocusVisible(ctx, control, gtx.Focused(control))
 	return control.focus.Opacity(gtx, visible)
 }
 

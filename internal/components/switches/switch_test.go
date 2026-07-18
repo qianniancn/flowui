@@ -11,7 +11,6 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -261,27 +260,6 @@ func TestSwitchFocusOpacityAnimation(t *testing.T) {
 	}
 }
 
-func TestSwitchFocusVisibleIgnoresPointerFocus(t *testing.T) {
-	state := new(switchState)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("keyboard focus was not focus-visible")
-	}
-
-	state.focusVisible(false, nil)
-	if state.focusVisible(true, []widget.Press{widgetPressForSwitchTest()}) {
-		t.Fatal("pointer focus was focus-visible")
-	}
-
-	if state.focusVisible(true, nil) {
-		t.Fatal("pointer focus became focus-visible without losing focus")
-	}
-
-	state.focusVisible(false, nil)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("focus-visible did not reset after blur")
-	}
-}
-
 func TestSwitchFocusesOnPress(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
@@ -347,10 +325,6 @@ type fixedSwitchChild struct {
 
 func (f fixedSwitchChild) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(f.size)}
-}
-
-func widgetPressForSwitchTest() widget.Press {
-	return widget.Press{Start: time.Unix(1, 0)}
 }
 
 func layoutSwitchFrame(ctx *frame.Context, router *input.Router) {

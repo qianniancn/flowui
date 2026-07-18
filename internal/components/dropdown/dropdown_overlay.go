@@ -55,7 +55,6 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 		}
 		event, ok := e.(key.Event)
 		if ok && event.State == key.Press {
-			state.prepareTriggerFocus(true)
 			frame.RequestFocusVisible(ctx, &state.trigger, true)
 			state.skipRestore = true
 			open = state.requestOpen(ctx, d, false)
@@ -71,7 +70,6 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 	var runtime menu.Runtime
 	runtime = d.menu.Runtime(ctx, state.key, "menu", func(focusVisible bool) {
 		runtime.CloseSubmenus()
-		state.prepareTriggerFocus(focusVisible)
 		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
 		state.skipRestore = true
 		state.requestOpen(ctx, d, false)

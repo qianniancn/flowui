@@ -32,7 +32,7 @@ func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, gro
 		semantic.RadioButton.Add(gtx.Ops)
 		semantic.SelectedOp(selected).Add(gtx.Ops)
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
-		focusVisible := itemState.focusVisible(gtx.Focused(&itemState.clickable), itemState.clickable.History())
+		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
 		style := radioStyleFor(frame.ActiveTheme(ctx), r.variant, itemState.clickable.Hovered(), itemState.clickable.Pressed(), disabled, invalid)
 		style.selected = itemState.selection(animGtx, selected)
 		style.focus = itemState.focusOpacity(animGtx, focusVisible && !disabled)

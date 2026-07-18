@@ -404,7 +404,7 @@ func TestSelectArrowDownOpensAndFocusesFirstOption(t *testing.T) {
 	if !router.Source().Focused(item) {
 		t.Fatal("ArrowDown did not focus first enabled option")
 	}
-	if focus.PointerOrigin {
+	if !frame.FocusVisible(ctx, item, true) {
 		t.Fatal("keyboard-opened select marked the option focus as pointer-originated")
 	}
 	layoutSelectTestFrame(ctx, router, widget, start.Add(selectEnterDuration+time.Millisecond))
@@ -432,7 +432,7 @@ func TestSelectPointerOpenFocusesSelectedWithoutFocusRing(t *testing.T) {
 	if !router.Source().Focused(item) {
 		t.Fatal("pointer-opened select did not focus its selected option")
 	}
-	if !focus.PointerOrigin {
+	if frame.FocusVisible(ctx, item, true) {
 		t.Fatal("pointer-opened select did not preserve pointer focus modality")
 	}
 

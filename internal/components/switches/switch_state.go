@@ -32,7 +32,3 @@ func (s *switchState) selection(gtx layout.Context, checked bool) float32 {
 func (s *switchState) focusOpacity(gtx layout.Context, focused bool) float32 {
 	return s.focus.Opacity(gtx, focused)
 }
-
-func (s *switchState) focusVisible(focused bool, history []widget.Press) bool {
-	return s.focus.Visible(focused, history)
-}

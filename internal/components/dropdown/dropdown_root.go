@@ -44,7 +44,6 @@ func (d Widget) layoutRoot(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if restoreFocus {
 		frame.AfterOverlays(ctx, func() {
 			if !frame.HasTopOverlay(ctx) {
-				state.prepareTriggerFocus(state.focusVisible)
 				frame.RequestFocusVisible(ctx, &state.trigger, state.focusVisible)
 			}
 		})
@@ -67,7 +66,6 @@ func (d Widget) handleTrigger(ctx *frame.Context, gtx layout.Context, state *dro
 		state.focusLast = false
 		state.focusVisible = focusVisible
 		open = state.requestOpen(ctx, d, !open)
-		state.prepareTriggerFocus(focusVisible)
 		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
 	}
 	open = d.handleTriggerKeys(ctx, gtx, state, open)
@@ -171,7 +169,6 @@ func (d Widget) handleLongPress(ctx *frame.Context, gtx layout.Context, state *d
 	state.focusFirst = true
 	state.focusLast = false
 	state.focusVisible = false
-	state.prepareTriggerFocus(false)
 	frame.RequestFocusVisible(ctx, &state.trigger, false)
 	return state.requestOpen(ctx, d, true)
 }
@@ -195,7 +192,6 @@ func (d Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *dro
 	if trigger, ok := d.trigger.(*button.ButtonWidget); ok && trigger != nil {
 		return d.layoutButtonTrigger(ctx, gtx, state, *trigger)
 	}
-	state.prepareButtonFocus = nil
 	animGtx := gtx
 	presses := stateutil.ActivePresses(state.trigger.History())
 	if !d.disabled {
@@ -243,8 +239,7 @@ func (d Widget) layoutButtonTrigger(ctx *frame.Context, gtx layout.Context, stat
 		frame.FocusOnPress(ctx, &state.trigger, state.trigger.History(), presses)
 	}
 	macro := op.Record(gtx.Ops)
-	dims, focus := button.LayoutWithClickableNoEventsAndFocus(trigger, ctx, gtx, &state.trigger)
-	state.prepareButtonFocus = focus.Prepare
+	dims := button.LayoutWithClickableNoEvents(trigger, ctx, gtx, &state.trigger)
 	call := macro.Stop()
 	if d.triggerMode == TriggerLongPress && dims.Size.X > 0 && dims.Size.Y > 0 {
 		area := clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops)

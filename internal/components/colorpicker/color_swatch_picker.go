@@ -166,7 +166,7 @@ func (picker ColorSwatchPickerWidget) recordItem(ctx *frame.Context, gtx layout.
 		selection := itemState.selection.Value(gtx, boolFloat(value == picker.value), colorSwatchTransition, animation.EaseSmoothstep)
 		check := itemState.check.Value(gtx, boolFloat(value == picker.value), colorSwatchCheckTransition, animation.EaseSmoothstep)
 		hover := itemState.hover.Value(gtx, boolFloat(itemState.clickable.Hovered() && enabled), colorSwatchTransition, animation.EaseSmoothstep)
-		focusVisible := itemState.focus.Visible(gtx.Focused(&itemState.clickable), itemState.clickable.History())
+		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
 		focus := itemState.focus.Opacity(gtx, focusVisible && enabled)
 		opacity := paint.PushOpacity(gtx.Ops, func() float32 {
 			if enabled {

@@ -6,81 +6,30 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 )
 
-func TestFocusAnimationDistinguishesPointerFocus(t *testing.T) {
-	var state FocusAnimation
-	if !state.Visible(true, nil) {
-		t.Fatal("keyboard focus was not visible")
-	}
-	state.Visible(false, nil)
-	if state.Visible(true, []widget.Press{{}}) {
-		t.Fatal("pointer focus was visible")
-	}
-}
-
-func TestFocusAnimationDoesNotTreatStaleHistoryAsPointerFocus(t *testing.T) {
-	var animation FocusAnimation
-	start := time.Unix(1, 0)
-	history := []widget.Press{{Start: start}}
-
-	animation.Visible(false, nil)
-	animation.Visible(false, history)
-	if animation.Visible(true, history) {
-		t.Fatal("pointer focus was visible")
-	}
-	animation.Visible(false, history)
-	history[0].End = start.Add(time.Millisecond)
-	if !animation.Visible(true, history) {
-		t.Fatal("stale pointer history hid later keyboard focus")
-	}
-}
-
-func TestFocusAnimationPointerPressHidesExistingKeyboardFocus(t *testing.T) {
-	var animation FocusAnimation
-	if !animation.Visible(true, nil) {
-		t.Fatal("keyboard focus was not visible")
-	}
-	if animation.Visible(true, []widget.Press{{Start: time.Unix(1, 0)}}) {
-		t.Fatal("pointer interaction did not hide keyboard focus")
-	}
-}
-
-func TestFocusAnimationDropsUnappliedPointerFocus(t *testing.T) {
-	var animation FocusAnimation
-	history := []widget.Press{{Start: time.Unix(1, 0)}}
-	animation.Visible(false, nil)
-	animation.Visible(false, history)
-	animation.Visible(false, history)
-	animation.Visible(false, history)
-	if !animation.Visible(true, history) {
-		t.Fatal("unapplied pointer focus poisoned later keyboard focus")
-	}
-}
-
-func TestFocusAnimationPreparesProgrammaticFocusModality(t *testing.T) {
-	var animation FocusAnimation
-	animation.Prepare(false)
-	if animation.Visible(true, nil) {
-		t.Fatal("pointer-originated programmatic focus was visible")
-	}
-	animation.Visible(false, nil)
-	animation.Prepare(true)
-	if !animation.Visible(true, nil) {
-		t.Fatal("keyboard-originated programmatic focus was hidden")
-	}
-}
-
-func TestPointerPreparationImmediatelyClearsVisibleFocus(t *testing.T) {
+func TestFocusAnimationOpacityTracksVisible(t *testing.T) {
 	var animation FocusAnimation
 	gtx := layout.Context{Ops: new(op.Ops), Now: time.Unix(1, 0)}
 	if got := animation.Opacity(gtx, true); got != 1 {
-		t.Fatalf("initial keyboard focus opacity = %v, want 1", got)
+		t.Fatalf("visible opacity = %v, want 1", got)
 	}
 
-	animation.Prepare(false)
+	gtx.Now = gtx.Now.Add(focusAnimationDuration + time.Millisecond)
 	if got := animation.Opacity(gtx, false); got != 0 {
-		t.Fatalf("pointer focus opacity = %v, want 0", got)
+		t.Fatalf("hidden opacity = %v, want 0", got)
+	}
+}
+
+func TestFocusAnimationTargetOpacityTracksLatestValue(t *testing.T) {
+	var animation FocusAnimation
+	gtx := layout.Context{Ops: new(op.Ops), Now: time.Unix(1, 0)}
+	animation.Opacity(gtx, true)
+	if got := animation.TargetOpacity(); got != 1 {
+		t.Fatalf("target opacity = %v, want 1", got)
+	}
+	animation.Opacity(gtx, false)
+	if got := animation.TargetOpacity(); got != 0 {
+		t.Fatalf("target opacity = %v, want 0", got)
 	}
 }

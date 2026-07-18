@@ -43,20 +43,8 @@ func (s *State) Selection(gtx layout.Context, selected bool, duration time.Durat
 	return s.selection.Value(gtx, target, duration, animation.EaseSmoothstep)
 }
 
-func (s *FocusableState) PrepareFocus(visible bool) {
-	s.focus.Prepare(visible)
-}
-
 func (s *FocusableState) FocusOpacity(gtx layout.Context, focused bool) float32 {
 	return s.focus.Opacity(gtx, focused)
-}
-
-func (s *FocusableState) FocusVisible(focused bool, history []widget.Press) bool {
-	return s.focus.Visible(focused, history)
-}
-
-func (s *FocusableState) FocusPointerOrigin() bool {
-	return s.focus.PointerOrigin()
 }
 
 func (s *FocusableState) FocusTargetOpacity() float32 {

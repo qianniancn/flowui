@@ -259,8 +259,7 @@ type FocusGroup struct {
 }
 
 type FocusGroupItem struct {
-	Tag     event.Tag
-	Prepare func(bool)
+	Tag event.Tag
 }
 
 // FocusCollector gathers focusable descendants laid out within a component.
@@ -290,12 +289,12 @@ func PushFocusGroup(ctx *Context, group *FocusGroup) func() {
 	}
 }
 
-func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool, prepare func(bool)) {
+func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool) {
 	registerCollectedFocus(ctx, tag, enabled)
 	if ctx.focusGroup == nil || tag == nil || !enabled {
 		return
 	}
-	ctx.focusGroup.Items = append(ctx.focusGroup.Items, FocusGroupItem{Tag: tag, Prepare: prepare})
+	ctx.focusGroup.Items = append(ctx.focusGroup.Items, FocusGroupItem{Tag: tag})
 }
 
 func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {

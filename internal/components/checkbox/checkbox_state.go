@@ -2,7 +2,6 @@ package checkbox
 
 import (
 	"gioui.org/layout"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -38,8 +37,4 @@ func (s *SelectionAnimation) Progress(gtx layout.Context, checked bool) float32 
 
 func (s *checkboxState) focusOpacity(gtx layout.Context, focused bool) float32 {
 	return s.focus.Opacity(gtx, focused)
-}
-
-func (s *checkboxState) focusVisible(focused bool, history []widget.Press) bool {
-	return s.focus.Visible(focused, history)
 }

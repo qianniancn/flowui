@@ -101,7 +101,7 @@ func (area ColorAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layou
 			return max(gtx.Dp(tokens.ThumbSize), 1)
 		}(),
 		max(gtx.Dp(tokens.ThumbBorderWidth), 1),
-		areaState.control.focusOpacity(gtx),
+		areaState.control.focusOpacity(ctx, gtx),
 		frame.ActiveTheme(ctx).Palette.Focus,
 		area.showDots,
 		max(gtx.Dp(tokens.DotSize), 1),

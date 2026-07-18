@@ -145,7 +145,7 @@ func (slider ColorSliderWidget) layoutTrack(ctx *frame.Context, gtx layout.Conte
 	size := image.Pt(gtx.Constraints.Max.X, max(gtx.Dp(tokens.TrackHeight), 1))
 	trackGtx := gtx
 	trackGtx.Constraints = layout.Exact(size)
-	focus := sliderState.control.focusOpacity(gtx)
+	focus := sliderState.control.focusOpacity(ctx, gtx)
 	thumbSize := max(gtx.Dp(tokens.ThumbSize), 1)
 	thumbBorder := max(gtx.Dp(tokens.ThumbBorderWidth), 1)
 

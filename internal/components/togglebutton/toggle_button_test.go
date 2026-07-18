@@ -236,7 +236,7 @@ func TestToggleButtonOnlyShowsFocusRingForKeyboardFocus(t *testing.T) {
 		if !router.Source().Focused(&stateValue.clickable) {
 			t.Fatal("pointer press did not focus toggle button")
 		}
-		if stateValue.focus.Visible(true, stateValue.clickable.History()) {
+		if frame.FocusVisible(ctx, &stateValue.clickable, true) {
 			t.Fatal("pointer focus should not be focus-visible")
 		}
 	}
@@ -248,7 +248,7 @@ func TestToggleButtonOnlyShowsFocusRingForKeyboardFocus(t *testing.T) {
 		stateValue := toggleButtonStateFromContext(t, ctx, "toggle")
 		router.Source().Execute(key.FocusCmd{Tag: &stateValue.clickable})
 		layoutToggleButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		if !stateValue.focus.Visible(true, stateValue.clickable.History()) {
+		if !frame.FocusVisible(ctx, &stateValue.clickable, true) {
 			t.Fatal("keyboard focus should be focus-visible")
 		}
 	}

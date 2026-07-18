@@ -294,51 +294,6 @@ func TestFocusClearsOnOutsidePress(t *testing.T) {
 	}
 }
 
-func TestButtonFocusVisibleIgnoresPointerFocus(t *testing.T) {
-	state := new(buttonState)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("keyboard focus was not focus-visible")
-	}
-
-	state.focusVisible(false, nil)
-	if state.focusVisible(true, []widget.Press{{Start: time.Unix(1, 0)}}) {
-		t.Fatal("pointer focus was focus-visible")
-	}
-
-	if state.focusVisible(true, nil) {
-		t.Fatal("pointer focus became focus-visible without losing focus")
-	}
-
-	state.focusVisible(false, nil)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("focus-visible did not reset after blur")
-	}
-}
-
-func TestButtonFocusHandlePreservesProgrammaticFocusModality(t *testing.T) {
-	state := new(buttonState)
-	handle := FocusHandle{state: state}
-	handle.Prepare(false)
-	if state.focusVisible(true, nil) {
-		t.Fatal("pointer-originated restored focus was visible")
-	}
-	state.focusVisible(false, nil)
-	handle.Prepare(true)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("keyboard-originated restored focus was hidden")
-	}
-}
-
-func TestButtonFocusHandleDropsUnappliedModality(t *testing.T) {
-	state := new(buttonState)
-	FocusHandle{state: state}.Prepare(false)
-	state.focusVisible(false, nil)
-	state.focusVisible(false, nil)
-	if !state.focusVisible(true, nil) {
-		t.Fatal("unapplied pointer modality hid a later keyboard focus")
-	}
-}
-
 func TestButtonLoadingBlocksClick(t *testing.T) {
 	clicked := false
 	clickable := new(widget.Clickable)

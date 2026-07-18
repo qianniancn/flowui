@@ -237,7 +237,6 @@ func (s *menubarState) updateInteractions(ctx *frame.Context, gtx layout.Context
 		s.focusPanelKey = ""
 		s.focusLast = false
 		s.focusVisible = false
-		trigger.focus.Prepare(false)
 		frame.RequestFocusVisible(ctx, &trigger.clickable, false)
 	}
 	s.hoveredKey = hoveredKey
@@ -359,7 +358,6 @@ func (s *menubarState) focusMovedTrigger(ctx *frame.Context, widget Widget, inde
 	}
 	item := widget.items[index]
 	trigger := s.trigger(item.key)
-	trigger.focus.Prepare(true)
 	frame.RequestFocusVisible(ctx, &trigger.clickable, true)
 	if openKey != "" {
 		s.requestOpen(ctx, widget, item.key)
@@ -384,7 +382,6 @@ func (s *menubarState) focusTrigger(ctx *frame.Context, key string, visible bool
 	if trigger == nil {
 		return
 	}
-	trigger.focus.Prepare(visible)
 	frame.RequestFocusVisible(ctx, &trigger.clickable, visible)
 }
 

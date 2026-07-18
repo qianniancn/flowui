@@ -70,7 +70,7 @@ func (b CloseButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 	size := closeButtonSize(gtx, frame.ActiveTheme(ctx).Components.CloseButton.Size)
 	gtx.Constraints = layout.Exact(size)
 	focused := gtx.Focused(clickable)
-	focusVisible := buttonState.focus.Visible(focused, clickable.History())
+	focusVisible := frame.FocusVisible(ctx, clickable, focused)
 	style := closeButtonStyleFor(frame.ActiveTheme(ctx), clickable.Hovered(), !enabled)
 	style.background = buttonState.background(animGtx, style.background)
 	style.focusOpacity = buttonState.focus.Opacity(animGtx, focusVisible && enabled)

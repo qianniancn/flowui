@@ -256,7 +256,7 @@ func (t TabsWidget) layoutTab(ctx *frame.Context, gtx layout.Context, componentS
 		semantic.SelectedOp(selected).Add(gtx.Ops)
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
 
-		focusVisible := itemState.interaction.Visible(gtx.Focused(&itemState.clickable), itemState.clickable.History())
+		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
 		focus := itemState.interaction.Opacity(animGtx, focusVisible && !disabled)
 		progress := itemState.selectionProgress(animGtx, selected)
 		style := tabsItemStyleFor(frame.ActiveTheme(ctx), t.variant, t.color, itemState.clickable.Hovered() && !selected, disabled)

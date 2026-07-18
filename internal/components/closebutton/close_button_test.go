@@ -179,11 +179,10 @@ func TestCloseButtonPointerAndKeyboardFocusVisibility(t *testing.T) {
 			Position:  f32.Pt(12, 12),
 		})
 		layoutCloseButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		buttonState, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton)
-		if !ok || !router.Source().Focused(clickable) {
+		if _, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton); !ok || !router.Source().Focused(clickable) {
 			t.Fatal("pointer press did not focus the close button")
 		}
-		if buttonState.focus.Visible(true, clickable.History()) {
+		if frame.FocusVisible(ctx, clickable, true) {
 			t.Fatal("pointer focus should not show the focus ring")
 		}
 	}
@@ -199,21 +198,9 @@ func TestCloseButtonPointerAndKeyboardFocusVisibility(t *testing.T) {
 		}
 		router.Source().Execute(key.FocusCmd{Tag: clickable})
 		layoutCloseButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		buttonState, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton)
-		if !ok || !buttonState.focus.Visible(true, clickable.History()) {
+		if _, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton); !ok || !frame.FocusVisible(ctx, clickable, true) {
 			t.Fatal("keyboard focus should show the focus ring")
 		}
-	}
-}
-
-func TestCloseButtonFocusVisibleIgnoresPointerFocus(t *testing.T) {
-	var buttonState closeButtonState
-	if !buttonState.focus.Visible(true, nil) {
-		t.Fatal("keyboard focus should be visible")
-	}
-	buttonState.focus.Visible(false, nil)
-	if buttonState.focus.Visible(true, []widget.Press{{Start: time.Unix(1, 0)}}) {
-		t.Fatal("pointer focus should not be visible")
 	}
 }
 

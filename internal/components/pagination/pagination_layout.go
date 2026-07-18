@@ -179,7 +179,7 @@ func (p Widget) layoutButton(ctx *frame.Context, gtx layout.Context, item *pagin
 			background = activeTheme.DisabledColor(background)
 			foreground = activeTheme.DisabledColor(foreground)
 		}
-		focusVisible := item.focus.Visible(gtx.Focused(&item.clickable), item.clickable.History())
+		focusVisible := frame.FocusVisible(ctx, &item.clickable, gtx.Focused(&item.clickable))
 		focus := item.focus.Opacity(gtx, focusVisible && !disabled)
 
 		macro := op.Record(gtx.Ops)

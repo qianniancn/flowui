@@ -547,7 +547,6 @@ func (s *tableColumnResizeState) update(ctx *frame.Context, gtx layout.Context, 
 			s.pointerID = event.PointerID
 			s.startX = event.Position.X
 			s.startWidth = current
-			s.focus.Prepare(false)
 			frame.RequestFocusVisible(ctx, s, false)
 			gtx.Execute(pointer.GrabCmd{Tag: s, ID: event.PointerID})
 		case pointer.Drag:

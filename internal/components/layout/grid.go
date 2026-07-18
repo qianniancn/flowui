@@ -58,11 +58,12 @@ func (g GridWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 		return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Point{})}
 	}
 
-	columnGap := gtx.Dp(g.columnGap)
-	rowGap := gtx.Dp(g.rowGap)
+	columnGap := max(gtx.Dp(g.columnGap), 0)
+	rowGap := max(gtx.Dp(g.rowGap), 0)
 	columns := g.columnsFor(gtx, columnGap)
 	cellWidth := gridCellWidth(gtx.Constraints.Max.X, columns, columnGap)
 	childGtx := gtx
+	childGtx.Constraints.Min.Y = 0
 	childGtx.Constraints.Min.X = cellWidth
 	childGtx.Constraints.Max.X = cellWidth
 

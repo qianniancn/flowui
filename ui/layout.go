@@ -15,6 +15,7 @@ type CenterWidget = layoutui.CenterWidget
 type ColumnWidget = layoutui.ColumnWidget
 type RowWidget = layoutui.RowWidget
 type FlexWidget = layoutui.FlexWidget
+type FlexSpacing = layoutui.FlexSpacing
 type GridWidget = layoutui.GridWidget
 type KeyWidget = layoutui.KeyWidget
 type ListWidget = layoutui.ListWidget
@@ -39,6 +40,13 @@ const (
 	AlignBottomStart = layoutui.AlignBottomStart
 	AlignBottom      = layoutui.AlignBottom
 	AlignBottomEnd   = layoutui.AlignBottomEnd
+
+	SpaceEnd     = layoutui.SpaceEnd
+	SpaceStart   = layoutui.SpaceStart
+	SpaceSides   = layoutui.SpaceSides
+	SpaceAround  = layoutui.SpaceAround
+	SpaceBetween = layoutui.SpaceBetween
+	SpaceEvenly  = layoutui.SpaceEvenly
 
 	SplitPaneHorizontal = layoutui.SplitPaneHorizontal
 	SplitPaneVertical   = layoutui.SplitPaneVertical

@@ -45,6 +45,32 @@ func TestAutoGridComputesColumnsFromMinimumWidth(t *testing.T) {
 	}
 }
 
+func TestAutoGridClampsNegativeGap(t *testing.T) {
+	a := &cellWidget{height: 10}
+	b := &cellWidget{height: 10}
+	AutoGrid(90, a, b).Gap(-90).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	if a.constraints.Min.X != 100 || b.constraints.Min.X != 100 {
+		t.Fatalf("cell widths = %d/%d, want 100/100", a.constraints.Min.X, b.constraints.Min.X)
+	}
+}
+
+func TestGridClearsParentCrossAxisMinimumForCells(t *testing.T) {
+	a := &cellWidget{height: 10}
+	b := &cellWidget{height: 10}
+	Grid(1, a, b).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Min: image.Pt(100, 80), Max: image.Pt(200, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	if a.constraints.Min.Y != 0 || b.constraints.Min.Y != 0 {
+		t.Fatalf("cell minimum heights = %d/%d, want 0/0", a.constraints.Min.Y, b.constraints.Min.Y)
+	}
+}
+
 func TestGridPropagatesCellPosition(t *testing.T) {
 	probe := &overlayProbeWidget{
 		key:    "grid",

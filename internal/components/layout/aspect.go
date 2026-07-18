@@ -14,8 +14,8 @@ type AspectRatioWidget struct {
 }
 
 func AspectRatio(ratio float32, child frame.Widget) AspectRatioWidget {
-	if ratio <= 0 {
-		panic("flowui: aspect ratio must be positive")
+	if !(ratio > 0) || math.IsInf(float64(ratio), 0) {
+		panic("flowui: aspect ratio must be finite and positive")
 	}
 	return AspectRatioWidget{
 		ratio: ratio,

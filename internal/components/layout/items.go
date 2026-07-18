@@ -9,6 +9,8 @@ import (
 )
 
 func LayoutItems(ctx *frame.Context, gtx layout.Context, horizontal bool, columnGap, rowGap int, children []layout.Widget) layout.Dimensions {
+	columnGap = max(columnGap, 0)
+	rowGap = max(rowGap, 0)
 	if !horizontal {
 		type trackedChild struct {
 			dims      layout.Dimensions

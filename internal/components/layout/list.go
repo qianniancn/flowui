@@ -64,7 +64,7 @@ func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	state := ctx.ListState(l.key)
 	bar := derivedScrollbarState(ctx, l.key)
 	state.Axis = layout.Vertical
-	state.Gap = gtx.Dp(l.gap)
+	state.Gap = max(gtx.Dp(l.gap), 0)
 	state.Alignment = l.align
 	state.ScrollToEnd = l.stickToEnd
 	state.ScrollAnyAxis = l.scrollAnyAxis

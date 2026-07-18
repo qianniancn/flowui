@@ -2,6 +2,7 @@ package layoutui
 
 import (
 	"image"
+	"math"
 	"testing"
 
 	"gioui.org/layout"
@@ -36,5 +37,18 @@ func TestAspectRatioUsesHeightWhenWidthIsTooTall(t *testing.T) {
 
 	if dims.Size != image.Pt(178, 100) {
 		t.Fatalf("aspect size = %v, want (178,100)", dims.Size)
+	}
+}
+
+func TestAspectRatioRejectsNonFiniteRatios(t *testing.T) {
+	for _, ratio := range []float32{float32(math.NaN()), float32(math.Inf(1))} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Fatalf("ratio %v did not panic", ratio)
+				}
+			}()
+			AspectRatio(ratio, Spacer(1, 1))
+		}()
 	}
 }

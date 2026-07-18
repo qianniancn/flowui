@@ -1,7 +1,9 @@
 package layoutui
 
 import (
+	"fmt"
 	"image"
+	"math"
 	"testing"
 
 	"gioui.org/io/input"
@@ -59,6 +61,29 @@ func TestBoxAppliesWidthAndPadding(t *testing.T) {
 	}
 	if child.constraints.Min.X != 80 || child.constraints.Max.X != 80 {
 		t.Fatalf("child width constraints = %v, want exact 80", child.constraints)
+	}
+}
+
+func TestBoxClampsExplicitSizeToParentConstraints(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		requested   image.Point
+		constraints layout.Constraints
+		want        image.Point
+	}{
+		{name: "maximum", requested: image.Pt(120, 120), constraints: layout.Constraints{Min: image.Pt(40, 50), Max: image.Pt(80, 90)}, want: image.Pt(80, 90)},
+		{name: "minimum", requested: image.Pt(20, 20), constraints: layout.Constraints{Min: image.Pt(40, 50), Max: image.Pt(80, 90)}, want: image.Pt(40, 50)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			child := &constraintWidget{}
+			Box(child).Width(test.requested.X).Height(test.requested.Y).Layout(newContext(nil), layout.Context{
+				Constraints: test.constraints,
+				Ops:         new(op.Ops),
+			})
+			if child.constraints != layout.Exact(test.want) {
+				t.Fatalf("child constraints = %v, want exact %v", child.constraints, test.want)
+			}
+		})
 	}
 }
 
@@ -198,6 +223,46 @@ func TestRowColumnAlignment(t *testing.T) {
 	}
 }
 
+func TestRowSpacingBetweenUsesRemainingMainAxisSpace(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(100, 20)
+	var first, second image.Rectangle
+	firstProbe := &overlayProbeWidget{key: "first", size: image.Pt(10, 10), anchor: image.Rect(0, 0, 10, 10), got: &first}
+	secondProbe := &overlayProbeWidget{key: "second", size: image.Pt(10, 10), anchor: image.Rect(0, 0, 10, 10), got: &second}
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Ops: new(op.Ops)}
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Row(firstProbe, secondProbe).Spacing(SpaceBetween).Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	if first != image.Rect(0, 0, 10, 10) || second != image.Rect(90, 0, 100, 10) {
+		t.Fatalf("spacing positions = %v/%v, want (0,0)-(10,10) and (90,0)-(100,10)", first, second)
+	}
+}
+
+func TestFlexSpacingModes(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		spacing     FlexSpacing
+		wantStart   int
+		wantBetween int
+	}{
+		{name: "end", spacing: SpaceEnd},
+		{name: "start", spacing: SpaceStart, wantStart: 10},
+		{name: "sides", spacing: SpaceSides, wantStart: 5},
+		{name: "around", spacing: SpaceAround, wantStart: 2, wantBetween: 5},
+		{name: "between", spacing: SpaceBetween, wantBetween: 10},
+		{name: "evenly", spacing: SpaceEvenly, wantStart: 3, wantBetween: 3},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			start, between := flexSpacing(test.spacing, 10, 2)
+			if start != test.wantStart || between != test.wantBetween {
+				t.Fatalf("spacing = %d/%d, want %d/%d", start, between, test.wantStart, test.wantBetween)
+			}
+		})
+	}
+}
+
 func TestCenterPropagatesOverlayPosition(t *testing.T) {
 	got := resolveOverlayAnchor(t, layout.Exact(image.Pt(100, 80)), Center(&overlayProbeWidget{
 		key:    "center",
@@ -283,6 +348,20 @@ func TestLayoutItemsPropagatesOverlayPositions(t *testing.T) {
 				t.Fatalf("item anchor = %v, want %v", got, test.want)
 			}
 		})
+	}
+}
+
+func TestLayoutItemsClampsNegativeGaps(t *testing.T) {
+	dims := LayoutItems(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	}, true, -10, -10, []layout.Widget{
+		func(layout.Context) layout.Dimensions { return layout.Dimensions{Size: image.Pt(20, 10)} },
+		func(layout.Context) layout.Dimensions { return layout.Dimensions{Size: image.Pt(20, 10)} },
+	})
+
+	if dims.Size != image.Pt(40, 10) {
+		t.Fatalf("items size = %v, want (40,10)", dims.Size)
 	}
 }
 
@@ -381,6 +460,17 @@ func TestWrapMovesChildrenToNextLine(t *testing.T) {
 	}
 }
 
+func TestWrapClampsNegativeGaps(t *testing.T) {
+	dims := Wrap(Spacer(60, 10), Spacer(60, 10)).Gap(-10).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size != image.Pt(120, 10) {
+		t.Fatalf("wrap size = %v, want (120,10)", dims.Size)
+	}
+}
+
 func TestWrapAlignmentOffset(t *testing.T) {
 	if Wrap().AlignEnd().align != layout.End {
 		t.Fatal("wrap alignment was not end")
@@ -423,6 +513,40 @@ func TestAdaptiveReceivesAvailableSize(t *testing.T) {
 
 	if got.Width != 200 || got.Height != 100 {
 		t.Fatalf("size = %v, want (200dp,100dp)", got)
+	}
+}
+
+func TestAdaptiveSelectsLargestMatchingWidthBreakpoint(t *testing.T) {
+	selected := "base"
+	Adaptive(func(ViewSize) frame.Widget {
+		return Spacer(10, 10)
+	}).AtLeastWidth(300, func(ViewSize) frame.Widget {
+		selected = "wide"
+		return Spacer(10, 10)
+	}).AtLeastWidth(600, func(ViewSize) frame.Widget {
+		selected = "extra-wide"
+		return Spacer(10, 10)
+	}).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(1200, 200)},
+		Metric:      unit.Metric{PxPerDp: 2, PxPerSp: 2},
+		Ops:         new(op.Ops),
+	})
+
+	if selected != "extra-wide" {
+		t.Fatalf("adaptive view = %q, want extra-wide", selected)
+	}
+}
+
+func TestFlexibleRejectsInvalidWeight(t *testing.T) {
+	for _, weight := range []float32{0, -1, float32(math.NaN()), float32(math.Inf(1))} {
+		t.Run(fmt.Sprintf("weight-%v", weight), func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("expected invalid flex weight panic")
+				}
+			}()
+			Flexible(weight, Spacer(1, 1))
+		})
 	}
 }
 

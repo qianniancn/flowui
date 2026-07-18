@@ -37,6 +37,19 @@ func TestListKeepsState(t *testing.T) {
 	}
 }
 
+func TestListClampsNegativeGap(t *testing.T) {
+	ctx := newContext(nil)
+	List("items", 1, func(int) frame.Widget { return Spacer(20, 20) }).Gap(-8).Layout(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	state := testComponentState[layout.List](ctx, "items", stateSlotList)
+	if state.Gap != 0 {
+		t.Fatalf("gap = %d, want 0", state.Gap)
+	}
+}
+
 func TestListDisabled(t *testing.T) {
 	l := List("items", 1, func(int) frame.Widget {
 		return text.New("item")

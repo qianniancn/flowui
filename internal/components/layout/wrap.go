@@ -48,8 +48,8 @@ func (w WrapWidget) AlignEnd() WrapWidget {
 
 func (w WrapWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	prepareFieldAssociations(ctx, w.children...)
-	gap := gtx.Dp(w.gap)
-	lineGap := gtx.Dp(w.lineGap)
+	gap := max(gtx.Dp(w.gap), 0)
+	lineGap := max(gtx.Dp(w.lineGap), 0)
 	rows := make([]wrapRow, 0)
 	maxWidth := gtx.Constraints.Max.X
 	childGtx := gtx

@@ -211,11 +211,11 @@ func (b BoxWidget) layoutOverflow(ctx *frame.Context, gtx layout.Context, child 
 
 func (b BoxWidget) applyConstraints(gtx *layout.Context) {
 	if b.hasMaxWidth {
-		gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, gtx.Dp(b.maxWidth))
+		gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, max(gtx.Dp(b.maxWidth), 0))
 		gtx.Constraints.Min.X = min(gtx.Constraints.Min.X, gtx.Constraints.Max.X)
 	}
 	if b.hasMaxHeight {
-		gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y, gtx.Dp(b.maxHeight))
+		gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y, max(gtx.Dp(b.maxHeight), 0))
 		gtx.Constraints.Min.Y = min(gtx.Constraints.Min.Y, gtx.Constraints.Max.Y)
 	}
 	if b.hasMinWidth {
@@ -231,12 +231,12 @@ func (b BoxWidget) applyConstraints(gtx *layout.Context) {
 		gtx.Constraints.Min.Y = gtx.Constraints.Max.Y
 	}
 	if b.width > 0 {
-		width := gtx.Dp(b.width)
+		width := min(max(gtx.Dp(b.width), gtx.Constraints.Min.X), gtx.Constraints.Max.X)
 		gtx.Constraints.Min.X = width
 		gtx.Constraints.Max.X = width
 	}
 	if b.height > 0 {
-		height := gtx.Dp(b.height)
+		height := min(max(gtx.Dp(b.height), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
 		gtx.Constraints.Min.Y = height
 		gtx.Constraints.Max.Y = height
 	}

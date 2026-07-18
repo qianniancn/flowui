@@ -100,7 +100,7 @@ func (w Widget) layoutEntries(ctx *frame.Context, gtx layout.Context, state *sid
 		if entry.section {
 			return w.layoutSection(ctx, gtx, entry.title, expansion)
 		}
-		return w.layoutItem(ctx, gtx, state.item(entry.item.Key), entry.item, expansion)
+		return w.layoutItem(ctx, gtx, state, state.item(entry.item.Key), entry.item, expansion)
 	})
 }
 
@@ -156,10 +156,18 @@ func sidebarTransitionContent(child frame.Widget, opacity float32, width int) fr
 	})
 }
 
-func (w Widget) layoutItem(ctx *frame.Context, gtx layout.Context, itemState *sidebarItemState, item Item, expansion float32) layout.Dimensions {
+func (w Widget) layoutItem(ctx *frame.Context, gtx layout.Context, sidebarState *sidebarState, itemState *sidebarItemState, item Item, expansion float32) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.Sidebar
 	disabled := w.itemDisabled(item)
+	if gtx.Focused(&itemState.clickable) {
+		sidebarState.focusedKey = item.Key
+	}
+	if !disabled {
+		for itemState.clickable.Clicked(gtx) {
+			w.activate(item.Key)
+		}
+	}
 	height := min(max(gtx.Dp(tokens.ItemHeight), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
 	size := image.Pt(gtx.Constraints.Max.X, height)
 	itemGtx := gtx

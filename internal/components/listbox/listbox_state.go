@@ -35,13 +35,22 @@ type listBoxState struct {
 	bar              widget.Scrollbar
 	items            map[string]*listBoxItemState
 	frameItems       map[string]struct{}
-	itemKeys         map[string]struct{}
+	itemKeys         map[string]int
 	keyFilters       []event.Filter
+	dataCache        listBoxDataCache
+	focusedKey       string
 	pressedKey       key.Name
 	pressedActionKey string
 	typeahead        string
 	typeaheadAt      time.Time
 	typeaheadReady   bool
+}
+
+type listBoxDataCache struct {
+	ready   bool
+	version uint64
+	entries []listBoxEntry
+	items   []ListBoxItem
 }
 
 const listBoxTypeaheadTimeout = 500 * time.Millisecond
@@ -63,51 +72,78 @@ func (s *listBoxState) item(key string) *listBoxItemState {
 	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
+func (s *listBoxState) resolveEntries(widget ListBoxWidget) ([]listBoxEntry, []ListBoxItem) {
+	if !widget.hasDataVersion {
+		entries, items := widget.entriesAndItems()
+		s.checkItems(items)
+		s.dataCache.ready = false
+		return entries, items
+	}
+	if s.dataCache.ready && s.dataCache.version == widget.dataVersion {
+		return s.dataCache.entries, s.dataCache.items
+	}
+	entries, items := widget.entriesAndItems()
+	s.checkItems(items)
+	s.dataCache = listBoxDataCache{
+		ready:   true,
+		version: widget.dataVersion,
+		entries: entries,
+		items:   items,
+	}
+	return entries, items
+}
+
 func (s *listBoxState) checkItems(items []ListBoxItem) {
 	if s.itemKeys == nil {
-		s.itemKeys = make(map[string]struct{}, len(items))
+		s.itemKeys = make(map[string]int, len(items))
 	} else {
 		clear(s.itemKeys)
 	}
-	for _, item := range items {
+	for index, item := range items {
 		if item.Key == "" {
 			panic("flowui: empty listbox item key")
 		}
 		if _, ok := s.itemKeys[item.Key]; ok {
 			panic(fmt.Sprintf("flowui: duplicate listbox item key %q", item.Key))
 		}
-		s.itemKeys[item.Key] = struct{}{}
+		s.itemKeys[item.Key] = index
 	}
 }
 
 func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, disabledKeys []string, selectedKey string) listBoxKeyResult {
 	s.keyFilters = s.keyFilters[:0]
-	for _, item := range items {
-		tag := &s.item(item.Key).Clickable
+	current := s.focusedIndex(gtx)
+	if current < 0 {
+		if index, ok := s.itemKeys[selectedKey]; ok {
+			current = index
+			s.focusedKey = selectedKey
+		}
+	}
+	for itemKey, itemState := range s.items {
+		index, ok := s.itemKeys[itemKey]
+		if !ok || index < 0 || index >= len(items) {
+			continue
+		}
+		tag := &itemState.Clickable
 		s.keyFilters = append(s.keyFilters,
 			key.Filter{Focus: tag, Name: key.NameDownArrow},
 			key.Filter{Focus: tag, Name: key.NameUpArrow},
 			key.Filter{Focus: tag, Name: key.NameHome},
 			key.Filter{Focus: tag, Name: key.NameEnd},
 		)
-		if listBoxItemDisabled(item, disabledKeys) {
-			continue
+		if !listBoxItemDisabled(items[index], disabledKeys) {
+			s.keyFilters = append(s.keyFilters,
+				key.Filter{Focus: tag, Name: key.NameEnter},
+				key.Filter{Focus: tag, Name: key.NameReturn},
+				key.Filter{Focus: tag, Name: key.NameSpace},
+				key.Filter{Focus: tag},
+			)
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameEnter},
-			key.Filter{Focus: tag, Name: key.NameReturn},
-			key.Filter{Focus: tag, Name: key.NameSpace},
-			key.Filter{Focus: tag},
-		)
 	}
 	if len(s.keyFilters) == 0 {
 		return listBoxKeyResult{}
 	}
 
-	current := s.focusedIndex(gtx, items)
-	if current < 0 {
-		current = listBoxIndexByKey(items, selectedKey)
-	}
 	result := listBoxKeyResult{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -230,13 +266,33 @@ func listBoxTypeaheadIndex(items []ListBoxItem, disabledKeys []string, current i
 	return current, false
 }
 
-func (s *listBoxState) focusedIndex(gtx layout.Context, items []ListBoxItem) int {
-	for i, item := range items {
-		if gtx.Focused(&s.item(item.Key).Clickable) {
-			return i
+func (s *listBoxState) focusedIndex(gtx layout.Context) int {
+	if s.focusedKey != "" {
+		if index, ok := s.itemKeys[s.focusedKey]; ok {
+			if itemState := s.items[s.focusedKey]; itemState != nil && gtx.Focused(&itemState.Clickable) {
+				return index
+			}
+		}
+	}
+	for key, itemState := range s.items {
+		if index, ok := s.itemKeys[key]; ok && gtx.Focused(&itemState.Clickable) {
+			s.focusedKey = key
+			return index
 		}
 	}
 	return -1
+}
+
+func (s *listBoxState) keyboardActiveKey(widget ListBoxWidget) string {
+	if widget.selectionMode != ListBoxSelectionMultiple {
+		return widget.selectedKey
+	}
+	for _, key := range widget.selectedKeys {
+		if _, ok := s.itemKeys[key]; ok {
+			return key
+		}
+	}
+	return ""
 }
 
 func listBoxIndexByKey(items []ListBoxItem, key string) int {

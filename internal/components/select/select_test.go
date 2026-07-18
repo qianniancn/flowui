@@ -131,6 +131,20 @@ func TestSelectConstructorsAndDisplayValues(t *testing.T) {
 	}
 }
 
+func TestSelectDataVersionCachesItems(t *testing.T) {
+	widget := SelectSections("cached", "one", []SelectSection{{Title: "Group", Items: []SelectItem{{Key: "one", Label: "One"}}}}).DataVersion(1)
+	state := new(selectState)
+	items := state.itemsFor(widget)
+	cachedItems := state.itemsFor(widget)
+	if &items[0] != &cachedItems[0] {
+		t.Fatal("unchanged Select data version did not reuse items")
+	}
+	updatedItems := state.itemsFor(widget.DataVersion(2))
+	if &items[0] == &updatedItems[0] {
+		t.Fatal("changed Select data version reused stale items")
+	}
+}
+
 func TestSelectSectionConstructors(t *testing.T) {
 	sections := []SelectSection{{Title: "Systems", Items: selectTestItems()[:2]}}
 	single := SelectSections("language", "go", sections)

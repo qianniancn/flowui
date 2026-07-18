@@ -107,6 +107,9 @@ func (l ListBoxWidget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layou
 
 func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listState *listBoxState, item ListBoxItem) layout.Dimensions {
 	itemState := listState.item(item.Key)
+	if gtx.Focused(&itemState.Clickable) {
+		listState.focusedKey = item.Key
+	}
 	disabled := l.itemDisabled(item)
 	selected := l.isSelected(item.Key)
 	animGtx := gtx

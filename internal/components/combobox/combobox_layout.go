@@ -100,8 +100,8 @@ func (c ComboBoxWidget) layoutOpen(ctx *frame.Context, gtx layout.Context, state
 				}
 				c.updateEditor(editor, state, gtx)
 				query := editor.Text()
-				selectedLabel, _ := c.selectedLabel()
-				panelVisible = comboBoxVisibleItems(c.items, query, selectedLabel)
+				selectedLabel, _ := state.selectedLabel(c)
+				panelVisible = state.visibleItems(c, query, selectedLabel)
 				state.clampHighlight(c.items, panelVisible)
 			}
 			panelGtx := gtx

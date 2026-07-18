@@ -79,6 +79,22 @@ func TestComboBoxOptions(t *testing.T) {
 	}
 }
 
+func TestComboBoxDataVersionCachesVisibleItems(t *testing.T) {
+	widget := ComboBox("cached", "one", []ComboBoxItem{{Key: "one", Label: "One"}, {Key: "two", Label: "Two"}}).DataVersion(1)
+	state := new(comboBoxState)
+	state.checkItems(widget.items, true, widget.dataVersion)
+	first := state.visibleItems(widget, "", "One")
+	second := state.visibleItems(widget, "", "One")
+	if &first[0] != &second[0] {
+		t.Fatal("unchanged ComboBox data version did not reuse visible items")
+	}
+	state.checkItems(widget.items, true, 2)
+	third := state.visibleItems(widget.DataVersion(2), "", "One")
+	if &first[0] == &third[0] {
+		t.Fatal("changed ComboBox data version reused stale visible items")
+	}
+}
+
 func TestComboBoxSyncsSelectedLabel(t *testing.T) {
 	ctx := newContext(nil)
 	layoutComboBoxFrame(ctx, new(input.Router), ComboBox("animal", "cat", comboBoxTestItems()))

@@ -16,9 +16,19 @@ type sidebarState struct {
 	bar              widget.Scrollbar
 	items            map[string]*sidebarItemState
 	frameItems       map[string]struct{}
+	itemIndex        map[string]int
 	keyFilters       []event.Filter
+	dataCache        sidebarDataCache
+	focusedKey       string
 	pressedKey       key.Name
 	pressedActionKey string
+}
+
+type sidebarDataCache struct {
+	ready   bool
+	version uint64
+	entries []entry
+	items   []Item
 }
 
 type sidebarItemState struct {
@@ -43,8 +53,32 @@ func (s *sidebarState) item(key string) *sidebarItemState {
 	return stateutil.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
+func (s *sidebarState) resolveEntries(widget Widget) ([]entry, []Item) {
+	if !widget.hasDataVersion {
+		entries, items := widget.entriesAndItems()
+		s.checkItems(items)
+		s.dataCache.ready = false
+		return entries, items
+	}
+	if s.dataCache.ready && s.dataCache.version == widget.dataVersion {
+		return s.dataCache.entries, s.dataCache.items
+	}
+	entries, items := widget.entriesAndItems()
+	s.checkItems(items)
+	s.dataCache = sidebarDataCache{ready: true, version: widget.dataVersion, entries: entries, items: items}
+	return entries, items
+}
+
 func (s *sidebarState) checkItems(items []Item) {
 	validateSidebarItems(items)
+	if s.itemIndex == nil {
+		s.itemIndex = make(map[string]int, len(items))
+	} else {
+		clear(s.itemIndex)
+	}
+	for index, item := range items {
+		s.itemIndex[item.Key] = index
+	}
 }
 
 type sidebarKeyResult struct {
@@ -54,31 +88,37 @@ type sidebarKeyResult struct {
 
 func (s *sidebarState) updateKeys(gtx layout.Context, sidebar Widget, items []Item) sidebarKeyResult {
 	s.keyFilters = s.keyFilters[:0]
-	for _, item := range items {
-		tag := &s.item(item.Key).clickable
+	current := s.focusedIndex(gtx)
+	if current < 0 {
+		if index, ok := s.itemIndex[sidebar.selectedKey]; ok {
+			current = index
+			s.focusedKey = sidebar.selectedKey
+		}
+	}
+	for itemKey, itemState := range s.items {
+		index, ok := s.itemIndex[itemKey]
+		if !ok || index < 0 || index >= len(items) {
+			continue
+		}
+		tag := &itemState.clickable
 		s.keyFilters = append(s.keyFilters,
 			key.Filter{Focus: tag, Name: key.NameDownArrow},
 			key.Filter{Focus: tag, Name: key.NameUpArrow},
 			key.Filter{Focus: tag, Name: key.NameHome},
 			key.Filter{Focus: tag, Name: key.NameEnd},
 		)
-		if sidebar.itemDisabled(item) {
-			continue
+		if !sidebar.itemDisabled(items[index]) {
+			s.keyFilters = append(s.keyFilters,
+				key.Filter{Focus: tag, Name: key.NameEnter},
+				key.Filter{Focus: tag, Name: key.NameReturn},
+				key.Filter{Focus: tag, Name: key.NameSpace},
+			)
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameEnter},
-			key.Filter{Focus: tag, Name: key.NameReturn},
-			key.Filter{Focus: tag, Name: key.NameSpace},
-		)
 	}
 	if len(s.keyFilters) == 0 {
 		return sidebarKeyResult{}
 	}
 
-	current := s.focusedIndex(gtx, items)
-	if current < 0 {
-		current = sidebarItemIndex(items, sidebar.selectedKey)
-	}
 	result := sidebarKeyResult{}
 	for {
 		value, ok := gtx.Event(s.keyFilters...)
@@ -142,9 +182,17 @@ func (s *sidebarState) updateActionKey(event key.Event, items []Item, sidebar Wi
 	}
 }
 
-func (s *sidebarState) focusedIndex(gtx layout.Context, items []Item) int {
-	for index, item := range items {
-		if gtx.Focused(&s.item(item.Key).clickable) {
+func (s *sidebarState) focusedIndex(gtx layout.Context) int {
+	if s.focusedKey != "" {
+		if index, ok := s.itemIndex[s.focusedKey]; ok {
+			if itemState := s.items[s.focusedKey]; itemState != nil && gtx.Focused(&itemState.clickable) {
+				return index
+			}
+		}
+	}
+	for key, itemState := range s.items {
+		if index, ok := s.itemIndex[key]; ok && gtx.Focused(&itemState.clickable) {
+			s.focusedKey = key
 			return index
 		}
 	}

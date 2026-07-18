@@ -68,6 +68,20 @@ func TestSidebarSectionsCopyAndCollapseHeaders(t *testing.T) {
 	}
 }
 
+func TestSidebarDataVersionCachesEntries(t *testing.T) {
+	widget := NewSections("cached", "home", []Section{{Title: "Main", Items: []Item{{Key: "home", Label: "Home"}}}}).DataVersion(1)
+	state := new(sidebarState)
+	entries, items := state.resolveEntries(widget)
+	cachedEntries, cachedItems := state.resolveEntries(widget)
+	if &entries[0] != &cachedEntries[0] || &items[0] != &cachedItems[0] {
+		t.Fatal("unchanged Sidebar data version did not reuse entries")
+	}
+	updatedEntries, _ := state.resolveEntries(widget.DataVersion(2))
+	if &entries[0] == &updatedEntries[0] {
+		t.Fatal("changed Sidebar data version reused stale entries")
+	}
+}
+
 func TestSidebarRejectsInvalidConfiguration(t *testing.T) {
 	for _, test := range []struct {
 		name string

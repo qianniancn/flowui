@@ -95,7 +95,7 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 
 	return state.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		value, selected := s.displayValue()
+		value, selected := s.displayValueCached(state)
 		focusVisible := frame.FocusVisible(ctx, &state.trigger, gtx.Focused(&state.trigger))
 		style := selectStyleFor(frame.ActiveTheme(ctx), s.variant, state.trigger.Hovered(), focusVisible, s.disabled, s.invalid)
 		style.field.Background = state.field.Background(animGtx, style.field.Background)
@@ -315,6 +315,9 @@ func (s SelectWidget) listBox(ctx *frame.Context, state *selectState, open bool)
 		EmptyText(s.emptyText).
 		DisabledKeys(s.disabledKeys).
 		Disabled(!open || s.disabled)
+	if s.hasDataVersion {
+		list = list.DataVersion(s.dataVersion)
+	}
 	list = listbox.WithDerivedIdentity(list, s.resolvedKey(ctx, state), "options")
 	return listbox.WithPadding(list, frame.ActiveTheme(ctx).Components.Select.PanelPadding)
 }
@@ -330,7 +333,7 @@ func (s SelectWidget) focusPendingOption(ctx *frame.Context, state *selectState)
 	if state.focusIntent == selectFocusNone {
 		return
 	}
-	items := s.allItems()
+	items := state.itemsFor(s)
 	index, ok := s.focusOptionIndex(items, state.focusIntent)
 	focusVisible := state.focusVisibleIntent
 	state.focusIntent = selectFocusNone

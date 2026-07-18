@@ -40,6 +40,13 @@ type comboBoxState struct {
 	items              map[string]*comboBoxItemState
 	frameItems         map[string]struct{}
 	itemKeys           map[string]struct{}
+	itemLabels         map[string]string
+	dataVersion        uint64
+	dataReady          bool
+	visibleQuery       string
+	visibleSelected    string
+	cachedVisibleItems []int
+	visibleReady       bool
 }
 
 func (s *comboBoxState) beginFrame() {
@@ -54,11 +61,19 @@ func (s *comboBoxState) item(key string) *comboBoxItemState {
 	return state.UseFrameMap(&s.items, &s.frameItems, key)
 }
 
-func (s *comboBoxState) checkItems(items []ComboBoxItem) {
+func (s *comboBoxState) checkItems(items []ComboBoxItem, versioned bool, version uint64) {
+	if versioned && s.dataReady && s.dataVersion == version {
+		return
+	}
 	if s.itemKeys == nil {
 		s.itemKeys = make(map[string]struct{}, len(items))
 	} else {
 		clear(s.itemKeys)
+	}
+	if s.itemLabels == nil {
+		s.itemLabels = make(map[string]string, len(items))
+	} else {
+		clear(s.itemLabels)
 	}
 	for _, item := range items {
 		if item.Key == "" {
@@ -68,7 +83,33 @@ func (s *comboBoxState) checkItems(items []ComboBoxItem) {
 			panic(fmt.Sprintf("flowui: duplicate combobox item key %q", item.Key))
 		}
 		s.itemKeys[item.Key] = struct{}{}
+		s.itemLabels[item.Key] = item.Label
 	}
+	s.dataReady = versioned
+	s.dataVersion = version
+	s.visibleReady = false
+}
+
+func (s *comboBoxState) selectedLabel(widget ComboBoxWidget) (string, bool) {
+	if widget.hasDataVersion {
+		label, ok := s.itemLabels[widget.selectedKey]
+		return label, ok
+	}
+	return widget.selectedLabel()
+}
+
+func (s *comboBoxState) visibleItems(widget ComboBoxWidget, query, selectedLabel string) []int {
+	if widget.hasDataVersion && s.visibleReady && s.visibleQuery == query && s.visibleSelected == selectedLabel {
+		return s.cachedVisibleItems
+	}
+	visible := comboBoxVisibleItems(widget.items, query, selectedLabel)
+	if widget.hasDataVersion {
+		s.visibleQuery = query
+		s.visibleSelected = selectedLabel
+		s.cachedVisibleItems = visible
+		s.visibleReady = true
+	}
+	return visible
 }
 
 func (s *comboBoxState) syncEditor(editor *widget.Editor, c ComboBoxWidget) {
@@ -79,7 +120,7 @@ func (s *comboBoxState) syncEditor(editor *widget.Editor, c ComboBoxWidget) {
 		}
 		return
 	}
-	if label, ok := c.selectedLabel(); ok {
+	if label, ok := s.selectedLabel(c); ok {
 		if c.selectedKey != s.syncedSelectedKey || label != s.syncedInputValue {
 			s.setEditorText(editor, label)
 			s.syncedInputValue = label

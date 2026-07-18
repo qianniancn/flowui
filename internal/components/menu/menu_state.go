@@ -27,7 +27,11 @@ type menuState struct {
 	items                 map[string]*menuItemState
 	frameItems            map[string]struct{}
 	itemKeys              map[string]struct{}
+	itemIndex             map[string]int
 	keyFilters            []event.Filter
+	dataCache             menuDataCache
+	frameActionable       []entry
+	focusedKey            string
 	pressedKey            key.Name
 	pressedActionKey      string
 	typeaheadText         string
@@ -45,6 +49,13 @@ type menuState struct {
 	submenuWasOpen        bool
 	focusPending          bool
 	requestedFocusVisible bool
+}
+
+type menuDataCache struct {
+	ready      bool
+	version    uint64
+	entries    []entry
+	actionable []entry
 }
 
 type menuItemState struct {
@@ -81,16 +92,41 @@ func (s *menuState) beginFrame() {
 }
 
 func (s *menuState) endFrame() {
-	state.SweepFrameMap(s.items, s.frameItems)
 	if s.openSubmenu != "" {
 		if _, ok := s.frameItems[s.openSubmenu]; !ok {
 			s.openSubmenu = ""
 		}
 	}
+	state.SweepFrameMap(s.items, s.frameItems)
 }
 
 func (s *menuState) item(key string) *menuItemState {
 	return state.UseFrameMap(&s.items, &s.frameItems, key)
+}
+
+func (s *menuState) resolveEntries(widget Widget) []entry {
+	if !widget.hasDataVersion {
+		entries := widget.entries()
+		s.frameActionable = actionableEntries(entries)
+		s.checkEntries(s.frameActionable)
+		s.dataCache.ready = false
+		return entries
+	}
+	if s.dataCache.ready && s.dataCache.version == widget.dataVersion {
+		return s.dataCache.entries
+	}
+	entries := widget.entries()
+	actionable := actionableEntries(entries)
+	s.checkEntries(actionable)
+	s.dataCache = menuDataCache{ready: true, version: widget.dataVersion, entries: entries, actionable: actionable}
+	return entries
+}
+
+func (s *menuState) actionableEntries(entries []entry) []entry {
+	if s.dataCache.ready {
+		return s.dataCache.actionable
+	}
+	return s.frameActionable
 }
 
 func (s *menuState) checkEntries(entries []entry) {
@@ -99,7 +135,12 @@ func (s *menuState) checkEntries(entries []entry) {
 	} else {
 		clear(s.itemKeys)
 	}
-	for _, entry := range entries {
+	if s.itemIndex == nil {
+		s.itemIndex = make(map[string]int, len(entries))
+	} else {
+		clear(s.itemIndex)
+	}
+	for index, entry := range entries {
 		if entry.item.Key == "" {
 			panic("flowui: empty menu item key")
 		}
@@ -107,13 +148,19 @@ func (s *menuState) checkEntries(entries []entry) {
 			panic(fmt.Sprintf("flowui: duplicate menu item key %q", entry.item.Key))
 		}
 		s.itemKeys[entry.item.Key] = struct{}{}
+		s.itemIndex[entry.item.Key] = index
 	}
 }
 
 func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entry, nested bool) keyResult {
 	s.keyFilters = s.keyFilters[:0]
-	for _, entry := range entries {
-		tag := &s.item(entry.item.Key).clickable
+	current := s.focusedIndex(gtx)
+	first := max(s.list.Position.First-1, 0)
+	last := min(first+s.list.Position.Count+2, len(entries))
+	for index := first; index < last; index++ {
+		entry := entries[index]
+		itemState := s.item(entry.item.Key)
+		tag := &itemState.clickable
 		s.keyFilters = append(s.keyFilters,
 			key.Filter{Focus: tag, Name: key.NameDownArrow},
 			key.Filter{Focus: tag, Name: key.NameUpArrow},
@@ -124,20 +171,18 @@ func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entr
 		if nested || widget.onRootPrevious != nil {
 			s.keyFilters = append(s.keyFilters, key.Filter{Focus: tag, Name: key.NameLeftArrow})
 		}
-		if widget.itemDisabled(entry.item) {
-			continue
+		if !widget.itemDisabled(entries[index].item) {
+			s.keyFilters = append(s.keyFilters,
+				key.Filter{Focus: tag, Name: key.NameEnter},
+				key.Filter{Focus: tag, Name: key.NameReturn},
+				key.Filter{Focus: tag, Name: key.NameSpace},
+				key.Filter{Focus: tag},
+			)
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameEnter},
-			key.Filter{Focus: tag, Name: key.NameReturn},
-			key.Filter{Focus: tag, Name: key.NameSpace},
-			key.Filter{Focus: tag},
-		)
 	}
 	if len(s.keyFilters) == 0 {
 		return keyResult{}
 	}
-	current := s.focusedIndex(gtx, entries)
 	result := keyResult{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -236,13 +281,29 @@ func (s *menuState) updateActivation(event key.Event, widget Widget, entries []e
 	}
 }
 
-func (s *menuState) focusedIndex(gtx layout.Context, entries []entry) int {
-	for index, entry := range entries {
-		if gtx.Focused(&s.item(entry.item.Key).clickable) {
+func (s *menuState) focusedIndex(gtx layout.Context) int {
+	if index, ok := s.itemIndex[s.focusedKey]; ok {
+		if itemState := s.items[s.focusedKey]; itemState != nil && gtx.Focused(&itemState.clickable) {
+			return index
+		}
+	}
+	for key, itemState := range s.items {
+		if index, ok := s.itemIndex[key]; ok && gtx.Focused(&itemState.clickable) {
+			s.focusedKey = key
 			return index
 		}
 	}
 	return -1
+}
+
+func actionableEntries(entries []entry) []entry {
+	result := make([]entry, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.separator && entry.sectionTitle == "" {
+			result = append(result, entry)
+		}
+	}
+	return result
 }
 
 func (s *menuState) appendTypeahead(now time.Time, text string) string {

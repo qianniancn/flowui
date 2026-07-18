@@ -74,14 +74,14 @@ func (m Widget) layoutContent(ctx *frame.Context, gtx layout.Context, menuState 
 	menuState.beginFrame()
 	defer menuState.endFrame()
 	menuState.submenuActive = false
-	actionable := m.actionableEntries()
-	menuState.checkEntries(actionable)
+	entries := menuState.resolveEntries(m)
+	actionable := menuState.actionableEntries(entries)
 	if interactive && !m.disabled {
 		result := menuState.updateKeys(gtx, m, actionable, m.nested)
 		if result.focusKey != "" {
 			if entry, ok := entryByKey(actionable, result.focusKey); ok {
 				menuState.focus(ctx, entry, true)
-				menuState.reveal(m.entries(), result.focusKey)
+				menuState.reveal(entries, result.focusKey)
 			}
 		}
 		if result.actionKey != "" {
@@ -108,7 +108,6 @@ func (m Widget) layoutContent(ctx *frame.Context, gtx layout.Context, menuState 
 	innerGtx := gtx
 	innerGtx.Constraints.Min = image.Pt(max(gtx.Constraints.Min.X-padding*2, 0), 0)
 	innerGtx.Constraints.Max = image.Pt(max(gtx.Constraints.Max.X-padding*2, 0), max(gtx.Constraints.Max.Y-padding*2, 0))
-	entries := m.entries()
 	if len(entries) == 0 {
 		return layout.UniformInset(tokens.Padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return m.layoutEmpty(ctx, gtx)
@@ -120,8 +119,8 @@ func (m Widget) layoutContent(ctx *frame.Context, gtx layout.Context, menuState 
 	menuState.list.Gap = 0
 	menuState.list.ScrollToEnd = false
 	menuState.list.ScrollAnyAxis = false
-	entrySizes := make([]image.Point, len(entries))
-	entryTopGaps := make([]int, len(entries))
+	entrySizes := make(map[int]image.Point, menuState.list.Position.Count+2)
+	entryTopGaps := make(map[int]int, menuState.list.Position.Count+2)
 	contentOffset := op.Offset(image.Pt(padding, padding)).Push(gtx.Ops)
 	content := layoutui.LayoutTrackedScrollbar(ctx, innerGtx, &menuState.list, &menuState.bar, len(entries), m.disabled || !interactive, false, func(gtx layout.Context, index int) layout.Dimensions {
 		entry := entries[index]
@@ -218,6 +217,9 @@ func (m Widget) layoutSeparator(ctx *frame.Context, gtx layout.Context) layout.D
 func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *menuState, entry entry, interactive bool) layout.Dimensions {
 	item := entry.item
 	itemState := menuState.item(item.Key)
+	if gtx.Focused(&itemState.clickable) {
+		menuState.focusedKey = item.Key
+	}
 	disabled := m.itemDisabled(item)
 	animGtx := gtx
 	eventGtx := gtx

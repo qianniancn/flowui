@@ -47,6 +47,8 @@ type ListBoxWidget struct {
 	selectedKeys      []string
 	items             []ListBoxItem
 	sections          []ListBoxSection
+	dataVersion       uint64
+	hasDataVersion    bool
 	emptyText         string
 	onChange          func(string)
 	onSelectionChange func([]string)
@@ -133,6 +135,14 @@ func (l ListBoxWidget) EmptyText(text string) ListBoxWidget {
 	return l
 }
 
+// DataVersion enables validation and flattened-data reuse. Increase version
+// whenever the item data or section structure changes.
+func (l ListBoxWidget) DataVersion(version uint64) ListBoxWidget {
+	l.dataVersion = version
+	l.hasDataVersion = true
+	return l
+}
+
 func (l ListBoxWidget) OnChange(fn func(string)) ListBoxWidget {
 	l.onChange = fn
 	return l
@@ -187,11 +197,10 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	state := l.stateFor(ctx)
 	state.beginFrame()
 	defer state.endFrame()
-	entries, items := l.entriesAndItems()
-	state.checkItems(items)
+	entries, items := state.resolveEntries(l)
 
 	if !l.disabled {
-		result := state.updateKeys(gtx, items, l.disabledKeys, l.keyboardActiveKey(items))
+		result := state.updateKeys(gtx, items, l.disabledKeys, state.keyboardActiveKey(l))
 		if result.focusKey != "" {
 			frame.RequestFocus(ctx, &state.item(result.focusKey).Clickable)
 		}
@@ -238,18 +247,6 @@ func (l ListBoxWidget) isSelected(key string) bool {
 	default:
 		return key == l.selectedKey
 	}
-}
-
-func (l ListBoxWidget) keyboardActiveKey(items []ListBoxItem) string {
-	if l.selectionMode != ListBoxSelectionMultiple {
-		return l.selectedKey
-	}
-	for _, item := range items {
-		if listBoxContainsKey(l.selectedKeys, item.Key) {
-			return item.Key
-		}
-	}
-	return ""
 }
 
 func (l ListBoxWidget) allItems() []ListBoxItem {

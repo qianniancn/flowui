@@ -56,10 +56,26 @@ type selectState struct {
 	binding            selectOpenBinding
 	skipRestore        bool
 	peerClosePending   bool
+	dataVersion        uint64
+	dataReady          bool
+	cachedItems        []SelectItem
 }
 
 func (s *selectState) BeginFrame() {
 	s.peerClosePending = false
+}
+
+func (s *selectState) itemsFor(widget SelectWidget) []SelectItem {
+	if !widget.hasDataVersion {
+		return widget.allItems()
+	}
+	if s.dataReady && s.dataVersion == widget.dataVersion {
+		return s.cachedItems
+	}
+	s.cachedItems = widget.allItems()
+	s.dataVersion = widget.dataVersion
+	s.dataReady = true
+	return s.cachedItems
 }
 
 type selectOpenBinding struct {

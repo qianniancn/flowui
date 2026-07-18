@@ -29,6 +29,8 @@ type Widget struct {
 	selectedKey    string
 	items          []Item
 	sections       []Section
+	dataVersion    uint64
+	hasDataVersion bool
 	header         frame.Widget
 	footer         frame.Widget
 	emptyText      string
@@ -59,6 +61,14 @@ func (w Widget) Header(header frame.Widget) Widget {
 
 func (w Widget) Footer(footer frame.Widget) Widget {
 	w.footer = footer
+	return w
+}
+
+// DataVersion enables item validation and flattened-data reuse. Increase
+// version whenever the item data or section structure changes.
+func (w Widget) DataVersion(version uint64) Widget {
+	w.dataVersion = version
+	w.hasDataVersion = true
 	return w
 }
 
@@ -115,19 +125,9 @@ func (w Widget) OnAction(fn func(string)) Widget {
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := sidebarStateFor(ctx, w.key)
-	entries, items := w.entriesAndItems()
+	entries, items := state.resolveEntries(w)
 	state.beginFrame()
 	defer state.endFrame()
-	state.checkItems(items)
-
-	for _, item := range items {
-		itemState := state.item(item.Key)
-		for itemState.clickable.Clicked(gtx) {
-			if !w.itemDisabled(item) {
-				w.activate(item.Key)
-			}
-		}
-	}
 	if !w.disabled {
 		result := state.updateKeys(gtx, w, items)
 		if result.focusKey != "" {

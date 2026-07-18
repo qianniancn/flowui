@@ -80,6 +80,8 @@ type Widget struct {
 	derivedRole          string
 	items                []Item
 	sections             []Section
+	dataVersion          uint64
+	hasDataVersion       bool
 	autoSeparateSections bool
 	beforeContent        frame.Widget
 	afterContent         frame.Widget
@@ -145,6 +147,14 @@ func (m Widget) AfterContent(content frame.Widget) Widget {
 
 func (m Widget) EmptyText(text string) Widget {
 	m.emptyText = text
+	return m
+}
+
+// DataVersion enables item validation and flattened-data reuse. Increase
+// version whenever the item data or section structure changes.
+func (m Widget) DataVersion(version uint64) Widget {
+	m.dataVersion = version
+	m.hasDataVersion = true
 	return m
 }
 

@@ -481,6 +481,20 @@ func TestListBoxSectionsLayout(t *testing.T) {
 	}
 }
 
+func TestListBoxDataVersionCachesEntries(t *testing.T) {
+	widget := ListBoxSections("cached", "one", []ListBoxSection{{Title: "Group", Items: []ListBoxItem{{Key: "one", Label: "One"}}}}).DataVersion(1)
+	state := new(listBoxState)
+	entries, items := state.resolveEntries(widget)
+	cachedEntries, cachedItems := state.resolveEntries(widget)
+	if &entries[0] != &cachedEntries[0] || &items[0] != &cachedItems[0] {
+		t.Fatal("unchanged ListBox data version did not reuse entries")
+	}
+	updatedEntries, _ := state.resolveEntries(widget.DataVersion(2))
+	if &entries[0] == &updatedEntries[0] {
+		t.Fatal("changed ListBox data version reused stale entries")
+	}
+}
+
 func TestListBoxFullWidth(t *testing.T) {
 	dims := ListBox("languages", "go", listBoxTestItems()).
 		FullWidth().

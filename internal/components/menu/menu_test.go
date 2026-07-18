@@ -76,6 +76,20 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 	}
 }
 
+func TestMenuDataVersionCachesEntries(t *testing.T) {
+	widget := MenuSections("cached", []Section{{Title: "Edit", Items: []Item{{Key: "copy", Label: "Copy"}}}}).DataVersion(1)
+	state := new(menuState)
+	entries := state.resolveEntries(widget)
+	cachedEntries := state.resolveEntries(widget)
+	if &entries[0] != &cachedEntries[0] {
+		t.Fatal("unchanged Menu data version did not reuse entries")
+	}
+	updatedEntries := state.resolveEntries(widget.DataVersion(2))
+	if &entries[0] == &updatedEntries[0] {
+		t.Fatal("changed Menu data version reused stale entries")
+	}
+}
+
 func TestMenuCompactTokensAndSubmenu(t *testing.T) {
 	ctx := menuTestContext()
 	base := Menu("actions", nil)

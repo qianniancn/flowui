@@ -310,7 +310,10 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	state.dragSource = ""
 	state.dragSources = state.dragSources[:0]
 	state.dropTarget = treeDropTarget{}
-	dragSelection := t.selectedDragKeys(visible)
+	var dragSelection []string
+	if t.onDrop != nil && t.selectionMode == SelectionMultiple {
+		dragSelection = t.selectedDragKeys(visible)
+	}
 
 	if !t.disabled {
 		dragIndex := -1

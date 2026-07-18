@@ -20,6 +20,8 @@ type ComboBoxWidget struct {
 	key              string
 	selectedKey      string
 	items            []ComboBoxItem
+	dataVersion      uint64
+	hasDataVersion   bool
 	hint             string
 	inputValue       string
 	emptyText        string
@@ -52,6 +54,14 @@ func ComboBox(key, selectedKey string, items []ComboBoxItem) ComboBoxWidget {
 
 func (c ComboBoxWidget) Hint(hint string) ComboBoxWidget {
 	c.hint = hint
+	return c
+}
+
+// DataVersion enables item validation and filtered-index reuse. Increase
+// version whenever the item data changes.
+func (c ComboBoxWidget) DataVersion(version uint64) ComboBoxWidget {
+	c.dataVersion = version
+	c.hasDataVersion = true
 	return c
 }
 
@@ -111,7 +121,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	editor.SingleLine = true
 	editor.Submit = true
 	state.beginFrame()
-	state.checkItems(c.items)
+	state.checkItems(c.items, c.hasDataVersion, c.dataVersion)
 	state.syncEditor(editor, c)
 	state.input.Update(ctx, eventGtx, c.disabled, editor)
 
@@ -120,8 +130,8 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	}
 
 	query := editor.Text()
-	selectedLabel, _ := c.selectedLabel()
-	visible := comboBoxVisibleItems(c.items, query, selectedLabel)
+	selectedLabel, _ := state.selectedLabel(c)
+	visible := state.visibleItems(c, query, selectedLabel)
 	processMainEvents := !state.open
 	state.updateFocus(gtx.Focused(editor), c.disabled)
 	if !c.disabled && processMainEvents {
@@ -131,7 +141,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		}
 		c.updateEditor(editor, state, gtx)
 		query = editor.Text()
-		visible = comboBoxVisibleItems(c.items, query, selectedLabel)
+		visible = state.visibleItems(c, query, selectedLabel)
 		state.clampHighlight(c.items, visible)
 	}
 

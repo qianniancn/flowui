@@ -33,6 +33,8 @@ type SelectWidget struct {
 	selectedKeys      []string
 	items             []SelectItem
 	sections          []SelectSection
+	dataVersion       uint64
+	hasDataVersion    bool
 	placeholder       string
 	emptyText         string
 	label             string
@@ -99,6 +101,14 @@ func SelectMultipleSections(key string, selectedKeys []string, sections []Select
 
 func (s SelectWidget) Placeholder(placeholder string) SelectWidget {
 	s.placeholder = placeholder
+	return s
+}
+
+// DataVersion enables item validation and flattened-data reuse. Increase
+// version whenever the item data or section structure changes.
+func (s SelectWidget) DataVersion(version uint64) SelectWidget {
+	s.dataVersion = version
+	s.hasDataVersion = true
 	return s
 }
 
@@ -273,8 +283,33 @@ func (s SelectWidget) overflowAvoidanceEnabled() bool {
 	return s.avoidOverflow
 }
 
-func (s SelectWidget) selectedLabel() (string, bool) {
-	for _, item := range s.allItems() {
+func (s SelectWidget) displayValue() (string, bool) {
+	return s.displayValueItems(s.allItems())
+}
+
+func (s SelectWidget) displayValueCached(state *selectState) (string, bool) {
+	return s.displayValueItems(state.itemsFor(s))
+}
+
+func (s SelectWidget) displayValueItems(items []SelectItem) (string, bool) {
+	if s.valueText != "" {
+		return s.valueText, true
+	}
+	if s.selectionMode == SelectSelectionMultiple {
+		labels := s.selectedLabelsFrom(items)
+		if len(labels) == 0 {
+			return s.placeholder, false
+		}
+		return strings.Join(labels, ", "), true
+	}
+	if label, ok := s.selectedLabelFrom(items); ok {
+		return label, true
+	}
+	return s.placeholder, false
+}
+
+func (s SelectWidget) selectedLabelFrom(items []SelectItem) (string, bool) {
+	for _, item := range items {
 		if item.Key == s.selectedKey {
 			return item.Label, true
 		}
@@ -282,8 +317,7 @@ func (s SelectWidget) selectedLabel() (string, bool) {
 	return "", false
 }
 
-func (s SelectWidget) selectedLabels() []string {
-	items := s.allItems()
+func (s SelectWidget) selectedLabelsFrom(items []SelectItem) []string {
 	labels := make([]string, 0, len(s.selectedKeys))
 	seen := make(map[string]struct{}, len(s.selectedKeys))
 	for _, selectedKey := range s.selectedKeys {
@@ -299,23 +333,6 @@ func (s SelectWidget) selectedLabels() []string {
 		}
 	}
 	return labels
-}
-
-func (s SelectWidget) displayValue() (string, bool) {
-	if s.valueText != "" {
-		return s.valueText, true
-	}
-	if s.selectionMode == SelectSelectionMultiple {
-		labels := s.selectedLabels()
-		if len(labels) == 0 {
-			return s.placeholder, false
-		}
-		return strings.Join(labels, ", "), true
-	}
-	if label, ok := s.selectedLabel(); ok {
-		return label, true
-	}
-	return s.placeholder, false
 }
 
 func (s SelectWidget) allItems() []SelectItem {

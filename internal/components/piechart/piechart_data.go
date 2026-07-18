@@ -5,6 +5,8 @@ import (
 	"image/color"
 	"math"
 
+	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -38,31 +40,15 @@ type chartData struct {
 }
 
 type chartDataCache struct {
-	ready      bool
-	version    uint64
-	generation uint64
-	theme      *theme.Theme
-	data       chartData
+	cache chart.DataCache[chartData]
 }
 
 func (c *chartDataCache) resolve(widget Widget, activeTheme *theme.Theme) chartData {
-	if !widget.hasDataVersion {
-		*c = chartDataCache{}
+	data, generation := c.cache.Resolve(widget.hasDataVersion, widget.dataVersion, activeTheme, unit.Metric{}, func() chartData {
 		return resolveChartData(widget, activeTheme)
-	}
-	if c.ready && c.version == widget.dataVersion && c.theme == activeTheme {
-		return c.data
-	}
-	c.generation++
-	if c.generation == 0 {
-		c.generation = 1
-	}
-	c.data = resolveChartData(widget, activeTheme)
-	c.data.generation = c.generation
-	c.ready = true
-	c.version = widget.dataVersion
-	c.theme = activeTheme
-	return c.data
+	})
+	data.generation = generation
+	return data
 }
 
 func resolveChartData(widget Widget, activeTheme *theme.Theme) chartData {

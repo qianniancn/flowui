@@ -10,6 +10,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -223,14 +224,5 @@ func barCategoryBounds(geometry chartGeometry, column columnLayout, category int
 }
 
 func drawChartLine(gtx layout.Context, from, to f32.Point, width float32, col color.NRGBA) {
-	if width <= 0 || col.A == 0 {
-		return
-	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(from)
-	path.LineTo(to)
-	stroke := clip.Stroke{Path: path.End(), Width: width}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	chart.StrokeLine(gtx, from, to, width, col)
 }

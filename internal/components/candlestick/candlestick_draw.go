@@ -148,16 +148,7 @@ func drawCandles(gtx layout.Context, data chartData, geometry chartGeometry, sel
 }
 
 func drawLine(gtx layout.Context, from, to f32.Point, width float32, lineColor color.NRGBA) {
-	if width <= 0 || lineColor.A == 0 {
-		return
-	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(from)
-	path.LineTo(to)
-	stroke := clip.Stroke{Path: path.End(), Width: width}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, lineColor)
-	stroke.Pop()
+	chart.StrokeLine(gtx, from, to, width, lineColor)
 }
 
 func (w Widget) layoutAxisLabels(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) {

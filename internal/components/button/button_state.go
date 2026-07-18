@@ -4,11 +4,10 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -20,23 +19,8 @@ func buttonStateFor(ctx *frame.Context, key string) *buttonState {
 }
 
 func buttonAnimationScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, size ButtonSize, disabled bool) float32 {
-	if disabled || len(history) == 0 {
-		return 1
-	}
-	press := history[len(history)-1]
 	target := buttonPressedScale(theme, size)
-	if press.End.IsZero() {
-		progress := render.Ease(render.Progress(gtx.Now.Sub(press.Start), buttonPressInDuration))
-		if progress < 1 {
-			gtx.Execute(op.InvalidateCmd{})
-		}
-		return render.Lerp(1, target, progress)
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(press.End), buttonPressOutDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	return render.Lerp(target, 1, progress)
+	return optionrow.PressScale(gtx, history, disabled, target, buttonPressInDuration, buttonPressOutDuration)
 }
 
 func buttonPressedScale(theme *theme.Theme, size ButtonSize) float32 {

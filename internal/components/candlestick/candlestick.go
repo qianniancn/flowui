@@ -3,7 +3,6 @@ package candlestick
 import (
 	"fmt"
 	"image/color"
-	"math"
 	"time"
 
 	"gioui.org/layout"
@@ -391,7 +390,7 @@ func (w Widget) yLabel(value, interval float64) string {
 }
 
 func finite(value float64) bool {
-	return !math.IsNaN(value) && !math.IsInf(value, 0)
+	return chart.Finite(value)
 }
 
 func validateDuration(duration time.Duration) {

@@ -3,7 +3,6 @@ package candlestick
 import (
 	"fmt"
 	"image"
-	"math"
 
 	"gioui.org/font"
 	"gioui.org/io/semantic"
@@ -269,12 +268,5 @@ func (w Widget) semanticDescription(data chartData) string {
 }
 
 func visibleCategoryRange(count int, window chart.DataWindow) (int, int) {
-	if count <= 0 {
-		return 0, 0
-	}
-	start := int(math.Floor(float64(window.Start) * float64(count)))
-	end := int(math.Ceil(float64(window.End) * float64(count)))
-	start = min(max(start, 0), count-1)
-	end = min(max(end, start+1), count)
-	return start, end
+	return chart.VisibleCategoryRange(count, window)
 }

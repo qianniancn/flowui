@@ -7,13 +7,12 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -245,21 +244,6 @@ func datePickerEscapePressed(gtx layout.Context, target event.Tag) bool {
 }
 
 func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool) float32 {
-	if disabled || len(history) == 0 {
-		return 1
-	}
-	press := history[len(history)-1]
 	target := float32(0.95)
-	if press.End.IsZero() {
-		progress := render.Ease(render.Progress(gtx.Now.Sub(press.Start), datePickerPressInDuration))
-		if progress < 1 {
-			gtx.Execute(op.InvalidateCmd{})
-		}
-		return render.Lerp(1, target, progress)
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(press.End), datePickerPressOutDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	return render.Lerp(target, 1, progress)
+	return optionrow.PressScale(gtx, history, disabled, target, datePickerPressInDuration, datePickerPressOutDuration)
 }

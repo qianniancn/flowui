@@ -88,9 +88,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 }
 
 func clampLineAnnotationLabel(position, size image.Point, plot image.Rectangle) image.Point {
-	position.X = min(max(position.X, plot.Min.X), max(plot.Max.X-size.X, plot.Min.X))
-	position.Y = min(max(position.Y, plot.Min.Y), max(plot.Max.Y-size.Y, plot.Min.Y))
-	return position
+	return chart.ClampLabelPosition(position, size, plot)
 }
 
 func lineMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image.Rectangle, bool) {

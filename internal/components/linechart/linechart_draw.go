@@ -3,12 +3,12 @@ package linechart
 import (
 	"image"
 	"image/color"
-	"math"
 
 	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -149,16 +149,7 @@ func drawChartCrosshair(gtx layout.Context, geometry chartGeometry, selection ch
 }
 
 func drawChartLine(gtx layout.Context, from, to f32.Point, width float32, col color.NRGBA) {
-	if width <= 0 || col.A == 0 {
-		return
-	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(from)
-	path.LineTo(to)
-	stroke := clip.Stroke{Path: path.End(), Width: width}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	chart.StrokeLine(gtx, from, to, width, col)
 }
 
 func drawChartHollowPoint(gtx layout.Context, center f32.Point, diameter int, col, background color.NRGBA) {
@@ -177,11 +168,5 @@ func drawChartEmphasisPoint(gtx layout.Context, center f32.Point, diameter int, 
 }
 
 func chartPointRect(center f32.Point, diameter int) image.Rectangle {
-	half := float32(diameter) / 2
-	return image.Rect(
-		int(math.Round(float64(center.X-half))),
-		int(math.Round(float64(center.Y-half))),
-		int(math.Round(float64(center.X+half))),
-		int(math.Round(float64(center.Y+half))),
-	)
+	return chart.PointRect(center, diameter)
 }

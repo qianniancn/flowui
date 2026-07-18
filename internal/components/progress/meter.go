@@ -2,7 +2,6 @@ package progress
 
 import (
 	"fmt"
-	"math"
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
@@ -132,14 +131,7 @@ func meterStateFor(ctx *frame.Context, key string) *progressBarState {
 }
 
 func (m MeterWidget) ratio() float32 {
-	if m.maxValue <= m.minValue {
-		return 0
-	}
-	ratio := (m.value - m.minValue) / (m.maxValue - m.minValue)
-	if math.IsNaN(ratio) || math.IsInf(ratio, 0) {
-		return 0
-	}
-	return float32(min(max(ratio, 0), 1))
+	return progressRatio(m.value, m.minValue, m.maxValue, false)
 }
 
 func (m MeterWidget) outputText() string {

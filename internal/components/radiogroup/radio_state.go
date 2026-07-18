@@ -6,11 +6,10 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -206,24 +205,9 @@ func (s *radioItemState) focusVisible(focused bool, history []widget.Press) bool
 }
 
 func radioPressScale(gtx layout.Context, history []widget.Press, theme *theme.Theme, disabled bool) float32 {
-	if disabled || len(history) == 0 {
-		return 1
-	}
-	press := history[len(history)-1]
 	target := theme.Components.RadioGroup.PressedScale
 	if target <= 0 || target > 1 {
 		target = 0.95
 	}
-	if press.End.IsZero() {
-		progress := render.Ease(render.Progress(gtx.Now.Sub(press.Start), radioPressInDuration))
-		if progress < 1 {
-			gtx.Execute(op.InvalidateCmd{})
-		}
-		return render.Lerp(1, target, progress)
-	}
-	progress := render.Ease(render.Progress(gtx.Now.Sub(press.End), radioPressOutDuration))
-	if progress < 1 {
-		gtx.Execute(op.InvalidateCmd{})
-	}
-	return render.Lerp(target, 1, progress)
+	return optionrow.PressScale(gtx, history, disabled, target, radioPressInDuration, radioPressOutDuration)
 }

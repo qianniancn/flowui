@@ -215,6 +215,11 @@ func addNumberCommas(value string) string {
 	return sign + integer + fraction
 }
 
-func finite(value float64) bool {
+// Finite reports whether value is neither NaN nor an infinity.
+func Finite(value float64) bool {
 	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+func finite(value float64) bool {
+	return Finite(value)
 }

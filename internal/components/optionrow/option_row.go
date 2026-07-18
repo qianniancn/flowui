@@ -82,11 +82,6 @@ func PressScale(gtx layout.Context, history []widget.Press, disabled bool, targe
 	return render.Lerp(target, 1, progress)
 }
 
-func Transform(size image.Point, scale float32) op.TransformOp {
-	origin := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
-	return op.Affine(f32.AffineId().Scale(origin, f32.Pt(scale, scale)))
-}
-
 func Frame(constraints layout.Constraints, minHeight int, content image.Point) (size, offset image.Point) {
 	size = constraints.Constrain(image.Pt(content.X, max(minHeight, content.Y)))
 	offset.Y = max((size.Y-content.Y)/2, 0)

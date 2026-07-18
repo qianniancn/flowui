@@ -91,9 +91,7 @@ func (w Widget) drawMarkLinesAndPoints(ctx *frame.Context, gtx layout.Context, g
 }
 
 func clampBarAnnotationLabel(position, size image.Point, plot image.Rectangle) image.Point {
-	position.X = min(max(position.X, plot.Min.X), max(plot.Max.X-size.X, plot.Min.X))
-	position.Y = min(max(position.Y, plot.Min.Y), max(plot.Max.Y-size.Y, plot.Min.Y))
-	return position
+	return chart.ClampLabelPosition(position, size, plot)
 }
 
 func barMarkAreaRect(mark chart.MarkArea, geometry chartGeometry) (image.Rectangle, bool) {
@@ -149,11 +147,5 @@ func barCategoryX(geometry chartGeometry, value float64) float32 {
 }
 
 func barMarkPointRect(center f32.Point, diameter int) image.Rectangle {
-	half := float32(diameter) / 2
-	return image.Rect(
-		int(math.Round(float64(center.X-half))),
-		int(math.Round(float64(center.Y-half))),
-		int(math.Round(float64(center.X+half))),
-		int(math.Round(float64(center.Y+half))),
-	)
+	return chart.PointRect(center, diameter)
 }

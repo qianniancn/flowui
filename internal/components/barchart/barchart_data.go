@@ -3,7 +3,6 @@ package barchart
 import (
 	"fmt"
 	"image/color"
-	"math"
 
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
@@ -53,33 +52,15 @@ type chartData struct {
 }
 
 type chartDataCache struct {
-	ready      bool
-	version    uint64
-	generation uint64
-	theme      *theme.Theme
-	metric     unit.Metric
-	data       chartData
+	cache chart.DataCache[chartData]
 }
 
 func (c *chartDataCache) resolve(widget Widget, activeTheme *theme.Theme, metric unit.Metric) chartData {
-	if !widget.hasDataVersion {
-		*c = chartDataCache{}
+	data, generation := c.cache.Resolve(widget.hasDataVersion, widget.dataVersion, activeTheme, metric, func() chartData {
 		return resolveChartData(widget, activeTheme, metric.Dp)
-	}
-	if c.ready && c.version == widget.dataVersion && c.theme == activeTheme && c.metric == metric {
-		return c.data
-	}
-	c.generation++
-	if c.generation == 0 {
-		c.generation = 1
-	}
-	c.data = resolveChartData(widget, activeTheme, metric.Dp)
-	c.data.generation = c.generation
-	c.ready = true
-	c.version = widget.dataVersion
-	c.theme = activeTheme
-	c.metric = metric
-	return c.data
+	})
+	data.generation = generation
+	return data
 }
 
 func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) int) chartData {
@@ -195,5 +176,5 @@ func resolveChartData(widget Widget, activeTheme *theme.Theme, dp func(unit.Dp) 
 }
 
 func finite(value float64) bool {
-	return !math.IsNaN(value) && !math.IsInf(value, 0)
+	return chart.Finite(value)
 }

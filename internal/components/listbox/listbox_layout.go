@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -153,7 +154,7 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 		dims.Size = size
 		dims.Baseline += max(size.Y-contentOffset.Y-contentDims.Size.Y, 0)
 
-		stack := optionrow.Transform(dims.Size, scale).Push(gtx.Ops)
+		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
 		drawListBoxItem(gtx, frame.ActiveTheme(ctx), dims.Size, style)
 		offset := op.Offset(contentOffset).Push(gtx.Ops)
 		call.Add(gtx.Ops)

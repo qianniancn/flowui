@@ -16,6 +16,19 @@ type DataWindow struct {
 	End   float32
 }
 
+// VisibleCategoryRange converts a normalized data window to a non-empty
+// category index range.
+func VisibleCategoryRange(count int, window DataWindow) (int, int) {
+	if count <= 0 {
+		return 0, 0
+	}
+	start := int(math.Floor(float64(window.Start) * float64(count)))
+	end := int(math.Ceil(float64(window.End) * float64(count)))
+	start = min(max(start, 0), count-1)
+	end = min(max(end, start+1), count)
+	return start, end
+}
+
 // FullDataWindow returns the complete normalized data range.
 func FullDataWindow() DataWindow {
 	return DataWindow{End: 1}

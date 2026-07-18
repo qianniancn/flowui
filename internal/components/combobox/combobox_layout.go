@@ -15,6 +15,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
@@ -242,7 +243,7 @@ func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, combo
 		style := comboBoxItemStyleFor(frame.ActiveTheme(ctx), itemState.Clickable.Hovered() || highlighted, itemState.Clickable.Pressed(), item.Disabled)
 		style.bg = itemState.Background(gtx, style.bg, comboBoxItemColorDuration)
 		scale := optionrow.PressScale(gtx, itemState.Clickable.History(), item.Disabled, 0.98, comboBoxItemPressInDuration, comboBoxItemPressDuration)
-		stack := optionrow.Transform(dims.Size, scale).Push(gtx.Ops)
+		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
 		drawComboBoxItem(gtx, frame.ActiveTheme(ctx), dims.Size, style)
 		offset := op.Offset(contentOffset).Push(gtx.Ops)
 		call.Add(gtx.Ops)

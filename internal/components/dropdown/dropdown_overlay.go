@@ -108,12 +108,11 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 	panelPlacement.PlaceTransform(panelTransform)
 	panelPlacement.SetOpacity(progress)
 	animatedPanel := overlay.AffineRectBounds(image.Rectangle{Max: panelDims.Size}, panelTransform)
-	d.layoutDismissAreas(gtx, state, bounds, anchor, animatedPanel)
+	d.layoutDismissAndBlocker(gtx, state, bounds, animatedPanel, anchor)
 
 	offset := op.Offset(panelOffset).Push(gtx.Ops)
 	transform := op.Affine(panelScale).Push(gtx.Ops)
 	opacity := paint.PushOpacity(gtx.Ops, progress)
-	d.layoutDialogBlocker(gtx, state, panelDims.Size)
 	panelCall.Add(gtx.Ops)
 	opacity.Pop()
 	transform.Pop()
@@ -143,7 +142,7 @@ func (d Widget) panelGapPx(ctx *frame.Context, gtx layout.Context) int {
 	return gtx.Dp(frame.ActiveTheme(ctx).Components.Dropdown.PanelGap)
 }
 
-func (d Widget) layoutDismissAreas(gtx layout.Context, state *dropdownState, viewport image.Point, excluded ...image.Rectangle) {
+func (d Widget) layoutDismissAndBlocker(gtx layout.Context, state *dropdownState, viewport image.Point, blocker image.Rectangle, excluded ...image.Rectangle) {
 	areas := overlay.DismissRectsExcluding(image.Rectangle{Max: viewport}, excluded...)
 	for index, area := range areas {
 		if index >= len(state.dismiss) || area.Empty() {
@@ -159,15 +158,14 @@ func (d Widget) layoutDismissAreas(gtx layout.Context, state *dropdownState, vie
 		pass.Pop()
 		offset.Pop()
 	}
-}
-
-func (d Widget) layoutDialogBlocker(gtx layout.Context, state *dropdownState, size image.Point) {
-	if size.X <= 0 || size.Y <= 0 {
+	if blocker.Empty() {
 		return
 	}
 	blockerGtx := gtx
-	blockerGtx.Constraints = layout.Exact(size)
+	blockerGtx.Constraints = layout.Exact(blocker.Size())
+	offset := op.Offset(blocker.Min).Push(gtx.Ops)
 	state.dialog.Layout(blockerGtx, func(layout.Context) layout.Dimensions {
-		return layout.Dimensions{Size: size}
+		return layout.Dimensions{Size: blocker.Size()}
 	})
+	offset.Pop()
 }

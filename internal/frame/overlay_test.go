@@ -2,6 +2,7 @@ package frame
 
 import (
 	"image"
+	"image/color"
 	"math"
 	"reflect"
 	"testing"
@@ -11,9 +12,43 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
+
+func TestOverlayCapturesInstanceTheme(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	BeginFrameWithViewport(ctx, image.Pt(100, 100))
+	restore := PushInstanceTheme(ctx, func(active *theme.Theme) {
+		active.Components.Button.Radius = 7
+		active.Palette.Accent = color.NRGBA{R: 7, A: 0xff}
+	})
+	var radiusSeen unit.Dp
+	var accentSeen color.NRGBA
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "themed",
+		Layout: func(layout.Context, image.Rectangle, bool) layout.Dimensions {
+			radiusSeen = ActiveTheme(ctx).Components.Button.Radius
+			accentSeen = ActiveTheme(ctx).Palette.Accent
+			return layout.Dimensions{}
+		},
+	})
+	restore()
+	gtx := layout.Context{Constraints: layout.Exact(image.Pt(100, 100)), Ops: new(op.Ops)}
+	LayoutOverlays(ctx, gtx)
+
+	if radiusSeen != 7 {
+		t.Fatalf("overlay radius = %v, want 7", radiusSeen)
+	}
+	if accentSeen.R != 7 {
+		t.Fatalf("overlay accent = %#v, want red 7", accentSeen)
+	}
+	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 24 {
+		t.Fatalf("active radius after overlays = %v, want 24", radius)
+	}
+}
 
 func TestLayoutOverlaysRecordsRootInputOps(t *testing.T) {
 	ctx := New(nil, nil, locale.LanguageAuto)

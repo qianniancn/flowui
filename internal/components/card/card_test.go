@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -63,6 +64,43 @@ func TestCardThemeControlsSpacing(t *testing.T) {
 
 	if dims.Size != image.Pt(80, 66) {
 		t.Fatalf("themed card size = %v, want (80,66)", dims.Size)
+	}
+}
+
+func TestCardInstanceThemeSupportsZeroWithoutMutation(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := cardTestContext(&activeTheme)
+	accent := color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
+	themedProbe := &cardThemeProbeWidget{}
+	defaultProbe := &cardThemeProbeWidget{}
+	var ops op.Ops
+	dims := Card(themedProbe).
+		Theme(func(cardTheme *theme.Theme) {
+			cardTheme.Components.Card.Padding = 0
+			cardTheme.Components.Card.Radius = 0
+			cardTheme.Palette.Accent = accent
+			cardTheme.Spacing.PanelGap = 31
+		}).
+		Layout(ctx, layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+			Ops:         &ops,
+		})
+
+	if dims.Size != image.Pt(40, 10) {
+		t.Fatalf("instance-themed card size = %v, want (40,10)", dims.Size)
+	}
+	if themedProbe.accent != accent || themedProbe.panelGap != 31 {
+		t.Fatalf("card child theme = %#v/%v, want %#v/31", themedProbe.accent, themedProbe.panelGap, accent)
+	}
+	if activeTheme.Components.Card.Padding != 16 || activeTheme.Components.Card.Radius != 24 {
+		t.Fatalf("instance theme mutated application card theme: %#v", activeTheme.Components.Card)
+	}
+	Card(defaultProbe).Layout(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Ops:         &ops,
+	})
+	if defaultProbe.accent != activeTheme.Palette.Accent || defaultProbe.panelGap != activeTheme.Spacing.PanelGap {
+		t.Fatal("card instance theme leaked into sibling")
 	}
 }
 
@@ -189,6 +227,11 @@ type colorProbeWidget struct {
 	background color.NRGBA
 }
 
+type cardThemeProbeWidget struct {
+	accent   color.NRGBA
+	panelGap unit.Dp
+}
+
 type cardOverlayProbe struct {
 	anchor *image.Rectangle
 }
@@ -219,5 +262,12 @@ func (w *cardOverlayProbe) Layout(ctx *frame.Context, _ layout.Context) layout.D
 func (w *colorProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
 	w.foreground = ctx.ForegroundColor()
 	w.background = ctx.BackgroundColor()
+	return layout.Dimensions{Size: image.Pt(40, 10)}
+}
+
+func (w *cardThemeProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+	activeTheme := frame.ActiveTheme(ctx)
+	w.accent = activeTheme.Palette.Accent
+	w.panelGap = activeTheme.Spacing.PanelGap
 	return layout.Dimensions{Size: image.Pt(40, 10)}
 }

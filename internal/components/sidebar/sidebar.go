@@ -7,6 +7,7 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Item describes one destination in a Sidebar.
@@ -26,6 +27,7 @@ type Section struct {
 
 // Widget presents controlled primary application navigation.
 type Widget struct {
+	theme          func(*theme.Theme)
 	key            string
 	selectedKey    string
 	items          []Item
@@ -125,7 +127,15 @@ func (w Widget) OnAction(fn func(string)) Widget {
 	return w
 }
 
+func (w Widget) Theme(fn func(*theme.Theme)) Widget {
+	w.theme = fn
+	return w
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
+		defer restore()
+	}
 	state := sidebarStateFor(ctx, w.key)
 	w.disabledKeySet = state.disabledKeys.Resolve(w.disabledKeys)
 	entries, items := state.resolveEntries(w)

@@ -41,7 +41,15 @@ type paginationSizeStyle struct {
 	iconSize unit.Dp
 }
 
+func (p Widget) Theme(fn func(*theme.Theme)) Widget {
+	p.theme = fn
+	return p
+}
+
 func (p Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, state.KindPagination, p.key)
 	value := frame.UseState[paginationState](ctx, key, stateSlotPagination)
 	value.beginFrame()

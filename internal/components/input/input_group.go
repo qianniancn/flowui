@@ -5,6 +5,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotInputGroup = "input-group"
@@ -12,6 +13,7 @@ const stateSlotInputGroup = "input-group"
 // InputGroupWidget combines an Input or TextArea with optional prefix and suffix content
 // inside one HeroUI-style field shell.
 type InputGroupWidget struct {
+	theme              func(*theme.Theme)
 	input              InputWidget
 	textArea           TextAreaWidget
 	multiline          bool
@@ -94,7 +96,15 @@ func (g InputGroupWidget) FullWidth() InputGroupWidget {
 	return g
 }
 
+func (g InputGroupWidget) Theme(fn func(*theme.Theme)) InputGroupWidget {
+	g.theme = fn
+	return g
+}
+
 func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
+		defer restore()
+	}
 	var key string
 	var editor *widget.Editor
 	var enabled bool

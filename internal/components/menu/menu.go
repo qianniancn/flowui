@@ -75,6 +75,7 @@ type Section struct {
 }
 
 type Widget struct {
+	theme                func(*theme.Theme)
 	key                  string
 	derivedOwner         string
 	derivedRole          string
@@ -225,7 +226,15 @@ func (m Widget) Width(dp int) Widget {
 	return m
 }
 
+func (m Widget) Theme(fn func(*theme.Theme)) Widget {
+	m.theme = fn
+	return m
+}
+
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
+		defer restore()
+	}
 	state := m.stateFor(ctx)
 	return m.layout(ctx, gtx, state, !m.disabled)
 }

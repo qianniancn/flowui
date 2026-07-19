@@ -148,10 +148,28 @@ func main() {
 }
 ```
 
-Theme customization applies to the application or window. Component tokens
-such as `theme.Components.Button` affect matching components in that window;
-they are not per-widget style setters. Use component variants and sizes for
-instance-level choices.
+Application theme customization applies to the application or window. Widgets
+backed by component themes provide a matching `Theme` chain method for the
+current instance. Its callback receives a copy of the active theme, so
+unchanged fields still inherit the application theme:
+
+```go
+ui.Button("save", ui.Text("Save")).Theme(func(theme *ui.Theme) {
+	theme.Components.Button.Radius = 8
+	theme.Components.Button.BorderWidth = 2
+	theme.Components.Button.PressedScaleMedium = 0.9
+	theme.Palette.Accent = color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
+})
+```
+
+Every widget backed by a component theme provides a `Theme(func(*Theme))`
+method. The callback receives a copy of the full application theme, so shared
+`Palette`, `Spacing`, and `Typography` values and component-specific fields
+under `Components` are all available. Overrides
+support valid zero values. They do not mutate the application theme or leak to
+sibling widgets; composed children inherit the instance theme while that widget
+is being laid out. The callback runs during layout and should only modify the
+provided theme without side effects.
 
 FlowUI includes English and Chinese component strings. `ui.LanguageAuto`
 selects the host language. An application that owns its windows can change a

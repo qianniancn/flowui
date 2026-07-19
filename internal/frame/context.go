@@ -163,6 +163,21 @@ func ActiveTheme(ctx *Context) *theme.Theme {
 	return ctx.theme
 }
 
+// PushInstanceTheme customizes a copy of the active theme for the current layout scope.
+func PushInstanceTheme(ctx *Context, customize func(*theme.Theme)) func() {
+	if ctx == nil || customize == nil {
+		return nil
+	}
+	activeTheme := ctx.Theme()
+	customize(&activeTheme)
+	theme.SyncMaterialTheme(&activeTheme)
+	previous := ctx.theme
+	ctx.theme = &activeTheme
+	return func() {
+		ctx.theme = previous
+	}
+}
+
 // ActiveLanguage returns the resolved language used by internal components.
 func ActiveLanguage(ctx *Context) locale.Language {
 	return ctx.language

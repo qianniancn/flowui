@@ -7,9 +7,11 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type InputWidget struct {
+	theme     func(*theme.Theme)
 	key       string
 	value     string
 	hint      string
@@ -107,7 +109,15 @@ func (i InputWidget) Label(label string) InputWidget {
 	return i
 }
 
+func (i InputWidget) Theme(fn func(*theme.Theme)) InputWidget {
+	i.theme = fn
+	return i
+}
+
 func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, i.theme); restore != nil {
+		defer restore()
+	}
 	gtx, key, editor, enabled := i.prepareEditor(ctx, gtx, i.disabled)
 	disabled := !enabled
 	state := inputStateFor(ctx, key)

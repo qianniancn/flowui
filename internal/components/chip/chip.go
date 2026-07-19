@@ -3,6 +3,7 @@ package chip
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Color selects the semantic color of a Chip.
@@ -37,6 +38,7 @@ const (
 
 // Widget presents compact, non-interactive metadata or status information.
 type Widget struct {
+	theme        func(*theme.Theme)
 	label        string
 	color        Color
 	variant      Variant
@@ -80,6 +82,14 @@ func (c Widget) EndContent(content frame.Widget) Widget {
 	return c
 }
 
+func (c Widget) Theme(fn func(*theme.Theme)) Widget {
+	c.theme = fn
+	return c
+}
+
 func (c Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
+		defer restore()
+	}
 	return c.layout(ctx, gtx)
 }

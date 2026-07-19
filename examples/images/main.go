@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"image"
-	"image/png"
+	"image/jpeg"
 
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/assets/images"
@@ -57,7 +57,7 @@ func section(title string, content ui.Widget) ui.Widget {
 }
 
 func loadImage(data []byte) image.Image {
-	value, err := png.Decode(bytes.NewReader(data))
+	value, err := jpeg.Decode(bytes.NewReader(data))
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +66,7 @@ func loadImage(data []byte) image.Image {
 
 func main() {
 	ui.Run(
-		Model{Landscape: paint.NewImageOp(loadImage(images.BGDesertPNG))},
+		Model{Landscape: paint.NewImageOp(loadImage(images.BGDesertJPG))},
 		Update,
 		View,
 		ui.Title("FlowUI Image"),

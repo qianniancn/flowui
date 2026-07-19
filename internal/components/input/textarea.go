@@ -7,11 +7,13 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const defaultTextAreaRows = 3
 
 type TextAreaWidget struct {
+	theme     func(*theme.Theme)
 	key       string
 	value     string
 	hint      string
@@ -92,7 +94,15 @@ func (t TextAreaWidget) Label(label string) TextAreaWidget {
 	return t
 }
 
+func (t TextAreaWidget) Theme(fn func(*theme.Theme)) TextAreaWidget {
+	t.theme = fn
+	return t
+}
+
 func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
+		defer restore()
+	}
 	gtx, key, editor, enabled := t.prepareEditor(ctx, gtx, t.disabled)
 	disabled := !enabled
 	state := inputStateFor(ctx, key)

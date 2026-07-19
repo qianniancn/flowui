@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotDateRangePicker = "date-range-picker"
@@ -26,6 +27,7 @@ type DateRange struct {
 }
 
 type DateRangePickerWidget struct {
+	theme        func(*theme.Theme)
 	key          string
 	value        DateRange
 	label        string
@@ -120,7 +122,15 @@ func (d DateRangePickerWidget) MaxDate(value time.Time) DateRangePickerWidget {
 	return d
 }
 
+func (d DateRangePickerWidget) Theme(fn func(*theme.Theme)) DateRangePickerWidget {
+	d.theme = fn
+	return d
+}
+
 func (d DateRangePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
+		defer restore()
+	}
 	d = d.resolveLocale(ctx)
 	key := frame.ClaimKey(ctx, state.KindDateRangePicker, d.key)
 	componentState := frame.UseState[dateRangePickerState](ctx, key, stateSlotDateRangePicker)

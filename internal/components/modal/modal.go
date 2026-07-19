@@ -7,10 +7,12 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // ModalWidget renders an overlay dialog controlled by application state.
 type ModalWidget struct {
+	theme                   func(*theme.Theme)
 	key                     string
 	open                    bool
 	title                   string
@@ -200,7 +202,15 @@ func (m ModalWidget) CloseButton(show bool) ModalWidget {
 }
 
 // Layout renders the modal overlay when it is open or exiting.
+func (m ModalWidget) Theme(fn func(*theme.Theme)) ModalWidget {
+	m.theme = fn
+	return m
+}
+
 func (m ModalWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
+		defer restore()
+	}
 	fullKey := frame.FullKey(ctx, m.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	if !m.open && !hasVisibleModal(ctx, fullKey) {

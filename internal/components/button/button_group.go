@@ -8,6 +8,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ButtonGroupOrientation uint8
@@ -33,6 +34,7 @@ type buttonGroupItemStyle struct {
 }
 
 type ButtonGroupWidget struct {
+	theme       func(*theme.Theme)
 	buttons     []ButtonWidget
 	orientation ButtonGroupOrientation
 	variant     ButtonVariant
@@ -76,7 +78,15 @@ func (g ButtonGroupWidget) Separators(visible bool) ButtonGroupWidget {
 	return g
 }
 
+func (g ButtonGroupWidget) Theme(fn func(*theme.Theme)) ButtonGroupWidget {
+	g.theme = fn
+	return g
+}
+
 func (g ButtonGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
+		defer restore()
+	}
 	if len(g.buttons) == 0 {
 		return layout.Dimensions{}
 	}
@@ -161,7 +171,7 @@ type buttonGroupItemLayout struct {
 }
 
 func buttonGroupForeground(ctx *frame.Context, button ButtonWidget) color.NRGBA {
-	activeTheme := frame.ActiveTheme(ctx)
+	activeTheme := button.activeTheme(ctx)
 	foreground := buttonColors(activeTheme, button.variant).fg
 	if button.disabled {
 		foreground = activeTheme.DisabledColor(foreground)

@@ -13,11 +13,13 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotColorSlider = "color-slider"
 
 type ColorSliderWidget struct {
+	theme      func(*theme.Theme)
 	key        string
 	value      color.NRGBA
 	channel    ColorChannel
@@ -75,7 +77,15 @@ func (slider ColorSliderWidget) withColorState(state *colorValueState) ColorSlid
 	return slider
 }
 
+func (slider ColorSliderWidget) Theme(fn func(*theme.Theme)) ColorSliderWidget {
+	slider.theme = fn
+	return slider
+}
+
 func (slider ColorSliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, slider.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, state.KindColorSlider, slider.key)
 	sliderState := frame.UseState[colorSliderState](ctx, key, stateSlotColorSlider)
 	valueState := &sliderState.color

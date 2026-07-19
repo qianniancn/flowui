@@ -17,6 +17,7 @@ import (
 )
 
 type ProgressCircleWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	minValue      float64
@@ -93,7 +94,15 @@ func (p ProgressCircleWidget) Disabled(disabled bool) ProgressCircleWidget {
 	return p
 }
 
+func (p ProgressCircleWidget) Theme(fn func(*theme.Theme)) ProgressCircleWidget {
+	p.theme = fn
+	return p
+}
+
 func (p ProgressCircleWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
+		defer restore()
+	}
 	activeTheme := frame.ActiveTheme(ctx)
 	progressState := progressCircleStateFor(ctx, p.key)
 	progress := progressState.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)

@@ -5,10 +5,12 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // DescriptionWidget provides supporting text for a form field or control.
 type DescriptionWidget struct {
+	theme    func(*theme.Theme)
 	text     string
 	forKey   string
 	disabled bool
@@ -30,7 +32,15 @@ func (d DescriptionWidget) Disabled(disabled bool) DescriptionWidget {
 	return d
 }
 
+func (d DescriptionWidget) Theme(fn func(*theme.Theme)) DescriptionWidget {
+	d.theme = fn
+	return d
+}
+
 func (d DescriptionWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
+		defer restore()
+	}
 	if d.forKey != "" {
 		d.registerFieldAssociation(ctx)
 	}

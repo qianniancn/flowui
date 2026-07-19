@@ -16,6 +16,7 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotSplitPane = "split-pane"
@@ -33,6 +34,7 @@ const (
 )
 
 type SplitPaneWidget struct {
+	theme           func(*theme.Theme)
 	key             string
 	first           frame.Widget
 	second          frame.Widget
@@ -121,7 +123,15 @@ func (s SplitPaneWidget) Disabled(disabled bool) SplitPaneWidget {
 	return s
 }
 
+func (s SplitPaneWidget) Theme(fn func(*theme.Theme)) SplitPaneWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SplitPaneWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	prepareFieldAssociations(ctx, s.first, s.second)
 	key := frame.ClaimKey(ctx, state.KindSplitPane, s.key)
 	value := frame.UseState[splitPaneState](ctx, key, stateSlotSplitPane)

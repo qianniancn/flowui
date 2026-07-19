@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ComboBoxItem struct {
@@ -17,6 +18,7 @@ type ComboBoxItem struct {
 }
 
 type ComboBoxWidget struct {
+	theme            func(*theme.Theme)
 	key              string
 	selectedKey      string
 	items            []ComboBoxItem
@@ -111,7 +113,15 @@ func (c ComboBoxWidget) AllowCustomValue() ComboBoxWidget {
 	return c
 }
 
+func (c ComboBoxWidget) Theme(fn func(*theme.Theme)) ComboBoxWidget {
+	c.theme = fn
+	return c
+}
+
 func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
+		defer restore()
+	}
 	state := comboBoxStateFor(ctx, c.key)
 	key := frame.FullKey(ctx, c.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)

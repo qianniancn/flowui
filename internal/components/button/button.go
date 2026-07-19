@@ -31,6 +31,7 @@ type ButtonWidget struct {
 	group       buttonGroupItemStyle
 	prepared    buttonPreparedContent
 	preparedSet bool
+	theme       func(*theme.Theme)
 }
 
 type ButtonVariant int
@@ -108,6 +109,12 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 	return b
 }
 
+// Theme customizes a copy of the active theme for this button's layout scope.
+func (b ButtonWidget) Theme(fn func(*theme.Theme)) ButtonWidget {
+	b.theme = fn
+	return b
+}
+
 func (b ButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	return layoutWithClickable(b, ctx, gtx, nil, true)
 }
@@ -124,6 +131,10 @@ func LayoutWithClickableNoEvents(b ButtonWidget, ctx *frame.Context, gtx layout.
 }
 
 func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) layout.Dimensions {
+	if restore := b.pushTheme(ctx); restore != nil {
+		defer restore()
+	}
+	activeTheme := frame.ActiveTheme(ctx)
 	var key string
 	if clickable == nil {
 		key, clickable = frame.ClickableWithKey(ctx, b.key)
@@ -145,7 +156,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		frame.FocusOnPress(ctx, clickable, clickable.History(), presses)
 	}
 
-	sizeStyle := buttonSizeStyle(frame.ActiveTheme(ctx), b.size, b.iconOnly)
+	sizeStyle := buttonSizeStyle(activeTheme, b.size, b.iconOnly)
 
 	if b.fullWidth {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
@@ -161,11 +172,11 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 	dims := clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		focused := gtx.Focused(clickable)
 		focusVisible := frame.FocusVisible(ctx, clickable, focused)
-		style := b.style(frame.ActiveTheme(ctx), clickable)
+		style := b.style(activeTheme, clickable)
 		if b.loading && !b.iconOnly && !b.fullWidth {
-			style.inset = buttonLoadingInset(gtx, frame.ActiveTheme(ctx), b.size, style.inset)
+			style.inset = buttonLoadingInset(gtx, activeTheme, b.size, style.inset)
 		}
-		motion := frame.ActiveTheme(ctx).Motion
+		motion := activeTheme.Motion
 		style.bg = buttonState.background(animGtx, style.bg, motion)
 		style.focus = buttonState.focusOpacity(animGtx, focusVisible && !b.disabled, motion)
 		child := b.styleChild(style)
@@ -181,7 +192,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 			return style.inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				restore := frame.PushColors(ctx, style.fg, style.bg)
 				defer restore()
-				return b.layoutContent(ctx, gtx, style, child)
+				return b.layoutContent(ctx, gtx, style, child, activeTheme)
 			})
 		})
 		call := macro.Stop()
@@ -194,7 +205,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 
 		scale := float32(1)
 		if !b.group.grouped {
-			scale = buttonAnimationScale(gtx, clickable.History(), frame.ActiveTheme(ctx), b.size, b.disabled)
+			scale = buttonAnimationScale(gtx, clickable.History(), activeTheme, b.size, b.disabled)
 		}
 		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
 		drawButton(gtx, dims.Size, style)
@@ -204,4 +215,17 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		return dims
 	})
 	return dims
+}
+
+func (b ButtonWidget) activeTheme(ctx *frame.Context) *theme.Theme {
+	restore := b.pushTheme(ctx)
+	activeTheme := frame.ActiveTheme(ctx)
+	if restore != nil {
+		restore()
+	}
+	return activeTheme
+}
+
+func (b ButtonWidget) pushTheme(ctx *frame.Context) func() {
+	return frame.PushInstanceTheme(ctx, b.theme)
 }

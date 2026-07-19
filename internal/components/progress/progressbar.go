@@ -10,9 +10,11 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ProgressBarWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	minValue      float64
@@ -103,7 +105,15 @@ func (p ProgressBarWidget) Disabled(disabled bool) ProgressBarWidget {
 	return p
 }
 
+func (p ProgressBarWidget) Theme(fn func(*theme.Theme)) ProgressBarWidget {
+	p.theme = fn
+	return p
+}
+
 func (p ProgressBarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
+		defer restore()
+	}
 	state := progressBarStateFor(ctx, p.key)
 	style := progressBarStyleFor(frame.ActiveTheme(ctx), p.color, p.disabled)
 	sizeStyle := progressBarSizeStyleFor(frame.ActiveTheme(ctx), p.size)

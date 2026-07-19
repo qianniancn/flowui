@@ -7,9 +7,11 @@ import (
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type DatePickerWidget struct {
+	theme        func(*theme.Theme)
 	key          string
 	value        time.Time
 	hint         string
@@ -135,7 +137,15 @@ func (d DatePickerWidget) MaxDate(date time.Time) DatePickerWidget {
 	return d
 }
 
+func (d DatePickerWidget) Theme(fn func(*theme.Theme)) DatePickerWidget {
+	d.theme = fn
+	return d
+}
+
 func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
+		defer restore()
+	}
 	d = d.resolveLocale(ctx)
 	now := datePickerFrameNow(gtx.Now)
 	state := datePickerStateFor(ctx, d.key)

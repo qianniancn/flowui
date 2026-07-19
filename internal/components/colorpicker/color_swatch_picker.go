@@ -15,6 +15,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 )
 
 type ColorSwatchPickerWidget struct {
+	theme          func(*theme.Theme)
 	key            string
 	value          color.NRGBA
 	colors         []color.NRGBA
@@ -99,7 +101,15 @@ func (picker ColorSwatchPickerWidget) DisabledColors(values []color.NRGBA) Color
 	return picker
 }
 
+func (picker ColorSwatchPickerWidget) Theme(fn func(*theme.Theme)) ColorSwatchPickerWidget {
+	picker.theme = fn
+	return picker
+}
+
 func (picker ColorSwatchPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, picker.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, state.KindColorSwatchPicker, picker.key)
 	pickerState := frame.UseState[colorSwatchPickerState](ctx, key, stateSlotColorSwatchPicker)
 	if pickerState.items == nil {

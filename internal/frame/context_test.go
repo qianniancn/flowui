@@ -25,6 +25,29 @@ func TestNewUsesProvidedTheme(t *testing.T) {
 	}
 }
 
+func TestPushInstanceThemeRestoresActiveTheme(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := New(nil, &activeTheme, locale.LanguageAuto)
+	restore := PushInstanceTheme(ctx, func(active *theme.Theme) {
+		active.Components.Button.Radius = 7
+		active.Palette.Accent = color.NRGBA{R: 7, A: 0xff}
+	})
+
+	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 7 {
+		t.Fatalf("component radius = %v, want 7", radius)
+	}
+	if accent := ActiveTheme(ctx).Palette.Accent; accent.R != 7 {
+		t.Fatalf("component accent = %#v, want red 7", accent)
+	}
+	restore()
+	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 24 {
+		t.Fatalf("restored radius = %v, want 24", radius)
+	}
+	if ActiveTheme(ctx).Palette.Accent.R == 7 {
+		t.Fatal("instance palette leaked into active theme")
+	}
+}
+
 func TestContextRejectsDuplicateExplicitKeys(t *testing.T) {
 	ctx := New(nil, nil, locale.LanguageAuto)
 	BeginFrame(ctx)

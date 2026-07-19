@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 )
 
 type CloseButtonWidget struct {
+	theme    func(*theme.Theme)
 	key      string
 	onClick  func()
 	disabled bool
@@ -53,7 +55,15 @@ func (b CloseButtonWidget) Label(label string) CloseButtonWidget {
 	return b
 }
 
+func (b CloseButtonWidget) Theme(fn func(*theme.Theme)) CloseButtonWidget {
+	b.theme = fn
+	return b
+}
+
 func (b CloseButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, b.theme); restore != nil {
+		defer restore()
+	}
 	key, clickable := frame.ClickableWithKey(ctx, b.key)
 	return layoutWithClickable(b, ctx, gtx, clickable, closeButtonStateFor(ctx, key), true)
 }

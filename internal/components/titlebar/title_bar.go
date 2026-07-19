@@ -34,6 +34,7 @@ type titleBarState struct {
 
 // Widget provides client-side window decorations with an application menu.
 type Widget struct {
+	theme func(*theme.Theme)
 	key   string
 	title string
 	menu  frame.Widget
@@ -43,7 +44,15 @@ func New(key, title string, menu frame.Widget) Widget {
 	return Widget{key: key, title: title, menu: menu}
 }
 
+func (w Widget) Theme(fn func(*theme.Theme)) Widget {
+	w.theme = fn
+	return w
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, stateutil.KindTitleBar, w.key)
 	state := frame.UseState[titleBarState](ctx, key, stateSlotTitleBar)
 	state.decorations.Maximized = ctx.WindowState().Mode == frame.Maximized

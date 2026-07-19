@@ -3,6 +3,7 @@ package alert
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Status identifies the semantic tone of an Alert.
@@ -18,6 +19,7 @@ const (
 
 // Widget presents persistent, in-page feedback without interrupting the user.
 type Widget struct {
+	theme       func(*theme.Theme)
 	title       string
 	description string
 	status      Status
@@ -51,6 +53,14 @@ func (a Widget) Action(action frame.Widget) Widget {
 	return a
 }
 
+func (a Widget) Theme(fn func(*theme.Theme)) Widget {
+	a.theme = fn
+	return a
+}
+
 func (a Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, a.theme); restore != nil {
+		defer restore()
+	}
 	return a.layout(ctx, gtx, alertStyleFor(frame.ActiveTheme(ctx), a.status))
 }

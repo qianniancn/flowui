@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // OverlayLayer controls the root-level stacking group for an overlay.
@@ -43,16 +44,17 @@ type overlayIdentity struct {
 
 type overlayRequest struct {
 	OverlayRequest
-	identity  overlayIdentity
-	host      *overlayHost
-	transform int
-	scope     []string
-	group     OverlayLayer
-	order     uint64
-	rootOrder uint64
-	parent    *overlayRequest
-	rendered  bool
-	dismissed bool
+	identity    overlayIdentity
+	host        *overlayHost
+	transform   int
+	scope       []string
+	group       OverlayLayer
+	order       uint64
+	rootOrder   uint64
+	parent      *overlayRequest
+	activeTheme *theme.Theme
+	rendered    bool
+	dismissed   bool
 }
 
 type overlayTransform struct {
@@ -159,6 +161,7 @@ func RegisterOverlay(ctx *Context, request OverlayRequest) {
 		order:          order,
 		rootOrder:      rootOrder,
 		parent:         host.active,
+		activeTheme:    ctx.theme,
 	})
 }
 
@@ -215,7 +218,13 @@ func OverlayNaturallyDisabled(gtx layout.Context) bool {
 // overlays have completed their layout.
 func AfterOverlays(ctx *Context, fn func()) {
 	if fn != nil {
-		ctx.overlays.afterLayout = append(ctx.overlays.afterLayout, fn)
+		activeTheme := ctx.theme
+		ctx.overlays.afterLayout = append(ctx.overlays.afterLayout, func() {
+			previous := ctx.theme
+			ctx.theme = activeTheme
+			defer func() { ctx.theme = previous }()
+			fn()
+		})
 	}
 }
 
@@ -255,6 +264,8 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 		func() {
 			host.active = request
 			previousCurrent := host.current
+			previousTheme := ctx.theme
+			ctx.theme = request.activeTheme
 			requestRoot := host.appendTransform(overlayTransform{
 				parent:  invalidOverlayTransform,
 				local:   f32.AffineId(),
@@ -265,6 +276,7 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 			restoreScope := ctx.keys.UseScope(request.scope)
 			defer func() {
 				restoreScope()
+				ctx.theme = previousTheme
 				host.current = previousCurrent
 				host.active = nil
 			}()
@@ -316,6 +328,9 @@ func (h *overlayHost) layoutTail(ctx *Context, rootGtx layout.Context, request *
 	}
 	restoreScope := ctx.keys.UseScope(request.scope)
 	defer restoreScope()
+	previousTheme := ctx.theme
+	ctx.theme = request.activeTheme
+	defer func() { ctx.theme = previousTheme }()
 	h.inTail = true
 	defer func() { h.inTail = false }()
 	if inheritedOpacity < 1 {

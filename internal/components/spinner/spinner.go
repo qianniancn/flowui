@@ -15,6 +15,7 @@ import (
 const spinnerPeriod = 750 * time.Millisecond
 
 type SpinnerWidget struct {
+	theme func(*theme.Theme)
 	color SpinnerColor
 	size  SpinnerSize
 	label string
@@ -58,7 +59,15 @@ func (s SpinnerWidget) Label(label string) SpinnerWidget {
 	return s
 }
 
+func (s SpinnerWidget) Theme(fn func(*theme.Theme)) SpinnerWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SpinnerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	activeTheme := frame.ActiveTheme(ctx)
 	style := spinnerStyleFor(activeTheme, s.color)
 	sizeStyle := spinnerSizeStyleFor(activeTheme, s.size)

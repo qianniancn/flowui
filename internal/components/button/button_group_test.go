@@ -115,6 +115,29 @@ func TestVerticalButtonGroupPassesDisabledContext(t *testing.T) {
 	}
 }
 
+func TestVerticalButtonGroupUsesButtonThemeDuringMeasurement(t *testing.T) {
+	ctx := newContext(nil)
+	group := ButtonGroup(
+		Button("themed", text.New("Themed")).Theme(func(theme *theme.Theme) {
+			theme.Components.Button.ContentGap = 64
+		}).Loading(true),
+		Button("default", text.New("Default")),
+	).Orientation(ButtonGroupVertical)
+	defaultGroup := ButtonGroup(
+		Button("themed", text.New("Themed")).Loading(true),
+		Button("default", text.New("Default")),
+	).Orientation(ButtonGroupVertical)
+
+	themedDims := group.Layout(ctx, testLayoutContext())
+	defaultDims := defaultGroup.Layout(newContext(nil), testLayoutContext())
+	if themedDims.Size.X <= defaultDims.Size.X || themedDims.Size.Y != 80 {
+		t.Fatalf("themed ButtonGroup size = %v, want wider than %v with height 80", themedDims.Size, defaultDims.Size)
+	}
+	if gap := frame.ActiveTheme(ctx).Components.Button.ContentGap; gap != 8 {
+		t.Fatalf("button theme leaked after group layout: gap = %v, want 8", gap)
+	}
+}
+
 func TestButtonGroupCorners(t *testing.T) {
 	horizontalStart := buttonGroupCorners(buttonGroupItemStyle{grouped: true, position: buttonGroupStart})
 	horizontalMiddle := buttonGroupCorners(buttonGroupItemStyle{grouped: true, position: buttonGroupMiddle})

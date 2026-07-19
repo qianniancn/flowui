@@ -11,6 +11,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Point is one Cartesian data point. A non-finite Y value creates a gap.
@@ -218,6 +219,7 @@ func (s Series) Hidden(hidden bool) Series {
 }
 
 type Widget struct {
+	theme                   func(*theme.Theme)
 	key                     string
 	series                  []Series
 	categories              []string
@@ -471,7 +473,15 @@ func (w Widget) Disabled(disabled bool) Widget {
 	return w
 }
 
+func (w Widget) Theme(fn func(*theme.Theme)) Widget {
+	w.theme = fn
+	return w
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
+		defer restore()
+	}
 	return w.layout(ctx, gtx)
 }
 

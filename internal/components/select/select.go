@@ -9,6 +9,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type SelectItem = listbox.ListBoxItem
@@ -28,6 +29,7 @@ const (
 )
 
 type SelectWidget struct {
+	theme             func(*theme.Theme)
 	key               string
 	selectedKey       string
 	selectedKeys      []string
@@ -221,7 +223,15 @@ func (s SelectWidget) FullWidth() SelectWidget {
 	return s
 }
 
+func (s SelectWidget) Theme(fn func(*theme.Theme)) SelectWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	state := selectStateFor(ctx, s.key)
 	interactive := frame.OverlayInteractive(ctx, frame.OverlayLayerPopup, state.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)

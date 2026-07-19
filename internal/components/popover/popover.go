@@ -7,9 +7,11 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type PopoverWidget struct {
+	theme                   func(*theme.Theme)
 	key                     string
 	open                    bool
 	trigger                 frame.Widget
@@ -94,7 +96,15 @@ func (p PopoverWidget) KeyboardDismissDisabled(disabled bool) PopoverWidget {
 	return p
 }
 
+func (p PopoverWidget) Theme(fn func(*theme.Theme)) PopoverWidget {
+	p.theme = fn
+	return p
+}
+
 func (p PopoverWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
+		defer restore()
+	}
 	fullKey := frame.FullKey(ctx, p.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	triggerDims := p.layoutTrigger(ctx, gtx)

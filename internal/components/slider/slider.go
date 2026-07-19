@@ -8,6 +8,7 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type SliderOrientation uint8
@@ -18,6 +19,7 @@ const (
 )
 
 type SliderWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	upperValue    float64
@@ -120,7 +122,15 @@ func (s SliderWidget) Disabled(disabled bool) SliderWidget {
 	return s
 }
 
+func (s SliderWidget) Theme(fn func(*theme.Theme)) SliderWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	key, state := sliderStateFor(ctx, s.key)
 	values := s.resolvedValues()
 	axis := s.axis()

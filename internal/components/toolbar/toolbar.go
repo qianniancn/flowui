@@ -25,6 +25,7 @@ const (
 
 // Widget groups related controls and provides directional keyboard navigation.
 type Widget struct {
+	theme       func(*theme.Theme)
 	children    []frame.Widget
 	orientation Orientation
 	attached    bool
@@ -62,7 +63,15 @@ func (w Widget) Alt(alt string) Widget {
 	return w
 }
 
+func (w Widget) Theme(fn func(*theme.Theme)) Widget {
+	w.theme = fn
+	return w
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
+		defer restore()
+	}
 	if !gtx.Enabled() {
 		w.disabled = true
 	}
@@ -215,6 +224,7 @@ func moveIndex(current, delta, count int, loop bool) int {
 }
 
 type SeparatorWidget struct {
+	theme       func(*theme.Theme)
 	orientation Orientation
 }
 
@@ -222,7 +232,15 @@ func Separator() SeparatorWidget {
 	return SeparatorWidget{}
 }
 
+func (s SeparatorWidget) Theme(fn func(*theme.Theme)) SeparatorWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SeparatorWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	tokens := frame.ActiveTheme(ctx).Components.Toolbar
 	length := max(gtx.Dp(tokens.SeparatorLength), 1)
 	thickness := max(gtx.Dp(tokens.SeparatorWidth), 1)

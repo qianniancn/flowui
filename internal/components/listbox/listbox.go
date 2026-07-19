@@ -7,6 +7,7 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ListBoxItem struct {
@@ -41,6 +42,7 @@ const (
 )
 
 type ListBoxWidget struct {
+	theme             func(*theme.Theme)
 	key               string
 	derivedOwner      string
 	derivedRole       string
@@ -196,7 +198,15 @@ func (l ListBoxWidget) MaxHeight(dp int) ListBoxWidget {
 	return l
 }
 
+func (l ListBoxWidget) Theme(fn func(*theme.Theme)) ListBoxWidget {
+	l.theme = fn
+	return l
+}
+
 func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, l.theme); restore != nil {
+		defer restore()
+	}
 	state := l.stateFor(ctx)
 	state.beginFrame()
 	defer state.endFrame()

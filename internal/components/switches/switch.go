@@ -8,9 +8,11 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type SwitchWidget struct {
+	theme       func(*theme.Theme)
 	key         string
 	checked     bool
 	label       string
@@ -79,7 +81,15 @@ func (s SwitchWidget) Thumb(content func(checked bool) frame.Widget) SwitchWidge
 	return s
 }
 
+func (s SwitchWidget) Theme(fn func(*theme.Theme)) SwitchWidget {
+	s.theme = fn
+	return s
+}
+
 func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	componentState := switchStateFor(ctx, s.key)
 	key := frame.FullKey(ctx, s.key)
 	if s.description != "" {
@@ -122,6 +132,7 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 }
 
 type SwitchGroupWidget struct {
+	theme      func(*theme.Theme)
 	children   []frame.Widget
 	horizontal bool
 }
@@ -135,7 +146,15 @@ func (g SwitchGroupWidget) Horizontal() SwitchGroupWidget {
 	return g
 }
 
+func (g SwitchGroupWidget) Theme(fn func(*theme.Theme)) SwitchGroupWidget {
+	g.theme = fn
+	return g
+}
+
 func (g SwitchGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
+		defer restore()
+	}
 	theme := frame.ActiveTheme(ctx).Components.SwitchGroup
 	children := make([]layout.Widget, 0, len(g.children))
 	for _, child := range g.children {

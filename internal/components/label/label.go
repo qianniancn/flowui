@@ -3,10 +3,12 @@ package label
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // LabelWidget identifies and describes a form field.
 type LabelWidget struct {
+	theme    func(*theme.Theme)
 	text     string
 	forKey   string
 	required bool
@@ -40,7 +42,15 @@ func (l LabelWidget) Invalid(invalid bool) LabelWidget {
 	return l
 }
 
+func (l LabelWidget) Theme(fn func(*theme.Theme)) LabelWidget {
+	l.theme = fn
+	return l
+}
+
 func (l LabelWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, l.theme); restore != nil {
+		defer restore()
+	}
 	disabled := l.disabled || !gtx.Enabled()
 	content := func(gtx layout.Context) layout.Dimensions {
 		return l.layoutContent(ctx, gtx, labelStyleFor(frame.ActiveTheme(ctx), ctx.ForegroundColor(), disabled, l.invalid))

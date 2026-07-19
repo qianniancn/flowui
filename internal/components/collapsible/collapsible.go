@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Item describes one entry in a CollapsibleGroup.
@@ -21,6 +22,7 @@ type Item struct {
 
 // Widget presents one controlled expandable section.
 type Widget struct {
+	theme            func(*theme.Theme)
 	key              string
 	expanded         bool
 	label            string
@@ -56,7 +58,15 @@ func (w Widget) OnExpandedChange(fn func(bool)) Widget {
 	return w
 }
 
+func (w Widget) Theme(fn func(*theme.Theme)) Widget {
+	w.theme = fn
+	return w
+}
+
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
+		defer restore()
+	}
 	state := collapsibleStateFor(ctx, w.key)
 	disabled := w.disabled || !gtx.Enabled()
 	presses := activePresses(&state.item)
@@ -83,6 +93,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 
 // GroupWidget coordinates a controlled collection of collapsible sections.
 type GroupWidget struct {
+	theme                 func(*theme.Theme)
 	key                   string
 	expandedKeys          []string
 	items                 []Item
@@ -115,7 +126,15 @@ func (g GroupWidget) OnExpandedChange(fn func([]string)) GroupWidget {
 	return g
 }
 
+func (g GroupWidget) Theme(fn func(*theme.Theme)) GroupWidget {
+	g.theme = fn
+	return g
+}
+
 func (g GroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
+		defer restore()
+	}
 	state := collapsibleStateFor(ctx, g.key)
 	state.beginFrame()
 	defer state.endFrame()

@@ -8,6 +8,7 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ToastVariant uint8
@@ -97,6 +98,7 @@ func (t ToastItem) showIndicator() bool {
 }
 
 type ToastProviderWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	items         []ToastItem
 	onClose       func(string)
@@ -170,7 +172,15 @@ func (p ToastProviderWidget) Paused(paused bool) ToastProviderWidget {
 	return p
 }
 
+func (p ToastProviderWidget) Theme(fn func(*theme.Theme)) ToastProviderWidget {
+	p.theme = fn
+	return p
+}
+
 func (p ToastProviderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
+		defer restore()
+	}
 	fullKey, providerState := toastStateFor(ctx, p.key)
 	providerState.sync(gtx, p.items, p.defaultTimeout(ctx))
 	providerState.cleanup()

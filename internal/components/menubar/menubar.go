@@ -96,6 +96,7 @@ func (i Item) Width(dp int) Item {
 }
 
 type Widget struct {
+	theme             func(*theme.Theme)
 	key               string
 	items             []Item
 	orientation       Orientation
@@ -176,7 +177,15 @@ func (m Widget) themeTokens(activeTheme *theme.Theme) theme.MenubarTheme {
 	return tokens
 }
 
+func (m Widget) Theme(fn func(*theme.Theme)) Widget {
+	m.theme = fn
+	return m
+}
+
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
+		defer restore()
+	}
 	return m.layout(ctx, gtx)
 }
 

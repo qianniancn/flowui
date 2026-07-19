@@ -100,6 +100,36 @@ func TestButtonOptions(t *testing.T) {
 	}
 }
 
+func TestButtonThemeAppliesOnlyToCurrentInstance(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+	themedProbe := &themeProbeWidget{}
+	baseProbe := &themeProbeWidget{}
+	base := Button("default", baseProbe)
+	accent := color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
+	themed := Button("themed", themedProbe).Theme(func(theme *theme.Theme) {
+		theme.Components.Button.Radius = 0
+		theme.Components.Button.PressedScaleMedium = 0.9
+		theme.Palette.Accent = accent
+	})
+	resolved := themed.activeTheme(ctx)
+
+	themed.Layout(ctx, testLayoutContext())
+	if resolved.Components.Button.Radius != 0 || resolved.Components.Button.PressedScaleMedium != 0.9 || resolved.Palette.Accent != accent {
+		t.Fatalf("resolved button theme = %#v", resolved)
+	}
+	if themedProbe.radius != 0 {
+		t.Fatalf("button child radius = %v, want inherited instance radius 0", themedProbe.radius)
+	}
+	if activeTheme.Components.Button.Radius != 24 || activeTheme.Components.Button.PressedScaleMedium != 0.97 || activeTheme.Palette.Accent == accent {
+		t.Fatalf("button theme mutated active theme: %#v", activeTheme)
+	}
+	base.Layout(ctx, testLayoutContext())
+	if baseProbe.radius != 24 {
+		t.Fatalf("sibling button radius = %v, want 24", baseProbe.radius)
+	}
+}
+
 func TestButtonSemanticsIncludeLabelAndDisabledState(t *testing.T) {
 	var router input.Router
 	var ops op.Ops
@@ -562,6 +592,15 @@ type foregroundProbeWidget struct {
 
 func (w *foregroundProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
 	w.foreground = ctx.ForegroundColor()
+	return layout.Dimensions{Size: image.Pt(16, 16)}
+}
+
+type themeProbeWidget struct {
+	radius unit.Dp
+}
+
+func (w *themeProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+	w.radius = frame.ActiveTheme(ctx).Components.Button.Radius
 	return layout.Dimensions{Size: image.Pt(16, 16)}
 }
 

@@ -6,9 +6,11 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ContextMenuWidget struct {
+	theme             func(*theme.Theme)
 	key               string
 	trigger           frame.Widget
 	menu              Widget
@@ -67,7 +69,15 @@ func (c ContextMenuWidget) LongPressDisabled(disabled bool) ContextMenuWidget {
 	return c
 }
 
+func (c ContextMenuWidget) Theme(fn func(*theme.Theme)) ContextMenuWidget {
+	c.theme = fn
+	return c
+}
+
 func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
+		defer restore()
+	}
 	state := contextMenuStateFor(ctx, c.key)
 	state.bind(c)
 	open := state.isOpen(c)

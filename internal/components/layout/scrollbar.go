@@ -18,6 +18,7 @@ const (
 )
 
 type ScrollbarWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	child         frame.Widget
 	axis          layout.Axis
@@ -82,7 +83,15 @@ func (s ScrollbarWidget) Overlay() ScrollbarWidget {
 	return s
 }
 
+func (s ScrollbarWidget) Theme(fn func(*theme.Theme)) ScrollbarWidget {
+	s.theme = fn
+	return s
+}
+
 func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
+		defer restore()
+	}
 	prepareFieldAssociations(ctx, s.child)
 	key := frame.ClaimKey(ctx, stateutil.KindScrollbar, s.key)
 	state := frame.UseState[scrollbarState](ctx, key, stateSlotScrollbar)

@@ -6,9 +6,11 @@ import (
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ColorPickerWidget struct {
+	theme     func(*theme.Theme)
 	key       string
 	value     color.NRGBA
 	label     string
@@ -58,7 +60,15 @@ func (picker ColorPickerWidget) Presets(values []color.NRGBA) ColorPickerWidget 
 	return picker
 }
 
+func (picker ColorPickerWidget) Theme(fn func(*theme.Theme)) ColorPickerWidget {
+	picker.theme = fn
+	return picker
+}
+
 func (picker ColorPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, picker.theme); restore != nil {
+		defer restore()
+	}
 	key, pickerState := colorPickerStateFor(ctx, picker.key)
 	pickerState.color.sync(picker.value)
 

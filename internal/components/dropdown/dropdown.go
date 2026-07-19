@@ -6,6 +6,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type SelectionMode = menu.SelectionMode
@@ -35,6 +36,7 @@ const (
 )
 
 type Widget struct {
+	theme            func(*theme.Theme)
 	key              string
 	trigger          frame.Widget
 	menu             menu.Widget
@@ -192,7 +194,15 @@ func (d Widget) Width(dp int) Widget {
 	return d
 }
 
+func (d Widget) Theme(fn func(*theme.Theme)) Widget {
+	d.theme = fn
+	return d
+}
+
 func (d Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
+		defer restore()
+	}
 	return d.layoutRoot(ctx, gtx)
 }
 

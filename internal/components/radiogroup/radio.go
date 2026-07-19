@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type RadioItem struct {
@@ -17,6 +18,7 @@ type RadioItem struct {
 }
 
 type RadioGroupWidget struct {
+	theme       func(*theme.Theme)
 	key         string
 	selectedKey string
 	items       []RadioItem
@@ -74,7 +76,15 @@ func (r RadioGroupWidget) Horizontal() RadioGroupWidget {
 	return r
 }
 
+func (r RadioGroupWidget) Theme(fn func(*theme.Theme)) RadioGroupWidget {
+	r.theme = fn
+	return r
+}
+
 func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, r.theme); restore != nil {
+		defer restore()
+	}
 	state := radioGroupStateFor(ctx, r.key)
 	state.beginFrame()
 	defer state.endFrame()

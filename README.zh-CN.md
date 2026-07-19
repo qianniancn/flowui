@@ -143,9 +143,23 @@ func main() {
 }
 ```
 
-主题覆盖作用于应用或窗口。`theme.Components.Button` 这类组件 Token 会影响
-该窗口中的同类组件，并不是单个组件实例的样式设置器；单个实例的差异应使用
-组件已有的变体和尺寸选项。
+应用级主题覆盖作用于应用或窗口。拥有组件主题的 Widget 可通过对应的 `Theme`
+链式方法覆盖当前实例；回调接收当前主题的副本，未修改的字段继续继承应用主题：
+
+```go
+ui.Button("save", ui.Text("保存")).Theme(func(theme *ui.Theme) {
+	theme.Components.Button.Radius = 8
+	theme.Components.Button.BorderWidth = 2
+	theme.Components.Button.PressedScaleMedium = 0.9
+	theme.Palette.Accent = color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
+})
+```
+
+每个拥有组件主题的 Widget 都提供 `Theme(func(*Theme))` 方法。回调接收完整应用
+主题的副本，因此既能修改 `Palette`、`Spacing`、`Typography` 等共享参数，也能
+通过 `Components` 修改组件专属字段。覆盖支持合法的零值，
+不会修改应用主题或泄漏到同级 Widget；组合在当前 Widget 内部的子组件会在布局
+期间继承该实例主题。回调在布局阶段执行，应只修改传入的主题，不要包含业务副作用。
 
 FlowUI 内置英文和中文组件文案。`ui.LanguageAuto` 会根据系统语言选择
 默认语言。由应用管理窗口时，可以通过 `Application.SetTheme` 和

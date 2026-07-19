@@ -7,6 +7,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Variant selects the Table container treatment.
@@ -88,6 +89,7 @@ type RowContextMenu func(Row) menu.Widget
 
 // Widget presents structured data with controlled sorting and selection.
 type Widget struct {
+	theme              func(*theme.Theme)
 	key                string
 	columns            []Column
 	rows               []Row
@@ -313,7 +315,15 @@ func (t Widget) showsFullGrid() bool {
 	return t.gridLinesSet && t.gridLines
 }
 
+func (t Widget) Theme(fn func(*theme.Theme)) Widget {
+	t.theme = fn
+	return t
+}
+
 func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
+		defer restore()
+	}
 	state := tableStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()

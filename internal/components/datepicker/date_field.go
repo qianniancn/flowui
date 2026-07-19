@@ -23,6 +23,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const (
@@ -31,6 +32,7 @@ const (
 )
 
 type DateFieldWidget struct {
+	theme        func(*theme.Theme)
 	key          string
 	value        time.Time
 	label        string
@@ -151,7 +153,15 @@ func (d DateFieldWidget) MaxDate(value time.Time) DateFieldWidget {
 	return d
 }
 
+func (d DateFieldWidget) Theme(fn func(*theme.Theme)) DateFieldWidget {
+	d.theme = fn
+	return d
+}
+
 func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
+		defer restore()
+	}
 	d = d.resolveLocale(ctx)
 	key := frame.ClaimKey(ctx, state.KindDateField, d.key)
 	componentState := frame.UseState[dateFieldState](ctx, key, stateSlotDateField)

@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type Size uint8
@@ -15,6 +16,7 @@ const (
 )
 
 type Widget struct {
+	theme         func(*theme.Theme)
 	key           string
 	page          int
 	total         int

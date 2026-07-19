@@ -7,6 +7,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type CheckboxVariant uint8
@@ -25,6 +26,7 @@ type IndicatorState struct {
 }
 
 type CheckboxWidget struct {
+	theme         func(*theme.Theme)
 	key           string
 	checked       bool
 	label         string
@@ -103,7 +105,15 @@ func (c CheckboxWidget) Invalid(invalid bool) CheckboxWidget {
 	return c
 }
 
+func (c CheckboxWidget) Theme(fn func(*theme.Theme)) CheckboxWidget {
+	c.theme = fn
+	return c
+}
+
 func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
+		defer restore()
+	}
 	key, valueState := frame.BoolStateWithKey(ctx, c.key)
 	anim := checkboxStateFor(ctx, key)
 	valueState.Value = c.checked

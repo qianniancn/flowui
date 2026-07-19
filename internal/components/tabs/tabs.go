@@ -3,6 +3,7 @@ package tabs
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type TabItem struct {
@@ -41,6 +42,7 @@ const (
 )
 
 type TabsWidget struct {
+	theme       func(*theme.Theme)
 	key         string
 	selectedKey string
 	items       []TabItem
@@ -103,7 +105,15 @@ func (t TabsWidget) Separators(visible bool) TabsWidget {
 	return t
 }
 
+func (t TabsWidget) Theme(fn func(*theme.Theme)) TabsWidget {
+	t.theme = fn
+	return t
+}
+
 func (t TabsWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
+		defer restore()
+	}
 	state := tabsStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()

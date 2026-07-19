@@ -9,11 +9,13 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotColorArea = "color-area"
 
 type ColorAreaWidget struct {
+	theme    func(*theme.Theme)
 	key      string
 	value    color.NRGBA
 	label    string
@@ -57,7 +59,15 @@ func (area ColorAreaWidget) withColorState(state *colorValueState) ColorAreaWidg
 	return area
 }
 
+func (area ColorAreaWidget) Theme(fn func(*theme.Theme)) ColorAreaWidget {
+	area.theme = fn
+	return area
+}
+
 func (area ColorAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, area.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, state.KindColorArea, area.key)
 	areaState := frame.UseState[colorAreaState](ctx, key, stateSlotColorArea)
 	valueState := &areaState.color

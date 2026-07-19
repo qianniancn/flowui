@@ -11,11 +11,13 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotColorField = "color-field"
 
 type ColorFieldWidget struct {
+	theme        func(*theme.Theme)
 	key          string
 	value        color.NRGBA
 	label        string
@@ -98,7 +100,15 @@ func (field ColorFieldWidget) Swatch(show bool) ColorFieldWidget {
 	return field
 }
 
+func (field ColorFieldWidget) Theme(fn func(*theme.Theme)) ColorFieldWidget {
+	field.theme = fn
+	return field
+}
+
 func (field ColorFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, field.theme); restore != nil {
+		defer restore()
+	}
 	key := frame.ClaimKey(ctx, state.KindColorField, field.key)
 	fieldState := frame.UseState[colorFieldState](ctx, key, stateSlotColorField)
 	fieldState.sync(field.value, field.alpha)

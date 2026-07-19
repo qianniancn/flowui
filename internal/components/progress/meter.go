@@ -3,10 +3,12 @@ package progress
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // MeterWidget keeps meter semantics while reusing the linear progress control.
 type MeterWidget struct {
+	theme          func(*theme.Theme)
 	bar            ProgressBarWidget
 	alt            string
 	valueFormatter func(float64) string
@@ -80,7 +82,15 @@ func (m MeterWidget) Disabled(disabled bool) MeterWidget {
 	return m
 }
 
+func (m MeterWidget) Theme(fn func(*theme.Theme)) MeterWidget {
+	m.theme = fn
+	return m
+}
+
 func (m MeterWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
+		defer restore()
+	}
 	return m.progressBar().Layout(ctx, gtx)
 }
 

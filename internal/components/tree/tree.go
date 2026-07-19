@@ -10,6 +10,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // Item describes one node in a Tree.
@@ -92,6 +93,7 @@ type DropEvent struct {
 
 // Widget presents hierarchical, expandable data with controlled selection and expansion.
 type Widget struct {
+	theme             func(*theme.Theme)
 	key               string
 	selectedKey       string
 	selectedKeys      []string
@@ -299,7 +301,15 @@ func (t Widget) MaxHeight(dp int) Widget {
 	return t
 }
 
+func (t Widget) Theme(fn func(*theme.Theme)) Widget {
+	t.theme = fn
+	return t
+}
+
 func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
+		defer restore()
+	}
 	state := treeStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()

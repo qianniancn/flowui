@@ -6,6 +6,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/surface"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // CardVariant selects the semantic surface prominence of a card.
@@ -20,6 +21,7 @@ const (
 
 // CardWidget groups related content on a HeroUI-style semantic surface.
 type CardWidget struct {
+	theme      func(*theme.Theme)
 	children   []frame.Widget
 	variant    CardVariant
 	padding    unit.Dp
@@ -65,7 +67,15 @@ func (c CardWidget) Shadow(enabled bool) CardWidget {
 	return c
 }
 
+func (c CardWidget) Theme(fn func(*theme.Theme)) CardWidget {
+	c.theme = fn
+	return c
+}
+
 func (c CardWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
+		defer restore()
+	}
 	prepareCardFieldAssociations(ctx, c.children...)
 	tokens := frame.ActiveTheme(ctx).Components.Card
 	padding := tokens.Padding

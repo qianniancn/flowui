@@ -541,6 +541,15 @@ func FieldFocusTag(ctx *Context, key string) event.Tag {
 	return ctx.fieldFocus[key].tag
 }
 
+func AnyFieldFocused(ctx *Context, gtx layout.Context) bool {
+	for _, target := range ctx.fieldFocus {
+		if target.enabled && gtx.Focused(target.tag) {
+			return true
+		}
+	}
+	return false
+}
+
 func HasFieldLabel(ctx *Context, key string) bool {
 	_, ok := ctx.fieldLabels[key]
 	return ok

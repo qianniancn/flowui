@@ -193,6 +193,8 @@ func (t Widget) dragPreview(ctx *frame.Context, label string, offset image.Point
 }
 
 func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label string) layout.Dimensions {
+	opacity := paint.PushOpacity(gtx.Ops, 0.5)
+	defer opacity.Pop()
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := treeTokensFor(activeTheme, t.size)
 	gtx.Constraints.Min = image.Point{}
@@ -214,7 +216,6 @@ func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label 
 	content := macro.Stop()
 
 	surface := activeTheme.Palette.OverlayColor()
-	surface.A = byte(float32(surface.A)*0.5 + 0.5)
 	radius := min(max(gtx.Dp(tokens.DragPreviewRadius), 0), min(dims.Size.X, dims.Size.Y)/2)
 	render.DrawSurface(
 		gtx,

@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/button"
+	inputui "github.com/qianniancn/FlowUI/internal/components/input"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/components/togglebutton"
 	"github.com/qianniancn/FlowUI/internal/components/tooltip"
@@ -106,6 +107,34 @@ func TestCommandScopeLetsChildConsumeShortcutFirst(t *testing.T) {
 	layoutCommandFrame(ctx, router, scope, start.Add(time.Millisecond))
 	if childCalls != 1 || commandCalls != 0 {
 		t.Fatalf("shortcut calls = child %d command %d, want 1/0", childCalls, commandCalls)
+	}
+}
+
+func TestCommandScopeCanPauseWhileFieldIsFocused(t *testing.T) {
+	ctx := commandTestContext()
+	router := new(input.Router)
+	called := 0
+	scope := Scope(
+		[]Command{New("duplicate", "Duplicate").Shortcut(KeyShortcut("D", ShortcutPrimary)).OnExecute(func() { called++ })},
+		inputui.Input("name", "Ada"),
+	).DisableWhenFieldFocused()
+	start := time.Unix(4, 0)
+	layoutCommandFrame(ctx, router, scope, start)
+	editor := frame.FieldFocusTag(ctx, "name")
+	router.Source().Execute(key.FocusCmd{Tag: editor})
+	layoutCommandFrame(ctx, router, scope, start.Add(time.Millisecond))
+	router.Queue(key.Event{Name: key.Name("D"), Modifiers: key.ModShortcut, State: key.Press})
+	layoutCommandFrame(ctx, router, scope, start.Add(2*time.Millisecond))
+	if called != 0 {
+		t.Fatalf("command executions with focused field = %d, want 0", called)
+	}
+
+	router.Source().Execute(key.FocusCmd{})
+	layoutCommandFrame(ctx, router, scope, start.Add(3*time.Millisecond))
+	router.Queue(key.Event{Name: key.Name("D"), Modifiers: key.ModShortcut, State: key.Press})
+	layoutCommandFrame(ctx, router, scope, start.Add(4*time.Millisecond))
+	if called != 1 {
+		t.Fatalf("command executions without focused field = %d, want 1", called)
 	}
 }
 

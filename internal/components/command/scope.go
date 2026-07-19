@@ -12,12 +12,20 @@ import (
 
 // ScopeWidget installs shortcuts for its child subtree.
 type ScopeWidget struct {
-	commands []Command
-	child    frame.Widget
+	commands                []Command
+	child                   frame.Widget
+	disableWhenFieldFocused bool
 }
 
 func Scope(commands []Command, child frame.Widget) ScopeWidget {
 	return ScopeWidget{commands: append([]Command(nil), commands...), child: child}
+}
+
+// DisableWhenFieldFocused prevents application commands from taking over
+// editing shortcuts while an input field has keyboard focus.
+func (s ScopeWidget) DisableWhenFieldFocused() ScopeWidget {
+	s.disableWhenFieldFocused = true
+	return s
 }
 
 func (s ScopeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -26,7 +34,7 @@ func (s ScopeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	if s.child != nil {
 		dims = s.child.Layout(ctx, gtx)
 	}
-	if gtx.Enabled() {
+	if gtx.Enabled() && !(s.disableWhenFieldFocused && frame.AnyFieldFocused(ctx, gtx)) {
 		s.update(gtx)
 	}
 	return dims

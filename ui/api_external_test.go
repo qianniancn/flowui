@@ -427,7 +427,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				ui.CommandButton("command-save", saveCommand),
 				ui.CommandButton("command-bold", boldCommand),
 			),
-		),
+		).DisableWhenFieldFocused(),
 		ui.Menu("command-menu", []ui.MenuItem{
 			ui.CommandMenuItem(saveCommand),
 			ui.CommandMenuItem(boldCommand),

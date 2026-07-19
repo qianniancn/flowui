@@ -222,7 +222,7 @@ func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label 
 		image.Rectangle{Max: dims.Size},
 		radius,
 		surface,
-		render.PopupShadow(activeTheme.Palette.OverlayShadowColor()),
+		render.ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadowColor(), 1),
 	)
 	content.Add(gtx.Ops)
 	return dims

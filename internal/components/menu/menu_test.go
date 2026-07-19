@@ -16,6 +16,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -263,7 +264,7 @@ func TestMenuFocusRingStaysInsideItemBounds(t *testing.T) {
 func TestMenuHeroUIOverlayShadow(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	style := menuPanelStyle(&activeTheme)
-	layers := heroMenuShadow(style.shadow, style.shadowOpacity).EffectiveLayers()
+	layers := render.ThemeShadow(activeTheme.Shadows.Menu, style.shadow, style.shadowOpacity).EffectiveLayers()
 	if len(layers) != 3 {
 		t.Fatalf("menu shadow layers = %d, want 3", len(layers))
 	}
@@ -273,7 +274,8 @@ func TestMenuHeroUIOverlayShadow(t *testing.T) {
 }
 
 func TestMenuShadowHonorsThemeColorAlpha(t *testing.T) {
-	shadow := heroMenuShadow(color.NRGBA{A: 0x80}, 1)
+	activeTheme := theme.DefaultTheme()
+	shadow := render.ThemeShadow(activeTheme.Shadows.Menu, color.NRGBA{A: 0x80}, 1)
 	if len(shadow.Layers) != 3 || shadow.Layers[0].Color.A != 8 || shadow.Layers[1].Color.A != 4 || shadow.Layers[2].Color.A != 10 {
 		t.Fatalf("alpha-aware Menu shadow = %#v", shadow)
 	}

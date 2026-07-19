@@ -32,11 +32,15 @@ func EllipseShadow() ShadowShape {
 }
 
 func PopupShadow(col color.NRGBA) BoxShadow {
-	return render.PopupShadow(col)
+	return render.ThemeShadow(DefaultShadows().Overlay, col, 1)
 }
 
 func SurfaceShadow(col color.NRGBA) BoxShadow {
-	return render.SurfaceShadow(col)
+	return render.ThemeShadow(DefaultShadows().Surface, col, 1)
+}
+
+func ThemeShadow(style ShadowTheme, col color.NRGBA, opacity float32) BoxShadow {
+	return render.ThemeShadow(style, col, opacity)
 }
 
 func DrawShadow(gtx layout.Context, bounds image.Rectangle, shape ShadowShape, box BoxShadow) {

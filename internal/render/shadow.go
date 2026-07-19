@@ -14,6 +14,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 // ShadowShapeKind identifies the geometry used for a shadow.
@@ -152,39 +153,33 @@ func (b BoxShadow) forEachLayer(fn func(ShadowLayer)) {
 	})
 }
 
-// PopupShadow returns a balanced two-layer popup shadow.
-func PopupShadow(col color.NRGBA) BoxShadow {
-	key := col
-	key.A = scaleAlpha(col.A, .72)
-	ambient := col
-	ambient.A = scaleAlpha(col.A, .56)
-	return BoxShadow{
-		OffsetY: 8,
-		Blur:    22,
-		Spread:  4,
-		Color:   ambient,
-		Layers: []ShadowLayer{
-			{OffsetY: 2, Blur: 6, Spread: 0, Color: key},
-			{OffsetY: 8, Blur: 22, Spread: 4, Color: ambient},
-		},
+// ThemeShadow resolves theme-controlled layers against a base color.
+func ThemeShadow(style theme.ShadowTheme, col color.NRGBA, opacity float32) BoxShadow {
+	opacity = shadowOpacity(opacity)
+	layers := make([]ShadowLayer, 0, len(style.Layers))
+	for _, token := range style.Layers {
+		layerOpacity := shadowOpacity(token.Opacity) * opacity
+		layerColor := col
+		layerColor.A = scaleAlpha(col.A, layerOpacity)
+		if token.Blur < 0 || layerColor.A == 0 {
+			continue
+		}
+		layers = append(layers, ShadowLayer{
+			OffsetX: float32(token.OffsetX),
+			OffsetY: float32(token.OffsetY),
+			Blur:    float32(token.Blur),
+			Spread:  float32(token.Spread),
+			Color:   layerColor,
+		})
 	}
+	return BoxShadow{Blur: -1, Layers: layers}
 }
 
-// SurfaceShadow returns the restrained elevation used by non-overlay surfaces.
-func SurfaceShadow(col color.NRGBA) BoxShadow {
-	key := col
-	key.A = scaleAlpha(col.A, .72)
-	ambient := col
-	ambient.A = scaleAlpha(col.A, .48)
-	return BoxShadow{
-		OffsetY: 2,
-		Blur:    4,
-		Color:   ambient,
-		Layers: []ShadowLayer{
-			{OffsetY: 1, Blur: 2, Color: key},
-			{OffsetY: 2, Blur: 4, Color: ambient},
-		},
+func shadowOpacity(value float32) float32 {
+	if value <= 0 || math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
+		return 0
 	}
+	return min(value, 1)
 }
 
 // DrawShadow paints a cached soft shadow for bounds. The bounds rectangle may be
@@ -242,13 +237,6 @@ func drawShadow(gtx layout.Context, bounds image.Rectangle, pxShape shadowShape,
 	})
 }
 
-func DrawPopupSurface(gtx layout.Context, rect image.Rectangle, radius int) {
-	DrawSurface(gtx, rect, radius,
-		color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-		PopupShadow(color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68}),
-	)
-}
-
 // DrawSurface paints a rounded surface with the supplied shadow. It is the
 // themeable form used by higher-level widgets.
 func DrawSurface(gtx layout.Context, rect image.Rectangle, radius int, surface color.NRGBA, shadow BoxShadow) {
@@ -264,10 +252,6 @@ func DrawSurface(gtx layout.Context, rect image.Rectangle, radius int, surface c
 	}
 	drawShadow(gtx, rect, shape, shadow)
 	paint.FillShape(gtx.Ops, surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-}
-
-func drawPopupSurface(gtx layout.Context, rect image.Rectangle, radius int) {
-	DrawPopupSurface(gtx, rect, radius)
 }
 
 func scaleAlpha(a uint8, scale float32) uint8 {

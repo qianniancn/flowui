@@ -16,6 +16,7 @@ type Theme struct {
 	Typography      Typography
 	Shape           Shape
 	Spacing         Spacing
+	Shadows         ShadowsTheme
 	Motion          MotionTheme
 	Components      ComponentsTheme
 	DisabledOpacity float32
@@ -119,6 +120,34 @@ type Spacing struct {
 	PanelGap             unit.Dp
 	PanelPadding         unit.Dp
 	ItemHeight           unit.Dp
+}
+
+const ShadowLayerCount = 3
+
+// ShadowLayerTheme describes one theme-controlled soft shadow pass.
+type ShadowLayerTheme struct {
+	OffsetX unit.Dp
+	OffsetY unit.Dp
+	// Blur is capped at 96 physical pixels during rasterization.
+	Blur   unit.Dp
+	Spread unit.Dp
+	// Opacity is clamped to [0, 1]. Zero disables the layer.
+	Opacity float32
+}
+
+// ShadowTheme stores shadow layers from tightest to broadest.
+type ShadowTheme struct {
+	Layers [ShadowLayerCount]ShadowLayerTheme
+}
+
+// ShadowsTheme groups the shadow profiles used by framework surfaces.
+type ShadowsTheme struct {
+	Surface     ShadowTheme
+	Overlay     ShadowTheme
+	Menu        ShadowTheme
+	Control     ShadowTheme
+	Checkbox    ShadowTheme
+	SwitchThumb ShadowTheme
 }
 
 type ComponentsTheme struct {
@@ -1102,6 +1131,7 @@ func DefaultTheme() Theme {
 			PanelPadding:         6,
 			ItemHeight:           36,
 		},
+		Shadows: DefaultShadows(),
 		Components: ComponentsTheme{
 			Button: ButtonTheme{
 				Radius:             24,
@@ -1940,6 +1970,38 @@ func DefaultTheme() Theme {
 	}
 	SyncMaterialTheme(&theme)
 	return theme
+}
+
+// DefaultShadows returns the framework shadow profiles.
+func DefaultShadows() ShadowsTheme {
+	return ShadowsTheme{
+		Surface: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{OffsetY: 1, Blur: 2, Opacity: .72},
+			{OffsetY: 2, Blur: 4, Opacity: .48},
+		}},
+		Overlay: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{OffsetY: 2, Blur: 6, Opacity: .72},
+			{OffsetY: 8, Blur: 22, Spread: 4, Opacity: .56},
+		}},
+		Menu: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{OffsetY: 2, Blur: 8, Opacity: .06},
+			{OffsetY: -6, Blur: 12, Opacity: .03},
+			{OffsetY: 14, Blur: 28, Opacity: .08},
+		}},
+		Control: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{Blur: 1, Opacity: 15.0 / 104.0},
+			{OffsetY: 1, Blur: 2, Opacity: 15.0 / 104.0},
+			{OffsetY: 2, Blur: 4, Opacity: 10.0 / 104.0},
+		}},
+		Checkbox: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{Blur: 1, Opacity: 16.0 / 104.0},
+			{OffsetY: 1, Blur: 2, Opacity: 20.0 / 104.0},
+		}},
+		SwitchThumb: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
+			{OffsetY: 1, Blur: 3, Opacity: .16},
+			{OffsetY: 2, Blur: 8, Opacity: .08},
+		}},
+	}
 }
 
 func DarkTheme() Theme {

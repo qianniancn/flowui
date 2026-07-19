@@ -24,7 +24,7 @@ func drawTreeRoot(gtx layout.Context, activeTheme *theme.Theme, tokens theme.Tre
 	}
 	if style.shadow {
 		shapeRadius := tokens.SurfaceRadius
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.SurfaceShadow(activeTheme.Palette.SurfaceShadow))
+		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.ThemeShadow(activeTheme.Shadows.Surface, activeTheme.Palette.SurfaceShadow, 1))
 	}
 	paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }

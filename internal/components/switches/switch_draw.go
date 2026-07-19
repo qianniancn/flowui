@@ -96,33 +96,13 @@ func drawSwitchThumbShadow(gtx layout.Context, theme *theme.Theme, rect image.Re
 	if shadow.A == 0 {
 		return
 	}
-	key := shadow
-	key.A = scaleSwitchShadowAlpha(shadow.A, 0.16)
-	ambient := shadow
-	ambient.A = scaleSwitchShadowAlpha(shadow.A, 0.08)
-	render.DrawShadow(gtx, rect, switchThumbShadowShape(size), render.BoxShadow{
-		Layers: []render.ShadowLayer{
-			{OffsetY: 1, Blur: 3, Spread: 0, Color: key},
-			{OffsetY: 2, Blur: 8, Spread: 0, Color: ambient},
-		},
-	})
+	render.DrawShadow(gtx, rect, switchThumbShadowShape(size), render.ThemeShadow(theme.Shadows.SwitchThumb, shadow, 1))
 
 }
 
 func switchThumbShadowShape(size switchSizeStyle) render.ShadowShape {
 	radius := size.thumbHeight / 2
 	return render.RoundedShadowCorners(radius, radius, radius, radius)
-}
-
-func scaleSwitchShadowAlpha(alpha uint8, scale float32) uint8 {
-	if scale <= 0 || alpha == 0 {
-		return 0
-	}
-	value := float32(alpha) * scale
-	if value >= 255 {
-		return 255
-	}
-	return uint8(value + 0.5)
 }
 
 func switchThumbContentColor(style switchStyle) color.NRGBA {

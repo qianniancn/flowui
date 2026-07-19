@@ -36,7 +36,8 @@ func (s SurfaceWidget) layout(ctx *frame.Context, gtx layout.Context, style surf
 	radius := min(max(gtx.Dp(s.radius), 0), min(dims.Size.X, dims.Size.Y)/2)
 	if s.shadow && !rect.Empty() {
 		shapeRadius := s.radius
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.SurfaceShadow(frame.ActiveTheme(ctx).Palette.SurfaceShadow))
+		activeTheme := frame.ActiveTheme(ctx)
+		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.ThemeShadow(activeTheme.Shadows.Surface, activeTheme.Palette.SurfaceShadow, 1))
 	}
 	if s.hasBackground && !rect.Empty() {
 		render.DrawBrush(gtx, rect, radius, s.background)

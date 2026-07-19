@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
@@ -85,6 +86,26 @@ func TestSurfaceLayoutPreservesChildSizeAndScopesForeground(t *testing.T) {
 	}
 	if got := ctx.BackgroundColor(); got != theme.Palette.Background {
 		t.Fatalf("background after layout = %#v, want restored %#v", got, theme.Palette.Background)
+	}
+}
+
+func TestSurfaceInstanceThemeScopesShadow(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := newContextWithTheme(nil, &activeTheme)
+	themedProbe := &surfaceProbeWidget{size: image.Pt(40, 20)}
+	defaultProbe := &surfaceProbeWidget{size: image.Pt(40, 20)}
+	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(100, 100)}, Ops: new(op.Ops)}
+
+	Surface(themedProbe).Shadow(true).Theme(func(theme *theme.Theme) {
+		theme.Shadows.Surface.Layers[1].Blur = 12
+	}).Layout(ctx, gtx)
+	Surface(defaultProbe).Shadow(true).Layout(ctx, gtx)
+
+	if themedProbe.shadowBlur != 12 {
+		t.Fatalf("themed shadow blur = %v, want 12", themedProbe.shadowBlur)
+	}
+	if defaultProbe.shadowBlur != 4 || activeTheme.Shadows.Surface.Layers[1].Blur != 4 {
+		t.Fatal("surface instance shadow leaked into sibling or application theme")
 	}
 }
 
@@ -198,21 +219,22 @@ func TestNewPaletteTokensFallBackForExistingCustomThemes(t *testing.T) {
 }
 
 func TestSurfaceShadowUsesRestrainedElevation(t *testing.T) {
-	layers := render.SurfaceShadow(color.NRGBA{A: 100}).EffectiveLayers()
+	activeTheme := theme.DefaultTheme()
+	layers := render.ThemeShadow(activeTheme.Shadows.Surface, color.NRGBA{A: 100}, 1).EffectiveLayers()
 	if len(layers) != 2 {
 		t.Fatalf("surface shadow layers = %d, want 2", len(layers))
 	}
-	if layers[1].Blur >= render.PopupShadow(color.NRGBA{A: 100}).EffectiveLayers()[1].Blur {
+	if layers[1].Blur >= render.ThemeShadow(activeTheme.Shadows.Overlay, color.NRGBA{A: 100}, 1).EffectiveLayers()[1].Blur {
 		t.Fatal("surface shadow should be tighter than overlay shadow")
 	}
 }
 
 func TestDarkThemeDisablesSurfaceElevation(t *testing.T) {
-	theme := DarkTheme()
-	if layers := render.SurfaceShadow(theme.Palette.SurfaceShadow).EffectiveLayers(); len(layers) != 0 {
+	activeTheme := DarkTheme()
+	if layers := render.ThemeShadow(activeTheme.Shadows.Surface, activeTheme.Palette.SurfaceShadow, 1).EffectiveLayers(); len(layers) != 0 {
 		t.Fatalf("dark surface shadow layers = %d, want 0", len(layers))
 	}
-	if theme.Palette.OverlayShadow.A == 0 {
+	if activeTheme.Palette.OverlayShadow.A == 0 {
 		t.Fatal("dark overlay shadow should retain separation from surrounding content")
 	}
 }
@@ -221,10 +243,12 @@ type surfaceProbeWidget struct {
 	size       image.Point
 	foreground color.NRGBA
 	background color.NRGBA
+	shadowBlur unit.Dp
 }
 
 func (w *surfaceProbeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	w.foreground = ctx.ForegroundColor()
 	w.background = ctx.BackgroundColor()
+	w.shadowBlur = frame.ActiveTheme(ctx).Shadows.Surface.Layers[1].Blur
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
 }

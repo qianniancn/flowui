@@ -3,12 +3,34 @@ package render
 import (
 	"image"
 	"image/color"
+	"math"
 	"sync"
 	"testing"
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
+
+func TestThemeShadowResolvesConfiguredLayers(t *testing.T) {
+	style := theme.ShadowTheme{Layers: [theme.ShadowLayerCount]theme.ShadowLayerTheme{
+		{OffsetX: 1, OffsetY: 2, Blur: 3, Spread: 4, Opacity: .8},
+	}}
+	layers := ThemeShadow(style, color.NRGBA{R: 10, A: 200}, .5).EffectiveLayers()
+	if len(layers) != 1 {
+		t.Fatalf("resolved layers = %d, want 1", len(layers))
+	}
+	if got := layers[0]; got.OffsetX != 1 || got.OffsetY != 2 || got.Blur != 3 || got.Spread != 4 || got.Color != (color.NRGBA{R: 10, A: 80}) {
+		t.Fatalf("resolved layer = %#v", got)
+	}
+}
+
+func TestThemeShadowRejectsInvalidOpacity(t *testing.T) {
+	style := theme.ShadowTheme{Layers: [theme.ShadowLayerCount]theme.ShadowLayerTheme{{Blur: 4, Opacity: float32(math.NaN())}}}
+	if layers := ThemeShadow(style, color.NRGBA{A: 200}, 1).EffectiveLayers(); len(layers) != 0 {
+		t.Fatalf("invalid shadow layers = %#v", layers)
+	}
+}
 
 func TestBoxShadowEffectiveLayersKeepsHardShadow(t *testing.T) {
 	box := BoxShadow{
@@ -217,7 +239,8 @@ func TestPopupSurfaceUsesSoftShadowCache(t *testing.T) {
 	var ops op.Ops
 	gtx := layout.Context{Ops: &ops}
 
-	drawPopupSurface(gtx, image.Rect(0, 0, 180, 96), 18)
+	activeTheme := theme.DefaultTheme()
+	DrawSurface(gtx, image.Rect(0, 0, 180, 96), 18, activeTheme.Palette.Overlay, ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadow, 1))
 
 	softShadowCache.Lock()
 	defer softShadowCache.Unlock()

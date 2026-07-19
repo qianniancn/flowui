@@ -2,7 +2,6 @@ package checkbox
 
 import (
 	"image"
-	"image/color"
 
 	"gioui.org/f32"
 	"gioui.org/layout"
@@ -73,7 +72,7 @@ func drawCheckbox(ctx *frame.Context, gtx layout.Context, activeTheme *theme.The
 
 func drawCheckboxFrame(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, style checkboxStyle) {
 	if style.shadow > 0 {
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius), checkboxShadow(style.shadow))
+		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius), render.ThemeShadow(theme.Shadows.Checkbox, theme.Palette.Shadow, style.shadow))
 	}
 	border := style.border
 	border.A = byte(float32(border.A)*(1-style.selected) + 0.5)
@@ -185,12 +184,4 @@ func layoutCheckboxIndicator(ctx *frame.Context, gtx layout.Context, activeTheme
 	})
 	clipStack.Pop()
 	stack.Pop()
-}
-
-func checkboxShadow(opacity float32) render.BoxShadow {
-	opacity = min(max(opacity, 0), 1)
-	return render.BoxShadow{Layers: []render.ShadowLayer{
-		{OffsetY: 1, Blur: 2, Color: color.NRGBA{A: byte(0x14*opacity + 0.5)}},
-		{Blur: 1, Color: color.NRGBA{A: byte(0x10*opacity + 0.5)}},
-	}}
 }

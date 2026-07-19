@@ -13,7 +13,7 @@ import (
 )
 
 func drawPopoverSurface(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, style popoverStyle) {
-	render.DrawShadow(gtx, rect, render.RoundedShadowCorners(theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius), render.PopupShadow(theme.Palette.OverlayShadowColor()))
+	render.DrawShadow(gtx, rect, render.RoundedShadowCorners(theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius, theme.Components.Popover.Radius), render.ThemeShadow(theme.Shadows.Overlay, theme.Palette.OverlayShadowColor(), 1))
 	paint.FillShape(gtx.Ops, style.surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }
 

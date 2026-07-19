@@ -15,7 +15,7 @@ func drawMenuPanel(gtx layout.Context, activeTheme *theme.Theme, rect image.Rect
 	if rect.Empty() {
 		return
 	}
-	render.DrawSurface(gtx, rect, radius, style.background, heroMenuShadow(style.shadow, style.shadowOpacity))
+	render.DrawSurface(gtx, rect, radius, style.background, render.ThemeShadow(activeTheme.Shadows.Menu, style.shadow, style.shadowOpacity))
 	width := max(gtx.Dp(activeTheme.Components.Menu.BorderWidth), 0)
 	if width <= 0 || style.border.A == 0 {
 		return
@@ -26,22 +26,6 @@ func drawMenuPanel(gtx layout.Context, activeTheme *theme.Theme, rect image.Rect
 		return
 	}
 	paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(inner, max(radius-width, 0)).Op(gtx.Ops))
-}
-
-func heroMenuShadow(col color.NRGBA, opacity float32) render.BoxShadow {
-	if opacity <= 0 || col.A == 0 {
-		return render.BoxShadow{Blur: -1}
-	}
-	layer := func(offsetY, blur, alpha float32) render.ShadowLayer {
-		layerColor := col
-		layerColor.A = byte(float32(col.A)*alpha*opacity + 0.5)
-		return render.ShadowLayer{OffsetY: offsetY, Blur: blur, Color: layerColor}
-	}
-	return render.BoxShadow{Layers: []render.ShadowLayer{
-		layer(2, 8, 0.06),
-		layer(-6, 12, 0.03),
-		layer(14, 28, 0.08),
-	}}
 }
 
 func drawMenuItem(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, style itemStyle) {

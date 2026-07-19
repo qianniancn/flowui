@@ -110,7 +110,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 			gtx,
 			rect,
 			render.RoundedShadowCorners(tokens.Radius, tokens.Radius, tokens.Radius, tokens.Radius),
-			render.PopupShadow(activeTheme.Palette.OverlayShadow),
+			render.ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadow, 1),
 		)
 		paint.FillShape(gtx.Ops, activeTheme.Palette.Surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 	}

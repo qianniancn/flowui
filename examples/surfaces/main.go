@@ -1,6 +1,10 @@
 package main
 
-import "github.com/qianniancn/FlowUI/ui"
+import (
+	"image/color"
+
+	"github.com/qianniancn/FlowUI/ui"
+)
 
 type Model struct{}
 type Msg struct{}
@@ -39,8 +43,8 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 						ui.SurfaceTransparent,
 						false,
 					),
-				).Gap(16).LineGap(16),
-			).Gap(16),
+				).Gap(24).LineGap(24),
+			).Gap(24),
 		).FillWidth().MaxWidth(760).Padding(24),
 	)
 }
@@ -53,15 +57,29 @@ func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow
 		).Gap(8),
 	).Width(320).MinHeight(132).Padding(20)
 
-	return ui.Surface(content).
+	surface := ui.Surface(content).
 		Variant(variant).
 		Radius(24).
 		Shadow(shadow)
+	if shadow {
+		surface = surface.Theme(func(theme *ui.Theme) {
+			theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
+			theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
+				{OffsetY: 2, Blur: 4, Opacity: 0.65},
+				{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
+				{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
+			}
+		})
+	}
+	return surface
 }
 
 func main() {
 	ui.Run(Model{}, Update, View,
 		ui.Title("FlowUI Surface"),
 		ui.Size(900, 620),
+		ui.CustomizeTheme(func(t *ui.Theme) {
+			t.Palette.Background = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+		}),
 	)
 }

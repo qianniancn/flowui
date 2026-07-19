@@ -7,6 +7,9 @@ type Palette = theme.Palette
 type Typography = theme.Typography
 type Shape = theme.Shape
 type Spacing = theme.Spacing
+type ShadowLayerTheme = theme.ShadowLayerTheme
+type ShadowTheme = theme.ShadowTheme
+type ShadowsTheme = theme.ShadowsTheme
 type MotionTheme = theme.MotionTheme
 type ComponentsTheme = theme.ComponentsTheme
 type DescriptionTheme = theme.DescriptionTheme
@@ -64,12 +67,18 @@ type ColorSliderTheme = theme.ColorSliderTheme
 type ColorSwatchTheme = theme.ColorSwatchTheme
 type ColorSwatchPickerTheme = theme.ColorSwatchPickerTheme
 
+const ShadowLayerCount = theme.ShadowLayerCount
+
 func DefaultTheme() Theme {
 	return theme.DefaultTheme()
 }
 
 func DarkTheme() Theme {
 	return theme.DarkTheme()
+}
+
+func DefaultShadows() ShadowsTheme {
+	return theme.DefaultShadows()
 }
 
 func syncMaterialTheme(activeTheme *Theme) {

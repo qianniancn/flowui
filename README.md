@@ -171,6 +171,27 @@ sibling widgets; composed children inherit the instance theme while that widget
 is being laid out. The callback runs during layout and should only modify the
 provided theme without side effects.
 
+Shadow geometry is also part of the instance theme. Profiles contain three
+layers ordered from tightest to broadest; a layer with zero opacity is disabled:
+
+```go
+ui.Surface(content).Shadow(true).Theme(func(theme *ui.Theme) {
+	theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
+	theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
+		{OffsetY: 2, Blur: 4, Opacity: 0.65},
+		{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
+		{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
+	}
+})
+```
+
+`Layers[0]`, `Layers[1]`, and `Layers[2]` are the near, middle, and far
+layers respectively. Each layer controls its offset, blur, spread, and opacity.
+The available profiles are `Surface`, `Overlay`, `Menu`, `Control`,
+`Checkbox`, and `SwitchThumb`. Profiles control geometry and per-layer opacity;
+components still provide the base color through settings such as
+`Palette.SurfaceShadow` and `Components.Menu.ShadowColor`.
+
 FlowUI includes English and Chinese component strings. `ui.LanguageAuto`
 selects the host language. An application that owns its windows can change a
 window at runtime with `Application.SetTheme` and `Application.SetLanguage`.

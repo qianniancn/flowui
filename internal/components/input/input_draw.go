@@ -13,14 +13,14 @@ import (
 )
 
 func drawInputFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style inputStyle, ringWidthDp float32) {
-	drawFieldFrame(gtx, rect, radius, activeTheme.Components.Input.Radius, style, ringWidthDp)
+	drawFieldFrame(gtx, activeTheme, rect, radius, activeTheme.Components.Input.Radius, style, ringWidthDp)
 }
 
 func drawTextAreaFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style inputStyle, ringWidthDp float32) {
-	drawFieldFrame(gtx, rect, radius, activeTheme.Components.TextArea.Radius, style, ringWidthDp)
+	drawFieldFrame(gtx, activeTheme, rect, radius, activeTheme.Components.TextArea.Radius, style, ringWidthDp)
 }
 
-func drawFieldFrame(gtx layout.Context, rect image.Rectangle, radius int, radiusDp unit.Dp, style inputStyle, ringWidthDp float32) {
+func drawFieldFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, radiusDp unit.Dp, style inputStyle, ringWidthDp float32) {
 	if rect.Empty() {
 		return
 	}
@@ -29,7 +29,7 @@ func drawFieldFrame(gtx layout.Context, rect image.Rectangle, radius int, radius
 			gtx,
 			rect,
 			render.RoundedShadowCorners(radiusDp, radiusDp, radiusDp, radiusDp),
-			inputShadow(style.ShadowOpacity),
+			render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, style.ShadowOpacity),
 		)
 	}
 	drawInputRing(gtx, rect, radius, style.Ring, ringWidthDp)
@@ -44,16 +44,4 @@ func drawInputRing(gtx layout.Context, rect image.Rectangle, radius int, ring co
 	outer := rect.Inset(-width)
 	outerRadius := min(radius+width, min(outer.Dx(), outer.Dy())/2)
 	paint.FillShape(gtx.Ops, ring, clip.UniformRRect(outer, max(outerRadius, 0)).Op(gtx.Ops))
-}
-
-func inputShadow(opacity float32) render.BoxShadow {
-	return render.BoxShadow{Layers: []render.ShadowLayer{
-		{OffsetY: 2, Blur: 4, Color: inputShadowColor(0x0a, opacity)},
-		{OffsetY: 1, Blur: 2, Color: inputShadowColor(0x0f, opacity)},
-		{Blur: 1, Color: inputShadowColor(0x0f, opacity)},
-	}}
-}
-
-func inputShadowColor(alpha byte, opacity float32) color.NRGBA {
-	return color.NRGBA{A: byte(float32(alpha)*min(max(opacity, 0), 1) + 0.5)}
 }

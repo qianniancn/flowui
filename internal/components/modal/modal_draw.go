@@ -22,7 +22,7 @@ func drawModalBackdrop(gtx layout.Context, size image.Point, style modalStyle, p
 func drawModalSurface(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, size ModalSize) {
 	if size != ModalFull {
 		shadowRadius := theme.Components.Modal.Radius
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shadowRadius, shadowRadius, shadowRadius, shadowRadius), render.PopupShadow(theme.Palette.OverlayShadowColor()))
+		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shadowRadius, shadowRadius, shadowRadius, shadowRadius), render.ThemeShadow(theme.Shadows.Overlay, theme.Palette.OverlayShadowColor(), 1))
 	}
 	paint.FillShape(gtx.Ops, theme.Palette.OverlayColor(), clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -312,21 +313,22 @@ func TestInputRingWidthAnimation(t *testing.T) {
 }
 
 func TestInputUsesThreeLayerHeroUIShadow(t *testing.T) {
-	layers := inputShadow(1).EffectiveLayers()
+	activeTheme := theme.DefaultTheme()
+	layers := render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, 1).EffectiveLayers()
 	if len(layers) != 3 {
 		t.Fatalf("shadow layer count = %d, want 3", len(layers))
 	}
-	if layers[0].OffsetY != 2 || layers[0].Blur != 4 || layers[0].Color.A != 0x0a {
+	if layers[0].OffsetY != 0 || layers[0].Blur != 1 || layers[0].Color.A != 0x0f {
 		t.Fatalf("first shadow layer = %#v", layers[0])
 	}
 	if layers[1].OffsetY != 1 || layers[1].Blur != 2 || layers[1].Color.A != 0x0f {
 		t.Fatalf("second shadow layer = %#v", layers[1])
 	}
-	if layers[2].OffsetY != 0 || layers[2].Blur != 1 || layers[2].Color.A != 0x0f {
+	if layers[2].OffsetY != 2 || layers[2].Blur != 4 || layers[2].Color.A != 0x0a {
 		t.Fatalf("third shadow layer = %#v", layers[2])
 	}
-	if got := inputShadowColor(0xff, .5); got != (color.NRGBA{A: 128}) {
-		t.Fatalf("half opacity shadow = %#v", got)
+	if got := render.ThemeShadow(activeTheme.Shadows.Control, color.NRGBA{A: 0xff}, .5).EffectiveLayers()[0].Color.A; got != 18 {
+		t.Fatalf("half opacity shadow alpha = %d, want 18", got)
 	}
 }
 

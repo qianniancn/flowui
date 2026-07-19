@@ -161,6 +161,26 @@ ui.Button("save", ui.Text("保存")).Theme(func(theme *ui.Theme) {
 不会修改应用主题或泄漏到同级 Widget；组合在当前 Widget 内部的子组件会在布局
 期间继承该实例主题。回调在布局阶段执行，应只修改传入的主题，不要包含业务副作用。
 
+阴影几何参数同样属于实例主题。每种阴影包含由近到远排列的三层，透明度为零的层
+不会绘制：
+
+```go
+ui.Surface(content).Shadow(true).Theme(func(theme *ui.Theme) {
+	theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
+	theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
+		{OffsetY: 2, Blur: 4, Opacity: 0.65},
+		{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
+		{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
+	}
+})
+```
+
+`Layers[0]`、`Layers[1]`、`Layers[2]` 分别表示近层、中层和远层；每层可控制
+偏移、模糊、扩散和透明度。
+可用配置包括 `Surface`、`Overlay`、`Menu`、`Control`、`Checkbox` 和
+`SwitchThumb`。这些配置控制阴影几何参数和每层透明度；基础颜色仍由组件使用的
+主题字段提供，例如 `Palette.SurfaceShadow` 和 `Components.Menu.ShadowColor`。
+
 FlowUI 内置英文和中文组件文案。`ui.LanguageAuto` 会根据系统语言选择
 默认语言。由应用管理窗口时，可以通过 `Application.SetTheme` 和
 `Application.SetLanguage` 在运行期间切换指定窗口。

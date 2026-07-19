@@ -78,6 +78,7 @@ func TestThemeBackedWidgetsExposeThemeMethod(t *testing.T) {
 		"Slider":            reflect.TypeOf((*ui.SliderWidget)(nil)).Elem(),
 		"Spinner":           reflect.TypeOf((*ui.SpinnerWidget)(nil)).Elem(),
 		"SplitPane":         reflect.TypeOf((*ui.SplitPaneWidget)(nil)).Elem(),
+		"Surface":           reflect.TypeOf((*ui.SurfaceWidget)(nil)).Elem(),
 		"Switch":            reflect.TypeOf((*ui.SwitchWidget)(nil)).Elem(),
 		"SwitchGroup":       reflect.TypeOf((*ui.SwitchGroupWidget)(nil)).Elem(),
 		"Table":             reflect.TypeOf((*ui.TableWidget)(nil)).Elem(),
@@ -536,7 +537,9 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			externalWidget{},
 			ui.Row(ui.Text("Footer")),
 		).Variant(ui.CardSecondary),
-		ui.Surface(externalWidget{}),
+		ui.Surface(externalWidget{}).Theme(func(theme *ui.Theme) {
+			theme.Shadows.Surface.Layers[1].Blur = 12
+		}),
 		ui.Surface(
 			ui.Tabs("settings", "general", tabs).Variant(ui.TabsSecondary),
 		).Variant(ui.SurfaceSecondary).Radius(8),
@@ -916,6 +919,11 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.ColorSliderTheme
 	var _ ui.ColorSwatchTheme
 	var _ ui.ColorSwatchPickerTheme
+	var _ ui.ShadowLayerTheme
+	var _ ui.ShadowTheme
+	var _ ui.ShadowsTheme
+	var _ ui.ShadowsTheme = ui.DefaultShadows()
+	var _ = ui.ThemeShadow(ui.ShadowTheme{}, color.NRGBA{}, 1)
 	var _ ui.ColorAreaWidget = ui.ColorArea("area", color.NRGBA{}).ShowDots(true).Disabled(false).OnChange(func(color.NRGBA) {})
 	var _ ui.ColorFieldWidget = ui.ColorField("field", color.NRGBA{}).Swatch(true).Alpha(true).Variant(ui.InputSecondary).FullWidth().OnChange(func(color.NRGBA) {})
 	var _ ui.ColorSliderWidget = ui.ColorSlider("hue", color.NRGBA{}, ui.ColorChannelHue).HideLabel().ShowOutput(false).OnChange(func(color.NRGBA) {})

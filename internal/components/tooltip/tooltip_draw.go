@@ -14,7 +14,7 @@ import (
 
 func drawTooltipSurface(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, style tooltipStyle) {
 	radii := theme.Components.Tooltip.Radius
-	render.DrawShadow(gtx, rect, render.RoundedShadowCorners(radii, radii, radii, radii), render.PopupShadow(theme.Palette.OverlayShadowColor()))
+	render.DrawShadow(gtx, rect, render.RoundedShadowCorners(radii, radii, radii, radii), render.ThemeShadow(theme.Shadows.Overlay, theme.Palette.OverlayShadowColor(), 1))
 	roundRect := clip.UniformRRect(rect, radius)
 	paint.FillShape(gtx.Ops, style.surface, roundRect.Op(gtx.Ops))
 	borderWidth := gtx.Dp(theme.Components.Tooltip.BorderWidth)

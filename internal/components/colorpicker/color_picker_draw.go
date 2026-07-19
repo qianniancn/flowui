@@ -22,7 +22,7 @@ func drawColorPickerPanel(gtx layout.Context, activeTheme *theme.Theme, size ima
 		image.Rectangle{Max: size},
 		radius,
 		activeTheme.Palette.OverlayColor(),
-		render.PopupShadow(activeTheme.Palette.OverlayShadowColor()),
+		render.ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadowColor(), 1),
 	)
 }
 
@@ -66,7 +66,8 @@ func drawColorSwatchPickerItem(ctx *frame.Context, gtx layout.Context, size imag
 				radius := colorSwatchPickerItemRadiusDp(ctx, swatchSize)
 				shadowShape = render.RoundedShadowCorners(radius, radius, radius, radius)
 			}
-			render.DrawShadow(gtx, rect, shadowShape, colorSwatchPickerShadow(shadowOpacity))
+			activeTheme := frame.ActiveTheme(ctx)
+			render.DrawShadow(gtx, rect, shadowShape, render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, shadowOpacity))
 		}
 		border := value
 		border.A = byte(float32(255)*selection + .5)
@@ -108,18 +109,6 @@ func colorSwatchPickerVisualSize(item image.Point, borderWidth int, scale float3
 		max(int(float32(content.X)*scale+.5), 1),
 		max(int(float32(content.Y)*scale+.5), 1),
 	)
-}
-
-func colorSwatchPickerShadow(opacity float32) render.BoxShadow {
-	opacity = min(max(opacity, 0), 1)
-	shadowColor := func(alpha byte) color.NRGBA {
-		return color.NRGBA{A: byte(float32(alpha)*opacity + .5)}
-	}
-	return render.BoxShadow{Layers: []render.ShadowLayer{
-		{OffsetY: 2, Blur: 4, Color: shadowColor(0x0a)},
-		{OffsetY: 1, Blur: 2, Color: shadowColor(0x0f)},
-		{Blur: 1, Color: shadowColor(0x0f)},
-	}}
 }
 
 func drawColorSwatchCheck(gtx layout.Context, size image.Point, value color.NRGBA, progress, strokeWidth float32) {

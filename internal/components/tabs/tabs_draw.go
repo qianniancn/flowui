@@ -57,7 +57,7 @@ func drawTabIndicator(gtx layout.Context, theme *theme.Theme, rect image.Rectang
 	radius := min(max(gtx.Dp(theme.Components.Tabs.IndicatorRadius), 1), min(rect.Dx(), rect.Dy())/2)
 	if theme.Palette.SurfaceShadow.A != 0 {
 		shapeRadius := theme.Components.Tabs.IndicatorRadius
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.SurfaceShadow(theme.Palette.SurfaceShadow))
+		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.ThemeShadow(theme.Shadows.Surface, theme.Palette.SurfaceShadow, 1))
 	}
 	paint.FillShape(gtx.Ops, col, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }

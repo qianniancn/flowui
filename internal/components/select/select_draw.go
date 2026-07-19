@@ -39,5 +39,5 @@ func drawSelectIndicator(gtx layout.Context, theme *theme.Theme, size image.Poin
 }
 
 func drawSelectPanel(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {
-	render.DrawSurface(gtx, rect, radius, theme.Palette.OverlayColor(), render.PopupShadow(theme.Palette.OverlayShadowColor()))
+	render.DrawSurface(gtx, rect, radius, theme.Palette.OverlayColor(), render.ThemeShadow(theme.Shadows.Overlay, theme.Palette.OverlayShadowColor(), 1))
 }

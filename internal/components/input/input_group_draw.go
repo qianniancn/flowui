@@ -20,7 +20,7 @@ func drawInputGroupFrame(gtx layout.Context, activeTheme *theme.Theme, rect imag
 			gtx,
 			rect,
 			render.RoundedShadowCorners(radiusDp, radiusDp, radiusDp, radiusDp),
-			inputShadow(style.ShadowOpacity),
+			render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, style.ShadowOpacity),
 		)
 	}
 	drawInputRing(gtx, rect, radius, style.Ring, ringWidth)

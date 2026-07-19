@@ -20,7 +20,7 @@ func drawAlertSurface(gtx layout.Context, activeTheme *theme.Theme, rect image.R
 		gtx,
 		rect,
 		render.RoundedShadowCorners(radiusDp, radiusDp, radiusDp, radiusDp),
-		render.SurfaceShadow(activeTheme.Palette.SurfaceShadow),
+		render.ThemeShadow(activeTheme.Shadows.Surface, activeTheme.Palette.SurfaceShadow, 1),
 	)
 	paint.FillShape(gtx.Ops, background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }

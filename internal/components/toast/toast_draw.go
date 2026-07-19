@@ -20,7 +20,7 @@ func drawToastSurface(gtx layout.Context, activeTheme *theme.Theme, rect image.R
 		gtx,
 		rect,
 		render.RoundedShadowCorners(radiusDp, radiusDp, radiusDp, radiusDp),
-		render.PopupShadow(activeTheme.Palette.OverlayShadow),
+		render.ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadow, 1),
 	)
 	paint.FillShape(gtx.Ops, surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 }

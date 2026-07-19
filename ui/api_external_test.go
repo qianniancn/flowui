@@ -193,7 +193,6 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ShowValue().
 			ValueText("60 GB").
 			ValueFormatter(func(value float64) string { return "formatted" }).
-			ValueContent(ui.Text("60 GB")).
 			Range(0, 100).
 			Color(ui.MeterSuccess).
 			Size(ui.MeterLarge).
@@ -443,12 +442,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Content(ui.Text("Custom alert content")).
 			Action(ui.CloseButton("dismiss-alert")),
 		ui.Card(
-			ui.CardHeader(
-				ui.CardTitle("Settings"),
-				ui.CardDescription("Public facade contract"),
+			ui.Column(
+				ui.Text("Settings"),
+				ui.Text("Public facade contract"),
 			),
-			ui.CardContent(externalWidget{}),
-			ui.CardFooter(ui.Text("Footer")),
+			externalWidget{},
+			ui.Row(ui.Text("Footer")),
 		).Variant(ui.CardSecondary),
 		ui.Surface(externalWidget{}),
 		ui.Surface(
@@ -529,10 +528,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Label("Resize panes").
 			OnRatioChange(func(float32) {}).
 			Disabled(false),
-		ui.StatusBar(ui.Text("Ready"), ui.Text("Ln 1, Col 1")).
-			Variant(ui.StatusBarAccent).
-			Height(30).
-			Border(true),
+		ui.StatusBar(ui.Text("Ready"), ui.Text("Ln 1, Col 1")),
 		ui.Table("members", tableColumns, tableRows).
 			Variant(ui.TableSecondary).
 			SelectionMode(ui.TableSelectionMultiple).
@@ -840,7 +836,6 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.ColorSwatchPickerWidget = ui.ColorSwatchPicker("swatches", color.NRGBA{}, nil).Size(ui.ColorSwatchSmall).Shape(ui.ColorSwatchCircle).Arrangement(ui.ColorSwatchPickerGrid).DisabledColors(nil).OnChange(func(color.NRGBA) {})
 	var _ ui.SplitPaneTheme
 	var _ ui.TitleBarTheme
-	var _ ui.StatusBarTheme
 	var _ ui.PaginationTheme
 	var _ ui.ProgressCircleTheme
 

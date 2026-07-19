@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"testing"
 
-	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/description"
@@ -88,53 +87,6 @@ func TestCardScopesVariantColors(t *testing.T) {
 	}
 }
 
-func TestCardSlotLayoutsMatchHeroUI(t *testing.T) {
-	ctx := cardTestContext(nil)
-	tests := []struct {
-		name   string
-		widget frame.Widget
-		want   image.Point
-	}{
-		{
-			name: "header column without gap",
-			widget: CardHeader(
-				fixedWidget{size: image.Pt(20, 8)},
-				fixedWidget{size: image.Pt(30, 10)},
-			),
-			want: image.Pt(30, 18),
-		},
-		{
-			name: "content column with four dp gap",
-			widget: CardContent(
-				fixedWidget{size: image.Pt(20, 8)},
-				fixedWidget{size: image.Pt(30, 10)},
-			),
-			want: image.Pt(30, 22),
-		},
-		{
-			name: "footer row aligned in the middle",
-			widget: CardFooter(
-				fixedWidget{size: image.Pt(20, 8)},
-				fixedWidget{size: image.Pt(30, 10)},
-			),
-			want: image.Pt(50, 10),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var ops op.Ops
-			dims := test.widget.Layout(ctx, layout.Context{
-				Constraints: layout.Constraints{Max: image.Pt(300, 200)},
-				Ops:         &ops,
-			})
-			if dims.Size != test.want {
-				t.Fatalf("slot size = %v, want %v", dims.Size, test.want)
-			}
-		})
-	}
-}
-
 func TestCardDefaultsShadowExceptForTransparentVariant(t *testing.T) {
 	if !Card().resolvedShadow() {
 		t.Fatal("default card should use surface elevation")
@@ -208,8 +160,8 @@ func TestCardPreparesFieldAssociationsAcrossSections(t *testing.T) {
 	var ops op.Ops
 
 	Card(
-		CardContent(probe),
-		CardFooter(description.Description("Account help").For("account")),
+		probe,
+		description.Description("Account help").For("account"),
 	).Layout(ctx, layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         &ops,
@@ -217,91 +169,6 @@ func TestCardPreparesFieldAssociationsAcrossSections(t *testing.T) {
 
 	if probe.description != "Account help" {
 		t.Fatalf("description during content layout = %q, want %q", probe.description, "Account help")
-	}
-}
-
-func TestCardSlotOptionsKeepValueSemantics(t *testing.T) {
-	header := CardHeader()
-	content := CardContent()
-	footer := CardFooter()
-	if got := header.Gap(3); header.hasGap || !got.hasGap || got.gap != 3 {
-		t.Fatal("header gap did not preserve value semantics")
-	}
-	if got := content.Gap(5); content.hasGap || !got.hasGap || got.gap != 5 {
-		t.Fatal("content gap did not preserve value semantics")
-	}
-	if got := footer.Gap(7); footer.hasGap || !got.hasGap || got.gap != 7 {
-		t.Fatal("footer gap did not preserve value semantics")
-	}
-
-	title := CardTitle("Title")
-	styledTitle := title.Size(16).LineHeight(22).Color(color.NRGBA{R: 1}).Weight(500)
-	if title.size != 0 || title.lineHeight != 0 || title.hasColor || title.weight != 0 {
-		t.Fatal("title options mutated the original value")
-	}
-	if styledTitle.size != 16 || styledTitle.lineHeight != 22 || !styledTitle.hasColor || styledTitle.weight != 500 {
-		t.Fatal("title options did not configure the returned value")
-	}
-
-	descriptionWidget := CardDescription("Description")
-	styledDescription := descriptionWidget.Size(13).LineHeight(18).Color(color.NRGBA{G: 1})
-	if descriptionWidget.size != 0 || descriptionWidget.lineHeight != 0 || descriptionWidget.hasColor {
-		t.Fatal("description options mutated the original value")
-	}
-	if styledDescription.size != 13 || styledDescription.lineHeight != 18 || !styledDescription.hasColor {
-		t.Fatal("description options did not configure the returned value")
-	}
-}
-
-func TestCardSlotGapOverrides(t *testing.T) {
-	ctx := cardTestContext(nil)
-	tests := []struct {
-		name   string
-		widget frame.Widget
-		want   image.Point
-	}{
-		{name: "header", widget: CardHeader(fixedWidget{image.Pt(20, 8)}, fixedWidget{image.Pt(30, 10)}).Gap(5), want: image.Pt(30, 23)},
-		{name: "content", widget: CardContent(fixedWidget{image.Pt(20, 8)}, fixedWidget{image.Pt(30, 10)}).Gap(7), want: image.Pt(30, 25)},
-		{name: "footer", widget: CardFooter(fixedWidget{image.Pt(20, 8)}, fixedWidget{image.Pt(30, 10)}).Gap(9), want: image.Pt(59, 10)},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var ops op.Ops
-			dims := test.widget.Layout(ctx, layout.Context{
-				Constraints: layout.Constraints{Max: image.Pt(300, 200)},
-				Ops:         &ops,
-			})
-			if dims.Size != test.want {
-				t.Fatalf("slot size = %v, want %v", dims.Size, test.want)
-			}
-		})
-	}
-}
-
-func TestCardTextSlotsLayout(t *testing.T) {
-	ctx := cardTestContext(nil)
-	widgets := []frame.Widget{
-		CardTitle("Default title"),
-		CardTitle("Styled title").
-			Size(16).
-			LineHeight(22).
-			Color(color.NRGBA{R: 1, A: 0xff}).
-			Weight(font.Bold),
-		CardDescription("Default description"),
-		CardDescription("Styled description").
-			Size(13).
-			LineHeight(18).
-			Color(color.NRGBA{G: 1, A: 0xff}),
-	}
-	for _, widget := range widgets {
-		var ops op.Ops
-		dims := widget.Layout(ctx, layout.Context{
-			Constraints: layout.Constraints{Max: image.Pt(300, 100)},
-			Ops:         &ops,
-		})
-		if dims.Size.X <= 0 || dims.Size.Y <= 0 {
-			t.Fatalf("text slot size = %v, want non-zero dimensions", dims.Size)
-		}
 	}
 }
 

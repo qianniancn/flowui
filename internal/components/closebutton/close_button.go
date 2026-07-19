@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
@@ -54,17 +55,33 @@ func (b CloseButtonWidget) Label(label string) CloseButtonWidget {
 
 func (b CloseButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	key, clickable := frame.ClickableWithKey(ctx, b.key)
-	buttonState := closeButtonStateFor(ctx, key)
+	return layoutWithClickable(b, ctx, gtx, clickable, closeButtonStateFor(ctx, key), true)
+}
+
+// LayoutWithClickableNoEvents renders a close button with caller-owned state and events.
+func LayoutWithClickableNoEvents(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, buttonState *State) layout.Dimensions {
+	return layoutWithClickable(b, ctx, gtx, clickable, buttonState, false)
+}
+
+func layoutWithClickable(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, buttonState *State, handleEvents bool) layout.Dimensions {
+	if clickable == nil {
+		panic("flowui: nil close button clickable")
+	}
+	if buttonState == nil {
+		buttonState = new(State)
+	}
 	animGtx := gtx
 	presses := state.ActivePresses(clickable.History())
 	enabled := gtx.Enabled() && !b.disabled
-	for clickable.Clicked(gtx) {
-		if enabled && b.onClick != nil {
-			b.onClick()
+	if handleEvents {
+		for clickable.Clicked(gtx) {
+			if enabled && b.onClick != nil {
+				b.onClick()
+			}
 		}
-	}
-	if enabled {
-		frame.FocusOnPress(ctx, clickable, clickable.History(), presses)
+		if enabled {
+			frame.FocusOnPress(ctx, clickable, clickable.History(), presses)
+		}
 	}
 
 	size := closeButtonSize(gtx, frame.ActiveTheme(ctx).Components.CloseButton.Size)

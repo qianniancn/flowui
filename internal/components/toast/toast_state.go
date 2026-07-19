@@ -12,6 +12,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/closebutton"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -41,9 +42,9 @@ type toastEntryState struct {
 	root               toastRootTag
 	hovered            bool
 	close              widget.Clickable
+	closeButton        closebutton.State
 	action             widget.Clickable
 	rootFocus          state.FocusAnimation
-	closeFocus         state.FocusAnimation
 	remaining          time.Duration
 	configuredTimeout  time.Duration
 	deadline           time.Time

@@ -8,20 +8,16 @@ import (
 )
 
 type Model struct {
-	Accent bool
 	Next   int
 	Toasts []ui.ToastItem
 }
 
 type Msg any
-type SetAccent bool
 type ShowNotification struct{}
 type CloseNotification string
 
 func Update(model *Model, msg Msg) {
 	switch msg := msg.(type) {
-	case SetAccent:
-		model.Accent = bool(msg)
 	case ShowNotification:
 		model.Next++
 		toast := ui.Toast(fmt.Sprintf("status-notification-%d", model.Next), "Status bar action").
@@ -34,17 +30,13 @@ func Update(model *Model, msg Msg) {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	variant := ui.StatusBarDefault
-	if model.Accent {
-		variant = ui.StatusBarAccent
-	}
-	status := ui.StatusBar(statusLeft(), statusRight(model.Accent, send)).Variant(variant)
+	status := ui.StatusBar(statusLeft(), statusRight(send))
 
 	return ui.Stack(
 		ui.Stacked(
 			ui.Surface(
 				ui.Column(
-					appBar(model, send),
+					appBar(),
 					ui.Divider(),
 					ui.Expanded(workspace()),
 					status,
@@ -61,15 +53,12 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	)
 }
 
-func appBar(model Model, send ui.Send[Msg]) ui.Widget {
+func appBar() ui.Widget {
 	return ui.Box(
 		ui.Row(
 			ui.Icon(lucide.Braces).Size(18),
 			ui.Text("FlowUI Editor").Size(14),
 			ui.Expanded(ui.Spacer(0, 0)),
-			ui.ToggleButton("accent-status", model.Accent, ui.Text("Accent status bar")).
-				Size(ui.ToggleButtonSmall).
-				OnChange(func(selected bool) { send(SetAccent(selected)) }),
 		).AlignMiddle().Gap(10),
 	).Padding(8).FillWidth()
 }
@@ -122,13 +111,7 @@ func statusLeft() ui.Widget {
 	).AlignMiddle().Gap(12)
 }
 
-func statusRight(accent bool, send ui.Send[Msg]) ui.Widget {
-	buttonKey := "show-status-notification"
-	buttonVariant := ui.ButtonGhost
-	if accent {
-		buttonKey = "show-status-notification-accent"
-		buttonVariant = ui.ButtonPrimary
-	}
+func statusRight(send ui.Send[Msg]) ui.Widget {
 	return ui.Row(
 		ui.Text("Ln 24, Col 8").Size(12),
 		ui.Text("Spaces: 4").Size(12),
@@ -136,8 +119,8 @@ func statusRight(accent bool, send ui.Send[Msg]) ui.Widget {
 		ui.Row(ui.Icon(lucide.Wifi).Size(13), ui.Text("Connected").Size(12)).AlignMiddle().Gap(5),
 		ui.Tooltip(
 			"notifications-status",
-			ui.Button(buttonKey, ui.Icon(lucide.Bell).Size(13)).
-				Variant(buttonVariant).
+			ui.Button("show-status-notification", ui.Icon(lucide.Bell).Size(13)).
+				Variant(ui.ButtonGhost).
 				Size(ui.ButtonSmall).
 				IconOnly().
 				OnClick(func() { send(ShowNotification{}) }),

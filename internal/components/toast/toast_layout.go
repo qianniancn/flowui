@@ -13,13 +13,11 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
+	"github.com/qianniancn/FlowUI/internal/components/closebutton"
 	"github.com/qianniancn/FlowUI/internal/components/spinner"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type toastRecord struct {
@@ -287,7 +285,7 @@ func (p ToastProviderWidget) layoutToast(ctx *frame.Context, gtx layout.Context,
 	focusVisible := frame.FocusVisible(ctx, &entry.root, gtx.Focused(&entry.root))
 	focusOpacity := entry.rootFocus.Opacity(gtx, focusVisible, frame.ActiveTheme(ctx).Motion)
 	drawToastFocus(gtx, rect, radius, style.focus, frame.ActiveTheme(ctx).Components.Toast.FocusRingWidth, focusOpacity)
-	p.layoutToastClose(ctx, gtx, entry, size, style, mobile || expanded)
+	p.layoutToastClose(ctx, gtx, entry, size, mobile || expanded)
 	return layout.Dimensions{Size: size}
 }
 
@@ -386,33 +384,19 @@ func (p ToastProviderWidget) layoutToastAction(ctx *frame.Context, gtx layout.Co
 	return button.LayoutWithClickable(action, ctx, gtx, &entry.action)
 }
 
-func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, toastSize image.Point, style toastStyle, alwaysVisible bool) {
+func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Context, entry *toastEntryState, toastSize image.Point, alwaysVisible bool) {
 	tokens := frame.ActiveTheme(ctx).Components.Toast
 	show := alwaysVisible || entry.hovered || entry.close.Hovered() || gtx.Focused(&entry.root) || gtx.Focused(&entry.close)
 	if !show {
 		return
 	}
-	size := gtx.Dp(tokens.CloseSize)
+	size := gtx.Dp(frame.ActiveTheme(ctx).Components.CloseButton.Size)
 	inset := gtx.Dp(tokens.CloseInset)
 	position := image.Pt(toastSize.X-size-inset, inset)
 	closeGtx := gtx
 	closeGtx.Constraints = layout.Exact(image.Pt(size, size))
 	offset := op.Offset(position).Push(gtx.Ops)
-	dims := entry.close.Layout(closeGtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(toastCloseLabel(ctx)).Add(gtx.Ops)
-		drawToastCloseButton(gtx, frame.ActiveTheme(ctx), image.Pt(size, size), style, entry.close.Hovered())
-		iconSize := gtx.Dp(tokens.CloseIconSize)
-		iconOffset := op.Offset(image.Pt((size-iconSize)/2, (size-iconSize)/2)).Push(gtx.Ops)
-		iconGtx := gtx
-		iconGtx.Constraints = layout.Exact(image.Pt(iconSize, iconSize))
-		icon.Layout(lucide.X, iconGtx, style.description)
-		iconOffset.Pop()
-		return layout.Dimensions{Size: image.Pt(size, size)}
-	})
-	focusVisible := frame.FocusVisible(ctx, &entry.close, gtx.Focused(&entry.close))
-	focusOpacity := entry.closeFocus.Opacity(gtx, focusVisible, frame.ActiveTheme(ctx).Motion)
-	drawToastFocus(gtx, image.Rectangle{Max: dims.Size}, size/2, style.focus, tokens.FocusRingWidth, focusOpacity)
+	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton(""), ctx, closeGtx, &entry.close, &entry.closeButton)
 	offset.Pop()
 }
 
@@ -468,11 +452,4 @@ func toastRegionX(viewportWidth, toastWidth, inset int, placement ToastPlacement
 
 func toastRadius(gtx layout.Context, radius unit.Dp, size image.Point) int {
 	return min(max(gtx.Dp(radius), 0), min(size.X, size.Y)/2)
-}
-
-func toastCloseLabel(ctx *frame.Context) string {
-	if frame.ActiveLanguage(ctx) == locale.LanguageChinese {
-		return "关闭"
-	}
-	return "Close"
 }

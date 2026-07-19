@@ -101,24 +101,6 @@ func prepareCardFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 			if widget != nil {
 				prepareCardFieldAssociations(ctx, widget.children...)
 			}
-		case CardHeaderWidget:
-			prepareCardFieldAssociations(ctx, widget.children...)
-		case *CardHeaderWidget:
-			if widget != nil {
-				prepareCardFieldAssociations(ctx, widget.children...)
-			}
-		case CardContentWidget:
-			prepareCardFieldAssociations(ctx, widget.children...)
-		case *CardContentWidget:
-			if widget != nil {
-				prepareCardFieldAssociations(ctx, widget.children...)
-			}
-		case CardFooterWidget:
-			prepareCardFieldAssociations(ctx, widget.children...)
-		case *CardFooterWidget:
-			if widget != nil {
-				prepareCardFieldAssociations(ctx, widget.children...)
-			}
 		default:
 			layoutui.PrepareFieldAssociations(ctx, widget)
 		}

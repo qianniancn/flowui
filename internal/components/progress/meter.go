@@ -1,59 +1,41 @@
 package progress
 
 import (
-	"fmt"
-
-	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
 )
 
+// MeterWidget keeps meter semantics while reusing the linear progress control.
 type MeterWidget struct {
-	key            string
-	value          float64
-	minValue       float64
-	maxValue       float64
-	label          string
+	bar            ProgressBarWidget
 	alt            string
-	valueText      string
-	hasValueText   bool
-	showValue      bool
 	valueFormatter func(float64) string
-	valueContent   frame.Widget
-	color          MeterColor
-	size           MeterSize
-	disabled       bool
 }
 
-type MeterColor uint8
+type MeterColor = ProgressBarColor
 
 const (
-	MeterAccent MeterColor = iota
-	MeterDefault
-	MeterSuccess
-	MeterWarning
-	MeterDanger
+	MeterAccent  = ProgressBarAccent
+	MeterDefault = ProgressBarDefault
+	MeterSuccess = ProgressBarSuccess
+	MeterWarning = ProgressBarWarning
+	MeterDanger  = ProgressBarDanger
 )
 
-type MeterSize uint8
+type MeterSize = ProgressBarSize
 
 const (
-	MeterMedium MeterSize = iota
-	MeterSmall
-	MeterLarge
+	MeterMedium = ProgressBarMedium
+	MeterSmall  = ProgressBarSmall
+	MeterLarge  = ProgressBarLarge
 )
-
-const stateSlotMeter = "meter"
 
 func Meter(key string, value float64) MeterWidget {
-	return MeterWidget{key: key, value: value, maxValue: 100}
+	return MeterWidget{bar: ProgressBar(key, value)}
 }
 
 func (m MeterWidget) Label(label string) MeterWidget {
-	m.label = label
+	m.bar = m.bar.Label(label)
 	return m
 }
 
@@ -63,101 +45,53 @@ func (m MeterWidget) Alt(alt string) MeterWidget {
 }
 
 func (m MeterWidget) ShowValue() MeterWidget {
-	m.showValue = true
+	m.bar = m.bar.ShowValue()
 	return m
 }
 
 func (m MeterWidget) ValueText(text string) MeterWidget {
-	m.valueText = text
-	m.hasValueText = true
-	m.showValue = true
+	m.bar = m.bar.ValueText(text)
 	return m
 }
 
 func (m MeterWidget) ValueFormatter(formatter func(float64) string) MeterWidget {
 	m.valueFormatter = formatter
-	m.showValue = true
-	return m
-}
-
-func (m MeterWidget) ValueContent(content frame.Widget) MeterWidget {
-	m.valueContent = content
-	m.showValue = true
+	m.bar.showValue = true
 	return m
 }
 
 func (m MeterWidget) Range(minValue, maxValue float64) MeterWidget {
-	m.minValue = minValue
-	m.maxValue = maxValue
+	m.bar = m.bar.Range(minValue, maxValue)
 	return m
 }
 
-func (m MeterWidget) Color(color MeterColor) MeterWidget {
-	m.color = color
+func (m MeterWidget) Color(value MeterColor) MeterWidget {
+	m.bar = m.bar.Color(value)
 	return m
 }
 
 func (m MeterWidget) Size(size MeterSize) MeterWidget {
-	m.size = size
+	m.bar = m.bar.Size(size)
 	return m
 }
 
 func (m MeterWidget) Disabled(disabled bool) MeterWidget {
-	m.disabled = disabled
+	m.bar = m.bar.Disabled(disabled)
 	return m
 }
 
 func (m MeterWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	meterState := meterStateFor(ctx, m.key)
-	style := meterStyleFor(frame.ActiveTheme(ctx), m.color, m.disabled)
-	sizeStyle := meterSizeStyleFor(frame.ActiveTheme(ctx), m.size)
-	progress := meterState.progress(gtx, m.ratio(), false, frame.ActiveTheme(ctx).Motion)
-	output := m.outputText()
-
-	macro := op.Record(gtx.Ops)
-	dims := m.layout(ctx, gtx, style, sizeStyle, progress, output)
-	call := macro.Stop()
-	root := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-	semantic.EnabledOp(!m.disabled).Add(gtx.Ops)
-	semantic.DescriptionOp(m.semanticDescription(output)).Add(gtx.Ops)
-	call.Add(gtx.Ops)
-	root.Pop()
-	return dims
+	return m.progressBar().Layout(ctx, gtx)
 }
 
-func meterStateFor(ctx *frame.Context, key string) *progressBarState {
-	key = frame.ClaimKey(ctx, state.KindMeter, key)
-	return frame.UseState[progressBarState](ctx, key, stateSlotMeter)
-}
-
-func (m MeterWidget) ratio() float32 {
-	return progressRatio(m.value, m.minValue, m.maxValue, false)
-}
-
-func (m MeterWidget) outputText() string {
-	if m.hasValueText {
-		return m.valueText
+func (m MeterWidget) progressBar() ProgressBarWidget {
+	bar := m.bar
+	bar.semanticLabel = m.alt
+	if bar.semanticLabel == "" && bar.label == "" {
+		bar.semanticLabel = "Meter"
 	}
-	if m.valueFormatter != nil {
-		return m.valueFormatter(m.value)
+	if !bar.hasValueText && m.valueFormatter != nil {
+		bar = bar.ValueText(m.valueFormatter(bar.value))
 	}
-	return m.defaultOutputText()
-}
-
-func (m MeterWidget) defaultOutputText() string {
-	return fmt.Sprintf("%.0f%%", m.ratio()*100)
-}
-
-func (m MeterWidget) semanticDescription(output string) string {
-	label := m.alt
-	if label == "" {
-		label = m.label
-	}
-	if label == "" {
-		label = "Meter"
-	}
-	if output == "" {
-		output = m.defaultOutputText()
-	}
-	return label + " " + output
+	return bar
 }

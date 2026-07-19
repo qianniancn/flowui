@@ -587,15 +587,6 @@ func TestToastBackIndicatorReceivesDisabledContext(t *testing.T) {
 	}
 }
 
-func TestToastCloseLabelUsesContextLanguage(t *testing.T) {
-	if got := toastCloseLabel(frame.New(nil, nil, locale.LanguageEnglish)); got != "Close" {
-		t.Fatalf("English close label = %q", got)
-	}
-	if got := toastCloseLabel(frame.New(nil, nil, locale.LanguageChinese)); got != "关闭" {
-		t.Fatalf("Chinese close label = %q", got)
-	}
-}
-
 type toastProbe struct {
 	constraints layout.Constraints
 	enabled     bool

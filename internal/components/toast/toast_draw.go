@@ -42,18 +42,6 @@ func drawToastFocus(gtx layout.Context, rect image.Rectangle, radius int, col co
 	stroke.Pop()
 }
 
-func drawToastCloseButton(gtx layout.Context, activeTheme *theme.Theme, size image.Point, style toastStyle, hovered bool) {
-	rect := image.Rectangle{Max: size}
-	radius := min(size.X, size.Y) / 2
-	background := activeTheme.Palette.Overlay
-	if hovered {
-		background = activeTheme.Palette.SurfaceRaised
-	}
-	paint.FillShape(gtx.Ops, style.border, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	inner := rect.Inset(max(gtx.Dp(unit.Dp(1)), 1))
-	paint.FillShape(gtx.Ops, background, clip.UniformRRect(inner, max(radius-1, 0)).Op(gtx.Ops))
-}
-
 func drawToastIndicator(gtx layout.Context, size image.Point, foreground color.NRGBA, variant ToastVariant) {
 	data := lucide.Info
 	switch variant {

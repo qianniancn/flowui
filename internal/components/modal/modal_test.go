@@ -24,13 +24,8 @@ const stateSlotClickable = "clickable"
 
 func TestModalCloseGeometryMatchesHeroUI(t *testing.T) {
 	component := theme.DefaultTheme().Components.Modal
-	if component.CloseSize != 24 || component.CloseIconSize != 16 || component.CloseInset != 16 {
-		t.Fatalf(
-			"modal close geometry = size %v icon %v inset %v, want 24/16/16",
-			component.CloseSize,
-			component.CloseIconSize,
-			component.CloseInset,
-		)
+	if component.CloseInset != 16 {
+		t.Fatalf("modal close inset = %v, want 16", component.CloseInset)
 	}
 }
 
@@ -40,10 +35,6 @@ func newContext(_ any) *frame.Context {
 
 func newContextWithTheme(_ any, value *theme.Theme) *frame.Context {
 	return frame.New(nil, value, locale.LanguageAuto)
-}
-
-func newContextWithThemeAndLanguage(_ any, value *theme.Theme, language locale.Language) *frame.Context {
-	return frame.New(nil, value, language)
 }
 
 func DefaultTheme() theme.Theme {
@@ -862,15 +853,6 @@ func TestModalBodyTextStyle(t *testing.T) {
 	}
 	if col, _ := body.ConfiguredColor(); col != frame.ActiveTheme(ctx).Palette.MutedForeground {
 		t.Fatalf("body text color = %#v, want muted foreground", col)
-	}
-}
-
-func TestModalCloseLabelUsesContextLanguage(t *testing.T) {
-	if got := modalCloseLabel(newContextWithThemeAndLanguage(nil, nil, locale.LanguageEnglish)); got != "Close" {
-		t.Fatalf("english close label = %q, want Close", got)
-	}
-	if got := modalCloseLabel(newContextWithThemeAndLanguage(nil, nil, locale.LanguageChinese)); got != "关闭" {
-		t.Fatalf("chinese close label = %q, want 关闭", got)
 	}
 }
 

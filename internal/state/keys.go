@@ -23,7 +23,6 @@ const (
 	KindRadioGroup       Kind = "radio-group"
 	KindProgressBar      Kind = "progress-bar"
 	KindProgressCircle   Kind = "progress-circle"
-	KindMeter            Kind = "meter"
 	KindSlider           Kind = "slider"
 	KindListBox          Kind = "listbox"
 	KindTree             Kind = "tree"

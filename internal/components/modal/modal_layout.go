@@ -7,15 +7,14 @@ import (
 	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
-	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/components/closebutton"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
 )
@@ -546,31 +545,18 @@ func (m ModalWidget) layoutFooter(ctx *frame.Context, gtx layout.Context) layout
 
 func (m ModalWidget) layoutCloseButton(ctx *frame.Context, gtx layout.Context, modalStateValue *modalState, dialogSize image.Point) {
 	theme := frame.ActiveTheme(ctx).Components.Modal
-	size := image.Pt(gtx.Dp(theme.CloseSize), gtx.Dp(theme.CloseSize))
+	closeSize := gtx.Dp(frame.ActiveTheme(ctx).Components.CloseButton.Size)
+	size := image.Pt(closeSize, closeSize)
 	inset := gtx.Dp(theme.CloseInset)
 	pos := image.Pt(max(dialogSize.X-inset-size.X, 0), min(inset, max(dialogSize.Y-size.Y, 0)))
 
 	buttonGtx := gtx
 	buttonGtx.Constraints = layout.Exact(size)
 	stack := op.Offset(pos).Push(gtx.Ops)
-	modalStateValue.close.Layout(buttonGtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(modalCloseLabel(ctx)).Add(gtx.Ops)
-		focused := gtx.Focused(&modalStateValue.close)
-		focusVisible := frame.FocusVisible(ctx, &modalStateValue.close, focused)
-		drawModalCloseButton(gtx, frame.ActiveTheme(ctx), size, modalStateValue.close.Hovered(), modalStateValue.close.Pressed(), focusVisible)
-		return layout.Dimensions{Size: size}
-	})
+	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton(""), ctx, buttonGtx, &modalStateValue.close, &modalStateValue.closeButton)
 	stack.Pop()
 }
 
 func shrinkPoint(p image.Point, amount int) image.Point {
 	return image.Pt(max(p.X-amount, 0), max(p.Y-amount, 0))
-}
-
-func modalCloseLabel(ctx *frame.Context) string {
-	if frame.ActiveLanguage(ctx) == locale.LanguageChinese {
-		return "关闭"
-	}
-	return "Close"
 }

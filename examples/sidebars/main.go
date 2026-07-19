@@ -142,17 +142,17 @@ func workspace(selected string, muted color.NRGBA) ui.Widget {
 					metricCard("Team members", "36", "Three currently away", muted),
 				).Gap(12),
 				ui.Card(
-					ui.CardHeader(
-						ui.CardTitle("Upcoming milestones"),
-						ui.CardDescription("Delivery dates across active projects"),
-					),
-					ui.CardContent(ui.Column(
+					ui.Column(
+						ui.Text("Upcoming milestones").Size(16),
+						ui.Text("Delivery dates across active projects").Size(13).Color(muted),
+					).Gap(4),
+					ui.Column(
 						milestone("Desktop navigation", "Today", muted),
 						ui.Divider(),
 						milestone("Workspace permissions", "Jul 18", muted),
 						ui.Divider(),
 						milestone("Quarterly review", "Jul 25", muted),
-					).Gap(12)),
+					).Gap(12),
 				).Variant(ui.CardSecondary),
 			).Gap(20),
 		).FillWidth().FillHeight().Padding(28),
@@ -161,11 +161,11 @@ func workspace(selected string, muted color.NRGBA) ui.Widget {
 
 func metricCard(label, value, detail string, muted color.NRGBA) ui.Widget {
 	return ui.Card(
-		ui.CardContent(ui.Column(
+		ui.Column(
 			ui.Text(label).Size(13).Color(muted),
 			ui.Text(value).Size(28),
 			ui.Text(detail).Size(12).Color(muted),
-		).Gap(6)),
+		).Gap(6),
 	).Variant(ui.CardSecondary)
 }
 

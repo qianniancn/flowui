@@ -18,6 +18,7 @@ type ProgressBarWidget struct {
 	minValue      float64
 	maxValue      float64
 	label         string
+	semanticLabel string
 	valueText     string
 	hasValueText  bool
 	showValue     bool
@@ -158,7 +159,10 @@ func (p ProgressBarWidget) addSemantic(gtx layout.Context) {
 }
 
 func (p ProgressBarWidget) semanticDescription() string {
-	label := p.label
+	label := p.semanticLabel
+	if label == "" {
+		label = p.label
+	}
 	if label == "" {
 		label = "Progress"
 	}

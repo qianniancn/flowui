@@ -45,27 +45,17 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 func variantCard(title, description string, variant ui.CardVariant) ui.Widget {
 	return ui.Box(
 		ui.Card(
-			ui.CardHeader(
-				ui.CardTitle(title),
-				ui.CardDescription(description),
-			),
-			ui.CardContent(
-				ui.Text("Cards inherit semantic foreground colors from their surface."),
-			),
+			cardHeader(title, description),
+			ui.Text("Cards inherit semantic foreground colors from their surface."),
 		).Variant(variant),
 	).Width(320)
 }
 
 func featureCard(send ui.Send[Msg]) ui.Widget {
 	return ui.Card(
-		ui.CardHeader(
-			ui.CardTitle("Create a focused workspace").Size(16),
-			ui.CardDescription("Group related content and actions without introducing application state into the component."),
-		).Gap(4),
-		ui.CardContent(
-			ui.Text("Card keeps its content composable, so controls continue to use the normal FlowUI MVU message path."),
-		),
-		ui.CardFooter(
+		cardHeader("Create a focused workspace", "Group related content and actions without introducing application state into the component."),
+		ui.Text("Card keeps its content composable, so controls continue to use the normal FlowUI MVU message path."),
+		ui.Row(
 			ui.Button("card-later", ui.Text("Later")).
 				Size(ui.ButtonSmall).
 				Variant(ui.ButtonGhost).
@@ -75,6 +65,10 @@ func featureCard(send ui.Send[Msg]) ui.Widget {
 				OnClick(func() { send(Msg{Action: "Create workspace"}) }),
 		).Gap(8),
 	).Variant(ui.CardDefault)
+}
+
+func cardHeader(title, description string) ui.Widget {
+	return ui.Column(ui.Text(title).Size(16), ui.Text(description).Size(14)).Gap(4)
 }
 
 func main() {

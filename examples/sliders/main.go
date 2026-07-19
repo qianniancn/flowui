@@ -43,68 +43,48 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Text("Controlled single-value, range, vertical, and disabled sliders."),
 					ui.Divider(),
 					ui.Card(
-						ui.CardHeader(
-							ui.CardTitle("Volume"),
-							ui.CardDescription("Drag the thumb or use the arrow, Home, End, PageUp, and PageDown keys."),
-						),
-						ui.CardContent(
-							ui.Slider("volume", model.Volume).
-								Label("Volume").
-								ShowValue().
-								OnChange(func(value float64) {
-									send(VolumeChanged(value))
-								}),
-						),
+						cardHeader("Volume", "Drag the thumb or use the arrow, Home, End, PageUp, and PageDown keys."),
+						ui.Slider("volume", model.Volume).
+							Label("Volume").
+							ShowValue().
+							OnChange(func(value float64) {
+								send(VolumeChanged(value))
+							}),
 					),
 					ui.Card(
-						ui.CardHeader(
-							ui.CardTitle("Price range"),
-							ui.CardDescription("Each half of the track targets its nearest range thumb."),
-						),
-						ui.CardContent(
-							ui.RangeSlider("price", model.PriceStart, model.PriceEnd).
-								Label("Price range").
-								Range(0, 1000).
-								Step(50).
-								ShowValue().
-								FormatValue(func(value float64) string {
-									return fmt.Sprintf("$%.0f", value)
-								}).
-								OnRangeChange(func(start, end float64) {
-									send(PriceChanged{Start: start, End: end})
-								}),
-						),
+						cardHeader("Price range", "Each half of the track targets its nearest range thumb."),
+						ui.RangeSlider("price", model.PriceStart, model.PriceEnd).
+							Label("Price range").
+							Range(0, 1000).
+							Step(50).
+							ShowValue().
+							FormatValue(func(value float64) string {
+								return fmt.Sprintf("$%.0f", value)
+							}).
+							OnRangeChange(func(start, end float64) {
+								send(PriceChanged{Start: start, End: end})
+							}),
 					).Variant(ui.CardSecondary),
 					ui.Row(
 						ui.Card(
-							ui.CardHeader(
-								ui.CardTitle("Vertical"),
-								ui.CardDescription("The value increases from bottom to top."),
-							),
-							ui.CardContent(
-								ui.Box(
-									ui.Slider("intensity", model.Intensity).
-										Label("Intensity").
-										ShowValue().
-										Vertical().
-										OnChange(func(value float64) {
-											send(IntensityChanged(value))
-										}),
-								).Width(96).Height(260),
-							),
+							cardHeader("Vertical", "The value increases from bottom to top."),
+							ui.Box(
+								ui.Slider("intensity", model.Intensity).
+									Label("Intensity").
+									ShowValue().
+									Vertical().
+									OnChange(func(value float64) {
+										send(IntensityChanged(value))
+									}),
+							).Width(96).Height(260),
 						),
 						ui.Expanded(
 							ui.Card(
-								ui.CardHeader(
-									ui.CardTitle("Disabled"),
-									ui.CardDescription("Disabled sliders preserve their label while reducing control prominence."),
-								),
-								ui.CardContent(
-									ui.Slider("disabled", 64).
-										Label("Storage").
-										ValueText("64 GB").
-										Disabled(true),
-								),
+								cardHeader("Disabled", "Disabled sliders preserve their label while reducing control prominence."),
+								ui.Slider("disabled", 64).
+									Label("Storage").
+									ValueText("64 GB").
+									Disabled(true),
 							).Variant(ui.CardTertiary),
 						),
 					).Gap(16).AlignStart(),
@@ -112,6 +92,10 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			).Vertical(),
 		).FillWidth().MaxWidth(760).Padding(24),
 	)
+}
+
+func cardHeader(title, description string) ui.Widget {
+	return ui.Column(ui.Text(title).Size(16), ui.Text(description).Size(14)).Gap(4)
 }
 
 func main() {

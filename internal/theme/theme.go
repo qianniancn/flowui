@@ -143,7 +143,6 @@ type ComponentsTheme struct {
 	RadioGroup        RadioGroupTheme
 	ProgressBar       ProgressBarTheme
 	ProgressCircle    ProgressCircleTheme
-	Meter             MeterTheme
 	Spinner           SpinnerTheme
 	Slider            SliderTheme
 	ListBox           ListBoxTheme
@@ -152,7 +151,6 @@ type ComponentsTheme struct {
 	Scrollbar         ScrollbarTheme
 	SplitPane         SplitPaneTheme
 	TitleBar          TitleBarTheme
-	StatusBar         StatusBarTheme
 	Toolbar           ToolbarTheme
 	Table             TableTheme
 	Pagination        PaginationTheme
@@ -181,16 +179,9 @@ type ComponentsTheme struct {
 }
 
 type CardTheme struct {
-	Padding               unit.Dp
-	Gap                   unit.Dp
-	Radius                unit.Dp
-	HeaderGap             unit.Dp
-	ContentGap            unit.Dp
-	FooterGap             unit.Dp
-	TitleSize             unit.Sp
-	TitleLineHeight       unit.Sp
-	DescriptionSize       unit.Sp
-	DescriptionLineHeight unit.Sp
+	Padding unit.Dp
+	Gap     unit.Dp
+	Radius  unit.Dp
 }
 
 type AlertTheme struct {
@@ -430,17 +421,6 @@ type ProgressCircleTheme struct {
 	StrokeRatio float32
 }
 
-type MeterTheme struct {
-	SmallHeight  unit.Dp
-	MediumHeight unit.Dp
-	LargeHeight  unit.Dp
-	SmallRadius  unit.Dp
-	MediumRadius unit.Dp
-	LargeRadius  unit.Dp
-	HeaderGap    unit.Dp
-	TextSize     unit.Sp
-}
-
 type SpinnerTheme struct {
 	SmallSize      unit.Dp
 	MediumSize     unit.Dp
@@ -572,13 +552,6 @@ type TitleBarTheme struct {
 	ControlPressed color.NRGBA
 	CloseHover     color.NRGBA
 	ClosePressed   color.NRGBA
-}
-
-type StatusBarTheme struct {
-	Height      unit.Dp
-	PaddingX    unit.Dp
-	Gap         unit.Dp
-	BorderWidth unit.Dp
 }
 
 type ToolbarTheme struct {
@@ -898,8 +871,6 @@ type ToastTheme struct {
 	ContentGap        unit.Dp
 	IndicatorPadding  unit.Dp
 	IndicatorSize     unit.Dp
-	CloseSize         unit.Dp
-	CloseIconSize     unit.Dp
 	CloseInset        unit.Dp
 	FocusRingWidth    unit.Dp
 	TitleSize         unit.Sp
@@ -925,8 +896,6 @@ type ModalTheme struct {
 	FooterGap            unit.Dp
 	SectionGap           unit.Dp
 	IconSize             unit.Dp
-	CloseSize            unit.Dp
-	CloseIconSize        unit.Dp
 	CloseInset           unit.Dp
 	TitleSize            unit.Sp
 	BodyTextSize         unit.Sp
@@ -1228,16 +1197,9 @@ func DefaultTheme() Theme {
 				PlacementOffsetRatio: 0.25,
 			},
 			Card: CardTheme{
-				Padding:               16,
-				Gap:                   12,
-				Radius:                24,
-				HeaderGap:             0,
-				ContentGap:            4,
-				FooterGap:             0,
-				TitleSize:             14,
-				TitleLineHeight:       24,
-				DescriptionSize:       14,
-				DescriptionLineHeight: 20,
+				Padding: 16,
+				Gap:     12,
+				Radius:  24,
 			},
 			Alert: AlertTheme{
 				PaddingX:              16,
@@ -1364,16 +1326,6 @@ func DefaultTheme() Theme {
 				LargeSize:   36,
 				StrokeRatio: 4.0 / 36.0,
 			},
-			Meter: MeterTheme{
-				SmallHeight:  4,
-				MediumHeight: 8,
-				LargeHeight:  12,
-				SmallRadius:  2,
-				MediumRadius: 4,
-				LargeRadius:  6,
-				HeaderGap:    4,
-				TextSize:     14,
-			},
 			Spinner: SpinnerTheme{
 				SmallSize:      16,
 				MediumSize:     24,
@@ -1498,12 +1450,6 @@ func DefaultTheme() Theme {
 				ControlPressed: color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff},
 				CloseHover:     color.NRGBA{R: 0xc4, G: 0x2b, B: 0x1c, A: 0xff},
 				ClosePressed:   color.NRGBA{R: 0xa3, G: 0x21, B: 0x16, A: 0xff},
-			},
-			StatusBar: StatusBarTheme{
-				Height:      28,
-				PaddingX:    10,
-				Gap:         8,
-				BorderWidth: 1,
 			},
 			Toolbar: ToolbarTheme{
 				Gap:             8,
@@ -1835,8 +1781,6 @@ func DefaultTheme() Theme {
 				ContentGap:        6,
 				IndicatorPadding:  4,
 				IndicatorSize:     16,
-				CloseSize:         20,
-				CloseIconSize:     12,
 				CloseInset:        -4,
 				FocusRingWidth:    2,
 				TitleSize:         14,
@@ -1861,8 +1805,6 @@ func DefaultTheme() Theme {
 				FooterGap:            8,
 				SectionGap:           20,
 				IconSize:             40,
-				CloseSize:            24,
-				CloseIconSize:        16,
 				CloseInset:           16,
 				TitleSize:            16,
 				BodyTextSize:         14,

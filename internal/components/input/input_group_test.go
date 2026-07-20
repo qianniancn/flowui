@@ -89,11 +89,12 @@ func TestInputGroupHeroUIDefaultTheme(t *testing.T) {
 	if tokens.MinHeight != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.TextAreaMinHeight != 38 || tokens.TextAreaPaddingY != 8 || tokens.DividerWidth != 0 {
 		t.Fatalf("input group geometry = %#v", tokens)
 	}
-	if tokens.TextSize != 14 || tokens.LineHeight != 20 || tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 {
+	if tokens.TextSize != 14 || tokens.LineHeight != 20 || tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 || tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
 		t.Fatalf("input group state tokens = %#v", tokens)
 	}
-	if got := theme.DarkTheme().Components.InputGroup.ShadowOpacity; got != 0 {
-		t.Fatalf("dark input group shadow opacity = %v, want 0", got)
+	darkTokens := theme.DarkTheme().Components.InputGroup
+	if darkTokens.ShadowOpacity != 0 || darkTokens.ShadowStrength != 1.5 {
+		t.Fatalf("dark input group shadow = %#v", darkTokens)
 	}
 }
 
@@ -198,20 +199,20 @@ func TestInputGroupStylesMatchHeroUIStates(t *testing.T) {
 	invalid := inputGroupStyleFor(&activeTheme, InputPrimary, false, false, false, true)
 	disabled := inputGroupStyleFor(&activeTheme, InputPrimary, false, false, true, false)
 
-	if primary.Background != activeTheme.Palette.Surface || primary.ShadowOpacity != 1 || primary.Divider != activeTheme.Palette.Border {
+	if primary.Background != activeTheme.Palette.FieldBackgroundColor() || primary.ShadowOpacity != 1 || primary.Divider != activeTheme.Palette.Border {
 		t.Fatalf("primary style = %#v", primary)
 	}
 	wantPrimaryHover := color.NRGBA{R: 0xf8, G: 0xf8, B: 0xf9, A: 0xff}
 	if hovered.Background != wantPrimaryHover {
 		t.Fatalf("primary hover = %#v, want %#v", hovered.Background, wantPrimaryHover)
 	}
-	if focused.Background != activeTheme.Palette.Surface || focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 {
+	if focused.Background != activeTheme.Palette.FieldFocusColor() || focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 {
 		t.Fatalf("focused style = %#v", focused)
 	}
-	if secondary.Background != activeTheme.Palette.SurfacePressed || secondary.ShadowOpacity != 0 {
+	if secondary.Background != activeTheme.Palette.DefaultColor() || secondary.ShadowOpacity != 0 {
 		t.Fatalf("secondary style = %#v", secondary)
 	}
-	if secondaryHovered.Background != activeTheme.Palette.Border {
+	if secondaryHovered.Background != activeTheme.Palette.DefaultHoverColor() {
 		t.Fatalf("secondary hover = %#v", secondaryHovered)
 	}
 	if invalid.Ring != activeTheme.Palette.Danger || invalid.RingWidth != 1 {
@@ -219,6 +220,10 @@ func TestInputGroupStylesMatchHeroUIStates(t *testing.T) {
 	}
 	if disabled.Opacity != activeTheme.DisabledOpacityValue() {
 		t.Fatalf("disabled opacity = %v", disabled.Opacity)
+	}
+	darkTheme := theme.DarkTheme()
+	if dark := inputGroupStyleFor(&darkTheme, InputPrimary, false, false, false, false); dark.Background != darkTheme.Palette.FieldBackgroundColor() || dark.ShadowOpacity != 0 {
+		t.Fatalf("dark input group style = %#v", dark)
 	}
 }
 

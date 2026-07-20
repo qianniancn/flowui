@@ -16,13 +16,13 @@ const (
 
 func ResolveStyle(theme *theme.Theme, variant Variant, hovered, focused, disabled, invalid bool) Style {
 	transparent := color.NRGBA{}
-	foreground := theme.Palette.Foreground
-	placeholder := theme.Palette.MutedForeground
-	fieldBg := theme.Palette.Surface
-	fieldHover := theme.Palette.SurfaceHover
-	fieldFocus := theme.Palette.Surface
-	defaultBg := theme.Palette.SurfaceRaised
-	defaultHover := theme.Palette.SurfacePressed
+	foreground := theme.Palette.FieldForegroundColor()
+	placeholder := theme.Palette.FieldPlaceholderColor()
+	fieldBg := theme.Palette.FieldBackgroundColor()
+	fieldHover := theme.Palette.FieldHoverColor()
+	fieldFocus := theme.Palette.FieldFocusColor()
+	defaultBg := theme.Palette.DefaultColor()
+	defaultHover := theme.Palette.DefaultHoverColor()
 	accent := theme.Palette.Accent
 	danger := theme.Palette.Danger
 

@@ -23,8 +23,8 @@ func TestResolveStylePrimary(t *testing.T) {
 
 func TestResolveStyleSecondary(t *testing.T) {
 	value := ResolveStyle(defaultTheme(), Secondary, false, false, false, false)
-	if value.Background != (color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff}) {
-		t.Fatalf("secondary background = %v, want raised surface", value.Background)
+	if value.Background != (color.NRGBA{R: 0xeb, G: 0xeb, B: 0xec, A: 0xff}) {
+		t.Fatalf("secondary background = %v, want default", value.Background)
 	}
 	if value.ShadowOpacity != 0 {
 		t.Fatalf("secondary shadow opacity = %v, want 0", value.ShadowOpacity)
@@ -33,11 +33,28 @@ func TestResolveStyleSecondary(t *testing.T) {
 
 func TestResolveStyleHover(t *testing.T) {
 	value := ResolveStyle(defaultTheme(), Primary, true, false, false, false)
-	if value.Background != (color.NRGBA{R: 0xfa, G: 0xfa, B: 0xfa, A: 0xff}) {
+	if value.Background != (color.NRGBA{R: 0xf8, G: 0xf8, B: 0xf9, A: 0xff}) {
 		t.Fatalf("hover background = %v, want field hover", value.Background)
 	}
 	if value.Border.A != 0 || value.BorderWidth != 0 {
 		t.Fatalf("hover border = %v at %v, want none", value.Border, value.BorderWidth)
+	}
+}
+
+func TestResolveStyleUsesDarkFieldTokens(t *testing.T) {
+	activeTheme := theme.DarkTheme()
+	primary := ResolveStyle(&activeTheme, Primary, false, false, false, false)
+	hovered := ResolveStyle(&activeTheme, Primary, true, false, false, false)
+	secondary := ResolveStyle(&activeTheme, Secondary, false, false, false, false)
+
+	if primary.Background != activeTheme.Palette.FieldBackground || primary.Foreground != activeTheme.Palette.FieldForeground || primary.Placeholder != activeTheme.Palette.FieldPlaceholder {
+		t.Fatalf("dark primary = %#v", primary)
+	}
+	if hovered.Background != activeTheme.Palette.FieldHover {
+		t.Fatalf("dark hover = %#v, want %#v", hovered.Background, activeTheme.Palette.FieldHover)
+	}
+	if secondary.Background != activeTheme.Palette.Default {
+		t.Fatalf("dark secondary = %#v, want %#v", secondary.Background, activeTheme.Palette.Default)
 	}
 }
 

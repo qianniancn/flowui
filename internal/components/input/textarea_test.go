@@ -2,6 +2,7 @@ package input
 
 import (
 	"image"
+	"image/color"
 	"testing"
 
 	"gioui.org/io/key"
@@ -105,11 +106,12 @@ func TestTextAreaHeroUIDefaultTheme(t *testing.T) {
 	if tokens.MinHeight != 38 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.PaddingY != 8 || tokens.TextSize != 14 || tokens.LineHeight != 20 {
 		t.Fatalf("textarea geometry = %#v", tokens)
 	}
-	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 {
+	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 || tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
 		t.Fatalf("textarea state tokens = %#v", tokens)
 	}
-	if dark := theme.DarkTheme().Components.TextArea.ShadowOpacity; dark != 0 {
-		t.Fatalf("dark textarea shadow opacity = %v, want 0", dark)
+	darkTokens := theme.DarkTheme().Components.TextArea
+	if darkTokens.ShadowOpacity != 0 || darkTokens.ShadowStrength != 1.5 {
+		t.Fatalf("dark textarea shadow = %#v", darkTokens)
 	}
 }
 
@@ -125,6 +127,10 @@ func TestTextAreaStyleUsesTextAreaThemeTokens(t *testing.T) {
 	secondary := textAreaStyleFor(&activeTheme, TextAreaSecondary, false, false, false, false)
 	if primary.ShadowOpacity != 0.25 || focused.RingWidth != 4 || invalid.RingWidth != 3 || secondary.ShadowOpacity != 0 {
 		t.Fatalf("textarea styles = primary %#v focused %#v invalid %#v secondary %#v", primary, focused, invalid, secondary)
+	}
+	darkTheme := theme.DarkTheme()
+	if dark := textAreaStyleFor(&darkTheme, TextAreaPrimary, false, false, false, false); dark.Background != darkTheme.Palette.FieldBackgroundColor() || dark.ShadowOpacity != 0 {
+		t.Fatalf("dark textarea style = %#v", dark)
 	}
 }
 

@@ -143,11 +143,21 @@ func TestInputHeroUIDefaultTheme(t *testing.T) {
 	if tokens.Height != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.TextSize != 14 || tokens.LineHeight != 20 {
 		t.Fatalf("input geometry = %#v", tokens)
 	}
-	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 {
+	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 {
 		t.Fatalf("input state tokens = %#v", tokens)
 	}
-	if dark := theme.DarkTheme().Components.Input.ShadowOpacity; dark != 0 {
-		t.Fatalf("dark input shadow opacity = %v, want 0", dark)
+	if tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
+		t.Fatalf("input shadow color = %#v, want enhanced black", tokens.ShadowColor)
+	}
+	darkTokens := theme.DarkTheme().Components.Input
+	if darkTokens.ShadowOpacity != 0 {
+		t.Fatalf("dark input shadow = color %#v opacity %v", darkTokens.ShadowColor, darkTokens.ShadowOpacity)
+	}
+	darkTheme := theme.DarkTheme()
+	if darkTheme.Palette.Background != (color.NRGBA{R: 0x06, G: 0x06, B: 0x07, A: 0xff}) ||
+		darkTheme.Palette.Surface != (color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff}) ||
+		darkTheme.Palette.DefaultColor() != (color.NRGBA{R: 0x27, G: 0x27, B: 0x2a, A: 0xff}) {
+		t.Fatalf("dark input backgrounds = page %#v primary %#v secondary %#v", darkTheme.Palette.Background, darkTheme.Palette.Surface, darkTheme.Palette.DefaultColor())
 	}
 	if activeTheme.Palette.Background != (color.NRGBA{R: 0xf5, G: 0xf5, B: 0xf5, A: 0xff}) {
 		t.Fatalf("light background = %#v, want HeroUI neutral background", activeTheme.Palette.Background)
@@ -253,20 +263,20 @@ func TestInputStylesMatchHeroUIStates(t *testing.T) {
 	focusedInvalid := inputStyleFor(&activeTheme, InputPrimary, false, true, false, true)
 	disabled := inputStyleFor(&activeTheme, InputPrimary, false, false, true, false)
 
-	if primary.Background != activeTheme.Palette.Surface || primary.ShadowOpacity != 1 {
+	if primary.Background != activeTheme.Palette.FieldBackgroundColor() || primary.ShadowOpacity != 1 {
 		t.Fatalf("primary style = %#v", primary)
 	}
-	if secondary.Background != activeTheme.Palette.SurfacePressed || secondary.ShadowOpacity != 0 {
+	if secondary.Background != activeTheme.Palette.DefaultColor() || secondary.ShadowOpacity != 0 {
 		t.Fatalf("secondary style = %#v", secondary)
 	}
-	if secondaryHovered.Background != activeTheme.Palette.Border {
+	if secondaryHovered.Background != activeTheme.Palette.DefaultHoverColor() {
 		t.Fatalf("secondary hover background = %#v", secondaryHovered.Background)
 	}
 	wantPrimaryHover := color.NRGBA{R: 0xf8, G: 0xf8, B: 0xf9, A: 0xff}
 	if hovered.Background != wantPrimaryHover {
 		t.Fatalf("hover background = %#v, want %#v", hovered.Background, wantPrimaryHover)
 	}
-	if focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 || focused.Background != activeTheme.Palette.Surface {
+	if focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 || focused.Background != activeTheme.Palette.FieldFocusColor() {
 		t.Fatalf("focused style = %#v", focused)
 	}
 	if invalid.Ring != activeTheme.Palette.Danger || invalid.RingWidth != 1 {
@@ -312,23 +322,33 @@ func TestInputRingWidthAnimation(t *testing.T) {
 	}
 }
 
-func TestInputUsesThreeLayerHeroUIShadow(t *testing.T) {
+func TestInputUsesEnhancedThreeLayerShadow(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	layers := render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, 1).EffectiveLayers()
+	tokens := activeTheme.Components.Input
+	layers := fieldShadow(&activeTheme, tokens.ShadowColor, tokens.ShadowOpacity, tokens.ShadowStrength).EffectiveLayers()
 	if len(layers) != 3 {
 		t.Fatalf("shadow layer count = %d, want 3", len(layers))
 	}
-	if layers[0].OffsetY != 0 || layers[0].Blur != 1 || layers[0].Color.A != 0x0f {
+	if layers[0].OffsetY != 0 || layers[0].Blur != 1 || layers[0].Color != (color.NRGBA{A: 0x38}) {
 		t.Fatalf("first shadow layer = %#v", layers[0])
 	}
-	if layers[1].OffsetY != 1 || layers[1].Blur != 2 || layers[1].Color.A != 0x0f {
+	if layers[1].OffsetY != 1 || layers[1].Blur != 2 || layers[1].Color != (color.NRGBA{A: 0x38}) {
 		t.Fatalf("second shadow layer = %#v", layers[1])
 	}
-	if layers[2].OffsetY != 2 || layers[2].Blur != 4 || layers[2].Color.A != 0x0a {
+	if layers[2].OffsetY != 2 || layers[2].Blur != 4 || layers[2].Color != (color.NRGBA{A: 0x26}) {
 		t.Fatalf("third shadow layer = %#v", layers[2])
 	}
 	if got := render.ThemeShadow(activeTheme.Shadows.Control, color.NRGBA{A: 0xff}, .5).EffectiveLayers()[0].Color.A; got != 18 {
 		t.Fatalf("half opacity shadow alpha = %d, want 18", got)
+	}
+}
+
+func TestDarkInputDisablesFieldShadow(t *testing.T) {
+	activeTheme := theme.DarkTheme()
+	tokens := activeTheme.Components.Input
+	layers := fieldShadow(&activeTheme, tokens.ShadowColor, tokens.ShadowOpacity, tokens.ShadowStrength).EffectiveLayers()
+	if len(layers) != 0 {
+		t.Fatalf("dark shadow layer count = %d, want 0", len(layers))
 	}
 }
 

@@ -34,6 +34,26 @@ func (p Palette) DefaultHoverColor() color.NRGBA {
 	return ColorOr(p.DefaultHover, p.SurfacePressed)
 }
 
+func (p Palette) FieldBackgroundColor() color.NRGBA {
+	return ColorOr(p.FieldBackground, p.Surface)
+}
+
+func (p Palette) FieldHoverColor() color.NRGBA {
+	return ColorOr(p.FieldHover, p.SurfaceHover)
+}
+
+func (p Palette) FieldForegroundColor() color.NRGBA {
+	return ColorOr(p.FieldForeground, p.Foreground)
+}
+
+func (p Palette) FieldPlaceholderColor() color.NRGBA {
+	return ColorOr(p.FieldPlaceholder, p.MutedForeground)
+}
+
+func (p Palette) FieldFocusColor() color.NRGBA {
+	return ColorOr(p.FieldFocus, p.FieldBackgroundColor())
+}
+
 func (p Palette) SeparatorColor() color.NRGBA {
 	return ColorOr(p.Separator, p.Border)
 }

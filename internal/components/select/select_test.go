@@ -855,7 +855,7 @@ func TestSelectStylesMatchPrimaryAndSecondaryFields(t *testing.T) {
 	if primary.field.ShadowOpacity == 0 {
 		t.Fatal("primary select should keep field shadow")
 	}
-	if secondary.field.ShadowOpacity != 0 || secondary.field.Background != theme.Palette.SurfaceRaised {
+	if secondary.field.ShadowOpacity != 0 || secondary.field.Background != theme.Palette.DefaultColor() {
 		t.Fatal("secondary select does not match lower-emphasis field style")
 	}
 	if invalid.field.Border != theme.Palette.Danger {

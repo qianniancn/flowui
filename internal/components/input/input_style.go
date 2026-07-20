@@ -4,11 +4,8 @@ import (
 	"image/color"
 
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-const primaryHoverStrength float32 = 0.65
 
 type inputStyle struct {
 	Background    color.NRGBA
@@ -32,17 +29,13 @@ func textAreaStyleFor(activeTheme *theme.Theme, variant TextAreaVariant, hovered
 }
 
 func fieldStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool, focusRingWidth, invalidOutlineWidth unit.Dp, shadowOpacity float32) inputStyle {
-	background := activeTheme.Palette.Surface
-	hoverBackground := render.LerpColor(
-		activeTheme.Palette.Surface,
-		activeTheme.Palette.SurfaceSecondary,
-		primaryHoverStrength,
-	)
-	focusBackground := activeTheme.Palette.Surface
+	background := activeTheme.Palette.FieldBackgroundColor()
+	hoverBackground := activeTheme.Palette.FieldHoverColor()
+	focusBackground := activeTheme.Palette.FieldFocusColor()
 	if variant == InputSecondary {
-		background = activeTheme.Palette.SurfacePressed
-		hoverBackground = activeTheme.Palette.Border
-		focusBackground = activeTheme.Palette.SurfacePressed
+		background = activeTheme.Palette.DefaultColor()
+		hoverBackground = activeTheme.Palette.DefaultHoverColor()
+		focusBackground = activeTheme.Palette.DefaultColor()
 		shadowOpacity = 0
 	}
 	if hovered && !focused {
@@ -72,8 +65,8 @@ func fieldStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focu
 	}
 	return inputStyle{
 		Background:    background,
-		Foreground:    activeTheme.Palette.Foreground,
-		Placeholder:   activeTheme.Palette.MutedForeground,
+		Foreground:    activeTheme.Palette.FieldForegroundColor(),
+		Placeholder:   activeTheme.Palette.FieldPlaceholderColor(),
 		Selection:     activeTheme.Palette.Selection,
 		Ring:          ring,
 		RingWidth:     ringWidth,

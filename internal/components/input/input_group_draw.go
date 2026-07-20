@@ -15,12 +15,12 @@ func drawInputGroupFrame(gtx layout.Context, activeTheme *theme.Theme, rect imag
 		return
 	}
 	if style.ShadowOpacity > 0 {
-		radiusDp := activeTheme.Components.InputGroup.Radius
+		tokens := activeTheme.Components.InputGroup
 		render.DrawShadow(
 			gtx,
 			rect,
-			render.RoundedShadowCorners(radiusDp, radiusDp, radiusDp, radiusDp),
-			render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, style.ShadowOpacity),
+			render.RoundedShadowCorners(tokens.Radius, tokens.Radius, tokens.Radius, tokens.Radius),
+			fieldShadow(activeTheme, tokens.ShadowColor, style.ShadowOpacity, tokens.ShadowStrength),
 		)
 	}
 	drawInputRing(gtx, rect, radius, style.Ring, ringWidth)

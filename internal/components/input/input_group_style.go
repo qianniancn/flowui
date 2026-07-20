@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -21,18 +20,14 @@ type inputGroupStyle struct {
 }
 
 func inputGroupStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool) inputGroupStyle {
-	background := activeTheme.Palette.Surface
-	hoverBackground := render.LerpColor(
-		activeTheme.Palette.Surface,
-		activeTheme.Palette.SurfaceSecondary,
-		primaryHoverStrength,
-	)
-	focusBackground := activeTheme.Palette.Surface
+	background := activeTheme.Palette.FieldBackgroundColor()
+	hoverBackground := activeTheme.Palette.FieldHoverColor()
+	focusBackground := activeTheme.Palette.FieldFocusColor()
 	shadowOpacity := activeTheme.Components.InputGroup.ShadowOpacity
 	if variant == InputSecondary {
-		background = activeTheme.Palette.SurfacePressed
-		hoverBackground = activeTheme.Palette.Border
-		focusBackground = activeTheme.Palette.SurfacePressed
+		background = activeTheme.Palette.DefaultColor()
+		hoverBackground = activeTheme.Palette.DefaultHoverColor()
+		focusBackground = activeTheme.Palette.DefaultColor()
 		shadowOpacity = 0
 	}
 	if hovered && !focused {
@@ -62,8 +57,8 @@ func inputGroupStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered,
 	}
 	return inputGroupStyle{
 		Background:    background,
-		Foreground:    activeTheme.Palette.Foreground,
-		Placeholder:   activeTheme.Palette.MutedForeground,
+		Foreground:    activeTheme.Palette.FieldForegroundColor(),
+		Placeholder:   activeTheme.Palette.FieldPlaceholderColor(),
 		Selection:     activeTheme.Palette.Selection,
 		Ring:          ring,
 		Divider:       activeTheme.Palette.Border,

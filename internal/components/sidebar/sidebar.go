@@ -46,6 +46,7 @@ type Widget struct {
 	collapsed      bool
 	width          unit.Dp
 	collapsedWidth unit.Dp
+	itemHeight     unit.Dp
 }
 
 // New creates a controlled Sidebar.
@@ -94,6 +95,14 @@ func (w Widget) CollapsedWidth(dp int) Widget {
 		panic("flowui: sidebar collapsed width must be positive")
 	}
 	w.collapsedWidth = unit.Dp(dp)
+	return w
+}
+
+func (w Widget) ItemHeight(dp int) Widget {
+	if dp <= 0 {
+		panic("flowui: sidebar item height must be positive")
+	}
+	w.itemHeight = unit.Dp(dp)
 	return w
 }
 

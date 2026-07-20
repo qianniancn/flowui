@@ -168,7 +168,11 @@ func (w Widget) layoutItem(ctx *frame.Context, gtx layout.Context, sidebarState 
 			w.activate(item.Key)
 		}
 	}
-	height := min(max(gtx.Dp(tokens.ItemHeight), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
+	itemHeight := tokens.ItemHeight
+	if w.itemHeight > 0 {
+		itemHeight = w.itemHeight
+	}
+	height := min(max(gtx.Dp(itemHeight), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
 	size := image.Pt(gtx.Constraints.Max.X, height)
 	itemGtx := gtx
 	itemGtx.Constraints = layout.Exact(size)

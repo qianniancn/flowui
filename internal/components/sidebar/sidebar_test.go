@@ -31,6 +31,7 @@ func TestSidebarOptionsUseValueSemantics(t *testing.T) {
 		Collapsed(true).
 		Width(260).
 		CollapsedWidth(72).
+		ItemHeight(34).
 		Alt("Primary navigation").
 		EmptyText("Empty").
 		DisabledKeys(disabled).
@@ -40,7 +41,7 @@ func TestSidebarOptionsUseValueSemantics(t *testing.T) {
 	items[0].Key = "changed"
 	disabled[0] = "changed"
 
-	if widget.key != "primary" || widget.selectedKey != "home" || widget.items[0].Key != "home" || !widget.collapsed || widget.width != 260 || widget.collapsedWidth != 72 {
+	if widget.key != "primary" || widget.selectedKey != "home" || widget.items[0].Key != "home" || !widget.collapsed || widget.width != 260 || widget.collapsedWidth != 72 || widget.itemHeight != 34 {
 		t.Fatalf("Sidebar options = %#v", widget)
 	}
 	if widget.header != header || widget.footer != footer || widget.alt != "Primary navigation" || widget.emptyText != "Empty" || widget.disabledKeys[0] != "settings" || !widget.disabled {
@@ -133,6 +134,7 @@ func TestSidebarRejectsInvalidConfiguration(t *testing.T) {
 		{"duplicate item key", func() { validateSidebarItems([]Item{{Key: "same"}, {Key: "same"}}) }},
 		{"width", func() { New("primary", "", nil).Width(0) }},
 		{"collapsed width", func() { New("primary", "", nil).CollapsedWidth(-1) }},
+		{"item height", func() { New("primary", "", nil).ItemHeight(0) }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			defer func() {
@@ -142,6 +144,20 @@ func TestSidebarRejectsInvalidConfiguration(t *testing.T) {
 			}()
 			test.fn()
 		})
+	}
+}
+
+func TestSidebarItemHeightOverridesTheme(t *testing.T) {
+	ctx := sidebarTestContext(nil)
+	viewport := image.Pt(248, 100)
+	var ops op.Ops
+	gtx := layout.Context{Constraints: layout.Constraints{Max: viewport}, Ops: &ops}
+	item := Item{Key: "home", Label: "Home"}
+	dims := New("primary", "home", []Item{item}).
+		ItemHeight(32).
+		layoutItem(ctx, gtx, new(sidebarState), new(sidebarItemState), item, 1)
+	if dims.Size != image.Pt(248, 32) {
+		t.Fatalf("item dimensions = %v, want (248,32)", dims.Size)
 	}
 }
 

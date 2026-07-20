@@ -61,6 +61,11 @@ func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow
 		Variant(variant).
 		Radius(24).
 		Shadow(shadow)
+	if variant == ui.SurfaceSecondary {
+		surface = surface.
+			BorderWidth(2).
+			BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
+	}
 	if shadow {
 		surface = surface.Theme(func(theme *ui.Theme) {
 			theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}

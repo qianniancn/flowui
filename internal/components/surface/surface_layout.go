@@ -45,5 +45,9 @@ func (s SurfaceWidget) layout(ctx *frame.Context, gtx layout.Context, style surf
 		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 	}
 	content.Add(gtx.Ops)
+	if style.borderWidth > 0 && style.border.A != 0 && !rect.Empty() {
+		width := max(gtx.Dp(style.borderWidth), 1)
+		render.DrawRoundedBorder(gtx, rect, radius, width, style.border)
+	}
 	return dims
 }

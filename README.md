@@ -171,6 +171,16 @@ sibling widgets; composed children inherit the instance theme while that widget
 is being laid out. The callback runs during layout and should only modify the
 provided theme without side effects.
 
+`Surface` uses `Components.Surface.BorderWidth` and `Palette.Border` for its
+default border. The current instance can override either value directly:
+
+```go
+ui.Surface(content).
+	Radius(12).
+	BorderWidth(1).
+	BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
+```
+
 Shadow geometry is also part of the instance theme. Profiles contain three
 layers ordered from tightest to broadest; a layer with zero opacity is disabled:
 

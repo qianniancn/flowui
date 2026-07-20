@@ -21,15 +21,19 @@ const (
 
 // SurfaceWidget provides a semantic, theme-aware background for non-overlay content.
 type SurfaceWidget struct {
-	theme         func(*theme.Theme)
-	child         frame.Widget
-	variant       SurfaceVariant
-	radius        unit.Dp
-	shadow        bool
-	background    render.Brush
-	foreground    color.NRGBA
-	hasBackground bool
-	hasForeground bool
+	theme          func(*theme.Theme)
+	child          frame.Widget
+	variant        SurfaceVariant
+	radius         unit.Dp
+	shadow         bool
+	background     render.Brush
+	foreground     color.NRGBA
+	borderColor    color.NRGBA
+	borderWidth    unit.Dp
+	hasBackground  bool
+	hasForeground  bool
+	hasBorderColor bool
+	hasBorderWidth bool
 }
 
 func Surface(child frame.Widget) SurfaceWidget {
@@ -68,6 +72,18 @@ func (s SurfaceWidget) Foreground(col color.NRGBA) SurfaceWidget {
 	return s
 }
 
+func (s SurfaceWidget) BorderColor(col color.NRGBA) SurfaceWidget {
+	s.borderColor = col
+	s.hasBorderColor = true
+	return s
+}
+
+func (s SurfaceWidget) BorderWidth(dp int) SurfaceWidget {
+	s.borderWidth = unit.Dp(max(dp, 0))
+	s.hasBorderWidth = true
+	return s
+}
+
 func (s SurfaceWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
 		defer restore()
@@ -75,6 +91,12 @@ func (s SurfaceWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	style := surfaceStyleFor(frame.ActiveTheme(ctx), s.variant)
 	if s.hasForeground {
 		style.foreground = s.foreground
+	}
+	if s.hasBorderColor {
+		style.border = s.borderColor
+	}
+	if s.hasBorderWidth {
+		style.borderWidth = s.borderWidth
 	}
 	return s.layout(ctx, gtx, style)
 }

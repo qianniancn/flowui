@@ -158,6 +158,7 @@ type ComponentsTheme struct {
 	Chip              ChipTheme
 	Avatar            AvatarTheme
 	Badge             BadgeTheme
+	Surface           SurfaceTheme
 	Card              CardTheme
 	Alert             AlertTheme
 	AlertDialog       AlertDialogTheme
@@ -205,6 +206,10 @@ type ComponentsTheme struct {
 	ColorSlider       ColorSliderTheme
 	ColorSwatch       ColorSwatchTheme
 	ColorSwatchPicker ColorSwatchPickerTheme
+}
+
+type SurfaceTheme struct {
+	BorderWidth unit.Dp
 }
 
 type CardTheme struct {

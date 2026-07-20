@@ -5,8 +5,11 @@ import (
 	"image/color"
 	"testing"
 
+	"gioui.org/gpu/headless"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -157,15 +160,61 @@ func TestSurfaceOptionsKeepValueSemantics(t *testing.T) {
 		render.GradientStop{Offset: 1, Color: color.NRGBA{B: 255, A: 255}},
 	)
 	foreground := color.NRGBA{G: 255, A: 255}
-	styled := base.Variant(SurfaceTertiary).Radius(20).Shadow(true).Background(gradient).Foreground(foreground)
-	if base.variant != SurfaceDefault || base.radius != 0 || base.shadow || base.hasBackground || base.hasForeground {
+	border := color.NRGBA{R: 12, G: 34, B: 56, A: 255}
+	styled := base.Variant(SurfaceTertiary).Radius(20).Shadow(true).Background(gradient).Foreground(foreground).BorderWidth(2).BorderColor(border)
+	if base.variant != SurfaceDefault || base.radius != 0 || base.shadow || base.hasBackground || base.hasForeground || base.hasBorderWidth || base.hasBorderColor {
 		t.Fatal("surface options mutated the original value")
 	}
-	if styled.variant != SurfaceTertiary || styled.radius != 20 || !styled.shadow || !styled.hasBackground || !styled.hasForeground || styled.foreground != foreground {
+	if styled.variant != SurfaceTertiary || styled.radius != 20 || !styled.shadow || !styled.hasBackground || !styled.hasForeground || styled.foreground != foreground || styled.borderWidth != 2 || styled.borderColor != border {
 		t.Fatal("surface options did not configure the returned value")
 	}
 	if got := base.Radius(-10).radius; got != 0 {
 		t.Fatalf("negative radius = %v, want 0", got)
+	}
+	if got := base.BorderWidth(-1).borderWidth; got != 0 {
+		t.Fatalf("negative border width = %v, want 0", got)
+	}
+}
+
+func TestSurfaceStyleUsesThemeBorder(t *testing.T) {
+	activeTheme := DefaultTheme()
+	activeTheme.Components.Surface.BorderWidth = 2
+	activeTheme.Palette.Border = color.NRGBA{R: 12, G: 34, B: 56, A: 255}
+
+	style := surfaceStyleFor(&activeTheme, SurfaceDefault)
+	if style.borderWidth != 2 || style.border != activeTheme.Palette.Border {
+		t.Fatalf("surface border = %v/%#v", style.borderWidth, style.border)
+	}
+}
+
+func TestSurfaceBorderPaintsAboveChild(t *testing.T) {
+	window, err := headless.NewWindow(40, 40)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	activeTheme := DefaultTheme()
+	ctx := newContextWithTheme(nil, &activeTheme)
+	var ops op.Ops
+	childColor := color.NRGBA{G: 0xff, A: 0xff}
+	borderColor := color.NRGBA{R: 0xff, A: 0xff}
+	Surface(paintedSurfaceChild{color: childColor}).
+		BorderWidth(3).
+		BorderColor(borderColor).
+		Layout(ctx, layout.Context{Constraints: layout.Exact(image.Pt(40, 40)), Ops: &ops})
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 40, 40))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	if got := pixels.RGBAAt(1, 20); got.R <= got.G {
+		t.Fatalf("border pixel = %#v, want border above child", got)
+	}
+	if got := pixels.RGBAAt(20, 20); got.G <= got.R {
+		t.Fatalf("center pixel = %#v, want child content", got)
 	}
 }
 
@@ -244,6 +293,16 @@ type surfaceProbeWidget struct {
 	foreground color.NRGBA
 	background color.NRGBA
 	shadowBlur unit.Dp
+}
+
+type paintedSurfaceChild struct {
+	color color.NRGBA
+}
+
+func (w paintedSurfaceChild) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	size := gtx.Constraints.Constrain(gtx.Constraints.Max)
+	paint.FillShape(gtx.Ops, w.color, clip.Rect(image.Rectangle{Max: size}).Op())
+	return layout.Dimensions{Size: size}
 }
 
 func (w *surfaceProbeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {

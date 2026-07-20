@@ -537,7 +537,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			externalWidget{},
 			ui.Row(ui.Text("Footer")),
 		).Variant(ui.CardSecondary),
-		ui.Surface(externalWidget{}).Theme(func(theme *ui.Theme) {
+		ui.Surface(externalWidget{}).BorderWidth(1).BorderColor(color.NRGBA{A: 0xff}).Theme(func(theme *ui.Theme) {
 			theme.Shadows.Surface.Layers[1].Blur = 12
 		}),
 		ui.Surface(
@@ -919,6 +919,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.ColorSliderTheme
 	var _ ui.ColorSwatchTheme
 	var _ ui.ColorSwatchPickerTheme
+	var _ ui.SurfaceTheme
 	var _ ui.ShadowLayerTheme
 	var _ ui.ShadowTheme
 	var _ ui.ShadowsTheme

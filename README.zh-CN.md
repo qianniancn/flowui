@@ -161,6 +161,16 @@ ui.Button("save", ui.Text("保存")).Theme(func(theme *ui.Theme) {
 不会修改应用主题或泄漏到同级 Widget；组合在当前 Widget 内部的子组件会在布局
 期间继承该实例主题。回调在布局阶段执行，应只修改传入的主题，不要包含业务副作用。
 
+`Surface` 默认使用 `Components.Surface.BorderWidth` 和 `Palette.Border`
+控制边框，也可以直接覆盖当前实例：
+
+```go
+ui.Surface(content).
+	Radius(12).
+	BorderWidth(1).
+	BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
+```
+
 阴影几何参数同样属于实例主题。每种阴影包含由近到远排列的三层，透明度为零的层
 不会绘制：
 

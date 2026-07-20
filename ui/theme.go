@@ -21,6 +21,7 @@ type CloseButtonTheme = theme.CloseButtonTheme
 type ChipTheme = theme.ChipTheme
 type AvatarTheme = theme.AvatarTheme
 type BadgeTheme = theme.BadgeTheme
+type SurfaceTheme = theme.SurfaceTheme
 type CardTheme = theme.CardTheme
 type AlertTheme = theme.AlertTheme
 type AlertDialogTheme = theme.AlertDialogTheme

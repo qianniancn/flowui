@@ -36,6 +36,53 @@ func TestColorPickerOptionsUseValueSemantics(t *testing.T) {
 	}
 }
 
+func TestColorPickerPointerTriggerFocusIsNotKeyboardVisible(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	picker := ColorPicker("brand", color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255}).Label("Accent color")
+	start := time.Unix(1, 0)
+	layoutColorPickerFrame(ctx, router, picker, start)
+	state := colorPickerTestState(ctx, "brand")
+
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(60, 18)})
+	layoutColorPickerFrame(ctx, router, picker, start.Add(time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(60, 18)})
+	layoutColorPickerFrame(ctx, router, picker, start.Add(2*time.Millisecond))
+	layoutColorPickerFrame(ctx, router, picker, start.Add(3*time.Millisecond))
+
+	if !state.open || !router.Source().Focused(&state.trigger) {
+		t.Fatal("pointer click did not open and focus the color picker trigger")
+	}
+	if frame.FocusVisible(ctx, &state.trigger, true) {
+		t.Fatal("pointer click exposed the color picker keyboard focus ring")
+	}
+}
+
+func TestColorPickerKeyboardTriggerFocusRemainsVisible(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	picker := ColorPicker("brand", color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255}).Label("Accent color")
+	start := time.Unix(1, 0)
+	layoutColorPickerFrame(ctx, router, picker, start)
+	state := colorPickerTestState(ctx, "brand")
+	router.Source().Execute(key.FocusCmd{Tag: &state.trigger})
+	layoutColorPickerFrame(ctx, router, picker, start.Add(time.Millisecond))
+
+	router.Queue(
+		key.Event{Name: key.NameReturn, State: key.Press},
+		key.Event{Name: key.NameReturn, State: key.Release},
+	)
+	layoutColorPickerFrame(ctx, router, picker, start.Add(2*time.Millisecond))
+	layoutColorPickerFrame(ctx, router, picker, start.Add(3*time.Millisecond))
+
+	if !state.open || !router.Source().Focused(&state.trigger) {
+		t.Fatal("keyboard activation did not open and retain color picker trigger focus")
+	}
+	if !frame.FocusVisible(ctx, &state.trigger, true) {
+		t.Fatal("keyboard activation hid the color picker focus ring")
+	}
+}
+
 func TestIndependentColorComponentsUseValueSemantics(t *testing.T) {
 	value := color.NRGBA{R: 1, G: 2, B: 3, A: 255}
 	colors := []color.NRGBA{{R: 4, A: 255}}

@@ -5,8 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/field"
@@ -76,6 +78,29 @@ func TestDateFieldArrowNavigationUsesLocaleOrder(t *testing.T) {
 
 	if !router.Source().Focused(&componentState.segments.segments[DatePartDay].clickable) {
 		t.Fatal("English right arrow did not move from month to day")
+	}
+}
+
+func TestDateFieldPointerSegmentFocusIsNotKeyboardVisible(t *testing.T) {
+	ctx := newContextWithThemeAndLanguage(nil, nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	widget := DateField("date", testDate(2026, 7, 9)).FullWidth()
+	start := testDate(2026, 7, 1)
+	layoutDateComponentFrame(ctx, router, widget, start)
+	state := testComponentState[dateFieldState](ctx, "date", stateSlotDateField)
+	month := &state.segments.segments[DatePartMonth].clickable
+
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(20, 18)})
+	layoutDateComponentFrame(ctx, router, widget, start.Add(time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(20, 18)})
+	layoutDateComponentFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	layoutDateComponentFrame(ctx, router, widget, start.Add(3*time.Millisecond))
+
+	if !router.Source().Focused(month) {
+		t.Fatal("pointer click did not focus the date segment")
+	}
+	if frame.FocusVisible(ctx, month, true) {
+		t.Fatal("pointer click exposed the date segment keyboard focus ring")
 	}
 }
 

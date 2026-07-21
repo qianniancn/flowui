@@ -113,15 +113,15 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, listSt
 	disabled := l.itemDisabled(item)
 	selected := l.isSelected(item.Key)
 	animGtx := gtx
-	presses := state.ActivePresses(itemState.Clickable.History())
+	presses := state.SnapshotPresses(itemState.Clickable.History())
 	if disabled {
 		gtx = gtx.Disabled()
 	} else {
 		for itemState.Clickable.Clicked(gtx) {
 			l.activate(item.Key)
-			frame.RequestFocus(ctx, &itemState.Clickable)
+			frame.RequestFocusVisible(ctx, &itemState.Clickable, presses.ClickFocusVisible(itemState.Clickable.History()))
 		}
-		frame.FocusOnPress(ctx, &itemState.Clickable, itemState.Clickable.History(), presses)
+		frame.FocusOnPress(ctx, &itemState.Clickable, itemState.Clickable.History(), presses.Active())
 	}
 
 	return itemState.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {

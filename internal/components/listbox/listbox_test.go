@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/text"
@@ -161,6 +163,47 @@ func TestListBoxClickActivatesItem(t *testing.T) {
 	}
 	if action != "rust" {
 		t.Fatalf("action = %q, want rust", action)
+	}
+}
+
+func TestListBoxPointerClickDoesNotShowKeyboardFocus(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	selected := "go"
+	widget := func() ListBoxWidget {
+		return ListBox("languages", selected, listBoxTestItems()).
+			FullWidth().
+			OnChange(func(key string) { selected = key })
+	}
+	layoutFrame := func(now time.Time) {
+		viewport := image.Pt(300, 200)
+		var ops op.Ops
+		gtx := layout.Context{Constraints: layout.Constraints{Max: viewport}, Source: router.Source(), Ops: &ops, Now: now}
+		frame.BeginFrameWithViewport(ctx, viewport)
+		widget().Layout(ctx, gtx)
+		frame.ApplyFrameCommands(ctx, gtx)
+		frame.EndFrame(ctx)
+		router.Frame(&ops)
+	}
+
+	now := time.Unix(4, 0)
+	layoutFrame(now)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(30, 70)})
+	layoutFrame(now.Add(time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(30, 70)})
+	layoutFrame(now.Add(2 * time.Millisecond))
+	layoutFrame(now.Add(3 * time.Millisecond))
+
+	state, _ := frame.PeekState[listBoxState](ctx, "languages", stateSlotListBox)
+	item := state.items["rust"]
+	if selected != "rust" {
+		t.Fatalf("selected = %q, want rust", selected)
+	}
+	if !router.Source().Focused(&item.Clickable) {
+		t.Fatal("pointer click did not focus the selected item")
+	}
+	if frame.FocusVisible(ctx, &item.Clickable, true) {
+		t.Fatal("pointer click displayed a keyboard focus ring")
 	}
 }
 

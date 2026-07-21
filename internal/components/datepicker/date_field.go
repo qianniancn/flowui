@@ -366,13 +366,13 @@ func (s *dateSegmentsState) layout(ctx *frame.Context, gtx layout.Context, local
 
 func (s *dateSegmentsState) updateSegment(ctx *frame.Context, gtx layout.Context, index int, order [3]DatePart, enabled bool, minDate, maxDate time.Time, onChange func(time.Time)) {
 	segment := &s.segments[index]
-	presses := state.ActivePresses(segment.clickable.History())
+	presses := state.SnapshotPresses(segment.clickable.History())
 	if enabled {
 		for segment.clickable.Clicked(gtx) {
 			segment.typed = ""
-			frame.RequestFocus(ctx, &segment.clickable)
+			frame.RequestFocusVisible(ctx, &segment.clickable, presses.ClickFocusVisible(segment.clickable.History()))
 		}
-		frame.FocusOnPress(ctx, &segment.clickable, segment.clickable.History(), presses)
+		frame.FocusOnPress(ctx, &segment.clickable, segment.clickable.History(), presses.Active())
 	}
 	if !enabled || !gtx.Focused(&segment.clickable) {
 		return

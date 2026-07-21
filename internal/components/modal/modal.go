@@ -291,12 +291,12 @@ func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, m
 		m.requestClose()
 	}
 	if m.showCloseButton() {
-		presses := state.ActivePresses(modalStateValue.close.History())
+		presses := state.SnapshotPresses(modalStateValue.close.History())
 		for modalStateValue.close.Clicked(gtx) {
 			m.requestClose()
-			frame.RequestFocus(ctx, &modalStateValue.close)
+			frame.RequestFocusVisible(ctx, &modalStateValue.close, presses.ClickFocusVisible(modalStateValue.close.History()))
 		}
-		frame.FocusOnPress(ctx, &modalStateValue.close, modalStateValue.close.History(), presses)
+		frame.FocusOnPress(ctx, &modalStateValue.close, modalStateValue.close.History(), presses.Active())
 	}
 	for i := range modalStateValue.dismiss {
 		for modalStateValue.dismiss[i].Clicked(gtx) {

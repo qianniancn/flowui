@@ -95,6 +95,9 @@ func TestLabelFocusesAssociatedControls(t *testing.T) {
 			if !router.Source().Focused(target) {
 				t.Fatal("associated control did not gain focus")
 			}
+			if frame.FocusVisible(ctx, target, true) {
+				t.Fatal("pointer-clicked label exposed keyboard-visible field focus")
+			}
 		})
 	}
 }

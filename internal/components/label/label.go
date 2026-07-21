@@ -3,6 +3,7 @@ package label
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -61,11 +62,12 @@ func (l LabelWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 
 	fieldKey := l.registerFieldAssociation(ctx)
 	_, clickable := frame.DerivedClickableWithKey(ctx, l.forKey, "label")
+	presses := state.SnapshotPresses(clickable.History())
 	if disabled {
 		gtx = gtx.Disabled()
 	} else {
 		for clickable.Clicked(gtx) {
-			frame.RequestFieldFocus(ctx, fieldKey)
+			frame.RequestFieldFocusVisible(ctx, fieldKey, presses.ClickFocusVisible(clickable.History()))
 		}
 	}
 	return clickable.Layout(gtx, content)

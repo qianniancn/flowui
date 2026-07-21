@@ -220,7 +220,10 @@ func TestComboBoxClickSelectsItem(t *testing.T) {
 	if item == nil {
 		t.Fatal("missing dog item state")
 	}
-	item.Clickable.Click()
+	position := f32.Pt(20, 106)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: position})
+	layoutComboBoxFrame(ctx, router, combo)
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: position})
 	layoutComboBoxFrame(ctx, router, combo)
 
 	if got != "dog" {
@@ -228,6 +231,9 @@ func TestComboBoxClickSelectsItem(t *testing.T) {
 	}
 	if state.open {
 		t.Fatal("combobox stayed open after selection")
+	}
+	if frame.FocusVisible(ctx, &state.editor, true) {
+		t.Fatal("pointer-selected item exposed keyboard-visible editor focus")
 	}
 	if text := state.editor.Text(); text != "Dog" {
 		t.Fatalf("editor text = %q, want Dog", text)
@@ -313,6 +319,9 @@ func TestComboBoxPanelPaddingPressKeepsFocusAndBlocksBackground(t *testing.T) {
 	}
 	if !router.Source().Focused(&comboState.editor) {
 		t.Fatal("panel padding release cleared editor focus")
+	}
+	if frame.FocusVisible(ctx, &comboState.editor, true) {
+		t.Fatal("panel padding click exposed keyboard-visible editor focus")
 	}
 	if backgroundClicked {
 		t.Fatal("panel padding click reached the background control")
@@ -485,6 +494,12 @@ func TestComboBoxFirstTriggerClickStaysOpen(t *testing.T) {
 	layoutComboBoxFrame(ctx, router, combo)
 	if !state.open {
 		t.Fatal("first trigger click closed combobox on release")
+	}
+	if !router.Source().Focused(&state.editor) {
+		t.Fatal("trigger click did not focus the combobox editor")
+	}
+	if frame.FocusVisible(ctx, &state.editor, true) {
+		t.Fatal("pointer trigger click exposed keyboard-visible editor focus")
 	}
 	if state.highlight != -1 {
 		t.Fatalf("highlight = %d, want no keyboard highlight", state.highlight)

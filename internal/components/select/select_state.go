@@ -164,7 +164,7 @@ func (s *selectState) closeForPeer() {
 }
 
 func (s *selectState) handleTrigger(ctx *frame.Context, gtx layout.Context, widget SelectWidget, open bool) bool {
-	presses := state.ActivePresses(s.trigger.History())
+	presses := state.SnapshotPresses(s.trigger.History())
 	if widget.disabled {
 		s.open = false
 		s.focusIntent = selectFocusNone
@@ -181,9 +181,9 @@ func (s *selectState) handleTrigger(ctx *frame.Context, gtx layout.Context, widg
 			s.focusVisibleIntent = false
 			open = s.requestOpen(ctx, widget, true)
 		}
-		frame.RequestFocus(ctx, &s.trigger)
+		frame.RequestFocusVisible(ctx, &s.trigger, presses.ClickFocusVisible(s.trigger.History()))
 	}
-	frame.FocusOnPress(ctx, &s.trigger, s.trigger.History(), presses)
+	frame.FocusOnPress(ctx, &s.trigger, s.trigger.History(), presses.Active())
 	return s.handleTriggerKeys(ctx, gtx, widget, open)
 }
 

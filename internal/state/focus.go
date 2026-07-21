@@ -39,6 +39,44 @@ type focusTarget struct {
 	applied     bool
 }
 
+// PressSnapshot records pointer history before a Clickable processes events.
+type PressSnapshot struct {
+	active  int
+	count   int
+	latest  widget.Press
+	hasLast bool
+}
+
+// SnapshotPresses captures the pointer presses currently known to a Clickable.
+func SnapshotPresses(history []widget.Press) PressSnapshot {
+	snapshot := PressSnapshot{
+		active: ActivePresses(history),
+		count:  len(history),
+	}
+	if snapshot.count > 0 {
+		snapshot.latest = history[snapshot.count-1]
+		snapshot.hasLast = true
+	}
+	return snapshot
+}
+
+// Active reports how many pointer presses were active in the snapshot.
+func (s PressSnapshot) Active() int {
+	return s.active
+}
+
+// ClickFocusVisible reports whether a subsequent click was not pointer-driven.
+func (s PressSnapshot) ClickFocusVisible(history []widget.Press) bool {
+	if s.active > 0 || len(history) > s.count {
+		return false
+	}
+	if len(history) == 0 || !s.hasLast {
+		return true
+	}
+	latest := history[len(history)-1]
+	return latest.Start == s.latest.Start && latest.Position == s.latest.Position
+}
+
 func (f *Focus) BeginFrame() {
 	f.frame++
 	f.pointerPress = false

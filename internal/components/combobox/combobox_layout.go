@@ -60,10 +60,11 @@ func (c ComboBoxWidget) layoutInput(ctx *frame.Context, gtx layout.Context, stat
 
 func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, size image.Point, style field.Style) {
 	triggerSize := image.Pt(min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.TriggerWidth), size.X), size.Y)
+	presses := state.SnapshotPresses(comboState.trigger.History())
 	if !c.disabled {
 		for comboState.trigger.Clicked(gtx) {
 			comboState.open = !comboState.open
-			frame.RequestFocus(ctx, editor)
+			frame.RequestFocusVisible(ctx, editor, presses.ClickFocusVisible(comboState.trigger.History()))
 		}
 	}
 
@@ -118,10 +119,10 @@ func (c ComboBoxWidget) layoutOpen(ctx *frame.Context, gtx layout.Context, state
 func (c ComboBoxWidget) layoutPanelOverlay(ctx *frame.Context, gtx, panelGtx layout.Context, comboState *comboBoxState, editor *widget.Editor, visible []int, anchor image.Rectangle, progress float32, interactive bool) layout.Dimensions {
 	if interactive {
 		for comboState.dialog.Clicked(gtx) {
-			frame.RequestFocus(ctx, editor)
+			frame.RequestFocusVisible(ctx, editor, false)
 		}
 		if comboState.dialog.TakePressed() {
-			frame.RequestFocus(ctx, editor)
+			frame.RequestFocusVisible(ctx, editor, false)
 		}
 	}
 	theme := frame.ActiveTheme(ctx).Components.ComboBox
@@ -217,13 +218,13 @@ func (c ComboBoxWidget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layo
 
 func (c ComboBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, item ComboBoxItem, selected, highlighted bool) layout.Dimensions {
 	itemState := comboState.item(item.Key)
-	presses := state.ActivePresses(itemState.Clickable.History())
+	presses := state.SnapshotPresses(itemState.Clickable.History())
 	if !item.Disabled {
 		for itemState.Clickable.Clicked(gtx) {
 			c.selectItem(editor, comboState, item)
-			frame.RequestFocus(ctx, editor)
+			frame.RequestFocusVisible(ctx, editor, presses.ClickFocusVisible(itemState.Clickable.History()))
 		}
-		frame.FocusOnPress(ctx, editor, itemState.Clickable.History(), presses)
+		frame.FocusOnPress(ctx, editor, itemState.Clickable.History(), presses.Active())
 	}
 	if item.Disabled {
 		gtx = gtx.Disabled()

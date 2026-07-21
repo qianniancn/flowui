@@ -335,9 +335,13 @@ func RegisterFieldFocus(ctx *Context, key string, tag event.Tag, enabled bool) {
 }
 
 func RequestFieldFocus(ctx *Context, key string) {
+	RequestFieldFocusVisible(ctx, key, true)
+}
+
+func RequestFieldFocusVisible(ctx *Context, key string, visible bool) {
 	target, ok := ctx.fieldFocus[key]
 	if ok && target.enabled {
-		RequestFocus(ctx, target.tag)
+		RequestFocusVisible(ctx, target.tag, visible)
 	}
 }
 

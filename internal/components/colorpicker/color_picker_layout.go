@@ -20,13 +20,13 @@ import (
 )
 
 func (picker ColorPickerWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, pickerState *colorPickerState, enabled bool) layout.Dimensions {
-	presses := state.ActivePresses(pickerState.trigger.History())
+	presses := state.SnapshotPresses(pickerState.trigger.History())
 	if enabled {
 		for pickerState.trigger.Clicked(gtx) {
 			pickerState.open = !pickerState.open
-			frame.RequestFocus(ctx, &pickerState.trigger)
+			frame.RequestFocusVisible(ctx, &pickerState.trigger, presses.ClickFocusVisible(pickerState.trigger.History()))
 		}
-		frame.FocusOnPress(ctx, &pickerState.trigger, pickerState.trigger.History(), presses)
+		frame.FocusOnPress(ctx, &pickerState.trigger, pickerState.trigger.History(), presses.Active())
 	}
 
 	return pickerState.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {

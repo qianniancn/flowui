@@ -3,6 +3,7 @@ package state
 import (
 	"image"
 	"testing"
+	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/input"
@@ -11,6 +12,30 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 )
+
+func TestPressSnapshotDistinguishesPointerClicks(t *testing.T) {
+	start := time.Unix(1, 0)
+	completed := widget.Press{Position: image.Pt(10, 12), Start: start, End: start.Add(time.Millisecond)}
+	tests := []struct {
+		name    string
+		before  []widget.Press
+		after   []widget.Press
+		visible bool
+	}{
+		{name: "programmatic", visible: true},
+		{name: "keyboard after old pointer", before: []widget.Press{completed}, after: []widget.Press{completed}, visible: true},
+		{name: "pointer release", before: []widget.Press{{Position: completed.Position, Start: start}}, after: []widget.Press{completed}},
+		{name: "batched pointer click", after: []widget.Press{completed}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			snapshot := SnapshotPresses(test.before)
+			if got := snapshot.ClickFocusVisible(test.after); got != test.visible {
+				t.Fatalf("focus visible = %v, want %v", got, test.visible)
+			}
+		})
+	}
+}
 
 func TestFocusPreserveLastsOnlyForCurrentFrame(t *testing.T) {
 	var focus Focus

@@ -447,6 +447,29 @@ func TestModalCloseButtonRequestsClose(t *testing.T) {
 	}
 }
 
+func TestModalCloseButtonPointerFocusIsNotKeyboardVisible(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	modal := Modal("settings", true, "Settings", text.New("Body")).Size(ModalFull)
+	start := time.Unix(1, 0)
+	layoutModalFrameAt(ctx, router, modal, start)
+	layoutModalFrameAt(ctx, router, modal, start.Add(modalEnterDuration))
+	state := testComponentState[modalState](ctx, "settings", stateSlotModal)
+	position := f32.Pt(272, 28)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: position})
+	layoutModalFrameAt(ctx, router, modal, start.Add(modalEnterDuration+time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: position})
+	layoutModalFrameAt(ctx, router, modal, start.Add(modalEnterDuration+2*time.Millisecond))
+	layoutModalFrameAt(ctx, router, modal, start.Add(modalEnterDuration+3*time.Millisecond))
+
+	if !router.Source().Focused(&state.close) {
+		t.Fatal("pointer click did not focus the close button")
+	}
+	if frame.FocusVisible(ctx, &state.close, true) {
+		t.Fatal("close button click exposed keyboard-visible focus")
+	}
+}
+
 func TestModalDismissAreaRequestsClose(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
 	state.dismiss[0].Click()

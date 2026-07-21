@@ -457,6 +457,29 @@ func TestSelectPointerOpenFocusesSelectedWithoutFocusRing(t *testing.T) {
 	}
 }
 
+func TestSelectPointerClickKeepsEmptyTriggerFocusHidden(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	widget := Select("language", "", nil).FullWidth()
+	start := time.Unix(1, 0)
+	layoutSelectTestFrame(ctx, router, widget, start)
+	state := testComponentState[selectState](ctx, "language", stateSlotSelect)
+
+	position := f32.Pt(20, 20)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: position})
+	layoutSelectTestFrame(ctx, router, widget, start.Add(time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: position})
+	layoutSelectTestFrame(ctx, router, widget, start.Add(2*time.Millisecond))
+	layoutSelectTestFrame(ctx, router, widget, start.Add(3*time.Millisecond))
+
+	if !state.open || !router.Source().Focused(&state.trigger) {
+		t.Fatal("pointer click did not open and focus the empty select trigger")
+	}
+	if frame.FocusVisible(ctx, &state.trigger, true) {
+		t.Fatal("pointer click exposed the empty select keyboard focus ring")
+	}
+}
+
 func TestSelectEscapeClosesFromOptionAndRestoresTriggerFocus(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)

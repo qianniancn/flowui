@@ -61,6 +61,33 @@ func TestSoftShadowCacheReusesEntries(t *testing.T) {
 	}
 }
 
+func TestSoftShadowCacheReusesAlphaVariants(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops}
+	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 4, NE: 8, SE: 6, SW: 2}}
+	for _, alpha := range []uint8{32, 64, 128, 255} {
+		drawShadow(gtx, image.Rect(0, 0, 48, 32), shape, BoxShadow{
+			Blur:  8,
+			Color: color.NRGBA{R: 30, G: 80, B: 220, A: alpha},
+		})
+	}
+
+	softShadowCache.Lock()
+	defer softShadowCache.Unlock()
+	if got := len(softShadowCache.entries); got != 1 {
+		t.Fatalf("cache entries = %d, want 1", got)
+	}
+	for key, entry := range softShadowCache.entries {
+		if key.color.A != 255 {
+			t.Fatalf("cached alpha = %d, want 255", key.color.A)
+		}
+		if softShadowCache.bytes != entry.bytes {
+			t.Fatalf("cache bytes = %d, want %d", softShadowCache.bytes, entry.bytes)
+		}
+	}
+}
+
 func TestSoftShadowCacheConcurrentMissesTrackBytesOnce(t *testing.T) {
 	resetSoftShadowCacheForTest()
 	col := color.NRGBA{R: 40, G: 90, B: 220, A: 120}
@@ -269,6 +296,27 @@ func BenchmarkSoftShadowCacheHit(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = softShadowEntry(size, shape, 22, 4, 0, 8, col)
+	}
+}
+
+func BenchmarkDrawShadowAlphaVariants(b *testing.B) {
+	resetSoftShadowCacheForTest()
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops}
+	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 20, NE: 10, SE: 24, SW: 14}}
+	rect := image.Rect(0, 0, 320, 180)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ops.Reset()
+		alpha := uint8(i%255 + 1)
+		drawShadow(gtx, rect, shape, BoxShadow{
+			Blur:    22,
+			Spread:  4,
+			OffsetY: 8,
+			Color:   color.NRGBA{R: 40, G: 90, B: 220, A: alpha},
+		})
 	}
 }
 

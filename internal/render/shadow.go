@@ -208,6 +208,9 @@ func drawShadow(gtx layout.Context, bounds image.Rectangle, pxShape shadowShape,
 		if blur < 0 || layer.Color.A == 0 {
 			return
 		}
+		opacity := float32(layer.Color.A) / 255
+		cacheColor := layer.Color
+		cacheColor.A = 255
 		entry := softShadowEntry(
 			size,
 			pxShape,
@@ -215,7 +218,7 @@ func drawShadow(gtx layout.Context, bounds image.Rectangle, pxShape shadowShape,
 			gtx.Dp(unit.Dp(layer.Spread)),
 			gtx.Dp(unit.Dp(layer.OffsetX)),
 			gtx.Dp(unit.Dp(layer.OffsetY)),
-			layer.Color,
+			cacheColor,
 		)
 		if entry.op.Size() == (image.Point{}) {
 			return
@@ -227,8 +230,15 @@ func drawShadow(gtx layout.Context, bounds image.Rectangle, pxShape shadowShape,
 			scale := float32(entry.scale)
 			scaleStack = op.Affine(f32.AffineId().Scale(f32.Point{}, f32.Pt(scale, scale))).Push(gtx.Ops)
 		}
+		var opacityStack paint.OpacityStack
+		if opacity < 1 {
+			opacityStack = paint.PushOpacity(gtx.Ops, opacity)
+		}
 		entry.op.Add(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
+		if opacity < 1 {
+			opacityStack.Pop()
+		}
 		if entry.scale > 1 {
 			scaleStack.Pop()
 		}

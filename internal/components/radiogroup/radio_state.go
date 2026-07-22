@@ -63,15 +63,16 @@ func (s *radioGroupState) updateKeys(gtx layout.Context, items []RadioItem, sele
 		if item.Disabled {
 			continue
 		}
-		tag := &s.item(item.Key).clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameRightArrow},
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameLeftArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
+		itemState := s.item(item.Key)
+		tag := &itemState.clickable
+		s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+			key.NameRightArrow,
+			key.NameDownArrow,
+			key.NameLeftArrow,
+			key.NameUpArrow,
+			key.NameHome,
+			key.NameEnd,
+		)...)
 	}
 	if len(s.keyFilters) == 0 {
 		return "", false
@@ -183,9 +184,10 @@ func radioLastEnabled(items []RadioItem) (int, bool) {
 }
 
 type radioItemState struct {
-	clickable widget.Clickable
-	selected  animation.FloatTransition
-	focus     state.FocusAnimation
+	clickable  widget.Clickable
+	selected   animation.FloatTransition
+	focus      state.FocusAnimation
+	keyFilters state.KeyFilterCache
 }
 
 func (s *radioItemState) selection(gtx layout.Context, selected bool, motions ...theme.MotionTheme) float32 {

@@ -2,6 +2,7 @@ package state
 
 import (
 	"image"
+	"runtime"
 	"testing"
 	"time"
 
@@ -32,6 +33,29 @@ func TestPressSnapshotDistinguishesPointerClicks(t *testing.T) {
 			snapshot := SnapshotPresses(test.before)
 			if got := snapshot.ClickFocusVisible(test.after); got != test.visible {
 				t.Fatalf("focus visible = %v, want %v", got, test.visible)
+			}
+		})
+	}
+}
+
+func BenchmarkPressSnapshot(b *testing.B) {
+	start := time.Unix(1, 0)
+	completed := widget.Press{Position: image.Pt(10, 12), Start: start, End: start.Add(time.Millisecond)}
+	for _, benchmark := range []struct {
+		name   string
+		before []widget.Press
+		after  []widget.Press
+	}{
+		{name: "programmatic"},
+		{name: "keyboard", before: []widget.Press{completed}, after: []widget.Press{completed}},
+		{name: "pointer-release", before: []widget.Press{{Position: completed.Position, Start: start}}, after: []widget.Press{completed}},
+		{name: "batched-pointer", after: []widget.Press{completed}},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				snapshot := SnapshotPresses(benchmark.before)
+				runtime.KeepAlive(snapshot.ClickFocusVisible(benchmark.after))
 			}
 		})
 	}

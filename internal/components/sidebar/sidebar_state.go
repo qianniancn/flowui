@@ -33,8 +33,9 @@ type sidebarDataCache struct {
 }
 
 type sidebarItemState struct {
-	clickable widget.Clickable
-	focus     stateutil.FocusAnimation
+	clickable  widget.Clickable
+	focus      stateutil.FocusAnimation
+	keyFilters stateutil.KeyFilterCache
 }
 
 func sidebarStateFor(ctx *frame.Context, key string) *sidebarState {
@@ -102,18 +103,23 @@ func (s *sidebarState) updateKeys(gtx layout.Context, sidebar Widget, items []It
 			continue
 		}
 		tag := &itemState.clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
-		if !sidebar.itemDisabled(items[index]) {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameEnter},
-				key.Filter{Focus: tag, Name: key.NameReturn},
-				key.Filter{Focus: tag, Name: key.NameSpace},
-			)
+		if sidebar.itemDisabled(items[index]) {
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+			)...)
+		} else {
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+				key.NameEnter,
+				key.NameReturn,
+				key.NameSpace,
+			)...)
 		}
 	}
 	if len(s.keyFilters) == 0 {

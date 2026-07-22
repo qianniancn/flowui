@@ -59,8 +59,9 @@ type menuDataCache struct {
 }
 
 type menuItemState struct {
-	clickable widget.Clickable
-	focus     state.FocusAnimation
+	clickable  widget.Clickable
+	focus      state.FocusAnimation
+	keyFilters state.KeyFilterCache
 }
 
 type keyResult struct {
@@ -161,24 +162,26 @@ func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entr
 		entry := entries[index]
 		itemState := s.item(entry.item.Key)
 		tag := &itemState.clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-			key.Filter{Focus: tag, Name: key.NameRightArrow},
-		)
+		names := [10]key.Name{
+			key.NameDownArrow,
+			key.NameUpArrow,
+			key.NameHome,
+			key.NameEnd,
+			key.NameRightArrow,
+		}
+		count := 5
 		if nested || widget.onRootPrevious != nil {
-			s.keyFilters = append(s.keyFilters, key.Filter{Focus: tag, Name: key.NameLeftArrow})
+			names[count] = key.NameLeftArrow
+			count++
 		}
 		if !widget.itemDisabled(entries[index].item) {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameEnter},
-				key.Filter{Focus: tag, Name: key.NameReturn},
-				key.Filter{Focus: tag, Name: key.NameSpace},
-				key.Filter{Focus: tag},
-			)
+			names[count] = key.NameEnter
+			names[count+1] = key.NameReturn
+			names[count+2] = key.NameSpace
+			names[count+3] = ""
+			count += 4
 		}
+		s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag, names[:count]...)...)
 	}
 	if len(s.keyFilters) == 0 {
 		return keyResult{}

@@ -15,6 +15,7 @@ import (
 
 type menubarTriggerPlacement struct {
 	dims      layout.Dimensions
+	call      op.CallOp
 	placement frame.OverlayPlacement
 }
 
@@ -38,7 +39,7 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	progress := state.progress(gtx, openKey != "", frame.ActiveTheme(ctx).Motion)
 
 	macro := op.Record(gtx.Ops)
-	dims, triggerRects := m.layoutTriggers(ctx, gtx, state, openKey)
+	dims, panelAnchor, hasPanelAnchor := m.layoutTriggers(ctx, gtx, state, openKey, state.panelKey)
 	call := macro.Stop()
 	root := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	semantic.EnabledOp(!m.disabled).Add(gtx.Ops)
@@ -52,8 +53,8 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 
 	if progress > 0 && state.panelKey != "" {
 		if item, ok := m.itemByKey(state.panelKey); ok {
-			if anchor, ok := triggerRects[state.panelKey]; ok && !anchor.Empty() {
-				m.registerOverlay(ctx, state, item, image.Rectangle{Max: dims.Size}, anchor, openKey == state.panelKey, progress)
+			if hasPanelAnchor && !panelAnchor.Empty() {
+				m.registerOverlay(ctx, state, item, image.Rectangle{Max: dims.Size}, panelAnchor, openKey == state.panelKey, progress)
 			}
 		}
 	} else if progress <= 0 {
@@ -62,52 +63,69 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	return dims
 }
 
-func (m Widget) layoutTriggers(ctx *frame.Context, gtx layout.Context, state *menubarState, openKey string) (layout.Dimensions, map[string]image.Rectangle) {
+func (m Widget) layoutTriggers(ctx *frame.Context, gtx layout.Context, state *menubarState, openKey, panelKey string) (layout.Dimensions, image.Rectangle, bool) {
 	axis := layout.Horizontal
 	if m.orientation == Vertical {
 		axis = layout.Vertical
 	}
-	placements := make([]menubarTriggerPlacement, len(m.items))
-	children := make([]layout.FlexChild, 0, len(m.items))
-	for index, item := range m.items {
-		index := index
-		item := item
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-				return m.layoutTrigger(ctx, gtx, state, item, openKey == item.key)
-			})
-			placements[index] = menubarTriggerPlacement{dims: dims, placement: placement}
-			return dims
-		}))
+	var inlinePlacements [16]menubarTriggerPlacement
+	placements := inlinePlacements[:0]
+	if len(m.items) > len(inlinePlacements) {
+		placements = make([]menubarTriggerPlacement, len(m.items))
+	} else {
+		placements = inlinePlacements[:len(m.items)]
 	}
 	gap := max(gtx.Dp(m.themeTokens(frame.ActiveTheme(ctx)).Gap), 0)
-	dims := layout.Flex{Axis: axis, Alignment: layout.Middle, Gap: gap}.Layout(gtx, children...)
-
-	maxCross := menubarCrossMinimum(gtx.Constraints, axis)
-	for _, child := range placements {
-		maxCross = max(maxCross, axis.Convert(child.dims.Size).Y)
+	axisMin := axis.Convert(gtx.Constraints.Min)
+	axisMax := axis.Convert(gtx.Constraints.Max)
+	remaining := axisMax.X - max(len(m.items)-1, 0)*gap
+	remaining = max(remaining, 0)
+	mainSize := max(len(m.items)-1, 0) * gap
+	maxCross := axisMin.Y
+	maxBaseline := 0
+	for index, item := range m.items {
+		childGtx := gtx
+		childGtx.Constraints = layout.Constraints{
+			Min: axis.Convert(image.Pt(0, axisMin.Y)),
+			Max: axis.Convert(image.Pt(remaining, axisMax.Y)),
+		}
+		macro := op.Record(gtx.Ops)
+		dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+			return m.layoutTrigger(ctx, childGtx, state, item, openKey == item.key)
+		})
+		placements[index] = menubarTriggerPlacement{dims: dims, call: macro.Stop(), placement: placement}
+		childSize := axis.Convert(dims.Size)
+		mainSize += childSize.X
+		remaining = max(remaining-childSize.X, 0)
+		maxCross = max(maxCross, childSize.Y)
+		maxBaseline = max(maxBaseline, dims.Size.Y-dims.Baseline)
 	}
-	rects := make(map[string]image.Rectangle, len(m.items))
+	if axisMin.X > mainSize {
+		mainSize = axisMin.X
+	}
+	size := gtx.Constraints.Constrain(axis.Convert(image.Pt(mainSize, maxCross)))
+	dims := layout.Dimensions{Size: size, Baseline: size.Y - maxBaseline}
+	var panelAnchor image.Rectangle
+	hasPanelAnchor := false
 	main := 0
 	for index, child := range placements {
 		size := axis.Convert(child.dims.Size)
 		cross := max((maxCross-size.Y)/2, 0)
 		position := axis.Convert(image.Pt(main, cross))
 		child.placement.PlaceOffset(position)
-		rects[m.items[index].key] = image.Rectangle{Min: position, Max: position.Add(child.dims.Size)}
+		offset := op.Offset(position).Push(gtx.Ops)
+		child.call.Add(gtx.Ops)
+		offset.Pop()
+		if m.items[index].key == panelKey {
+			panelAnchor = image.Rectangle{Min: position, Max: position.Add(child.dims.Size)}
+			hasPanelAnchor = true
+		}
 		main += size.X
 		if index < len(placements)-1 {
 			main += gap
 		}
 	}
-	return dims, rects
-}
-
-func menubarCrossMinimum(constraints layout.Constraints, axis layout.Axis) int {
-	if axis == layout.Horizontal {
-		return constraints.Min.Y
-	}
-	return constraints.Min.X
+	return dims, panelAnchor, hasPanelAnchor
 }
 
 func (m Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *menubarState, item Item, open bool) layout.Dimensions {

@@ -119,22 +119,23 @@ func (s *tabsState) updateKeys(gtx layout.Context, items []TabItem, selectedKey 
 		if item.Disabled {
 			continue
 		}
-		tag := &s.item(item.Key).clickable
+		itemState := s.item(item.Key)
+		tag := &itemState.clickable
 		if orientation == TabsVertical {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameDownArrow},
-				key.Filter{Focus: tag, Name: key.NameUpArrow},
-			)
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+			)...)
 		} else {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameRightArrow},
-				key.Filter{Focus: tag, Name: key.NameLeftArrow},
-			)
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameRightArrow,
+				key.NameLeftArrow,
+				key.NameHome,
+				key.NameEnd,
+			)...)
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
 	}
 	if len(s.keyFilters) == 0 {
 		return "", false
@@ -231,6 +232,7 @@ type tabsItemState struct {
 	clickable   widget.Clickable
 	interaction state.FocusAnimation
 	selection   animation.FloatTransition
+	keyFilters  state.KeyFilterCache
 }
 
 func tabsStateFor(ctx *frame.Context, key string) *tabsState {

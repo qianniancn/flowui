@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
@@ -153,49 +154,77 @@ func (f FlexWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 func flexLayout(ctx *frame.Context, gtx layout.Context, axis layout.Axis, gap unit.Dp, align layout.Alignment, spacing layout.Spacing, widgets []frame.Widget) layout.Dimensions {
 	type childPlacement struct {
 		dims      layout.Dimensions
+		call      op.CallOp
 		placement frame.OverlayPlacement
 	}
-	placements := make([]childPlacement, len(widgets))
-	children := make([]layout.FlexChild, 0, len(widgets))
-	for index, child := range widgets {
-		index := index
-		if flex, ok := child.(FlexWidget); ok {
-			children = append(children, layout.Flexed(flex.weight, func(gtx layout.Context) layout.Dimensions {
-				dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-					return flex.child.Layout(ctx, gtx)
-				})
-				placements[index] = childPlacement{dims: dims, placement: placement}
-				return dims
-			}))
-			continue
-		}
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-				return child.Layout(ctx, gtx)
-			})
-			placements[index] = childPlacement{dims: dims, placement: placement}
-			return dims
-		}))
+	var inlinePlacements [16]childPlacement
+	placements := inlinePlacements[:0]
+	if len(widgets) > len(inlinePlacements) {
+		placements = make([]childPlacement, len(widgets))
+	} else {
+		placements = inlinePlacements[:len(widgets)]
 	}
 	gapPx := max(gtx.Dp(gap), 0)
-	dims := layout.Flex{
-		Axis:      axis,
-		Gap:       gapPx,
-		Alignment: align,
-		Spacing:   spacing,
-	}.Layout(gtx, children...)
-
-	maxCross := axisCrossMinimum(gtx.Constraints, axis)
+	mainMin := axisMainMinimum(gtx.Constraints, axis)
+	mainMax := axisMainMaximum(gtx.Constraints, axis)
+	crossMin := axisCrossMinimum(gtx.Constraints, axis)
+	crossMax := axisCrossMaximum(gtx.Constraints, axis)
+	remaining := mainMax
+	if len(widgets) > 1 && gapPx > 0 {
+		remaining -= gapPx * (len(widgets) - 1)
+		remaining = max(remaining, 0)
+	}
+	var totalWeight float32
+	mainSize := 0
+	for index, widget := range widgets {
+		flex, ok := widget.(FlexWidget)
+		if ok {
+			totalWeight += flex.weight
+			continue
+		}
+		childGtx := gtx
+		childGtx.Constraints = flexConstraints(axis, 0, remaining, crossMin, crossMax)
+		macro := op.Record(gtx.Ops)
+		dims, placement := frame.TrackWidgetPlacement(ctx, childGtx, widget)
+		placements[index] = childPlacement{dims: dims, call: macro.Stop(), placement: placement}
+		size := axis.Convert(dims.Size).X
+		mainSize += size
+		remaining = max(remaining-size, 0)
+	}
+	flexTotal := remaining
+	var fraction float32
+	for index, widget := range widgets {
+		flex, ok := widget.(FlexWidget)
+		if !ok {
+			continue
+		}
+		flexSize := 0
+		if remaining > 0 && totalWeight > 0 {
+			childSize := float32(flexTotal) * flex.weight / totalWeight
+			flexSize = int(childSize + fraction + .5)
+			fraction = childSize - float32(flexSize)
+			flexSize = min(flexSize, remaining)
+		}
+		childGtx := gtx
+		childGtx.Constraints = flexConstraints(axis, flexSize, flexSize, crossMin, crossMax)
+		macro := op.Record(gtx.Ops)
+		dims, placement := frame.TrackWidgetPlacement(ctx, childGtx, flex.child)
+		placements[index] = childPlacement{dims: dims, call: macro.Stop(), placement: placement}
+		size := axis.Convert(dims.Size).X
+		mainSize += size
+		remaining = max(remaining-size, 0)
+	}
+	maxCross := crossMin
 	maxBaseline := 0
 	for _, child := range placements {
 		maxCross = max(maxCross, axis.Convert(child.dims.Size).Y)
 		maxBaseline = max(maxBaseline, child.dims.Size.Y-child.dims.Baseline)
 	}
-	mainSize := max(len(placements)-1, 0) * gapPx
-	for _, child := range placements {
-		mainSize += axis.Convert(child.dims.Size).X
-	}
-	main, extraGap := flexSpacing(spacing, max(axisMainMinimum(gtx.Constraints, axis)-mainSize, 0), len(placements))
+	mainSize += max(len(placements)-1, 0) * gapPx
+	free := max(mainMin-mainSize, 0)
+	main, extraGap := flexSpacing(spacing, free, len(placements))
+	finalMain := mainSize + free
+	dimsSize := gtx.Constraints.Constrain(axis.Convert(image.Pt(finalMain, maxCross)))
 	for index, child := range placements {
 		size := axis.Convert(child.dims.Size)
 		cross := 0
@@ -209,13 +238,17 @@ func flexLayout(ctx *frame.Context, gtx layout.Context, axis layout.Axis, gap un
 				cross = maxBaseline - (child.dims.Size.Y - child.dims.Baseline)
 			}
 		}
-		child.placement.PlaceOffset(axis.Convert(image.Pt(main, cross)))
+		position := axis.Convert(image.Pt(main, cross))
+		child.placement.PlaceOffset(position)
+		offset := op.Offset(position).Push(gtx.Ops)
+		child.call.Add(gtx.Ops)
+		offset.Pop()
 		main += size.X
 		if index < len(placements)-1 {
 			main += gapPx + extraGap
 		}
 	}
-	return dims
+	return layout.Dimensions{Size: dimsSize, Baseline: dimsSize.Y - maxBaseline}
 }
 
 func normalizeFlexSpacing(spacing layout.Spacing) layout.Spacing {
@@ -261,4 +294,25 @@ func axisCrossMinimum(constraints layout.Constraints, axis layout.Axis) int {
 		return constraints.Min.Y
 	}
 	return constraints.Min.X
+}
+
+func axisMainMaximum(constraints layout.Constraints, axis layout.Axis) int {
+	if axis == layout.Horizontal {
+		return constraints.Max.X
+	}
+	return constraints.Max.Y
+}
+
+func axisCrossMaximum(constraints layout.Constraints, axis layout.Axis) int {
+	if axis == layout.Horizontal {
+		return constraints.Max.Y
+	}
+	return constraints.Max.X
+}
+
+func flexConstraints(axis layout.Axis, mainMin, mainMax, crossMin, crossMax int) layout.Constraints {
+	return layout.Constraints{
+		Min: axis.Convert(image.Pt(mainMin, crossMin)),
+		Max: axis.Convert(image.Pt(mainMax, crossMax)),
+	}
 }

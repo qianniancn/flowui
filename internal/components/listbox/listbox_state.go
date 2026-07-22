@@ -127,19 +127,24 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			continue
 		}
 		tag := &itemState.Clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
-		if !widget.itemDisabled(items[index]) {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameEnter},
-				key.Filter{Focus: tag, Name: key.NameReturn},
-				key.Filter{Focus: tag, Name: key.NameSpace},
-				key.Filter{Focus: tag},
-			)
+		if widget.itemDisabled(items[index]) {
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+			)...)
+		} else {
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+				key.NameEnter,
+				key.NameReturn,
+				key.NameSpace,
+				"",
+			)...)
 		}
 	}
 	if len(s.keyFilters) == 0 {
@@ -405,4 +410,7 @@ func focusItem(ctx *frame.Context, stateKey, itemKey string, visible bool) bool 
 	return true
 }
 
-type listBoxItemState = optionrow.FocusableState
+type listBoxItemState struct {
+	optionrow.FocusableState
+	keyFilters state.KeyFilterCache
+}

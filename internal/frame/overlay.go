@@ -503,6 +503,20 @@ type OverlayPlacement struct {
 
 // TrackOverlayPlacement lays out child under a mutable transform node.
 func TrackOverlayPlacement(ctx *Context, child func() layout.Dimensions) (layout.Dimensions, OverlayPlacement) {
+	host, parent, node := beginOverlayPlacement(ctx)
+	defer func() { host.current = parent }()
+	return child(), OverlayPlacement{host: host, index: node}
+}
+
+// TrackWidgetPlacement lays out a Widget under a mutable transform node
+// without requiring a per-call closure.
+func TrackWidgetPlacement(ctx *Context, gtx layout.Context, child Widget) (layout.Dimensions, OverlayPlacement) {
+	host, parent, node := beginOverlayPlacement(ctx)
+	defer func() { host.current = parent }()
+	return child.Layout(ctx, gtx), OverlayPlacement{host: host, index: node}
+}
+
+func beginOverlayPlacement(ctx *Context) (*overlayHost, int, int) {
 	host := &ctx.overlays
 	host.ensureRootTransform()
 	parent := host.current
@@ -512,11 +526,7 @@ func TrackOverlayPlacement(ctx *Context, child func() layout.Dimensions) (layout
 		opacity: 1,
 	})
 	host.current = node
-	dims := func() layout.Dimensions {
-		defer func() { host.current = parent }()
-		return child()
-	}()
-	return dims, OverlayPlacement{host: host, index: node}
+	return host, parent, node
 }
 
 // PlaceOffset sets the child's local-to-parent translation.

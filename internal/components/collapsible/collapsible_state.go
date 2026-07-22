@@ -12,7 +12,8 @@ import (
 const stateSlotCollapsible = "collapsible"
 
 type collapsibleItemState struct {
-	clickable widget.Clickable
+	clickable  widget.Clickable
+	keyFilters stateutil.KeyFilterCache
 }
 
 type collapsibleState struct {
@@ -52,13 +53,14 @@ func (s *collapsibleState) updateKeys(gtx layout.Context, items []Item) string {
 		if item.Disabled {
 			continue
 		}
-		tag := &s.itemFor(item.Key).clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
+		itemState := s.itemFor(item.Key)
+		tag := &itemState.clickable
+		s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
+			key.NameDownArrow,
+			key.NameUpArrow,
+			key.NameHome,
+			key.NameEnd,
+		)...)
 	}
 	if len(s.keyFilters) == 0 {
 		return ""

@@ -49,8 +49,9 @@ type menubarState struct {
 }
 
 type menubarTriggerState struct {
-	clickable widget.Clickable
-	focus     stateutil.FocusAnimation
+	clickable  widget.Clickable
+	focus      stateutil.FocusAnimation
+	keyFilters stateutil.KeyFilterCache
 }
 
 type menubarBinding struct {
@@ -251,26 +252,29 @@ func (s *menubarState) updateTriggerKeys(ctx *frame.Context, gtx layout.Context,
 		if widget.itemDisabled(item) {
 			continue
 		}
-		tag := &s.trigger(item.key).clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-			key.Filter{Focus: tag, Name: key.NameEscape},
-			key.Filter{Focus: tag},
-		)
+		trigger := s.trigger(item.key)
+		tag := &trigger.clickable
 		if widget.orientation == Vertical {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameDownArrow},
-				key.Filter{Focus: tag, Name: key.NameUpArrow},
-				key.Filter{Focus: tag, Name: key.NameRightArrow},
-			)
+			s.keyFilters = append(s.keyFilters, trigger.keyFilters.Resolve(tag,
+				key.NameHome,
+				key.NameEnd,
+				key.NameEscape,
+				"",
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameRightArrow,
+			)...)
 		} else {
-			s.keyFilters = append(s.keyFilters,
-				key.Filter{Focus: tag, Name: key.NameRightArrow},
-				key.Filter{Focus: tag, Name: key.NameLeftArrow},
-				key.Filter{Focus: tag, Name: key.NameDownArrow},
-				key.Filter{Focus: tag, Name: key.NameUpArrow},
-			)
+			s.keyFilters = append(s.keyFilters, trigger.keyFilters.Resolve(tag,
+				key.NameHome,
+				key.NameEnd,
+				key.NameEscape,
+				"",
+				key.NameRightArrow,
+				key.NameLeftArrow,
+				key.NameDownArrow,
+				key.NameUpArrow,
+			)...)
 		}
 	}
 	if len(s.keyFilters) == 0 {

@@ -50,55 +50,59 @@ func (w WrapWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	prepareFieldAssociations(ctx, w.children...)
 	gap := max(gtx.Dp(w.gap), 0)
 	lineGap := max(gtx.Dp(w.lineGap), 0)
-	rows := make([]wrapRow, 0)
+	var inlineChildren [16]wrapChild
+	children := inlineChildren[:0]
+	if len(w.children) > len(inlineChildren) {
+		children = make([]wrapChild, 0, len(w.children))
+	}
 	maxWidth := gtx.Constraints.Max.X
 	childGtx := gtx
 	childGtx.Constraints.Min = image.Point{}
 
-	var x, y, rowHeight, width int
-	var row wrapRow
+	var x, y, rowHeight, width, rowIndex int
 	for _, child := range w.children {
 		macro := op.Record(gtx.Ops)
-		dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-			return child.Layout(ctx, childGtx)
-		})
+		dims, placement := frame.TrackWidgetPlacement(ctx, childGtx, child)
 		call := macro.Stop()
 
 		if x > 0 && x+gap+dims.Size.X > maxWidth {
-			row.width = x
-			rows = append(rows, row)
 			y += rowHeight + lineGap
 			x = 0
 			rowHeight = 0
-			row = wrapRow{}
+			rowIndex++
 		}
 		if x > 0 {
 			x += gap
 		}
-		row.children = append(row.children, wrapChild{
+		children = append(children, wrapChild{
 			call:      call,
 			pos:       image.Pt(x, y),
+			size:      dims.Size,
+			row:       rowIndex,
 			placement: placement,
 		})
 		x += dims.Size.X
 		width = max(width, x)
 		rowHeight = max(rowHeight, dims.Size.Y)
 	}
-	if len(row.children) > 0 {
-		row.width = x
-		rows = append(rows, row)
-	}
 
 	size := gtx.Constraints.Constrain(image.Pt(width, y+rowHeight))
-	for _, row := range rows {
-		offset := alignmentOffset(w.align, size.X-row.width)
-		for _, child := range row.children {
+	for start := 0; start < len(children); {
+		end := start + 1
+		for end < len(children) && children[end].row == children[start].row {
+			end++
+		}
+		last := children[end-1]
+		rowWidth := last.pos.X + last.size.X
+		offset := alignmentOffset(w.align, size.X-rowWidth)
+		for _, child := range children[start:end] {
 			pos := child.pos.Add(image.Pt(offset, 0))
 			child.placement.PlaceOffset(pos)
 			trans := op.Offset(pos).Push(gtx.Ops)
 			child.call.Add(gtx.Ops)
 			trans.Pop()
 		}
+		start = end
 	}
 	return layout.Dimensions{Size: size}
 }
@@ -117,13 +121,10 @@ func alignmentOffset(align layout.Alignment, free int) int {
 	}
 }
 
-type wrapRow struct {
-	children []wrapChild
-	width    int
-}
-
 type wrapChild struct {
 	call      op.CallOp
 	pos       image.Point
+	size      image.Point
+	row       int
 	placement frame.OverlayPlacement
 }

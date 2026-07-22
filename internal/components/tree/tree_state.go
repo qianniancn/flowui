@@ -191,26 +191,29 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 		}
 		entry := visible[index]
 		tag := &itemState.clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
+		names := [11]key.Name{
+			key.NameDownArrow,
+			key.NameUpArrow,
+			key.NameHome,
+			key.NameEnd,
+		}
+		count := 4
 		if tree.itemDisabled(entry.item) {
+			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag, names[:count]...)...)
 			continue
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameRightArrow},
-			key.Filter{Focus: tag, Name: key.NameLeftArrow},
-			key.Filter{Focus: tag, Name: key.NameEnter},
-			key.Filter{Focus: tag, Name: key.NameReturn},
-			key.Filter{Focus: tag, Name: key.NameSpace},
-			key.Filter{Focus: tag},
-		)
+		names[count] = key.NameRightArrow
+		names[count+1] = key.NameLeftArrow
+		names[count+2] = key.NameEnter
+		names[count+3] = key.NameReturn
+		names[count+4] = key.NameSpace
+		names[count+5] = ""
+		count += 6
 		if tree.onRename != nil && entry.item.Renamable {
-			s.keyFilters = append(s.keyFilters, key.Filter{Focus: tag, Name: key.NameF2})
+			names[count] = key.NameF2
+			count++
 		}
+		s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag, names[:count]...)...)
 	}
 	if len(s.keyFilters) == 0 {
 		return treeKeyResult{}
@@ -411,15 +414,16 @@ func treeTypeaheadText(name key.Name) string {
 }
 
 type treeItemState struct {
-	index     int
-	clickable widget.Clickable
-	toggle    overlay.ClickArea
-	focus     state.FocusAnimation
-	expansion animation.FloatTransition
-	drag      widget.Draggable
-	dragPress f32.Point
-	dragTag   byte
-	dropTags  [3]byte
+	index      int
+	clickable  widget.Clickable
+	toggle     overlay.ClickArea
+	focus      state.FocusAnimation
+	keyFilters state.KeyFilterCache
+	expansion  animation.FloatTransition
+	drag       widget.Draggable
+	dragPress  f32.Point
+	dragTag    byte
+	dropTags   [3]byte
 }
 
 type treeDropTarget struct {

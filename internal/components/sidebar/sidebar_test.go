@@ -71,6 +71,13 @@ func TestSidebarSectionsCopyAndCollapseHeaders(t *testing.T) {
 	}
 }
 
+func TestSidebarSectionsNormalizeEmptyItemsToNil(t *testing.T) {
+	widget := NewSections("primary", "", []Section{{Title: "Empty", Items: []Item{}}})
+	if widget.sections[0].Items != nil {
+		t.Fatalf("empty section items = %#v, want nil", widget.sections[0].Items)
+	}
+}
+
 func TestSidebarDataVersionCachesEntries(t *testing.T) {
 	widget := NewSections("cached", "home", []Section{{Title: "Main", Items: []Item{{Key: "home", Label: "Home"}}}}).DataVersion(1)
 	state := new(sidebarState)

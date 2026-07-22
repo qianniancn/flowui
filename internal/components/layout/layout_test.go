@@ -498,6 +498,24 @@ func TestWrapPropagatesWrappedAndAlignedPosition(t *testing.T) {
 	}
 }
 
+func TestWrapPreservesZeroHeightRowBoundaries(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(100, 20)
+	gtx := layout.Context{Constraints: layout.Constraints{Max: viewport}, Ops: new(op.Ops)}
+	var first, second image.Rectangle
+	firstProbe := &overlayProbeWidget{key: "first-zero-row", size: image.Pt(90, 0), anchor: image.Rect(0, 0, 1, 1), got: &first}
+	secondProbe := &overlayProbeWidget{key: "second-zero-row", size: image.Pt(30, 0), anchor: image.Rect(0, 0, 1, 1), got: &second}
+
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Wrap(firstProbe, secondProbe).Gap(10).AlignEnd().Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	if first.Min.X != 0 || second.Min.X != 60 {
+		t.Fatalf("zero-height row positions = %v/%v, want x=0/60", first, second)
+	}
+}
+
 func TestAdaptiveReceivesAvailableSize(t *testing.T) {
 	var got ViewSize
 	var ops op.Ops

@@ -184,21 +184,25 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 			continue
 		}
 		tag := &rowState.clickable
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameHome},
-			key.Filter{Focus: tag, Name: key.NameEnd},
-		)
 		if table.rowDisabled(row) {
+			s.keyFilters = append(s.keyFilters, rowState.keyFilters.Resolve(tag,
+				key.NameDownArrow,
+				key.NameUpArrow,
+				key.NameHome,
+				key.NameEnd,
+			)...)
 			continue
 		}
-		s.keyFilters = append(s.keyFilters,
-			key.Filter{Focus: tag, Name: key.NameEnter},
-			key.Filter{Focus: tag, Name: key.NameReturn},
-			key.Filter{Focus: tag, Name: key.NameSpace},
-			key.Filter{Focus: tag},
-		)
+		s.keyFilters = append(s.keyFilters, rowState.keyFilters.Resolve(tag,
+			key.NameDownArrow,
+			key.NameUpArrow,
+			key.NameHome,
+			key.NameEnd,
+			key.NameEnter,
+			key.NameReturn,
+			key.NameSpace,
+			"",
+		)...)
 	}
 	if len(s.keyFilters) == 0 {
 		return tableKeyResult{}
@@ -437,6 +441,7 @@ func (t Widget) rowLabel(row Row) string {
 type tableRowState struct {
 	clickable        widget.Clickable
 	focus            state.FocusAnimation
+	keyFilters       state.KeyFilterCache
 	background       animation.ColorTransition
 	selection        checkbox.SelectionAnimation
 	interactiveCells []image.Rectangle

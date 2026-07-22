@@ -217,10 +217,23 @@ func (w Widget) entriesAndItems() ([]entry, []Item) {
 }
 
 func cloneSections(sections []Section) []Section {
+	totalItems := 0
+	for _, section := range sections {
+		totalItems += len(section.Items)
+	}
 	result := make([]Section, len(sections))
+	items := make([]Item, totalItems)
+	itemOffset := 0
 	for index, section := range sections {
 		result[index] = section
-		result[index].Items = append([]Item(nil), section.Items...)
+		if len(section.Items) == 0 {
+			result[index].Items = nil
+			continue
+		}
+		nextOffset := itemOffset + len(section.Items)
+		copy(items[itemOffset:nextOffset], section.Items)
+		result[index].Items = items[itemOffset:nextOffset:nextOffset]
+		itemOffset = nextOffset
 	}
 	return result
 }

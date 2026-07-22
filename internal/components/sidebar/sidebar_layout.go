@@ -183,24 +183,28 @@ func (w Widget) layoutItem(ctx *frame.Context, gtx layout.Context, sidebarState 
 	selected := item.Key == w.selectedKey
 	style := sidebarItemStyleFor(activeTheme, selected, itemState.clickable.Hovered() && !disabled, itemState.clickable.Pressed() && !disabled, disabled)
 	focusVisible := frame.FocusVisible(ctx, &itemState.clickable, itemGtx.Focused(&itemState.clickable))
-		focus := itemState.focus.Opacity(gtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
+	focus := itemState.focus.Opacity(gtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
 
-	trigger := frame.WidgetFunc(func(ctx *frame.Context, triggerGtx layout.Context) layout.Dimensions {
-		triggerGtx.Constraints = layout.Exact(size)
-		if disabled {
-			triggerGtx = triggerGtx.Disabled()
-		}
-		return itemState.clickable.Layout(triggerGtx, func(gtx layout.Context) layout.Dimensions {
-			return w.layoutItemVisual(ctx, gtx, item, style, selected, !disabled, focus, expansion)
-		})
-	})
 	if !w.collapsed || expansion > 0 || item.Label == "" {
-		return trigger.Layout(ctx, itemGtx)
+		return w.layoutItemTrigger(ctx, itemGtx, size, itemState, item, style, selected, disabled, focus, expansion)
 	}
+	trigger := frame.WidgetFunc(func(ctx *frame.Context, triggerGtx layout.Context) layout.Dimensions {
+		return w.layoutItemTrigger(ctx, triggerGtx, size, itemState, item, style, selected, disabled, focus, expansion)
+	})
 	return tooltip.Tooltip("sidebar-item-label:"+item.Key, trigger, text.New(item.Label)).
 		Placement(overlay.PopoverRight).
 		Delay(0).
 		Layout(ctx, itemGtx)
+}
+
+func (w Widget) layoutItemTrigger(ctx *frame.Context, gtx layout.Context, size image.Point, itemState *sidebarItemState, item Item, style sidebarItemStyle, selected, disabled bool, focus, expansion float32) layout.Dimensions {
+	gtx.Constraints = layout.Exact(size)
+	if disabled {
+		gtx = gtx.Disabled()
+	}
+	return itemState.clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return w.layoutItemVisual(ctx, gtx, item, style, selected, !disabled, focus, expansion)
+	})
 }
 
 func (w Widget) layoutItemVisual(ctx *frame.Context, gtx layout.Context, item Item, style sidebarItemStyle, selected, enabled bool, focus, expansion float32) layout.Dimensions {
@@ -307,9 +311,7 @@ func recordSidebarContent(ctx *frame.Context, gtx layout.Context, child frame.Wi
 		return sidebarContent{}
 	}
 	macro := op.Record(gtx.Ops)
-	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return child.Layout(ctx, gtx)
-	})
+	dims, placement := frame.TrackWidgetPlacement(ctx, gtx, child)
 	return sidebarContent{call: macro.Stop(), dims: dims, placement: placement}
 }
 

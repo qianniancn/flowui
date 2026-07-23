@@ -17,6 +17,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -29,13 +30,17 @@ func TestToggleButtonOptionsUseValueSemantics(t *testing.T) {
 		Size(ToggleButtonLarge).
 		Disabled(true).
 		IconOnly().
-		Label("Like")
+		Label("Like").
+		Style(flowstyle.Style{}.Radius(4))
 
 	if base.key != "like" || base.selected || base.onChange != nil || base.variant != ToggleButtonDefault || base.size != ToggleButtonMedium || base.disabled || base.iconOnly || base.label != "" {
 		t.Fatalf("base toggle button was mutated: %#v", base)
 	}
 	if configured.onChange == nil || configured.variant != ToggleButtonGhost || configured.size != ToggleButtonLarge || !configured.disabled || !configured.iconOnly || configured.label != "Like" {
 		t.Fatalf("configured toggle button = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured toggle button did not retain its style")
 	}
 	configured.onChange(true)
 	if !changed {
@@ -138,9 +143,9 @@ func TestToggleButtonVariantAndSelectedColors(t *testing.T) {
 func TestToggleButtonReportsInverseControlledValue(t *testing.T) {
 	for _, selected := range []bool{false, true} {
 		ctx := newToggleButtonContext(nil)
-		stateValue := &toggleButtonState{}
-		stateValue.clickable.Click()
-		frame.UseStateWith(ctx, "toggle", stateSlotToggleButton, func() *toggleButtonState { return stateValue })
+		clickable := new(widget.Clickable)
+		clickable.Click()
+		frame.UseStateWith(ctx, "toggle", "clickable", func() *widget.Clickable { return clickable })
 		var got bool
 		called := false
 		ToggleButton("toggle", selected, text.New("Toggle")).OnChange(func(value bool) {
@@ -162,14 +167,14 @@ func TestToggleButtonPointerAndKeyboardToggle(t *testing.T) {
 			button := ToggleButton("toggle", false, text.New("Toggle")).OnChange(func(selected bool) { changed = selected })
 			start := time.Unix(1, 0)
 			layoutToggleButtonFrame(ctx, router, button, start)
-			stateValue := toggleButtonStateFromContext(t, ctx, "toggle")
+			clickable := toggleButtonClickableFromContext(t, ctx, "toggle")
 			if inputKind == "pointer" {
 				router.Queue(
 					pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(18, 18)},
 					pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(18, 18)},
 				)
 			} else {
-				router.Source().Execute(key.FocusCmd{Tag: &stateValue.clickable})
+				router.Source().Execute(key.FocusCmd{Tag: clickable})
 				layoutToggleButtonFrame(ctx, router, button, start.Add(time.Millisecond))
 				router.Queue(
 					key.Event{Name: key.NameSpace, State: key.Press},
@@ -230,13 +235,13 @@ func TestToggleButtonOnlyShowsFocusRingForKeyboardFocus(t *testing.T) {
 		router := new(input.Router)
 		button := ToggleButton("toggle", false, text.New("Toggle"))
 		layoutToggleButtonFrame(ctx, router, button, start)
-		stateValue := toggleButtonStateFromContext(t, ctx, "toggle")
+		clickable := toggleButtonClickableFromContext(t, ctx, "toggle")
 		router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(18, 18)})
 		layoutToggleButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		if !router.Source().Focused(&stateValue.clickable) {
+		if !router.Source().Focused(clickable) {
 			t.Fatal("pointer press did not focus toggle button")
 		}
-		if frame.FocusVisible(ctx, &stateValue.clickable, true) {
+		if frame.FocusVisible(ctx, clickable, true) {
 			t.Fatal("pointer focus should not be focus-visible")
 		}
 	}
@@ -245,43 +250,12 @@ func TestToggleButtonOnlyShowsFocusRingForKeyboardFocus(t *testing.T) {
 		router := new(input.Router)
 		button := ToggleButton("toggle", false, text.New("Toggle"))
 		layoutToggleButtonFrame(ctx, router, button, start)
-		stateValue := toggleButtonStateFromContext(t, ctx, "toggle")
-		router.Source().Execute(key.FocusCmd{Tag: &stateValue.clickable})
+		clickable := toggleButtonClickableFromContext(t, ctx, "toggle")
+		router.Source().Execute(key.FocusCmd{Tag: clickable})
 		layoutToggleButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		if !frame.FocusVisible(ctx, &stateValue.clickable, true) {
+		if !frame.FocusVisible(ctx, clickable, true) {
 			t.Fatal("keyboard focus should be focus-visible")
 		}
-	}
-}
-
-func TestToggleButtonAnimationTransitionsRemainContinuous(t *testing.T) {
-	start := time.Unix(1, 0)
-	gtx := toggleButtonTestContext()
-	gtx.Now = start
-	var stateValue toggleButtonState
-	from := color.NRGBA{R: 10, G: 20, B: 30, A: 255}
-	to := color.NRGBA{R: 110, G: 120, B: 130, A: 255}
-	if got := stateValue.animateBackground(gtx, from); got != from {
-		t.Fatalf("initial background = %#v, want %#v", got, from)
-	}
-	stateValue.animateBackground(gtx, to)
-	gtx.Now = start.Add(toggleButtonColorDuration / 2)
-	if got := stateValue.animateBackground(gtx, to); got == from || got == to {
-		t.Fatalf("mid-transition background = %#v", got)
-	}
-
-	gtx.Now = start
-	if got := stateValue.animateScale(gtx, 1); got != 1 {
-		t.Fatalf("initial scale = %v", got)
-	}
-	stateValue.animateScale(gtx, 0.97)
-	gtx.Now = start.Add(toggleButtonScaleDuration / 2)
-	pressed := stateValue.animateScale(gtx, 0.97)
-	if pressed <= 0.97 || pressed >= 1 {
-		t.Fatalf("pressed scale = %v, want between 0.97 and 1", pressed)
-	}
-	if released := stateValue.animateScale(gtx, 1); released != pressed {
-		t.Fatalf("quick release jumped from %v to %v", pressed, released)
 	}
 }
 
@@ -341,13 +315,13 @@ func layoutToggleButtonFrame(ctx *frame.Context, router *input.Router, button To
 	return dims
 }
 
-func toggleButtonStateFromContext(t *testing.T, ctx *frame.Context, key string) *toggleButtonState {
+func toggleButtonClickableFromContext(t *testing.T, ctx *frame.Context, key string) *widget.Clickable {
 	t.Helper()
-	stateValue, ok := frame.PeekState[toggleButtonState](ctx, key, stateSlotToggleButton)
+	clickable, ok := frame.PeekState[widget.Clickable](ctx, key, "clickable")
 	if !ok {
-		t.Fatalf("toggle button state %q is missing", key)
+		t.Fatalf("toggle button clickable %q is missing", key)
 	}
-	return stateValue
+	return clickable
 }
 
 func toggleButtonSemanticNode(nodes []input.SemanticNode) (input.SemanticNode, bool) {

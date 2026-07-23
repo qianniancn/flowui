@@ -9,15 +9,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/icon"
-	"github.com/qianniancn/FlowUI/internal/field"
-	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
-
-func drawSelectTrigger(gtx layout.Context, rect image.Rectangle, radius int, style selectStyle) {
-	field.DrawFrame(gtx, rect, radius, style.field)
-}
 
 func drawSelectIndicator(gtx layout.Context, theme *theme.Theme, size image.Point, progress float32, col color.NRGBA) {
 	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
@@ -36,8 +30,4 @@ func drawSelectIndicator(gtx layout.Context, theme *theme.Theme, size image.Poin
 	icon.Layout(lucide.ChevronDown, iconGtx, col)
 	offset.Pop()
 	stack.Pop()
-}
-
-func drawSelectPanel(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {
-	render.DrawSurface(gtx, rect, radius, theme.Palette.OverlayColor(), render.ThemeShadow(theme.Shadows.Overlay, theme.Palette.OverlayShadowColor(), 1))
 }

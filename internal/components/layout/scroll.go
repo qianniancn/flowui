@@ -3,6 +3,7 @@ package layoutui
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ScrollWidget struct {
@@ -75,7 +76,7 @@ func (s ScrollWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	if s.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutScrollbarList(ctx, gtx, state, bar, 1, s.disabled, false, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, "", state, bar, 1, s.disabled, false, flowstyle.Style{}, func(gtx layout.Context, _ int) layout.Dimensions {
 		return s.child.Layout(ctx, gtx)
 	})
 }

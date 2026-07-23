@@ -13,6 +13,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func TestSplitPaneOptions(t *testing.T) {
@@ -24,13 +25,69 @@ func TestSplitPaneOptions(t *testing.T) {
 		MinSecond(90).
 		Label("Resize workspace").
 		OnRatioChange(func(float32) {}).
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Width(2))
 
 	if value.orientation != SplitPaneVertical || value.ratio != .6 || value.defaultRatio != .4 || !value.hasRatio || !value.hasDefaultRatio {
 		t.Fatalf("split pane options = %#v", value)
 	}
 	if value.minFirst != 80 || value.minSecond != 90 || value.label != "Resize workspace" || value.onRatioChange == nil || !value.disabled {
 		t.Fatalf("split pane options = %#v", value)
+	}
+	if value.customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
+		t.Fatal("split pane style was not retained")
+	}
+}
+
+func TestSplitPaneSeparatesRootTrackAndIndicatorStyles(t *testing.T) {
+	root := flowstyle.RGB(0x010000)
+	track := flowstyle.RGB(0x000200)
+	indicator := flowstyle.RGB(0x000003)
+	gradient := flowstyle.LinearGradient(
+		flowstyle.ColorStop(0, track),
+		flowstyle.ColorStop(1, indicator),
+	)
+	custom := flowstyle.Style{}.
+		Background(root).
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Width(3).
+			Background(gradient).
+			BorderWidth(1).
+			Radius(2).
+			BoxShadow(1, 2, 3, 4, flowstyle.RGBA(0x01020380)).
+			Opacity(.5).
+			Translate(2, 3).
+			Cursor(pointer.CursorGrab)).
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.
+			Width(5).
+			Height(20).
+			Background(indicator).
+			Radius(2).
+			Scale(.9, .8))
+
+	ctx := newContext(nil)
+	gtx := testLayoutContext()
+	resolvedRoot, resolved := SplitPane("workspace", Spacer(1, 1), Spacer(1, 1)).Style(custom).resolveStyle(ctx, gtx, "workspace", flowstyle.StyleState{})
+	if resolvedRoot.Paint == nil || resolvedRoot.Paint.Background != root {
+		t.Fatalf("root paint = %#v", resolvedRoot.Paint)
+	}
+	if resolved.dividerWidth != 3 || resolved.activeWidth != 5 || resolved.handleLength != 20 || resolved.cursor != pointer.CursorGrab {
+		t.Fatalf("parts = %#v", resolved)
+	}
+	if resolved.track.Paint == nil || resolved.track.Paint.Opacity == nil || *resolved.track.Paint.Opacity != .5 || resolved.track.Paint.Border == nil || *resolved.track.Paint.Border.Width != 1 || *resolved.track.Paint.Radius != 2 || len(resolved.track.Paint.Shadows) != 1 {
+		t.Fatalf("track paint = %#v", resolved.track.Paint)
+	}
+	if _, ok := resolved.track.Paint.Background.(flowstyle.StyleGradient); !ok {
+		t.Fatalf("track background = %T, want gradient", resolved.track.Paint.Background)
+	}
+	if resolved.track.Trans == nil || *resolved.track.Trans.TranslateX != 2 || *resolved.track.Trans.TranslateY != 3 {
+		t.Fatalf("track transform = %#v", resolved.track.Trans)
+	}
+	if resolved.indicator.Paint == nil || resolved.indicator.Paint.Background != indicator || *resolved.indicator.Paint.Radius != 2 {
+		t.Fatalf("indicator paint = %#v", resolved.indicator.Paint)
+	}
+	if resolved.indicator.Trans == nil || *resolved.indicator.Trans.ScaleX != .9 || *resolved.indicator.Trans.ScaleY != .8 {
+		t.Fatalf("indicator transform = %#v", resolved.indicator.Trans)
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/components/closebutton"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -33,7 +32,6 @@ type modalState struct {
 	dismiss      [4]overlay.ClickArea
 	dialog       overlay.ClickArea
 	close        widget.Clickable
-	closeButton  closebutton.State
 	bodyList     layout.List
 	bodyBar      widget.Scrollbar
 	outsideList  layout.List

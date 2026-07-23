@@ -126,12 +126,12 @@ func memberMenu(value member, model Model, send ui.Send[Msg]) ui.MenuWidget {
 }
 
 func memberIdentity(value member) ui.Widget {
-	initials := ""
-	for _, part := range strings.Fields(value.name) {
-		initials += part[:1]
+	var initials strings.Builder
+	for part := range strings.FieldsSeq(value.name) {
+		initials.WriteString(part[:1])
 	}
 	return ui.Row(
-		ui.Box(ui.Text(initials).Size(12)).Width(30).Height(30).Align(ui.AlignCenter),
+		ui.Box(ui.Text(initials.String()).Size(12)).Width(30).Height(30).Align(ui.AlignCenter),
 		ui.Column(
 			ui.Text(value.name).Size(13),
 			ui.Text(strings.ToUpper(value.key)).Size(11),

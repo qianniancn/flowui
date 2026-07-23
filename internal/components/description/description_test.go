@@ -1,15 +1,21 @@
 package description
 
 import (
+	"image/color"
 	"testing"
 
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func TestOptions(t *testing.T) {
-	description := Description("Supporting text").For("field").Disabled(true)
+	custom := flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: color.NRGBA{R: 1, A: 255}})
+	description := Description("Supporting text").For("field").Disabled(true).Style(custom)
 	if description.text != "Supporting text" || description.forKey != "field" || !description.disabled {
 		t.Fatal("description options were not retained")
+	}
+	if description.customStyle.Resolve(flowstyle.StyleState{}).Text == nil {
+		t.Fatal("description style was not retained")
 	}
 }
 

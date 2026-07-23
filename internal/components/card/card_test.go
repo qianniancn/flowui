@@ -7,10 +7,10 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -67,40 +67,33 @@ func TestCardThemeControlsSpacing(t *testing.T) {
 	}
 }
 
-func TestCardInstanceThemeSupportsZeroWithoutMutation(t *testing.T) {
+func TestCardInstanceStyleOverridesComponentDefaults(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	ctx := cardTestContext(&activeTheme)
-	accent := color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
-	themedProbe := &cardThemeProbeWidget{}
-	defaultProbe := &cardThemeProbeWidget{}
+	background := color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
+	foreground := color.NRGBA{R: 0xf1, G: 0xf2, B: 0xf3, A: 0xff}
+	probe := &colorProbeWidget{}
 	var ops op.Ops
-	dims := Card(themedProbe).
-		Theme(func(cardTheme *theme.Theme) {
-			cardTheme.Components.Card.Padding = 0
-			cardTheme.Components.Card.Radius = 0
-			cardTheme.Palette.Accent = accent
-			cardTheme.Spacing.PanelGap = 31
-		}).
+	dims := Card(probe).
+		Style(flowstyle.Style{}.
+			Padding(0).
+			Radius(0).
+			Background(flowstyle.SolidColor{Color: background}).
+			TextColor(flowstyle.SolidColor{Color: foreground}),
+		).
 		Layout(ctx, layout.Context{
 			Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 			Ops:         &ops,
 		})
 
 	if dims.Size != image.Pt(40, 10) {
-		t.Fatalf("instance-themed card size = %v, want (40,10)", dims.Size)
+		t.Fatalf("styled card size = %v, want (40,10)", dims.Size)
 	}
-	if themedProbe.accent != accent || themedProbe.panelGap != 31 {
-		t.Fatalf("card child theme = %#v/%v, want %#v/31", themedProbe.accent, themedProbe.panelGap, accent)
+	if probe.background != background || probe.foreground != foreground {
+		t.Fatalf("card colors = %#v/%#v, want %#v/%#v", probe.background, probe.foreground, background, foreground)
 	}
 	if activeTheme.Components.Card.Padding != 16 || activeTheme.Components.Card.Radius != 24 {
-		t.Fatalf("instance theme mutated application card theme: %#v", activeTheme.Components.Card)
-	}
-	Card(defaultProbe).Layout(ctx, layout.Context{
-		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
-		Ops:         &ops,
-	})
-	if defaultProbe.accent != activeTheme.Palette.Accent || defaultProbe.panelGap != activeTheme.Spacing.PanelGap {
-		t.Fatal("card instance theme leaked into sibling")
+		t.Fatalf("instance style mutated application card theme: %#v", activeTheme.Components.Card)
 	}
 }
 
@@ -126,14 +119,12 @@ func TestCardScopesVariantColors(t *testing.T) {
 }
 
 func TestCardDefaultsShadowExceptForTransparentVariant(t *testing.T) {
-	if !Card().resolvedShadow() {
+	activeTheme := theme.DefaultTheme()
+	if shadows := cardRootDeclaration(&activeTheme, CardDefault).Resolve(flowstyle.StyleState{}).Paint.Shadows; len(shadows) != 1 || shadows[0].Profile == nil {
 		t.Fatal("default card should use surface elevation")
 	}
-	if Card().Variant(CardTransparent).resolvedShadow() {
+	if shadows := cardRootDeclaration(&activeTheme, CardTransparent).Resolve(flowstyle.StyleState{}).Paint.Shadows; len(shadows) != 0 {
 		t.Fatal("transparent card should not use surface elevation")
-	}
-	if !Card().Variant(CardTransparent).Shadow(true).resolvedShadow() {
-		t.Fatal("explicit shadow option should override the transparent default")
 	}
 }
 
@@ -142,18 +133,13 @@ func TestCardOptionsKeepValueSemantics(t *testing.T) {
 	styled := base.
 		Variant(CardTertiary).
 		Padding(20).
-		Gap(8).
-		Radius(16).
-		Shadow(false)
+		Gap(8)
 
-	if base.variant != CardDefault || base.hasPadding || base.hasGap || base.hasRadius || base.hasShadow {
+	if base.variant != CardDefault || base.hasPadding || base.hasGap {
 		t.Fatal("card options mutated the original value")
 	}
-	if styled.variant != CardTertiary || styled.padding != 20 || styled.gap != 8 || styled.radius != 16 {
+	if styled.variant != CardTertiary || styled.padding != 20 || styled.gap != 8 {
 		t.Fatal("card options did not configure the returned value")
-	}
-	if !styled.hasShadow || styled.shadow {
-		t.Fatal("explicit shadow option was not retained")
 	}
 	if got := base.Padding(-1).padding; got != 0 {
 		t.Fatalf("negative padding = %v, want 0", got)
@@ -227,11 +213,6 @@ type colorProbeWidget struct {
 	background color.NRGBA
 }
 
-type cardThemeProbeWidget struct {
-	accent   color.NRGBA
-	panelGap unit.Dp
-}
-
 type cardOverlayProbe struct {
 	anchor *image.Rectangle
 }
@@ -262,12 +243,5 @@ func (w *cardOverlayProbe) Layout(ctx *frame.Context, _ layout.Context) layout.D
 func (w *colorProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
 	w.foreground = ctx.ForegroundColor()
 	w.background = ctx.BackgroundColor()
-	return layout.Dimensions{Size: image.Pt(40, 10)}
-}
-
-func (w *cardThemeProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
-	activeTheme := frame.ActiveTheme(ctx)
-	w.accent = activeTheme.Palette.Accent
-	w.panelGap = activeTheme.Spacing.PanelGap
 	return layout.Dimensions{Size: image.Pt(40, 10)}
 }

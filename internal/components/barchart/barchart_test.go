@@ -17,6 +17,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -83,13 +84,17 @@ func TestBarChartOptionsUseValueSemantics(t *testing.T) {
 		Orientation(Horizontal).
 		Label("Sales").
 		EmptyText("Empty").
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Radius(4))
 	categories[0] = "Changed"
 	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring BarChart mutated base: %#v", base)
 	}
 	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || !configured.hasCategoryAxisLabel || configured.categoryAxisLabel != "Category" || !configured.hasValueAxisLabel || configured.valueAxisLabel != "Value" || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.orientation != Horizontal || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured BarChart = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured BarChart did not retain its style")
 	}
 }
 

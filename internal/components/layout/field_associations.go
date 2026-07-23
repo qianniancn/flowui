@@ -1,10 +1,14 @@
 package layoutui
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/description"
-	"github.com/qianniancn/FlowUI/internal/components/label"
+	"reflect"
+
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
+
+type fieldAssociationPreparer interface {
+	PrepareFieldAssociation(*frame.Context) bool
+}
 
 // PrepareFieldAssociations pre-registers semantic field relationships for a
 // composite component before its children are laid out.
@@ -19,11 +23,14 @@ func prepareFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 }
 
 func prepareFieldAssociation(ctx *frame.Context, widget frame.Widget) {
-	if widget == nil || label.PrepareFieldAssociation(ctx, widget) || description.PrepareFieldAssociation(ctx, widget) {
+	if widget == nil || reflect.ValueOf(widget).Kind() == reflect.Pointer && reflect.ValueOf(widget).IsNil() {
+		return
+	}
+	if preparer, ok := widget.(fieldAssociationPreparer); ok && preparer.PrepareFieldAssociation(ctx) {
 		return
 	}
 	switch widget := widget.(type) {
-	case AdaptiveWidget, *AdaptiveWidget, ListWidget, *ListWidget:
+	case ListWidget, *ListWidget:
 		// Their children depend on the current layout pass and are prepared there.
 	case AspectRatioWidget:
 		prepareFieldAssociation(ctx, widget.child)

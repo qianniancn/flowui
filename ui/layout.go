@@ -2,11 +2,8 @@ package ui
 
 import "github.com/qianniancn/FlowUI/internal/components/layout"
 
-type ViewSize = layoutui.ViewSize
-type AdaptiveWidget = layoutui.AdaptiveWidget
 type AspectRatioWidget = layoutui.AspectRatioWidget
 type BoxWidget = layoutui.BoxWidget
-type Overflow = layoutui.Overflow
 type Align = layoutui.Align
 type SpacerWidget = layoutui.SpacerWidget
 type DividerWidget = layoutui.DividerWidget
@@ -51,10 +48,6 @@ const (
 	SplitPaneHorizontal = layoutui.SplitPaneHorizontal
 	SplitPaneVertical   = layoutui.SplitPaneVertical
 )
-
-func Adaptive(view func(ViewSize) Widget) AdaptiveWidget {
-	return layoutui.Adaptive(view)
-}
 
 func AspectRatio(ratio float32, child Widget) AspectRatioWidget {
 	return layoutui.AspectRatio(ratio, child)
@@ -124,14 +117,17 @@ func SplitPane(key string, first, second Widget) SplitPaneWidget {
 	return layoutui.SplitPane(key, first, second)
 }
 
+// Stack creates a local positioning context and paints layers in declaration order.
 func Stack(layers ...StackLayer) StackWidget {
 	return layoutui.Stack(layers...)
 }
 
+// Stacked creates a relative layer that normally contributes to the Stack's size.
 func Stacked(child Widget) StackLayer {
 	return layoutui.Stacked(child)
 }
 
+// Overlay creates an absolute layer positioned within its Stack.
 func Overlay(child Widget) StackLayer {
 	return layoutui.Overlay(child)
 }

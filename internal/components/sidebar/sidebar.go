@@ -5,9 +5,10 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Item describes one destination in a Sidebar.
@@ -27,7 +28,6 @@ type Section struct {
 
 // Widget presents controlled primary application navigation.
 type Widget struct {
-	theme          func(*theme.Theme)
 	key            string
 	selectedKey    string
 	items          []Item
@@ -47,6 +47,7 @@ type Widget struct {
 	width          unit.Dp
 	collapsedWidth unit.Dp
 	itemHeight     unit.Dp
+	customStyle    flowstyle.Style
 }
 
 // New creates a controlled Sidebar.
@@ -136,15 +137,13 @@ func (w Widget) OnAction(fn func(string)) Widget {
 	return w
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
+	rootKey := frame.FullKey(ctx, w.key)
 	state := sidebarStateFor(ctx, w.key)
 	w.disabledKeySet = state.disabledKeys.Resolve(w.disabledKeys)
 	entries, items := state.resolveEntries(w)
@@ -164,7 +163,26 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 
 	restoreKey := frame.PushKey(ctx, w.key)
 	defer restoreKey()
-	return w.layout(ctx, gtx, state, entries)
+	hovered, pressed, focused, focusVisible := false, false, false, false
+	for _, item := range items {
+		itemState := state.item(item.Key)
+		hovered = hovered || itemState.clickable.Hovered()
+		pressed = pressed || itemState.clickable.Pressed()
+		itemFocused := gtx.Focused(&itemState.clickable)
+		focused = focused || itemFocused
+		focusVisible = focusVisible || frame.FocusVisible(ctx, &itemState.clickable, itemFocused)
+	}
+	return layoutui.LayoutStyled(ctx, gtx, rootKey, flowstyle.StyleState{
+		Hovered:      hovered,
+		Pressed:      pressed,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     w.disabled || !gtx.Enabled(),
+		Selected:     w.selectedKey != "",
+		Expanded:     !w.collapsed,
+	}, w.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return w.layout(ctx, gtx, state, entries)
+	}))
 }
 
 func (w Widget) activate(key string) {

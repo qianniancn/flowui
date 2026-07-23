@@ -1,20 +1,17 @@
 package closebutton
 
 import (
-	"image"
 	"time"
 
-	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/unit"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/components/icon"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/FlowUI/internal/interaction"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 const (
@@ -23,12 +20,12 @@ const (
 )
 
 type CloseButtonWidget struct {
-	theme    func(*theme.Theme)
-	key      string
-	onClick  func()
-	disabled bool
-	icon     frame.Widget
-	label    string
+	key         string
+	onClick     func()
+	disabled    bool
+	icon        frame.Widget
+	label       string
+	customStyle flowstyle.Style
 }
 
 func CloseButton(key string) CloseButtonWidget {
@@ -55,97 +52,38 @@ func (b CloseButtonWidget) Label(label string) CloseButtonWidget {
 	return b
 }
 
-func (b CloseButtonWidget) Theme(fn func(*theme.Theme)) CloseButtonWidget {
-	b.theme = fn
+func (b CloseButtonWidget) Style(value flowstyle.Style) CloseButtonWidget {
+	b.customStyle = value
 	return b
 }
 
 func (b CloseButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, b.theme); restore != nil {
-		defer restore()
-	}
-	key, clickable := frame.ClickableWithKey(ctx, b.key)
-	return layoutWithClickable(b, ctx, gtx, clickable, closeButtonStateFor(ctx, key), true)
+	return layoutWithClickable(b, ctx, gtx, nil, true)
 }
 
 // LayoutWithClickableNoEvents renders a close button with caller-owned state and events.
-func LayoutWithClickableNoEvents(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, buttonState *State) layout.Dimensions {
-	return layoutWithClickable(b, ctx, gtx, clickable, buttonState, false)
+func LayoutWithClickableNoEvents(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable) layout.Dimensions {
+	return layoutWithClickable(b, ctx, gtx, clickable, false)
 }
 
-func layoutWithClickable(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, buttonState *State, handleEvents bool) layout.Dimensions {
-	if clickable == nil {
-		panic("flowui: nil close button clickable")
-	}
-	if buttonState == nil {
-		buttonState = new(State)
-	}
-	animGtx := gtx
-	presses := state.ActivePresses(clickable.History())
-	enabled := gtx.Enabled() && !b.disabled
-	if handleEvents {
-		for clickable.Clicked(gtx) {
-			if enabled && b.onClick != nil {
-				b.onClick()
+func layoutWithClickable(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) layout.Dimensions {
+	click := interaction.BeginClick(ctx, gtx, b.key, clickable, !b.disabled, handleEvents, b.onClick)
+	style := b.resolveStyle(ctx, gtx, click.Key, click.StyleState)
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			child := b.icon
+			if child == nil {
+				child = frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+					return icon.Layout(lucide.X, gtx, ctx.ForegroundColor())
+				})
 			}
-		}
-		if enabled {
-			frame.FocusOnPress(ctx, clickable, clickable.History(), presses)
-		}
-	}
-
-	size := closeButtonSize(gtx, frame.ActiveTheme(ctx).Components.CloseButton.Size)
-	gtx.Constraints = layout.Exact(size)
-	focused := gtx.Focused(clickable)
-	focusVisible := frame.FocusVisible(ctx, clickable, focused)
-	style := closeButtonStyleFor(frame.ActiveTheme(ctx), clickable.Hovered(), !enabled)
-	motion := frame.ActiveTheme(ctx).Motion
-	style.background = buttonState.background(animGtx, style.background, motion)
-	style.focusOpacity = buttonState.focus.Opacity(animGtx, focusVisible && enabled, motion)
-	targetScale := float32(1)
-	if clickable.Pressed() && enabled {
-		targetScale = closeButtonPressedScale(style.pressedScale)
-	}
-	scale := buttonState.scale(animGtx, targetScale, motion)
-
-	if !enabled {
-		semanticClip := clip.Rect{Max: size}.Push(gtx.Ops)
-		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(b.semanticLabel(ctx)).Add(gtx.Ops)
-		semantic.EnabledOp(false).Add(gtx.Ops)
-		b.drawVisual(ctx, gtx, size, style, scale, true)
-		semanticClip.Pop()
-		return layout.Dimensions{Size: size}
-	}
-
-	dims := clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(b.semanticLabel(ctx)).Add(gtx.Ops)
-		semantic.EnabledOp(true).Add(gtx.Ops)
-		b.drawVisual(ctx, gtx, size, style, scale, false)
-		return layout.Dimensions{Size: size}
+			return layoutui.LayoutResolved(ctx, gtx, style.icon, child)
+		})
 	})
-	stack := render.Scale(size, scale).Push(gtx.Ops)
-	drawCloseButtonFocus(gtx, image.Rectangle{Max: size}, closeButtonRadius(gtx, size, style.radius), style)
-	stack.Pop()
-	return dims
-}
 
-func (b CloseButtonWidget) drawVisual(ctx *frame.Context, gtx layout.Context, size image.Point, style closeButtonStyle, scale float32, disabled bool) {
-	macro := op.Record(gtx.Ops)
-	drawCloseButton(gtx, size, style)
-	b.layoutIcon(ctx, gtx, size, style, disabled)
-	call := macro.Stop()
-	stack := render.Scale(size, scale).Push(gtx.Ops)
-	call.Add(gtx.Ops)
-	stack.Pop()
-}
-
-func closeButtonSize(gtx layout.Context, preferred unit.Dp) image.Point {
-	diameter := gtx.Dp(preferred)
-	diameter = min(diameter, min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y))
-	diameter = max(diameter, 0)
-	return image.Pt(diameter, diameter)
+	return layoutui.LayoutInteractiveResolved(ctx, gtx, style.root, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return click.Layout(gtx, visual, b.semanticLabel(ctx))
+	})
 }
 
 func (b CloseButtonWidget) semanticLabel(ctx *frame.Context) string {

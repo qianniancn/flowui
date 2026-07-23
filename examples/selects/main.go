@@ -111,7 +111,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								OnChange(func(key string) { send(SetSurfaceChoice(key)) }).
 								FullWidth(),
 						).Width(300).Padding(20),
-					).Variant(ui.SurfaceDefault).Radius(24).Shadow(true),
+					).Variant(ui.SurfaceDefault).Style(ui.Radius(24).Shadow(ui.ShadowSurface)),
 				),
 			).Gap(18),
 		).FillWidth().MaxWidth(760).Padding(24),

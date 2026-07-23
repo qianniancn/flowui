@@ -67,7 +67,7 @@ func drawColorSwatchPickerItem(ctx *frame.Context, gtx layout.Context, size imag
 				shadowShape = render.RoundedShadowCorners(radius, radius, radius, radius)
 			}
 			activeTheme := frame.ActiveTheme(ctx)
-			render.DrawShadow(gtx, rect, shadowShape, render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.Shadow, shadowOpacity))
+			render.DrawShadow(gtx, rect, shadowShape, render.ThemeShadow(activeTheme.Shadows.Control, activeTheme.Palette.SurfaceShadow, shadowOpacity))
 		}
 		border := value
 		border.A = byte(float32(255)*selection + .5)

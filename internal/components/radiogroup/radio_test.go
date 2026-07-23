@@ -15,6 +15,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -176,6 +178,78 @@ func TestRadioStyleSecondaryAndInvalid(t *testing.T) {
 	}
 	if style.selectedBg != theme.Palette.DangerHover {
 		t.Fatalf("invalid selected bg = %#v, want %#v", style.selectedBg, theme.Palette.DangerHover)
+	}
+}
+
+func TestRadioPartsResolveCompleteStyles(t *testing.T) {
+	off := color.NRGBA{R: 1, A: 0xff}
+	on := color.NRGBA{G: 2, A: 0xff}
+	dot := color.NRGBA{B: 3, A: 0xff}
+	label := color.NRGBA{R: 4, A: 0xff}
+	description := color.NRGBA{G: 5, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: off}).
+			BorderWidth(3).
+			Radius(8).
+			BoxShadow(1, 2, 3, 4, flowstyle.RGBA(0x01020380)).
+			Translate(2, 3).
+			TextColor(flowstyle.SolidColor{Color: dot}).
+			Opacity(.5).
+			When(flowstyle.Checked, flowstyle.Style{}.Background(flowstyle.LinearGradient(
+				flowstyle.ColorStop(0, flowstyle.SolidColor{Color: off}),
+				flowstyle.ColorStop(1, flowstyle.SolidColor{Color: on}),
+			)))).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: label}).FontSize(22)).
+		Part(flowstyle.PartDescription, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: description}).FontSize(13))
+
+	widget := RadioGroup("plan", "pro", radioTestItems()).Style(custom)
+	resolved := widget.resolveItemStyle(newContext(nil), layout.Context{Ops: new(op.Ops)}, "plan:pro", flowstyle.StyleState{Checked: true, Selected: true})
+	if resolved.indicatorOn.Paint == nil || resolved.indicatorOn.Paint.Opacity == nil || *resolved.indicatorOn.Paint.Opacity != .5 || resolved.indicatorOn.Paint.Border == nil || *resolved.indicatorOn.Paint.Border.Width != 3 || *resolved.indicatorOn.Paint.Radius != 8 || len(resolved.indicatorOn.Paint.Shadows) != 1 {
+		t.Fatalf("indicator paint = %#v", resolved.indicatorOn.Paint)
+	}
+	if _, ok := resolved.indicatorOn.Paint.Background.(flowstyle.StyleGradient); !ok {
+		t.Fatalf("selected background = %T, want gradient", resolved.indicatorOn.Paint.Background)
+	}
+	if resolved.indicatorOn.Trans == nil || *resolved.indicatorOn.Trans.TranslateX != 2 || *resolved.indicatorOn.Trans.TranslateY != 3 {
+		t.Fatalf("indicator transform = %#v", resolved.indicatorOn.Trans)
+	}
+	if got, ok := styleruntime.Color(resolved.indicatorOn.Text.Color); !ok || got != dot {
+		t.Fatalf("dot color = %#v, ok %v", got, ok)
+	}
+	if got, ok := styleruntime.Color(resolved.label.Text.Color); !ok || got != label || *resolved.label.Text.FontSize != 22 {
+		t.Fatalf("label style = %#v, color %#v, ok %v", resolved.label.Text, got, ok)
+	}
+	if got, ok := styleruntime.Color(resolved.description.Text.Color); !ok || got != description || *resolved.description.Text.FontSize != 13 {
+		t.Fatalf("description style = %#v, color %#v, ok %v", resolved.description.Text, got, ok)
+	}
+}
+
+func TestRadioIndicatorPartControlsGeometry(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	gtx := testLayoutContext()
+	widget := RadioGroup("compact", "", nil).
+		Style(flowstyle.Style{}.Part(flowstyle.PartIndicator, flowstyle.Style{}.Width(12).Height(10)))
+	style := widget.resolveItemStyle(ctx, gtx, "compact:one", flowstyle.StyleState{})
+	dims := drawRadio(ctx, gtx, &activeTheme, style, 1)
+	focusSpace := max(gtx.Dp(activeTheme.Components.RadioGroup.FocusSpace), 1)
+	want := image.Pt(gtx.Dp(12)+focusSpace*2, gtx.Dp(10)+focusSpace*2)
+	if dims.Size != want {
+		t.Fatalf("styled radio size = %v, want %v", dims.Size, want)
+	}
+}
+
+func TestRadioLabelAndDescriptionPartsUseCommonRenderer(t *testing.T) {
+	items := []RadioItem{{Key: "one", Label: "One", Description: "Details"}}
+	base := RadioGroup("base", "", items).Layout(newContext(nil), testLayoutContext())
+	styled := RadioGroup("styled", "", items).
+		Style(flowstyle.Style{}.
+			Part(flowstyle.PartLabel, flowstyle.Style{}.PaddingY(5)).
+			Part(flowstyle.PartDescription, flowstyle.Style{}.PaddingY(4))).
+		Layout(newContext(nil), testLayoutContext())
+	if styled.Size.Y <= base.Size.Y {
+		t.Fatalf("styled radio height = %d, want greater than %d", styled.Size.Y, base.Size.Y)
 	}
 }
 

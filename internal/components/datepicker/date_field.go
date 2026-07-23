@@ -18,12 +18,13 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/components/label"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const (
@@ -32,7 +33,6 @@ const (
 )
 
 type DateFieldWidget struct {
-	theme        func(*theme.Theme)
 	key          string
 	value        time.Time
 	label        string
@@ -48,10 +48,10 @@ type DateFieldWidget struct {
 	fullWidth    bool
 	minDate      time.Time
 	maxDate      time.Time
+	customStyle  flowstyle.Style
 }
 
 type dateFieldState struct {
-	input    field.State
 	segments dateSegmentsState
 	hover    dateInputHoverState
 }
@@ -153,15 +153,12 @@ func (d DateFieldWidget) MaxDate(value time.Time) DateFieldWidget {
 	return d
 }
 
-func (d DateFieldWidget) Theme(fn func(*theme.Theme)) DateFieldWidget {
-	d.theme = fn
+func (d DateFieldWidget) Style(value flowstyle.Style) DateFieldWidget {
+	d.customStyle = value
 	return d
 }
 
 func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
-		defer restore()
-	}
 	d = d.resolveLocale(ctx)
 	key := frame.ClaimKey(ctx, state.KindDateField, d.key)
 	componentState := frame.UseState[dateFieldState](ctx, key, stateSlotDateField)
@@ -173,9 +170,17 @@ func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	focused := componentState.segments.focused(gtx)
 	hovered := componentState.hover.hovered || componentState.segments.hovered()
 	invalid := d.invalid || !componentState.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, hovered, focused, !enabled, invalid)
-	style.Background = componentState.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
-	style.Border = componentState.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
+	styleState := flowstyle.StyleState{
+		Hovered: hovered, Focused: focused, FocusVisible: componentState.segments.focusVisible(ctx, gtx),
+		Disabled: !enabled, Invalid: invalid, Selected: !d.value.IsZero(),
+	}
+	tokens := frame.ActiveTheme(ctx).Components
+	resolved := field.Resolve(ctx, gtx, key, styleState, d.variant, field.DeclarationOptions{
+		Radius:         tokens.DatePicker.Radius,
+		FocusRingWidth: tokens.Input.FocusRingWidth, InvalidOutlineWidth: tokens.Input.InvalidOutlineWidth,
+		ShadowColor: tokens.Input.ShadowColor, ShadowOpacity: tokens.Input.ShadowOpacity,
+		ShadowStrength: tokens.Input.ShadowStrength,
+	}, d.customStyle)
 
 	var children [3]layout.FlexChild
 	count := 0
@@ -191,8 +196,8 @@ func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 		count++
 	}
 	children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		dimensions := layoutDateInputFrame(ctx, gtx, style, d.fullWidth, func(gtx layout.Context) layout.Dimensions {
-			return componentState.segments.layout(ctx, gtx, d.locale, style, enabled, invalid, d.minDate, d.maxDate, d.onChange)
+		dimensions := layoutDateInputFrame(ctx, gtx, resolved.Content, d.fullWidth, func(gtx layout.Context) layout.Dimensions {
+			return componentState.segments.layout(ctx, gtx, d.locale, resolved.Colors, enabled, invalid, d.minDate, d.maxDate, d.onChange)
 		})
 		addDateInputHover(gtx, &componentState.hover, dimensions.Size, enabled, true)
 		return dimensions
@@ -216,10 +221,12 @@ func (d DateFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 		count++
 	}
 
-	return layout.Flex{
-		Axis: layout.Vertical,
-		Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.FieldGap),
-	}.Layout(gtx, children[:count]...)
+	return layoutui.LayoutStyled(ctx, gtx, key, styleState, d.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layout.Flex{
+			Axis: layout.Vertical,
+			Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.FieldGap),
+		}.Layout(gtx, children[:count]...)
+	}))
 }
 
 func (d DateFieldWidget) resolveLocale(ctx *frame.Context) DateFieldWidget {
@@ -234,7 +241,13 @@ func (d DateFieldWidget) resolveLocale(ctx *frame.Context) DateFieldWidget {
 	return d
 }
 
-func layoutDateInputFrame(ctx *frame.Context, gtx layout.Context, style field.Style, fullWidth bool, content layout.Widget) layout.Dimensions {
+func layoutDateInputFrame(ctx *frame.Context, gtx layout.Context, resolved flowstyle.ResolvedStyle, fullWidth bool, content layout.Widget) layout.Dimensions {
+	return layoutui.LayoutResolved(ctx, gtx, resolved, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutDateInputContent(ctx, gtx, fullWidth, content)
+	}))
+}
+
+func layoutDateInputContent(ctx *frame.Context, gtx layout.Context, fullWidth bool, content layout.Widget) layout.Dimensions {
 	frameConstraints := gtx.Constraints
 	if fullWidth {
 		frameConstraints.Min.X = frameConstraints.Max.X
@@ -252,13 +265,9 @@ func layoutDateInputFrame(ctx *frame.Context, gtx layout.Context, style field.St
 	contentDims := content(contentGtx)
 	call := macro.Stop()
 	size := frameConstraints.Constrain(image.Pt(contentDims.Size.X+padding*2, height))
-	radius := min(max(gtx.Dp(tokens.Radius), 1), min(size.X, size.Y)/2)
-	field.DrawFrame(gtx, image.Rectangle{Max: size}, radius, style)
-	clipped := clip.UniformRRect(image.Rectangle{Max: size}, radius).Push(gtx.Ops)
 	offset := op.Offset(image.Pt(padding, max((size.Y-contentDims.Size.Y)/2, 0))).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	offset.Pop()
-	clipped.Pop()
 	return layout.Dimensions{Size: size}
 }
 
@@ -294,6 +303,16 @@ func (s *dateSegmentsState) focused(gtx layout.Context) bool {
 	return false
 }
 
+func (s *dateSegmentsState) focusVisible(ctx *frame.Context, gtx layout.Context) bool {
+	for index := range s.segments {
+		segment := &s.segments[index].clickable
+		if frame.FocusVisible(ctx, segment, gtx.Focused(segment)) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *dateSegmentsState) hovered() bool {
 	for index := range s.segments {
 		if s.segments[index].clickable.Hovered() {
@@ -323,7 +342,7 @@ func (s *dateSegmentsState) escapePressed(gtx layout.Context) bool {
 	return pressed
 }
 
-func (s *dateSegmentsState) layout(ctx *frame.Context, gtx layout.Context, locale DatePickerLocale, style field.Style, enabled, invalid bool, minDate, maxDate time.Time, onChange func(time.Time)) layout.Dimensions {
+func (s *dateSegmentsState) layout(ctx *frame.Context, gtx layout.Context, locale DatePickerLocale, style field.Colors, enabled, invalid bool, minDate, maxDate time.Time, onChange func(time.Time)) layout.Dimensions {
 	for _, part := range locale.DateOrder {
 		s.updateSegment(ctx, gtx, int(part), locale.DateOrder, enabled, minDate, maxDate, onChange)
 	}
@@ -583,7 +602,7 @@ func (s *dateSegmentsState) maximum(index int) int {
 	}
 }
 
-func (s *dateSegmentsState) layoutSegment(ctx *frame.Context, gtx layout.Context, index int, style field.Style, enabled, invalid bool) layout.Dimensions {
+func (s *dateSegmentsState) layoutSegment(ctx *frame.Context, gtx layout.Context, index int, style field.Colors, enabled, invalid bool) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.DatePicker
 	width := gtx.Dp(tokens.SegmentWidth)
 	if index == int(dateSegmentYear) {
@@ -666,7 +685,7 @@ func (s *dateSegmentsState) segmentText(index int, focused bool) (string, bool) 
 	return leftPadNumber(value, 2), false
 }
 
-func layoutDateSegmentLiteral(ctx *frame.Context, gtx layout.Context, value string, style field.Style) layout.Dimensions {
+func layoutDateSegmentLiteral(ctx *frame.Context, gtx layout.Context, value string, style field.Colors) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.DatePicker
 	height := min(gtx.Dp(tokens.SegmentHeight), gtx.Constraints.Max.Y)
 	minimumWidth := gtx.Dp(tokens.SeparatorWidth)

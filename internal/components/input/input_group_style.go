@@ -1,69 +1,33 @@
 package input
 
 import (
-	"image/color"
-
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/field"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-type inputGroupStyle struct {
-	Background    color.NRGBA
-	Foreground    color.NRGBA
-	Placeholder   color.NRGBA
-	Selection     color.NRGBA
-	Ring          color.NRGBA
-	Divider       color.NRGBA
-	RingWidth     unit.Dp
-	ShadowOpacity float32
-	Opacity       float32
+type inputGroupResolvedStyle struct {
+	root        flowstyle.ResolvedStyle
+	prefix      flowstyle.ResolvedStyle
+	suffix      flowstyle.ResolvedStyle
+	divider     flowstyle.ResolvedStyle
+	selection   flowstyle.ResolvedStyle
+	placeholder flowstyle.ResolvedStyle
 }
 
-func inputGroupStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool) inputGroupStyle {
-	background := activeTheme.Palette.FieldBackgroundColor()
-	hoverBackground := activeTheme.Palette.FieldHoverColor()
-	focusBackground := activeTheme.Palette.FieldFocusColor()
-	shadowOpacity := activeTheme.Components.InputGroup.ShadowOpacity
-	if variant == InputSecondary {
-		background = activeTheme.Palette.DefaultColor()
-		hoverBackground = activeTheme.Palette.DefaultHoverColor()
-		focusBackground = activeTheme.Palette.DefaultColor()
-		shadowOpacity = 0
-	}
-	if hovered && !focused {
-		background = hoverBackground
-	}
-	if focused || invalid {
-		background = focusBackground
-	}
+func inputGroupDefaultDeclaration(activeTheme *theme.Theme, variant InputVariant, fullWidth bool, minHeight unit.Dp) flowstyle.Style {
+	tokens := activeTheme.Components.InputGroup
+	root := field.DefaultDeclaration(activeTheme, variant, field.DeclarationOptions{
+		MinHeight: max(tokens.MinHeight, minHeight), Radius: tokens.Radius,
+		TextSize: tokens.TextSize, LineHeight: tokens.LineHeight,
+		FocusRingWidth: tokens.FocusRingWidth, InvalidOutlineWidth: tokens.InvalidOutlineWidth,
+		ShadowColor: tokens.ShadowColor, ShadowOpacity: tokens.ShadowOpacity,
+		ShadowStrength: tokens.ShadowStrength, FillWidth: fullWidth,
+	})
+	return root.
+		Part(flowstyle.PartPrefix, flowstyle.Style{}.TextColor(flowstyle.TokenMutedForeground)).
+		Part(flowstyle.PartSuffix, flowstyle.Style{}.TextColor(flowstyle.TokenMutedForeground)).
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.Width(tokens.DividerWidth).Background(flowstyle.TokenBorder))
 
-	ring := color.NRGBA{}
-	ringWidth := unit.Dp(0)
-	if focused {
-		ring = activeTheme.Palette.Focus
-		ringWidth = activeTheme.Components.InputGroup.FocusRingWidth
-	}
-	if invalid {
-		ring = activeTheme.Palette.Danger
-		ringWidth = activeTheme.Components.InputGroup.InvalidOutlineWidth
-		if focused {
-			ringWidth = activeTheme.Components.InputGroup.FocusRingWidth
-		}
-	}
-
-	opacity := float32(1)
-	if disabled {
-		opacity = activeTheme.DisabledOpacityValue()
-	}
-	return inputGroupStyle{
-		Background:    background,
-		Foreground:    activeTheme.Palette.FieldForegroundColor(),
-		Placeholder:   activeTheme.Palette.FieldPlaceholderColor(),
-		Selection:     activeTheme.Palette.Selection,
-		Ring:          ring,
-		Divider:       activeTheme.Palette.Border,
-		RingWidth:     ringWidth,
-		ShadowOpacity: shadowOpacity,
-		Opacity:       opacity,
-	}
 }

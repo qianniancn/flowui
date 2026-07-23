@@ -10,9 +10,11 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func (p PopoverWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *popoverState, trigger image.Rectangle, progress float32, contentEnabled bool) layout.Dimensions {
@@ -98,7 +100,12 @@ func (p PopoverWidget) panelConstraints(ctx *frame.Context, gtx layout.Context, 
 func (p PopoverWidget) recordPanel(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return p.layoutPanel(ctx, gtx)
+		return layoutui.LayoutStyled(ctx, gtx, frame.FullKey(ctx, p.key), flowstyle.StyleState{
+			Disabled: !gtx.Enabled(),
+			Open:     p.open,
+		}, p.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return p.layoutPanel(ctx, gtx)
+		}))
 	})
 	return macro.Stop(), dims, placement
 }
@@ -177,11 +184,12 @@ func (p PopoverWidget) layoutContent(ctx *frame.Context, gtx layout.Context, sty
 }
 
 func (p PopoverWidget) styleContent(ctx *frame.Context, content frame.Widget, style popoverStyle) frame.Widget {
-	text, ok := content.(text.Widget)
+	value, ok := content.(text.Widget)
 	if ok {
-		text = text.DefaultSize(float32(frame.ActiveTheme(ctx).Components.Popover.BodyTextSize))
-		text = text.DefaultColor(style.muted)
-		return text
+		return text.WithDefaults(value, flowstyle.Style{}.
+			FontSize(frame.ActiveTheme(ctx).Components.Popover.BodyTextSize).
+			TextColor(flowstyle.SolidColor{Color: style.muted}),
+		)
 	}
 	return content
 }

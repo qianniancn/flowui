@@ -3,6 +3,8 @@ package label
 import (
 	"image/color"
 
+	"gioui.org/font"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -24,4 +26,26 @@ func labelStyleFor(theme *theme.Theme, foreground color.NRGBA, disabled, invalid
 		style.required = theme.DisabledColor(style.required)
 	}
 	return style
+}
+
+func labelDefaultDeclaration(activeTheme *theme.Theme, foreground color.NRGBA) flowstyle.Style {
+	return flowstyle.Style{}.
+		FontSize(activeTheme.Components.Label.TextSize).
+		FontWeight(int(font.Medium)).
+		TextColor(flowstyle.SolidColor{Color: foreground})
+
+}
+
+func labelStateDeclaration(activeTheme *theme.Theme, foreground color.NRGBA, state flowstyle.StyleState) flowstyle.Style {
+	resolved := labelStyleFor(activeTheme, foreground, state.Disabled, state.Invalid)
+	return flowstyle.Style{}.
+		TextColor(flowstyle.SolidColor{Color: resolved.text})
+
+}
+
+func labelRequiredColor(activeTheme *theme.Theme, disabled bool) color.NRGBA {
+	if disabled {
+		return activeTheme.DisabledColor(activeTheme.Palette.Danger)
+	}
+	return activeTheme.Palette.Danger
 }

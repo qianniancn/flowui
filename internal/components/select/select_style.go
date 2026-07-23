@@ -8,15 +8,12 @@ import (
 )
 
 type selectStyle struct {
-	field field.Style
+	field field.Colors
 	error color.NRGBA
 }
 
-func selectStyleFor(theme *theme.Theme, variant SelectVariant, hovered, focusVisible, disabled, invalid bool) selectStyle {
-	style := selectStyle{
-		field: field.ResolveStyle(theme, variant, hovered, focusVisible, disabled, invalid),
-		error: theme.Palette.Danger,
-	}
+func selectStyleFor(theme *theme.Theme, disabled bool) selectStyle {
+	style := selectStyle{error: theme.Palette.Danger}
 	if disabled {
 		style.error = theme.DisabledColor(style.error)
 	}

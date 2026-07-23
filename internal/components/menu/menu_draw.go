@@ -7,56 +7,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func drawMenuPanel(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style panelStyle) {
-	if rect.Empty() {
-		return
-	}
-	render.DrawSurface(gtx, rect, radius, style.background, render.ThemeShadow(activeTheme.Shadows.Menu, style.shadow, style.shadowOpacity))
-	width := max(gtx.Dp(activeTheme.Components.Menu.BorderWidth), 0)
-	if width <= 0 || style.border.A == 0 {
-		return
-	}
-	paint.FillShape(gtx.Ops, style.border, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	inner := rect.Inset(width)
-	if inner.Empty() {
-		return
-	}
-	paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(inner, max(radius-width, 0)).Op(gtx.Ops))
-}
-
-func drawMenuItem(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, style itemStyle) {
-	if size.X <= 0 || size.Y <= 0 {
-		return
-	}
-	rect := image.Rectangle{Max: size}
-	if style.background.A != 0 {
-		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	}
-	if style.focus <= 0 {
-		return
-	}
-	width := max(gtx.Dp(activeTheme.Components.Menu.FocusRingWidth), 1)
-	offset := max(gtx.Dp(activeTheme.Components.Menu.FocusRingOffset), 0)
-	focusRect, focusRadius := menuFocusRingGeometry(rect, radius, width, offset)
-	if focusRect.Empty() {
-		return
-	}
-	col := style.focusColor
-	col.A = byte(float32(col.A)*style.focus + 0.5)
-	stroke := clip.Stroke{Path: clip.UniformRRect(focusRect, focusRadius).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
-}
-
-func menuFocusRingGeometry(rect image.Rectangle, radius, width, offset int) (image.Rectangle, int) {
-	inset := max(offset, 0) + (max(width, 1)+1)/2
-	focusRect := rect.Inset(inset)
-	return focusRect, max(radius-inset, 0)
-}
 
 func drawMenuSeparator(gtx layout.Context, size image.Point, col color.NRGBA) {
 	if size.X <= 0 || size.Y <= 0 || col.A == 0 {

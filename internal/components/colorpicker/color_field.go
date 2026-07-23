@@ -7,17 +7,17 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/components/input"
 	"github.com/qianniancn/FlowUI/internal/components/label"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const stateSlotColorField = "color-field"
 
 type ColorFieldWidget struct {
-	theme        func(*theme.Theme)
 	key          string
 	value        color.NRGBA
 	label        string
@@ -31,6 +31,7 @@ type ColorFieldWidget struct {
 	fullWidth    bool
 	alpha        bool
 	swatch       bool
+	customStyle  flowstyle.Style
 }
 
 type colorFieldState struct {
@@ -100,15 +101,12 @@ func (field ColorFieldWidget) Swatch(show bool) ColorFieldWidget {
 	return field
 }
 
-func (field ColorFieldWidget) Theme(fn func(*theme.Theme)) ColorFieldWidget {
-	field.theme = fn
+func (field ColorFieldWidget) Style(value flowstyle.Style) ColorFieldWidget {
+	field.customStyle = value
 	return field
 }
 
 func (field ColorFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, field.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, state.KindColorField, field.key)
 	fieldState := frame.UseState[colorFieldState](ctx, key, stateSlotColorField)
 	fieldState.sync(field.value, field.alpha)
@@ -179,10 +177,15 @@ func (field ColorFieldWidget) Layout(ctx *frame.Context, gtx layout.Context) lay
 				Layout(ctx, gtx)
 		}))
 	}
-	return layout.Flex{
-		Axis: layout.Vertical,
-		Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.ColorField.Gap),
-	}.Layout(gtx, children...)
+	return layoutui.LayoutStyled(ctx, gtx, key, flowstyle.StyleState{
+		Disabled: field.disabled,
+		Invalid:  invalid,
+	}, field.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layout.Flex{
+			Axis: layout.Vertical,
+			Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.ColorField.Gap),
+		}.Layout(gtx, children...)
+	}))
 }
 
 func (state *colorFieldState) sync(value color.NRGBA, alpha bool) {

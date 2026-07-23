@@ -2,6 +2,7 @@ package toolbar
 
 import (
 	"image"
+	"strconv"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -9,11 +10,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 type Orientation uint8
@@ -25,13 +26,13 @@ const (
 
 // Widget groups related controls and provides directional keyboard navigation.
 type Widget struct {
-	theme       func(*theme.Theme)
 	children    []frame.Widget
 	orientation Orientation
 	attached    bool
 	disabled    bool
 	loopFocus   bool
 	alt         string
+	customStyle flowstyle.Style
 }
 
 func New(children ...frame.Widget) Widget {
@@ -63,66 +64,38 @@ func (w Widget) Alt(alt string) Widget {
 	return w
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
 	if !gtx.Enabled() {
 		w.disabled = true
 	}
 	gtx.Constraints.Min = image.Point{}
-	activeTheme := frame.ActiveTheme(ctx)
-	tokens := activeTheme.Components.Toolbar
+	resolved := w.resolveStyle(ctx, gtx)
 	group := new(frame.FocusGroup)
-
-	macro := op.Record(gtx.Ops)
-	dims := func() layout.Dimensions {
+	dims := layoutui.LayoutResolved(ctx, gtx, resolved, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		restoreGroup := frame.PushFocusGroup(ctx, group)
 		defer restoreGroup()
 		if w.disabled {
 			gtx = gtx.Disabled()
 		}
-		content := func(gtx layout.Context) layout.Dimensions {
-			return w.layoutChildren(ctx, gtx)
+		macro := op.Record(gtx.Ops)
+		dims := w.layoutChildren(ctx, gtx)
+		call := macro.Stop()
+		root := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
+		semantic.EnabledOp(!w.disabled).Add(gtx.Ops)
+		label := w.alt
+		if label == "" {
+			label = "Toolbar"
 		}
-		if !w.attached {
-			return content(gtx)
-		}
-		restoreColors := frame.PushColors(
-			ctx,
-			theme.ColorOr(activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Foreground),
-			activeTheme.Palette.Surface,
-		)
-		defer restoreColors()
-		return layout.UniformInset(tokens.Padding).Layout(gtx, content)
-	}()
-	call := macro.Stop()
-
-	if w.attached && dims.Size.X > 0 && dims.Size.Y > 0 {
-		rect := image.Rectangle{Max: dims.Size}
-		radius := min(max(gtx.Dp(tokens.Radius), 0), min(dims.Size.X, dims.Size.Y)/2)
-		render.DrawShadow(
-			gtx,
-			rect,
-			render.RoundedShadowCorners(tokens.Radius, tokens.Radius, tokens.Radius, tokens.Radius),
-			render.ThemeShadow(activeTheme.Shadows.Overlay, activeTheme.Palette.OverlayShadow, 1),
-		)
-		paint.FillShape(gtx.Ops, activeTheme.Palette.Surface, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	}
-	root := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-	semantic.EnabledOp(!w.disabled).Add(gtx.Ops)
-	label := w.alt
-	if label == "" {
-		label = "Toolbar"
-	}
-	semantic.DescriptionOp(label).Add(gtx.Ops)
-	call.Add(gtx.Ops)
-	root.Pop()
+		semantic.DescriptionOp(label).Add(gtx.Ops)
+		call.Add(gtx.Ops)
+		root.Pop()
+		return dims
+	}))
 
 	w.updateKeys(ctx, gtx, group.Items)
 	return dims
@@ -139,6 +112,7 @@ func (w Widget) layoutChildren(ctx *frame.Context, gtx layout.Context) layout.Di
 	for index, child := range children {
 		if separator, ok := child.(SeparatorWidget); ok {
 			separator.orientation = w.orientation
+			separator.key = "toolbar-separator:" + strconv.Itoa(index)
 			children[index] = separator
 		}
 	}
@@ -224,33 +198,68 @@ func moveIndex(current, delta, count int, loop bool) int {
 }
 
 type SeparatorWidget struct {
-	theme       func(*theme.Theme)
 	orientation Orientation
+	key         string
+	customStyle flowstyle.Style
 }
 
 func Separator() SeparatorWidget {
 	return SeparatorWidget{}
 }
 
-func (s SeparatorWidget) Theme(fn func(*theme.Theme)) SeparatorWidget {
-	s.theme = fn
+func (s SeparatorWidget) Style(value flowstyle.Style) SeparatorWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SeparatorWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	tokens := frame.ActiveTheme(ctx).Components.Toolbar
-	length := max(gtx.Dp(tokens.SeparatorLength), 1)
-	thickness := max(gtx.Dp(tokens.SeparatorWidth), 1)
-	size := image.Pt(thickness, length)
-	line := image.Rectangle{Max: size}
+	defaultStyle := flowstyle.Style{}.
+		Width(tokens.SeparatorWidth).
+		Height(tokens.SeparatorLength).
+		Background(flowstyle.SolidColor{Color: frame.ActiveTheme(ctx).Palette.SeparatorColor()})
+
 	if s.orientation == Vertical {
-		size = image.Pt(length*2, thickness)
-		line = image.Rect(length/2, 0, length+length/2, thickness)
+		defaultStyle = flowstyle.Style{}.
+			Width(tokens.SeparatorLength * 2).
+			Height(tokens.SeparatorWidth).
+			Background(flowstyle.SolidColor{Color: frame.ActiveTheme(ctx).Palette.SeparatorColor()})
+
 	}
-	size = gtx.Constraints.Constrain(size)
-	paint.FillShape(gtx.Ops, frame.ActiveTheme(ctx).Palette.SeparatorColor(), clip.Rect(line).Op())
-	return layout.Dimensions{Size: size}
+	resolved := styleruntime.ResolveStatic(ctx, flowstyle.StyleState{}, defaultStyle, flowstyle.Style{}, flowstyle.Style{}, s.customStyle)
+	if len(resolved.Transitions) != 0 {
+		key := s.key
+		if key == "" {
+			key = "toolbar-separator"
+		}
+		key = frame.ClaimKey(ctx, stateutil.KindStyle, key)
+		resolved = styleruntime.ApplyTransitions(ctx, gtx, key, resolved)
+	}
+	return layoutui.LayoutResolved(ctx, gtx, resolved, nil)
+}
+
+func (w Widget) resolveStyle(ctx *frame.Context, gtx layout.Context) flowstyle.ResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults := flowstyle.Style{}
+	if w.attached {
+		defaults = defaults.
+			Background(flowstyle.SolidColor{Color: activeTheme.Palette.Surface}).
+			TextColor(flowstyle.SolidColor{Color: activeTheme.Palette.SurfaceForeground}).
+			Padding(activeTheme.Components.Toolbar.Padding).
+			Radius(activeTheme.Components.Toolbar.Radius).
+			Shadow(flowstyle.ShadowOverlay)
+	}
+	resolved := styleruntime.ResolveStatic(
+		ctx,
+		flowstyle.StyleState{Disabled: w.disabled},
+		defaults,
+		flowstyle.Style{},
+		flowstyle.Style{},
+		w.customStyle,
+	)
+	if len(resolved.Transitions) == 0 {
+		return resolved
+	}
+	key := frame.ClaimKey(ctx, stateutil.KindStyle, "toolbar")
+	return styleruntime.ApplyTransitions(ctx, gtx, key, resolved)
 }

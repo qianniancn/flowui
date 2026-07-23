@@ -9,8 +9,6 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/ui"
 )
@@ -82,6 +80,12 @@ type customTrigger struct {
 	label   string
 	pressed bool
 	onClick func()
+	style   ui.Style
+}
+
+func (button customTrigger) Style(value ui.Style) customTrigger {
+	button.style = value
+	return button
 }
 
 func (button customTrigger) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
@@ -96,33 +100,42 @@ func (button customTrigger) Layout(ctx *ui.Context, gtx layout.Context) layout.D
 		ctx.RequestFocusVisible(&state.click, false)
 	}
 
-	width := min(gtx.Dp(190), gtx.Constraints.Max.X)
-	height := min(gtx.Dp(36), gtx.Constraints.Max.Y)
-	size := image.Pt(width, height)
-	gtx.Constraints = layout.Exact(size)
-	return state.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		semantic.Button.Add(gtx.Ops)
-		semantic.LabelOp(button.label).Add(gtx.Ops)
-		palette := ctx.Theme().Palette
-		background := palette.SurfaceSecondary
-		if state.click.Hovered() || button.pressed {
-			background = palette.SurfaceTertiary
-		}
-		if state.click.Pressed() {
-			background = palette.SurfacePressed
-		}
-		rect := image.Rectangle{Max: size}
-		radius := min(gtx.Dp(6), min(size.X, size.Y)/2)
-		paint.FillShape(gtx.Ops, background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-		if ctx.FocusVisible(&state.click, gtx.Focused(&state.click)) {
-			width := max(gtx.Dp(2), 1)
-			ring := rect.Inset(width)
-			stroke := clip.Stroke{Path: clip.UniformRRect(ring, max(radius-width, 0)).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-			paint.Fill(gtx.Ops, palette.Focus)
-			stroke.Pop()
-		}
+	focused := gtx.Focused(&state.click)
+	styleState := ui.StyleState{
+		Hovered:      state.click.Hovered(),
+		Pressed:      state.click.Pressed(),
+		Focused:      focused,
+		FocusVisible: ctx.FocusVisible(&state.click, focused),
+		Selected:     button.pressed,
+	}
+	base := ui.Width(190).
+		Height(36).
+		PaddingX(12).
+		Radius(6).
+		Background(ui.TokenSurfaceSecondary).
+		TextColor(ui.TokenSurfaceSecondaryForeground).
+		Cursor(ui.CursorPointer).
+		Outline(2, 1, ui.WithAlpha(ui.TokenFocus, 0)).
+		Part(ui.PartLabel, ui.FontSize(13).MaxLines(1)).
+		Transition(ui.PropBackgroundColor, 120*time.Millisecond).
+		Transition(ui.PropOutlineColor, 100*time.Millisecond).
+		When(ui.Hovered, ui.Background(ui.TokenSurfaceTertiary)).
+		When(ui.Pressed, ui.Background(ui.TokenSurfacePressed)).
+		When(ui.If(button.pressed), ui.Background(ui.TokenSurfaceTertiary)).
+		When(ui.FocusVisible, ui.Outline(2, 1, ui.TokenFocus))
+
+	resolved := ui.ResolveStyle(ctx, gtx, button.key, styleState, base, button.style)
+	label := ui.ResolveStylePart(ctx, gtx, button.key, ui.PartLabel, styleState, base, button.style)
+	content := ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
 		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return ui.Text(button.label).Size(13).Color(palette.SurfaceSecondaryForeground).Layout(ctx, gtx)
+			return ui.LayoutResolvedStyle(ctx, gtx, label, ui.Text(button.label))
+		})
+	})
+	return ui.LayoutInteractiveResolvedStyle(ctx, gtx, resolved, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return state.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			semantic.Button.Add(gtx.Ops)
+			semantic.LabelOp(button.label).Add(gtx.Ops)
+			return visual(gtx)
 		})
 	})
 }
@@ -188,7 +201,7 @@ func portalPanel(anchor image.Rectangle, interactive bool, close func()) ui.Widg
 					ui.Button("close", ui.Text("Close")).Size(ui.ButtonSmall).OnClick(close),
 				).Gap(10),
 			).Width(280).Padding(14),
-		).Radius(8).Shadow(true))
+		).Style(ui.Radius(8).Shadow(ui.ShadowSurface)))
 
 		macro := op.Record(gtx.Ops)
 		_, placement := ui.TrackOverlayPlacement(ctx, func() layout.Dimensions {

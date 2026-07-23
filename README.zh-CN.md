@@ -143,46 +143,84 @@ func main() {
 }
 ```
 
-应用级主题覆盖作用于应用或窗口。拥有组件主题的 Widget 可通过对应的 `Theme`
-链式方法覆盖当前实例；回调接收当前主题的副本，未修改的字段继续继承应用主题：
+应用级主题覆盖作用于应用或窗口。组件实例使用可复用的 `Style` 快照。
+默认样式、变体、尺寸、继承的 `StyleScope` 和实例样式按顺序级联：
 
 ```go
-ui.Button("save", ui.Text("保存")).Theme(func(theme *ui.Theme) {
-	theme.Components.Button.Radius = 8
-	theme.Components.Button.BorderWidth = 2
-	theme.Components.Button.PressedScaleMedium = 0.9
-	theme.Palette.Accent = color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
-})
+primary := ui.Background(ui.TokenAccent).
+	TextColor(ui.TokenAccentForeground).
+	Radius(8).
+	Cursor(ui.CursorPointer).
+	BoxShadow(0, 6, 18, 0, ui.RGBA(0x00000030)).
+	When(ui.Hovered, ui.Background(ui.TokenAccentHover)).
+	When(ui.Pressed, ui.Background(ui.TokenAccentPressed).
+		Scale(0.96, 0.96))
+
+ui.StyleScope(
+	ui.FontSize(14),
+	ui.Button("save", ui.Text("保存")).Style(primary),
+)
 ```
 
-每个拥有组件主题的 Widget 都提供 `Theme(func(*Theme))` 方法。回调接收完整应用
-主题的副本，因此既能修改 `Palette`、`Spacing`、`Typography` 等共享参数，也能
-通过 `Components` 修改组件专属字段。覆盖支持合法的零值，
-不会修改应用主题或泄漏到同级 Widget；组合在当前 Widget 内部的子组件会在布局
-期间继承该实例主题。回调在布局阶段执行，应只修改传入的主题，不要包含业务副作用。
+`When` 可以使用 `Hovered`、`Pressed`、`Focused`、`Disabled`、`Selected` 和
+`Invalid` 等运行时状态。`StyleScope` 作用于后代组件，实例 `Style` 拥有最终
+优先级。主题颜色 Token 会在布局时解析，因此同一份 Style 可以跟随明暗主题。
+MVU 模型里的布尔值使用 `When(ui.If(model.Highlighted), ...)` 接入同一条路径；
+模型变化后由 View 重新构建声明。
 
-`Surface` 默认使用 `Components.Surface.BorderWidth` 和 `Palette.Border`
-控制边框，也可以直接覆盖当前实例：
+`RGB` 接收 `0xRRGGBB`，`RGBA` 接收 `0xRRGGBBAA`，`Color` 接收标准库
+`color.Color`，`WithAlpha` 可调整具体颜色或主题 Token 的透明度。几何能力包括
+固定/最小/最大尺寸、填充、margin、padding、overflow 裁剪、cursor 和宽高比：
 
 ```go
-ui.Surface(content).
-	Radius(12).
+square := ui.Width(40).AspectRatio(1).Background(ui.RGBA(0x9333eacc))
+```
+
+根属性始终作用于组件外层盒子；复合组件内部使用具名 Part。内置 Part 包括
+`PartContent`、`PartLabel`、`PartDescription`、`PartIcon`、`PartTrack`、
+`PartFill`、`PartThumb`、`PartIndicator`、`PartPanel`、`PartItem`、
+`PartBackdrop`、`PartPlaceholder`、`PartSelection`、`PartPrefix` 和
+`PartSuffix`：
+
+```go
+barStyle := ui.Background(ui.RGBA(0x111827cc)). // 组件外层
+	Part(ui.PartTrack, ui.Height(6).Background(ui.TokenSurfaceRaised)).
+	Part(ui.PartFill, ui.Background(ui.TokenAccent)).
+	Part(ui.PartLabel, ui.TextColor(ui.TokenMutedForeground))
+
+ui.ProgressBar("upload", 42).Label("上传").Style(barStyle)
+```
+
+Select、ComboBox 和日期控件这类复合字段使用 `PartContent` 表示字段表面；
+根属性仍属于整个组件外层。
+
+自定义组件通过 `ResolveStyle`、`ResolveStylePart`、`LayoutResolvedStyle` 和
+`LayoutInteractiveResolvedStyle` 复用同一套级联与渲染器；完整写法见
+`examples/custom_widgets`。
+
+`Surface` 也使用同一套 Style API 设置实例几何和绘制属性：
+
+```go
+ui.Surface(content).Style(ui.Radius(12).
 	BorderWidth(1).
-	BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
+	BorderColor(ui.RGB(0x9333ea)))
 ```
 
-阴影几何参数同样属于实例主题。每种阴影包含由近到远排列的三层，透明度为零的层
+transition 需要稳定身份。交互组件已经拥有身份；每个同级的非交互 transition
+组件应分别放入不同的 `ui.Key` 作用域；`Box` 也可以直接使用自己的 `.Key(...)`。
+
+阴影几何参数属于应用级主题。每种阴影包含由近到远排列的三层，透明度为零的层
 不会绘制：
 
 ```go
-ui.Surface(content).Shadow(true).Theme(func(theme *ui.Theme) {
+ui.Run(Model{}, Update, View, ui.CustomizeTheme(func(theme *ui.Theme) {
 	theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
 	theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
 		{OffsetY: 2, Blur: 4, Opacity: 0.65},
 		{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
 		{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
 	}
-})
+}))
 ```
 
 `Layers[0]`、`Layers[1]`、`Layers[2]` 分别表示近层、中层和远层；每层可控制
@@ -200,6 +238,7 @@ FlowUI 内置英文和中文组件文案。`ui.LanguageAuto` 会根据系统语�
 可运行示例位于 [`examples/`](examples/)：
 
 ```bash
+go run ./examples/components
 go run ./examples/counter
 go run ./examples/async
 go run ./examples/tables

@@ -12,6 +12,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -31,6 +32,9 @@ type Popup struct {
 	hasTransformMotion bool
 	progress           float32
 	exiting            bool
+	customStyle        flowstyle.Style
+	styleKey           string
+	styleState         flowstyle.StyleState
 }
 
 func NewPopup(content frame.Widget) Popup {
@@ -84,6 +88,11 @@ func (p Popup) Progress(progress float32) Popup {
 
 func (p Popup) Exiting(exiting bool) Popup {
 	p.exiting = exiting
+	return p
+}
+
+func (p Popup) Style(value flowstyle.Style) Popup {
+	p.customStyle = value
 	return p
 }
 
@@ -141,7 +150,8 @@ func (t TooltipWidget) popup(progress float32, exiting bool) Popup {
 		Placement(t.placement).
 		Progress(progress).
 		Exiting(exiting).
-		Arrow(t.arrow)
+		Arrow(t.arrow).
+		Style(t.customStyle)
 	if t.hasOffset {
 		p = p.Offset(unit.Dp(t.offset))
 	}

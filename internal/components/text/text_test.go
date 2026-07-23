@@ -16,6 +16,7 @@ import (
 	giotext "gioui.org/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func TestTextTransparentColor(t *testing.T) {
@@ -25,13 +26,22 @@ func TestTextTransparentColor(t *testing.T) {
 	}
 }
 
+func TestTextStyleAppliesCommonBoxModel(t *testing.T) {
+	ctx := textTestContext()
+	base := layoutTextFrame(ctx, new(input.Router), New("FlowUI"), time.Unix(1, 0), image.Pt(300, 100))
+	padded := layoutTextFrame(ctx, new(input.Router), New("FlowUI").Style(flowstyle.Style{}.Padding(6)), time.Unix(2, 0), image.Pt(300, 100))
+	if padded.Size.X != base.Size.X+12 || padded.Size.Y != base.Size.Y+12 {
+		t.Fatalf("padded text = %v, base %v", padded.Size, base.Size)
+	}
+}
+
 func TestTextOptionsUseValueSemantics(t *testing.T) {
 	base := New("FlowUI")
 	configured := base.
 		Size(18).
 		Color(color.NRGBA{R: 1, G: 2, B: 3, A: 4}).
 		Typeface("serif").
-		Style(font.Italic).
+		FontStyle(font.Italic).
 		Weight(font.Bold).
 		Align(giotext.Middle).
 		MaxLines(2).
@@ -40,7 +50,7 @@ func TestTextOptionsUseValueSemantics(t *testing.T) {
 		LineHeight(24).
 		LineHeightScale(1.2)
 
-	if base.size != 0 || base.hasColor || base.hasTypeface || base.hasStyle || base.hasWeight || base.maxLines != 0 || base.lineHeight != 0 || base.lineHeightScale != 0 {
+	if base.hasSize || base.hasColor || base.hasTypeface || base.hasStyle || base.hasWeight || base.hasMaxLines || base.hasLineHeight || base.lineHeightScale != 0 {
 		t.Fatalf("base Text was mutated: %#v", base)
 	}
 	if configured.size != 18 || configured.color != (color.NRGBA{R: 1, G: 2, B: 3, A: 4}) || configured.font != (font.Font{Typeface: "serif", Style: font.Italic, Weight: font.Bold}) {
@@ -61,7 +71,7 @@ func TestTextFontAndLayoutOptionsMapToGioLabel(t *testing.T) {
 		Wrap(giotext.WrapGraphemes).
 		LineHeight(22).
 		LineHeightScale(1.1)
-	label := configured.labelStyle(ctx)
+	label := configured.labelStyle(ctx, configured.resolveStyleStatic(ctx, flowstyle.StyleState{}))
 	if label.Font != (font.Font{Typeface: "monospace", Style: font.Italic, Weight: font.Medium}) {
 		t.Fatalf("Gio label font = %#v", label.Font)
 	}
@@ -74,11 +84,71 @@ func TestTextFontAndLayoutOptionsMapToGioLabel(t *testing.T) {
 }
 
 func TestTextExplicitNormalWeightOverridesComponentDefault(t *testing.T) {
-	if got := New("Regular").Weight(font.Normal).DefaultWeight(font.Bold).ConfiguredWeight(); got != font.Normal {
-		t.Fatalf("explicit normal weight = %v, want normal", got)
+	resolved := textPropertyDeclaration(New("Regular").Weight(font.Normal)).Resolve(flowstyle.StyleState{})
+	if resolved.Text == nil || resolved.Text.FontWeight == nil || font.Weight(*resolved.Text.FontWeight) != font.Normal {
+		t.Fatalf("explicit normal weight declaration = %#v", resolved.Text)
 	}
-	if got := New("Default").DefaultWeight(font.Bold).ConfiguredWeight(); got != font.Bold {
-		t.Fatalf("default weight = %v, want bold", got)
+}
+
+func TestTextStyleCascadesScopeBeforeInstance(t *testing.T) {
+	ctx := textTestContext()
+	restore := frame.PushStyle(ctx, flowstyle.Style{}.FontSize(18).TextColor(flowstyle.RGB(0x112233)))
+	defer restore()
+	value := New("FlowUI").
+		Weight(font.Bold).
+		Style(flowstyle.Style{}.
+			FontSize(20).
+			FontWeight(int(font.Normal)).
+			Typeface("monospace").
+			FontStyle(font.Italic).
+			Wrap(giotext.WrapGraphemes).
+			Truncator("...").
+			LineHeightScale(1.25),
+		)
+	label := value.labelStyle(ctx, value.resolveStyleStatic(ctx, flowstyle.StyleState{}))
+	if label.TextSize != 20 || label.Color != flowstyle.RGB(0x112233).Color {
+		t.Fatalf("resolved label = size %v color %#v", label.TextSize, label.Color)
+	}
+	if label.Font.Weight != font.Normal {
+		t.Fatalf("resolved weight = %v, want instance normal", label.Font.Weight)
+	}
+	if label.Font.Typeface != "monospace" || label.Font.Style != font.Italic || label.WrapPolicy != giotext.WrapGraphemes || label.Truncator != "..." || label.LineHeightScale != 1.25 {
+		t.Fatalf("resolved common text style = %#v", label)
+	}
+}
+
+func TestTextConditionalStyleTransition(t *testing.T) {
+	ctx := textTestContext()
+	start := time.Unix(1, 0)
+	from := flowstyle.RGB(0x102030).Color
+	to := flowstyle.RGB(0x8090a0).Color
+	resolveAt := func(now time.Time, active bool) color.NRGBA {
+		frame.BeginFrame(ctx)
+		resolved := New("Status").Style(
+			flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: from}).
+				Transition(flowstyle.PropTextColor, 100*time.Millisecond).
+				When(flowstyle.If(active), flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: to})),
+		).resolveLayoutStyle(ctx, layout.Context{Ops: new(op.Ops), Now: now})
+		frame.EndFrame(ctx)
+		got, ok := styleColor(resolved.Text.Color)
+		if !ok {
+			t.Fatalf("resolved text color = %#v", resolved.Text.Color)
+		}
+		return got
+	}
+
+	if got := resolveAt(start, false); got != from {
+		t.Fatalf("initial text color = %#v, want %#v", got, from)
+	}
+	if got := resolveAt(start, true); got != from {
+		t.Fatalf("transition start = %#v, want %#v", got, from)
+	}
+	middle := resolveAt(start.Add(50*time.Millisecond), true)
+	if middle == from || middle == to {
+		t.Fatalf("transition midpoint = %#v", middle)
+	}
+	if got := resolveAt(start.Add(100*time.Millisecond), true); got != to {
+		t.Fatalf("transition end = %#v, want %#v", got, to)
 	}
 }
 

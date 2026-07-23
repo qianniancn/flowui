@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -96,7 +97,6 @@ func (i Item) Width(dp int) Item {
 }
 
 type Widget struct {
-	theme             func(*theme.Theme)
 	key               string
 	items             []Item
 	orientation       Orientation
@@ -110,6 +110,7 @@ type Widget struct {
 	defaultOpenKey    string
 	hasDefaultOpenKey bool
 	onOpenChange      func(string)
+	customStyle       flowstyle.Style
 }
 
 func New(key string, items []Item) Widget {
@@ -177,15 +178,12 @@ func (m Widget) themeTokens(activeTheme *theme.Theme) theme.MenubarTheme {
 	return tokens
 }
 
-func (m Widget) Theme(fn func(*theme.Theme)) Widget {
-	m.theme = fn
+func (m Widget) Style(value flowstyle.Style) Widget {
+	m.customStyle = value
 	return m
 }
 
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
-		defer restore()
-	}
 	return m.layout(ctx, gtx)
 }
 

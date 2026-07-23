@@ -83,7 +83,6 @@ func runWindowCmd[M any, Msg any](
 			requested := subscriptions(model)
 			result := make([]runtime.Subscription[Msg], len(requested))
 			for index, subscription := range requested {
-				subscription := subscription
 				result[index] = runtime.Subscription[Msg]{
 					Key: subscription.key,
 					Run: func(effectCtx context.Context, send func(Msg)) error {

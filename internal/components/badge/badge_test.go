@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -37,12 +38,16 @@ func TestBadgeOptionsUseValueSemantics(t *testing.T) {
 		Color(ColorDanger).
 		Variant(VariantSoft).
 		Size(SizeSmall).
-		Placement(PlacementBottomLeft)
+		Placement(PlacementBottomLeft).
+		Style(flowstyle.Style{}.Radius(4))
 	if base.content != nil || base.alt != "" || base.color != ColorDefault || base.variant != VariantPrimary || base.size != SizeMedium || base.placement != PlacementTopRight {
 		t.Fatalf("configuring Badge mutated base: %#v", base)
 	}
 	if configured.content != content || configured.alt != "Notifications" || configured.color != ColorDanger || configured.variant != VariantSoft || configured.size != SizeSmall || configured.placement != PlacementBottomLeft {
 		t.Fatalf("configured Badge = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured Badge did not retain its style")
 	}
 }
 

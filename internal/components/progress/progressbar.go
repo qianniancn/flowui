@@ -7,14 +7,14 @@ import (
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ProgressBarWidget struct {
-	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	minValue      float64
@@ -28,6 +28,7 @@ type ProgressBarWidget struct {
 	color         ProgressBarColor
 	size          ProgressBarSize
 	disabled      bool
+	customStyle   flowstyle.Style
 }
 
 type ProgressBarColor int
@@ -105,29 +106,23 @@ func (p ProgressBarWidget) Disabled(disabled bool) ProgressBarWidget {
 	return p
 }
 
-func (p ProgressBarWidget) Theme(fn func(*theme.Theme)) ProgressBarWidget {
-	p.theme = fn
+func (p ProgressBarWidget) Style(value flowstyle.Style) ProgressBarWidget {
+	p.customStyle = value
 	return p
 }
 
 func (p ProgressBarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
-		defer restore()
-	}
-	state := progressBarStateFor(ctx, p.key)
-	style := progressBarStyleFor(frame.ActiveTheme(ctx), p.color, p.disabled)
-	sizeStyle := progressBarSizeStyleFor(frame.ActiveTheme(ctx), p.size)
-	progress := state.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)
-
-	macro := op.Record(gtx.Ops)
-	dims := p.layout(ctx, gtx, style, sizeStyle, progress)
-	call := macro.Stop()
-
-	clipStack := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-	p.addSemantic(gtx)
-	call.Add(gtx.Ops)
-	clipStack.Pop()
-	return dims
+	key := frame.ClaimKey(ctx, state.KindProgressBar, p.key)
+	progressState := progressBarStateFor(ctx, key)
+	resolved := p.resolveStyle(ctx, gtx, key)
+	progress := progressState.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)
+	return layoutui.LayoutResolved(ctx, gtx, resolved.root, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		dims := p.layout(ctx, gtx, resolved, progress)
+		clipStack := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
+		p.addSemantic(gtx)
+		clipStack.Pop()
+		return dims
+	}))
 }
 
 func (p ProgressBarWidget) ratio() float32 {

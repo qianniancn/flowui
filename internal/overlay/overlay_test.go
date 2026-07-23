@@ -3,6 +3,7 @@ package overlay
 import (
 	"image"
 	"math"
+	"slices"
 	"testing"
 
 	"gioui.org/f32"
@@ -143,11 +144,8 @@ func assertDismissPartition(t *testing.T, bounds image.Rectangle, exclusions, ar
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			point := image.Pt(x, y)
 			want := 1
-			for _, exclusion := range exclusions {
-				if point.In(exclusion) {
-					want = 0
-					break
-				}
+			if slices.ContainsFunc(exclusions, point.In) {
+				want = 0
 			}
 			if covered[point] != want {
 				t.Errorf("coverage at %v = %d, want %d", point, covered[point], want)

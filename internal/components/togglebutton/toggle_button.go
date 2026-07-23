@@ -5,7 +5,7 @@ import (
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ToggleButtonVariant uint8
@@ -29,16 +29,16 @@ const (
 )
 
 type ToggleButtonWidget struct {
-	theme    func(*theme.Theme)
-	key      string
-	selected bool
-	child    frame.Widget
-	onChange func(bool)
-	variant  ToggleButtonVariant
-	size     ToggleButtonSize
-	disabled bool
-	iconOnly bool
-	label    string
+	key         string
+	selected    bool
+	child       frame.Widget
+	onChange    func(bool)
+	variant     ToggleButtonVariant
+	size        ToggleButtonSize
+	disabled    bool
+	iconOnly    bool
+	label       string
+	customStyle flowstyle.Style
 }
 
 func ToggleButton(key string, selected bool, child frame.Widget) ToggleButtonWidget {
@@ -75,14 +75,11 @@ func (b ToggleButtonWidget) Label(label string) ToggleButtonWidget {
 	return b
 }
 
-func (b ToggleButtonWidget) Theme(fn func(*theme.Theme)) ToggleButtonWidget {
-	b.theme = fn
+func (b ToggleButtonWidget) Style(value flowstyle.Style) ToggleButtonWidget {
+	b.customStyle = value
 	return b
 }
 
 func (b ToggleButtonWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, b.theme); restore != nil {
-		defer restore()
-	}
 	return b.layout(ctx, gtx)
 }

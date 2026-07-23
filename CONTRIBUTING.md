@@ -46,11 +46,16 @@ When adding or changing a component:
 Run these before opening a pull request:
 
 ```bash
+go fix ./...
 gofmt -w path/to/changed.go
 go test ./...
 go vet ./...
 git diff --check
 ```
+
+Use Go 1.26.2 (or a newer compatible toolchain) for all changes. FlowUI is a
+clean-break refactor: use the current immutable `ui.Style`/`StyleScope`/`When` APIs
+and do not reintroduce removed component-level theme or compatibility shims.
 
 For visual or interaction changes, test the affected example and include the
 platform used for verification. For behavior changes, add a focused regression

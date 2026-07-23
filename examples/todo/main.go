@@ -115,18 +115,10 @@ func addControls(m Model, canAdd bool, send ui.Send[Msg]) ui.Widget {
 			send(Add{})
 		})
 
-	return ui.Adaptive(func(size ui.ViewSize) ui.Widget {
-		if size.Width < 520 {
-			return ui.Column(
-				input,
-				ui.Box(button).FillWidth(),
-			).Gap(12)
-		}
-		return ui.Row(
-			ui.Expanded(input),
-			ui.Box(button).Width(100),
-		).Gap(12).AlignMiddle()
-	})
+	return ui.Row(
+		ui.Expanded(input),
+		ui.Box(button).Width(100),
+	).Gap(12).AlignMiddle()
 }
 
 func todoRow(item Item, send ui.Send[Msg]) ui.Widget {
@@ -140,18 +132,10 @@ func todoRow(item Item, send ui.Send[Msg]) ui.Widget {
 		send(Delete{ID: item.ID})
 	}).Variant(ui.ButtonDangerSoft)
 
-	return ui.Adaptive(func(size ui.ViewSize) ui.Widget {
-		if size.Width < 520 {
-			return ui.Column(
-				checkbox,
-				ui.Box(button).FillWidth(),
-			).Gap(8)
-		}
-		return ui.Row(
-			ui.Expanded(checkbox),
-			ui.Box(button).Width(100),
-		).Gap(12).AlignMiddle()
-	})
+	return ui.Row(
+		ui.Expanded(checkbox),
+		ui.Box(button).Width(100),
+	).Gap(12).AlignMiddle()
 }
 
 func main() {

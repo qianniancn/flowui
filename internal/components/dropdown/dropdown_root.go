@@ -12,9 +12,11 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"github.com/qianniancn/FlowUI/internal/components/button"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func (d Widget) layoutRoot(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -31,7 +33,18 @@ func (d Widget) layoutRoot(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if d.disabled {
 		eventGtx = eventGtx.Disabled()
 	}
-	dims := d.layoutTrigger(ctx, eventGtx, state)
+	focused := eventGtx.Focused(&state.trigger)
+	focusVisible := frame.FocusVisible(ctx, &state.trigger, focused)
+	dims := layoutui.LayoutStyled(ctx, eventGtx, state.key, flowstyle.StyleState{
+		Hovered:      state.trigger.Hovered(),
+		Pressed:      state.trigger.Pressed(),
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     d.disabled || !gtx.Enabled(),
+		Open:         open,
+	}, d.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return d.layoutTrigger(ctx, gtx, state)
+	}))
 	state.triggerRect = image.Rectangle{Max: dims.Size}
 
 	if open && !state.wasOpen {

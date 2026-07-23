@@ -7,25 +7,26 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 const defaultTextAreaRows = 3
 
 type TextAreaWidget struct {
-	theme     func(*theme.Theme)
-	key       string
-	value     string
-	hint      string
-	onChange  func(string)
-	variant   TextAreaVariant
-	disabled  bool
-	invalid   bool
-	fullWidth bool
-	readOnly  bool
-	maxLength int
-	rows      int
-	label     string
+	key         string
+	value       string
+	hint        string
+	onChange    func(string)
+	variant     TextAreaVariant
+	disabled    bool
+	invalid     bool
+	fullWidth   bool
+	readOnly    bool
+	maxLength   int
+	rows        int
+	label       string
+	customStyle flowstyle.Style
 }
 
 type TextAreaVariant = field.Variant
@@ -94,27 +95,39 @@ func (t TextAreaWidget) Label(label string) TextAreaWidget {
 	return t
 }
 
-func (t TextAreaWidget) Theme(fn func(*theme.Theme)) TextAreaWidget {
-	t.theme = fn
+func (t TextAreaWidget) Style(value flowstyle.Style) TextAreaWidget {
+	t.customStyle = value
 	return t
 }
 
 func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
-		defer restore()
-	}
 	gtx, key, editor, enabled := t.prepareEditor(ctx, gtx, t.disabled)
 	disabled := !enabled
 	state := inputStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
-	style := textAreaStyleFor(frame.ActiveTheme(ctx), t.variant, state.Hovered, focused, disabled, t.invalid)
-	motion := frame.ActiveTheme(ctx).Motion
-	style.Background = state.Background(gtx, style.Background, motion)
-	style.Ring = state.BorderColor(gtx, style.Ring, motion)
-
-	return t.layoutFrame(ctx, gtx, state, style, enabled, t.editorLayout(ctx, key, enabled, editor, style))
+	focusVisible := frame.FocusVisible(ctx, editor, focused)
+	styleState := flowstyle.StyleState{
+		Hovered:      state.Hovered,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     disabled,
+		ReadOnly:     t.readOnly,
+		Invalid:      t.invalid,
+	}
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.TextArea
+	contentHeight := gtx.Sp(tokens.LineHeight)*t.resolvedRows() + gtx.Dp(tokens.PaddingY)*2
+	minHeight := gtx.Metric.PxToDp(contentHeight)
+	defaults := textAreaDefaultDeclaration(activeTheme, t.variant, t.fullWidth, minHeight)
+	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
+	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
+	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
+	style := resolvedInputStyle(root, placeholder, selection, activeTheme)
+	textSize, lineHeight := resolvedTypography(root, tokens.TextSize, tokens.LineHeight)
+	editorLayout := t.editorLayoutWithTypography(ctx, key, enabled, editor, style, textSize, lineHeight)
+	return t.layoutFrame(ctx, gtx, state, root, enabled, editorLayout)
 }
 
 func (t TextAreaWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disabled bool) (layout.Context, string, *widget.Editor, bool) {

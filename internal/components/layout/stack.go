@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -16,6 +17,8 @@ type StackWidget struct {
 type StackLayer struct {
 	child    frame.Widget
 	align    Align
+	offsetX  unit.Dp
+	offsetY  unit.Dp
 	hasAlign bool
 	overlay  bool
 	expanded bool
@@ -25,10 +28,12 @@ func Stack(layers ...StackLayer) StackWidget {
 	return StackWidget{layers: layers}
 }
 
+// Stacked creates a layer that contributes to the Stack's size unless expanded.
 func Stacked(child frame.Widget) StackLayer {
 	return StackLayer{child: child}
 }
 
+// Overlay creates a positioned layer that does not contribute to the Stack's size.
 func Overlay(child frame.Widget) StackLayer {
 	return StackLayer{child: child, overlay: true}
 }
@@ -41,6 +46,13 @@ func (s StackWidget) Align(align Align) StackWidget {
 func (l StackLayer) Align(align Align) StackLayer {
 	l.align = align
 	l.hasAlign = true
+	return l
+}
+
+// Offset moves the layer without changing the Stack's measured size.
+func (l StackLayer) Offset(x, y int) StackLayer {
+	l.offsetX = unit.Dp(x)
+	l.offsetY = unit.Dp(y)
 	return l
 }
 
@@ -83,12 +95,15 @@ func (s StackWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 		if !s.layers[i].hasAlign {
 			align = s.align
 		}
-		pos := align.Position(layer.dims.Size, size)
+		pos := align.Position(layer.dims.Size, size).Add(image.Pt(
+			gtx.Dp(s.layers[i].offsetX),
+			gtx.Dp(s.layers[i].offsetY),
+		))
 		layer.placement.PlaceOffset(pos)
 		trans := op.Offset(pos).Push(gtx.Ops)
 		layer.call.Add(gtx.Ops)
 		trans.Pop()
-		if baseline == 0 && layer.dims.Baseline != 0 {
+		if baseline == 0 && !s.layers[i].overlay && layer.dims.Baseline != 0 {
 			baseline = layer.dims.Baseline + size.Y - layer.dims.Size.Y - pos.Y
 		}
 	}

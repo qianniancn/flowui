@@ -37,7 +37,7 @@ func scrollPanel(title, key string, content ui.Widget) ui.Widget {
 				ui.Expanded(ui.Scrollbar(key, content)),
 			).Gap(10),
 		).Padding(14).FillWidth().Height(300),
-	).Variant(ui.SurfaceDefault).Radius(8)
+	).Variant(ui.SurfaceDefault).Style(ui.Radius(8))
 }
 
 func activityItems(muted color.NRGBA) ui.Widget {
@@ -76,7 +76,7 @@ func horizontalPanel(muted color.NRGBA) ui.Widget {
 					ui.Text(fmt.Sprintf("%d deliverables", 4+index%5)).Size(12).Color(muted),
 				).Gap(5),
 			).Padding(12).Width(132).Height(68),
-		).Variant(ui.SurfaceTertiary).Radius(6)
+		).Variant(ui.SurfaceTertiary).Style(ui.Radius(6))
 	}
 	return ui.Surface(
 		ui.Box(
@@ -89,7 +89,7 @@ func horizontalPanel(muted color.NRGBA) ui.Widget {
 				),
 			).Gap(10),
 		).Padding(14).FillWidth().Height(122),
-	).Variant(ui.SurfaceDefault).Radius(8)
+	).Variant(ui.SurfaceDefault).Style(ui.Radius(8))
 }
 
 func main() {

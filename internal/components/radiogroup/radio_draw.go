@@ -9,88 +9,93 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/render"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func drawRadio(gtx layout.Context, theme *theme.Theme, style radioStyle, scale float32) layout.Dimensions {
-	size := gtx.Dp(theme.Components.RadioGroup.Size)
-	focusSpace := max(gtx.Dp(theme.Components.RadioGroup.FocusSpace), 1)
-	maxSize := min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y) - focusSpace*2
-	size = min(size, max(maxSize, 0))
-	bounds := image.Pt(size+focusSpace*2, size+focusSpace*2)
+func drawRadio(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, style radioStyle, scale float32) layout.Dimensions {
+	controlSize := radioIndicatorSize(gtx, style, activeTheme.Components.RadioGroup.Size)
+	focusSpace := max(gtx.Dp(activeTheme.Components.RadioGroup.FocusSpace), 1)
+	controlSize.X = min(controlSize.X, max(gtx.Constraints.Max.X-focusSpace*2, 0))
+	controlSize.Y = min(controlSize.Y, max(gtx.Constraints.Max.Y-focusSpace*2, 0))
+	bounds := controlSize.Add(image.Pt(focusSpace*2, focusSpace*2))
 	dims := gtx.Constraints.Constrain(bounds)
-	if size <= 0 {
+	if controlSize.X <= 0 || controlSize.Y <= 0 {
 		return layout.Dimensions{Size: dims}
 	}
 
-	origin := image.Pt((dims.X-size)/2, (dims.Y-size)/2)
+	origin := image.Pt((dims.X-controlSize.X)/2, (dims.Y-controlSize.Y)/2)
 	rect := image.Rectangle{
 		Min: origin,
-		Max: origin.Add(image.Pt(size, size)),
+		Max: origin.Add(controlSize),
 	}
 	center := f32.Pt(
-		float32(rect.Min.X)+float32(size)/2,
-		float32(rect.Min.Y)+float32(size)/2,
+		float32(rect.Min.X)+float32(controlSize.X)/2,
+		float32(rect.Min.Y)+float32(controlSize.Y)/2,
 	)
 	stack := op.Affine(f32.AffineId().Scale(center, f32.Pt(scale, scale))).Push(gtx.Ops)
-	drawRadioFocus(gtx, rect, style)
-	drawRadioControl(gtx, theme, rect, style)
-	drawRadioDot(gtx, theme, rect, style)
+	dot := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		drawRadioDot(ctx, gtx, activeTheme, image.Rectangle{Max: gtx.Constraints.Min}, style)
+		return layout.Dimensions{Size: gtx.Constraints.Min}
+	})
+	layoutRadioLayer(ctx, gtx, rect, style.indicatorOff, 1-style.selected, style.focus, nil)
+	layoutRadioLayer(ctx, gtx, rect, style.indicatorOn, style.selected, style.focus, dot)
 	stack.Pop()
 
 	return layout.Dimensions{Size: dims}
 }
 
-func drawRadioFocus(gtx layout.Context, rect image.Rectangle, style radioStyle) {
-	if style.focus == 0 {
-		return
+func radioIndicatorSize(gtx layout.Context, style radioStyle, fallbackDp unit.Dp) image.Point {
+	var size image.Point
+	var hasWidth, hasHeight bool
+	for _, endpoint := range [...]flowstyle.ResolvedStyle{style.indicatorOff, style.indicatorOn} {
+		if endpoint.Box == nil {
+			continue
+		}
+		if endpoint.Box.Width != nil {
+			size.X = max(size.X, gtx.Dp(*endpoint.Box.Width))
+			hasWidth = true
+		}
+		if endpoint.Box.Height != nil {
+			size.Y = max(size.Y, gtx.Dp(*endpoint.Box.Height))
+			hasHeight = true
+		}
 	}
-	width := max(gtx.Dp(unit.Dp(2)), 1)
-	focusRect := rect.Inset(-max(width/2, 1))
-	col := style.focusColor
-	col.A = byte(float32(col.A)*style.focus + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.Ellipse(focusRect).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	if !hasWidth {
+		size.X = gtx.Dp(fallbackDp)
+	}
+	if !hasHeight {
+		size.Y = gtx.Dp(fallbackDp)
+	}
+	return size
 }
 
-func drawRadioControl(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, style radioStyle) {
-	bg := render.LerpColor(style.bg, style.selectedBg, style.selected)
-	border := style.border
-	border.A = byte(float32(border.A)*(1-style.selected) + 0.5)
-	if border.A == 0 {
-		paint.FillShape(gtx.Ops, bg, clip.Ellipse(rect).Op(gtx.Ops))
-		return
-	}
-
-	width := max(gtx.Dp(theme.Components.RadioGroup.BorderWidth), 1)
-	paint.FillShape(gtx.Ops, border, clip.Ellipse(rect).Op(gtx.Ops))
-	inner := rect.Inset(width)
-	if inner.Empty() {
-		return
-	}
-	paint.FillShape(gtx.Ops, bg, clip.Ellipse(inner).Op(gtx.Ops))
+func layoutRadioLayer(ctx *frame.Context, gtx layout.Context, rect image.Rectangle, style flowstyle.ResolvedStyle, opacity, focus float32, child frame.Widget) {
+	layerGtx := gtx
+	layerGtx.Constraints = layout.Exact(rect.Size())
+	offset := op.Offset(rect.Min).Push(gtx.Ops)
+	fade := paint.PushOpacity(gtx.Ops, opacity)
+	layoutui.LayoutResolved(ctx, layerGtx, styleruntime.ApplyOutlineOpacity(style, focus), child)
+	fade.Pop()
+	offset.Pop()
 }
 
-func drawRadioDot(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, style radioStyle) {
+func drawRadioDot(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, style radioStyle) {
 	if style.selected == 0 {
 		return
 	}
-	targetScale := theme.Components.RadioGroup.DotScale
+	targetScale := activeTheme.Components.RadioGroup.DotScale
 	if style.pressed {
-		targetScale = theme.Components.RadioGroup.DotPressedScale
+		targetScale = activeTheme.Components.RadioGroup.DotPressedScale
 	}
-	size := max(int(float32(rect.Dx())*targetScale*style.selected+0.5), 1)
+	size := max(int(float32(min(rect.Dx(), rect.Dy()))*targetScale*style.selected+0.5), 1)
 	center := rect.Min.Add(rect.Size().Div(2))
 	dot := image.Rectangle{
 		Min: center.Sub(image.Pt(size/2, size/2)),
 		Max: center.Sub(image.Pt(size/2, size/2)).Add(image.Pt(size, size)),
 	}
-	col := style.dot
-	col.A = byte(float32(col.A)*style.selected + 0.5)
-	paint.FillShape(gtx.Ops, col, clip.Ellipse(dot).Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, ctx.ForegroundColor(), clip.Ellipse(dot).Op(gtx.Ops))
 }

@@ -3,7 +3,13 @@ package badge
 import (
 	"image/color"
 
+	"gioui.org/font"
+	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -17,6 +23,58 @@ type badgeStyle struct {
 	lineHeight  unit.Sp
 	paddingX    unit.Dp
 	borderWidth unit.Dp
+}
+
+type badgeResolvedStyle struct {
+	root  flowstyle.ResolvedStyle
+	label flowstyle.ResolvedStyle
+}
+
+func (b Widget) resolveStyle(ctx *frame.Context, gtx layout.Context) badgeResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults := badgeDefaultDeclaration(activeTheme, ctx.BackgroundColor())
+	variant := badgeVariantDeclaration(activeTheme, b.color, b.variant)
+	size := badgeSizeDeclaration(activeTheme, b.size)
+	state := flowstyle.StyleState{}
+	resolved := badgeResolvedStyle{
+		root:  styleruntime.ResolveStatic(ctx, state, defaults, variant, size, b.customStyle),
+		label: styleruntime.ResolvePartStatic(ctx, flowstyle.PartLabel, state, defaults, variant, size, b.customStyle),
+	}
+	if !styleruntime.HasTransitions(resolved.root, resolved.label) {
+		return resolved
+	}
+	key := frame.ClaimKey(ctx, stateutil.KindStyle, "badge")
+	resolved.root = styleruntime.ApplyTransitions(ctx, gtx, key, resolved.root)
+	resolved.label = styleruntime.ApplyPartTransitions(ctx, gtx, key, flowstyle.PartLabel, resolved.label)
+	return resolved
+}
+
+func badgeDefaultDeclaration(activeTheme *theme.Theme, border color.NRGBA) flowstyle.Style {
+	return flowstyle.Style{}.
+		BorderColor(flowstyle.SolidColor{Color: border}).
+		BorderWidth(activeTheme.Components.Badge.BorderWidth).
+		Opacity(1).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontWeight(int(font.Medium)).MaxLines(1))
+
+}
+
+func badgeVariantDeclaration(activeTheme *theme.Theme, badgeColor Color, variant Variant) flowstyle.Style {
+	resolved := badgeStyleFor(activeTheme, badgeColor, variant, SizeMedium, color.NRGBA{})
+	return flowstyle.Style{}.
+		Background(flowstyle.SolidColor{Color: resolved.background}).
+		TextColor(flowstyle.SolidColor{Color: resolved.foreground})
+
+}
+
+func badgeSizeDeclaration(activeTheme *theme.Theme, size Size) flowstyle.Style {
+	resolved := badgeStyleFor(activeTheme, ColorDefault, VariantPrimary, size, color.NRGBA{})
+	return flowstyle.Style{}.
+		MinWidth(resolved.minSize).
+		MinHeight(resolved.minSize).
+		PaddingX(resolved.paddingX).
+		Radius(resolved.radius).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontSize(resolved.textSize).LineHeight(resolved.lineHeight))
+
 }
 
 func badgeStyleFor(activeTheme *theme.Theme, badgeColor Color, variant Variant, size Size, border color.NRGBA) badgeStyle {
@@ -59,13 +117,13 @@ func badgeStyleFor(activeTheme *theme.Theme, badgeColor Color, variant Variant, 
 func badgePrimaryColors(palette theme.Palette, badgeColor Color) (color.NRGBA, color.NRGBA) {
 	switch badgeColor {
 	case ColorAccent:
-		return palette.Accent, theme.ColorOr(palette.AccentForeground, palette.Foreground)
+		return palette.Accent, palette.AccentForeground
 	case ColorSuccess:
-		return palette.Success, theme.ColorOr(palette.SuccessForeground, palette.Foreground)
+		return palette.Success, palette.SuccessForeground
 	case ColorWarning:
-		return palette.Warning, theme.ColorOr(palette.WarningForeground, palette.Foreground)
+		return palette.Warning, palette.WarningForeground
 	case ColorDanger:
-		return palette.Danger, theme.ColorOr(palette.DangerForeground, palette.Foreground)
+		return palette.Danger, palette.DangerForeground
 	default:
 		return palette.DefaultColor(), palette.DefaultForegroundColor()
 	}
@@ -74,38 +132,31 @@ func badgePrimaryColors(palette theme.Palette, badgeColor Color) (color.NRGBA, c
 func badgeSecondaryForeground(palette theme.Palette, badgeColor Color) color.NRGBA {
 	switch badgeColor {
 	case ColorAccent:
-		return theme.ColorOr(palette.AccentSoftForeground, palette.Accent)
+		return palette.AccentSoftForeground
 	case ColorSuccess:
 		return palette.SuccessSoftForegroundColor()
 	case ColorWarning:
 		return palette.WarningSoftForegroundColor()
 	case ColorDanger:
-		return theme.ColorOr(palette.DangerSoftForeground, palette.Danger)
+		return palette.DangerSoftForeground
 	default:
 		return palette.DefaultForegroundColor()
 	}
 }
 
 func badgeSoftColors(palette theme.Palette, badgeColor Color) (color.NRGBA, color.NRGBA) {
-	var background color.NRGBA
-	var fallback color.NRGBA
 	switch badgeColor {
 	case ColorAccent:
-		background, fallback = palette.AccentSoft, palette.Accent
+		return palette.AccentSoft, badgeSecondaryForeground(palette, badgeColor)
 	case ColorSuccess:
-		background, fallback = palette.SuccessSoft, palette.Success
+		return palette.SuccessSoft, badgeSecondaryForeground(palette, badgeColor)
 	case ColorWarning:
-		background, fallback = palette.WarningSoft, palette.Warning
+		return palette.WarningSoft, badgeSecondaryForeground(palette, badgeColor)
 	case ColorDanger:
-		background, fallback = palette.DangerSoft, palette.Danger
+		return palette.DangerSoft, badgeSecondaryForeground(palette, badgeColor)
 	default:
-		background = palette.DefaultColor()
+		background := palette.DefaultColor()
 		background.A = byte((uint16(background.A) + 1) / 2)
 		return background, palette.DefaultForegroundColor()
 	}
-	if background.A == 0 {
-		background = fallback
-		background.A = 0x26
-	}
-	return background, badgeSecondaryForeground(palette, badgeColor)
 }

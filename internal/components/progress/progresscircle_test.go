@@ -12,6 +12,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -23,13 +24,17 @@ func TestProgressCircleOptions(t *testing.T) {
 		Indeterminate().
 		Color(ProgressCircleSuccess).
 		Size(ProgressCircleLarge).
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Opacity(.5))
 
 	if circle.key != "upload" || circle.value != 40 || circle.label != "Uploading" || circle.valueText != "40 files" || !circle.hasValueText {
 		t.Fatal("ProgressCircle constructor or text options were not retained")
 	}
 	if circle.minValue != 0 || circle.maxValue != 80 || !circle.indeterminate || circle.color != ProgressCircleSuccess || circle.size != ProgressCircleLarge || !circle.disabled {
 		t.Fatal("ProgressCircle range or visual options were not retained")
+	}
+	if circle.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("ProgressCircle style was not retained")
 	}
 }
 

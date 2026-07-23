@@ -18,6 +18,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -76,12 +77,16 @@ func TestLineChartOptionsUseValueSemantics(t *testing.T) {
 		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(1, 15)}).
 		Label("Traffic").
 		EmptyText("Empty").
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Radius(4))
 	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasXRange || base.hasYRange || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
 		t.Fatalf("configuring LineChart mutated base: %#v", base)
 	}
 	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured LineChart = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured LineChart did not retain its style")
 	}
 }
 

@@ -263,7 +263,7 @@ func TestTableRowContextMenuKeepsPointerFocusHiddenAcrossRepeatedOpens(t *testin
 	})
 	start := time.Unix(1, 0)
 	layoutTableOverlayFrame(ctx, router, table, start)
-	for cycle := 0; cycle < 3; cycle++ {
+	for cycle := range 3 {
 		openAt := start.Add(time.Duration(cycle*250+1) * time.Millisecond)
 		router.Queue(pointer.Event{
 			Kind: pointer.Press, Source: pointer.Mouse, PointerID: pointer.ID(cycle*2 + 1),

@@ -5,7 +5,9 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -75,7 +77,6 @@ type Section struct {
 }
 
 type Widget struct {
-	theme                func(*theme.Theme)
 	key                  string
 	derivedOwner         string
 	derivedRole          string
@@ -107,6 +108,7 @@ type Widget struct {
 	nested               bool
 	parentState          *menuState
 	parentItemKey        string
+	customStyle          flowstyle.Style
 }
 
 func Menu(key string, items []Item) Widget {
@@ -226,17 +228,30 @@ func (m Widget) Width(dp int) Widget {
 	return m
 }
 
-func (m Widget) Theme(fn func(*theme.Theme)) Widget {
-	m.theme = fn
+func (m Widget) Style(value flowstyle.Style) Widget {
+	m.customStyle = value
 	return m
 }
 
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, m.theme); restore != nil {
-		defer restore()
-	}
 	state := m.stateFor(ctx)
-	return m.layout(ctx, gtx, state, !m.disabled)
+	hovered, pressed, focused := false, false, false
+	for _, item := range state.items {
+		hovered = hovered || item.clickable.Hovered()
+		pressed = pressed || item.clickable.Pressed()
+		focused = focused || gtx.Focused(&item.clickable)
+	}
+	root := flowstyle.Join(menuRootDeclaration(frame.ActiveTheme(ctx)), m.customStyle)
+	return layoutui.LayoutStyled(ctx, gtx, state.key, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: m.disabled || !gtx.Enabled(),
+		Selected: m.selectedKey != "" || len(m.selectedKeys) > 0,
+		Open:     state.openSubmenu != "",
+	}, root, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return m.layout(ctx, gtx, state, !m.disabled)
+	}))
 }
 
 func (m Widget) withDerivedIdentity(owner, role string) Widget {
@@ -283,6 +298,7 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.disabled = m.disabled
 	child.compact = m.compact
 	child.width = m.width
+	child.customStyle = m.customStyle
 	return child.
 		withDerivedIdentity(state.key, "submenu:"+item.Key).
 		withParent(state, item.Key)

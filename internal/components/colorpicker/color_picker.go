@@ -5,20 +5,21 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ColorPickerWidget struct {
-	theme     func(*theme.Theme)
-	key       string
-	value     color.NRGBA
-	label     string
-	onChange  func(color.NRGBA)
-	disabled  bool
-	alpha     bool
-	showField bool
-	presets   []color.NRGBA
+	key         string
+	value       color.NRGBA
+	label       string
+	onChange    func(color.NRGBA)
+	disabled    bool
+	alpha       bool
+	showField   bool
+	presets     []color.NRGBA
+	customStyle flowstyle.Style
 }
 
 const (
@@ -60,15 +61,12 @@ func (picker ColorPickerWidget) Presets(values []color.NRGBA) ColorPickerWidget 
 	return picker
 }
 
-func (picker ColorPickerWidget) Theme(fn func(*theme.Theme)) ColorPickerWidget {
-	picker.theme = fn
+func (picker ColorPickerWidget) Style(value flowstyle.Style) ColorPickerWidget {
+	picker.customStyle = value
 	return picker
 }
 
 func (picker ColorPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, picker.theme); restore != nil {
-		defer restore()
-	}
 	key, pickerState := colorPickerStateFor(ctx, picker.key)
 	pickerState.color.sync(picker.value)
 
@@ -81,7 +79,15 @@ func (picker ColorPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) l
 	if !enabled {
 		triggerGtx = triggerGtx.Disabled()
 	}
-	dimensions := picker.layoutTrigger(ctx, triggerGtx, pickerState, enabled)
+	dimensions := layoutui.LayoutStyled(ctx, triggerGtx, key, flowstyle.StyleState{
+		Hovered:  pickerState.trigger.Hovered(),
+		Pressed:  pickerState.trigger.Pressed(),
+		Focused:  triggerGtx.Focused(&pickerState.trigger),
+		Disabled: !enabled,
+		Open:     pickerState.open,
+	}, picker.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return picker.layoutTrigger(ctx, gtx, pickerState, enabled)
+	}))
 	progress := pickerState.popoverProgress(gtx, pickerState.open && enabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 && !pickerState.open {
 		return dimensions

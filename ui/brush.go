@@ -1,22 +1,11 @@
 package ui
 
-import (
-	"image/color"
+import "github.com/qianniancn/FlowUI/internal/style"
 
-	"github.com/qianniancn/FlowUI/internal/render"
-)
-
-type Brush = render.Brush
-type GradientStop = render.GradientStop
-
-func SolidBrush(col color.NRGBA) Brush {
-	return render.SolidBrush(col)
+func LinearGradient(stops ...GradientStop) Gradient {
+	return style.LinearGradient(stops...)
 }
 
-func LinearGradient(stops ...GradientStop) Brush {
-	return render.LinearGradient(stops...)
-}
-
-func ColorStop(offset float32, col color.NRGBA) GradientStop {
-	return GradientStop{Offset: offset, Color: col}
+func ColorStop(offset float32, value ColorSource) GradientStop {
+	return style.ColorStop(offset, value)
 }

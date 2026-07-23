@@ -9,7 +9,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -44,7 +43,6 @@ type selectState struct {
 	trigger            widget.Clickable
 	dismiss            [16]overlay.ClickArea
 	dialog             overlay.ClickArea
-	field              field.State
 	focus              state.FocusAnimation
 	open               bool
 	initialized        bool

@@ -283,7 +283,7 @@ func TestLoopReportsBoundedMessageQueueDrops(t *testing.T) {
 				errorsReported <- err
 			}
 		}, nil, func(_ app.Config, send func(int)) {
-			for index := 0; index < messageQueueLimit+4; index++ {
+			for index := range messageQueueLimit + 4 {
 				send(index)
 			}
 		}, func(layout.Context, int, func(int)) { viewed <- struct{}{} })

@@ -15,9 +15,11 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/components/icon"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
@@ -41,15 +43,7 @@ type paginationSizeStyle struct {
 	iconSize unit.Dp
 }
 
-func (p Widget) Theme(fn func(*theme.Theme)) Widget {
-	p.theme = fn
-	return p
-}
-
 func (p Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, state.KindPagination, p.key)
 	value := frame.UseState[paginationState](ctx, key, stateSlotPagination)
 	value.beginFrame()
@@ -59,20 +53,37 @@ func (p Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	content := func(gtx layout.Context) layout.Dimensions {
 		return p.layoutContent(ctx, gtx, value)
 	}
-	if p.summary == nil {
-		return content(gtx)
-	}
-	tokens := frame.ActiveTheme(ctx).Components.Pagination
-	if gtx.Constraints.Max.X < gtx.Dp(tokens.CompactWidth) {
-		return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Gap: gtx.Dp(tokens.ContentGap)}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.layoutSummary(ctx, gtx) }),
+	layoutContent := func(gtx layout.Context) layout.Dimensions {
+		if p.summary == nil {
+			return content(gtx)
+		}
+		tokens := frame.ActiveTheme(ctx).Components.Pagination
+		if gtx.Constraints.Max.X < gtx.Dp(tokens.CompactWidth) {
+			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Gap: gtx.Dp(tokens.ContentGap)}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.layoutSummary(ctx, gtx) }),
+				layout.Rigid(content),
+			)
+		}
+		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions { return p.layoutSummary(ctx, gtx) }),
 			layout.Rigid(content),
 		)
 	}
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions { return p.layoutSummary(ctx, gtx) }),
-		layout.Rigid(content),
-	)
+	hovered, pressed, focused := false, false, false
+	for _, item := range value.items {
+		hovered = hovered || item.clickable.Hovered()
+		pressed = pressed || item.clickable.Pressed()
+		focused = focused || gtx.Focused(&item.clickable)
+	}
+	return layoutui.LayoutStyled(ctx, gtx, key, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: p.disabled || !gtx.Enabled(),
+		Selected: true,
+	}, p.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutContent(gtx)
+	}))
 }
 
 func (p Widget) layoutSummary(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -90,7 +101,6 @@ func (p Widget) layoutContent(ctx *frame.Context, gtx layout.Context, value *pag
 		}))
 	}
 	for _, page := range items {
-		page := page
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if page == 0 {
 				return p.layoutEllipsis(ctx, gtx)

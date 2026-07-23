@@ -8,7 +8,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ButtonGroupOrientation uint8
@@ -34,7 +34,6 @@ type buttonGroupItemStyle struct {
 }
 
 type ButtonGroupWidget struct {
-	theme       func(*theme.Theme)
 	buttons     []ButtonWidget
 	orientation ButtonGroupOrientation
 	variant     ButtonVariant
@@ -42,6 +41,7 @@ type ButtonGroupWidget struct {
 	disabled    bool
 	fullWidth   bool
 	separators  bool
+	customStyle flowstyle.Style
 }
 
 func ButtonGroup(buttons ...ButtonWidget) ButtonGroupWidget {
@@ -78,15 +78,14 @@ func (g ButtonGroupWidget) Separators(visible bool) ButtonGroupWidget {
 	return g
 }
 
-func (g ButtonGroupWidget) Theme(fn func(*theme.Theme)) ButtonGroupWidget {
-	g.theme = fn
+func (g ButtonGroupWidget) Style(value flowstyle.Style) ButtonGroupWidget {
+	g.customStyle = value
 	return g
 }
 
 func (g ButtonGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
-		defer restore()
-	}
+	restoreStyle := frame.PushStyle(ctx, g.customStyle)
+	defer restoreStyle()
 	if len(g.buttons) == 0 {
 		return layout.Dimensions{}
 	}
@@ -114,7 +113,6 @@ func (g ButtonGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 		verticalWidth = min(verticalWidth, gtx.Constraints.Max.X)
 	}
 	for index := range buttons {
-		index := index
 		layoutButton := func(gtx layout.Context) layout.Dimensions {
 			if verticalWidth > 0 {
 				gtx.Constraints.Min.X = verticalWidth
@@ -171,12 +169,9 @@ type buttonGroupItemLayout struct {
 }
 
 func buttonGroupForeground(ctx *frame.Context, button ButtonWidget) color.NRGBA {
-	activeTheme := button.activeTheme(ctx)
-	foreground := buttonColors(activeTheme, button.variant).fg
-	if button.disabled {
-		foreground = activeTheme.DisabledColor(foreground)
-	}
-	return foreground
+	resolved := button.staticStyle(ctx, flowstyle.StyleState{Disabled: button.disabled, Loading: button.loading})
+	resolved.fg.A = byte(float32(resolved.fg.A)*resolved.opacity + 0.5)
+	return resolved.fg
 }
 
 func (g ButtonGroupWidget) drawSeparators(ctx *frame.Context, gtx layout.Context, size image.Point, items []buttonGroupItemLayout) {

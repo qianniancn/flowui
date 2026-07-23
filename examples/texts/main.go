@@ -16,7 +16,7 @@ func View(_ *ui.Context, _ struct{}, _ ui.Send[struct{}]) ui.Widget {
 				ui.Text("Text").Size(24).Weight(font.SemiBold),
 				section("Typography", ui.Column(
 					ui.Text("Interface text with a regular sans-serif face."),
-					ui.Text("A serif italic accent for editorial content.").Typeface("serif").Style(font.Italic),
+					ui.Text("A serif italic accent for editorial content.").Typeface("serif").FontStyle(font.Italic),
 					ui.Text("MONOSPACED STATUS OUTPUT").Typeface("monospace").Size(13),
 				).Gap(8)),
 				section("Truncation", ui.Column(
@@ -36,7 +36,7 @@ func View(_ *ui.Context, _ struct{}, _ ui.Send[struct{}]) ui.Widget {
 							LineHeight(22).
 							MaxLines(5),
 					).FillWidth().Padding(16),
-				).Variant(ui.SurfaceSecondary).Radius(8)),
+				).Variant(ui.SurfaceSecondary).Style(ui.Radius(8))),
 			).Gap(18),
 		).FillWidth().MaxWidth(720).Padding(24),
 	)

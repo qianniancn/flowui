@@ -1,76 +1,50 @@
 package input
 
 import (
-	"image/color"
-
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/field"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-type inputStyle struct {
-	Background    color.NRGBA
-	Foreground    color.NRGBA
-	Placeholder   color.NRGBA
-	Selection     color.NRGBA
-	Ring          color.NRGBA
-	RingWidth     unit.Dp
-	ShadowOpacity float32
-	Opacity       float32
-}
+type inputStyle = field.Colors
 
-func inputStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool) inputStyle {
+func inputDefaultDeclaration(activeTheme *theme.Theme, variant InputVariant, fullWidth bool) flowstyle.Style {
 	tokens := activeTheme.Components.Input
-	return fieldStyleFor(activeTheme, variant, hovered, focused, disabled, invalid, tokens.FocusRingWidth, tokens.InvalidOutlineWidth, tokens.ShadowOpacity)
+	return field.DefaultDeclaration(activeTheme, variant, field.DeclarationOptions{
+		Height: tokens.Height, Radius: tokens.Radius, PaddingX: tokens.PaddingX,
+		TextSize: tokens.TextSize, LineHeight: tokens.LineHeight,
+		FocusRingWidth: tokens.FocusRingWidth, InvalidOutlineWidth: tokens.InvalidOutlineWidth,
+		ShadowColor: tokens.ShadowColor, ShadowOpacity: tokens.ShadowOpacity,
+		ShadowStrength: tokens.ShadowStrength, FillWidth: fullWidth,
+	})
 }
 
-func textAreaStyleFor(activeTheme *theme.Theme, variant TextAreaVariant, hovered, focused, disabled, invalid bool) inputStyle {
+func textAreaDefaultDeclaration(activeTheme *theme.Theme, variant TextAreaVariant, fullWidth bool, minHeight unit.Dp) flowstyle.Style {
 	tokens := activeTheme.Components.TextArea
-	return fieldStyleFor(activeTheme, variant, hovered, focused, disabled, invalid, tokens.FocusRingWidth, tokens.InvalidOutlineWidth, tokens.ShadowOpacity)
+	return field.DefaultDeclaration(activeTheme, variant, field.DeclarationOptions{
+		MinHeight: max(tokens.MinHeight, minHeight), Radius: tokens.Radius,
+		PaddingX: tokens.PaddingX, PaddingY: tokens.PaddingY,
+		TextSize: tokens.TextSize, LineHeight: tokens.LineHeight,
+		FocusRingWidth: tokens.FocusRingWidth, InvalidOutlineWidth: tokens.InvalidOutlineWidth,
+		ShadowColor: tokens.ShadowColor, ShadowOpacity: tokens.ShadowOpacity,
+		ShadowStrength: tokens.ShadowStrength, FillWidth: fullWidth,
+	})
 }
 
-func fieldStyleFor(activeTheme *theme.Theme, variant InputVariant, hovered, focused, disabled, invalid bool, focusRingWidth, invalidOutlineWidth unit.Dp, shadowOpacity float32) inputStyle {
-	background := activeTheme.Palette.FieldBackgroundColor()
-	hoverBackground := activeTheme.Palette.FieldHoverColor()
-	focusBackground := activeTheme.Palette.FieldFocusColor()
-	if variant == InputSecondary {
-		background = activeTheme.Palette.DefaultColor()
-		hoverBackground = activeTheme.Palette.DefaultHoverColor()
-		focusBackground = activeTheme.Palette.DefaultColor()
-		shadowOpacity = 0
-	}
-	if hovered && !focused {
-		background = hoverBackground
-	}
-	if focused || invalid {
-		background = focusBackground
-	}
+func resolvedInputStyle(root, placeholder, selection flowstyle.ResolvedStyle, activeTheme *theme.Theme) inputStyle {
+	return field.ResolvedColors(root, placeholder, selection, activeTheme)
+}
 
-	ring := color.NRGBA{}
-	ringWidth := unit.Dp(0)
-	if focused {
-		ring = activeTheme.Palette.Focus
-		ringWidth = focusRingWidth
+func resolvedTypography(root flowstyle.ResolvedStyle, textSize unit.Sp, lineHeight unit.Sp) (unit.Sp, unit.Sp) {
+	if root.Text == nil {
+		return textSize, lineHeight
 	}
-	if invalid {
-		ring = activeTheme.Palette.Danger
-		ringWidth = invalidOutlineWidth
-		if focused {
-			ringWidth = focusRingWidth
-		}
+	if root.Text.FontSize != nil {
+		textSize = *root.Text.FontSize
 	}
-
-	opacity := float32(1)
-	if disabled {
-		opacity = activeTheme.DisabledOpacityValue()
+	if root.Text.LineHeight != nil {
+		lineHeight = *root.Text.LineHeight
 	}
-	return inputStyle{
-		Background:    background,
-		Foreground:    activeTheme.Palette.FieldForegroundColor(),
-		Placeholder:   activeTheme.Palette.FieldPlaceholderColor(),
-		Selection:     activeTheme.Palette.Selection,
-		Ring:          ring,
-		RingWidth:     ringWidth,
-		ShadowOpacity: shadowOpacity,
-		Opacity:       opacity,
-	}
+	return textSize, lineHeight
 }

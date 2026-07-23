@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -856,12 +857,7 @@ func treeKeySet(keys []string) map[string]struct{} {
 }
 
 func treeContainsKey(keys []string, key string) bool {
-	for _, current := range keys {
-		if current == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keys, key)
 }
 
 func treeKeysEqual(first, second []string) bool {

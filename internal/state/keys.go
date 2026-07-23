@@ -19,7 +19,6 @@ const (
 	KindDatePicker       Kind = "datepicker"
 	KindCheckbox         Kind = "checkbox"
 	KindSwitch           Kind = "switch"
-	KindToggleButton     Kind = "toggle-button"
 	KindRadioGroup       Kind = "radio-group"
 	KindProgressBar      Kind = "progress-bar"
 	KindProgressCircle   Kind = "progress-circle"
@@ -49,6 +48,7 @@ const (
 	KindScrollbar        Kind = "scrollbar"
 	KindSplitPane        Kind = "split-pane"
 	KindTitleBar         Kind = "title-bar"
+	KindStyle            Kind = "style"
 	KindPortal           Kind = "portal"
 )
 

@@ -97,12 +97,18 @@ func (b Brush) ColorAt(offset float32) color.NRGBA {
 
 // DrawBrush fills rect with brush and clips it to the supplied corner radius.
 func DrawBrush(gtx layout.Context, rect image.Rectangle, radius int, brush Brush) {
+	radius = min(max(radius, 0), min(rect.Dx(), rect.Dy())/2)
+	DrawBrushRRect(gtx, clip.UniformRRect(rect, radius), brush)
+}
+
+// DrawBrushRRect fills a rounded rectangle with independent corner radii.
+func DrawBrushRRect(gtx layout.Context, shape clip.RRect, brush Brush) {
+	rect := shape.Rect
 	if rect.Empty() || brush.kind == brushNone {
 		return
 	}
-	radius = min(max(radius, 0), min(rect.Dx(), rect.Dy())/2)
-	shape := clip.UniformRRect(rect, radius).Push(gtx.Ops)
-	defer shape.Pop()
+	stack := shape.Push(gtx.Ops)
+	defer stack.Pop()
 
 	switch brush.kind {
 	case brushSolid:

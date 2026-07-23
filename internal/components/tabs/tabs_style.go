@@ -51,8 +51,8 @@ func tabsListStyleFor(theme *theme.Theme, variant TabsVariant) tabsListStyle {
 }
 
 func tabsItemStyleFor(activeTheme *theme.Theme, variant TabsVariant, tabsColor TabsColor, hovered, disabled bool) tabsItemStyle {
-	selectedForeground := theme.ColorOr(activeTheme.Palette.SegmentForeground, activeTheme.Palette.Foreground)
-	indicator := theme.ColorOr(activeTheme.Palette.Segment, activeTheme.Palette.Surface)
+	selectedForeground := activeTheme.Palette.SegmentForeground
+	indicator := activeTheme.Palette.Segment
 	if variant == TabsSecondary {
 		selectedForeground = activeTheme.Palette.Foreground
 		indicator = activeTheme.Palette.Accent

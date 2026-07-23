@@ -1,17 +1,18 @@
 package datepicker
 
 import (
+	"image"
 	"time"
 
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type DatePickerWidget struct {
-	theme        func(*theme.Theme)
 	key          string
 	value        time.Time
 	hint         string
@@ -33,6 +34,7 @@ type DatePickerWidget struct {
 	rangeStart   time.Time
 	rangeEnd     time.Time
 	onDateSelect func(time.Time)
+	customStyle  flowstyle.Style
 }
 
 const (
@@ -137,15 +139,12 @@ func (d DatePickerWidget) MaxDate(date time.Time) DatePickerWidget {
 	return d
 }
 
-func (d DatePickerWidget) Theme(fn func(*theme.Theme)) DatePickerWidget {
-	d.theme = fn
+func (d DatePickerWidget) Style(value flowstyle.Style) DatePickerWidget {
+	d.customStyle = value
 	return d
 }
 
 func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, d.theme); restore != nil {
-		defer restore()
-	}
 	d = d.resolveLocale(ctx)
 	now := datePickerFrameNow(gtx.Now)
 	state := datePickerStateFor(ctx, d.key)
@@ -171,10 +170,32 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 
 	invalid := d.invalid || !state.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
 	hovered := state.hover.hovered || state.segments.hovered() || state.trigger.Hovered()
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), d.variant, hovered && !focused, inputFocused, !enabled, invalid)
-	style.Background = state.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
-	style.Border = state.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
-	dims, anchor := d.layoutField(ctx, gtx, state, style, enabled, invalid)
+	styleState := flowstyle.StyleState{
+		Hovered:      hovered,
+		Focused:      focused,
+		FocusVisible: state.focusVisible(ctx, gtx),
+		Disabled:     !enabled,
+		Invalid:      invalid,
+		Selected:     !d.value.IsZero(),
+		Open:         state.open,
+	}
+	fieldState := styleState
+	fieldState.Hovered = hovered && !focused
+	fieldState.Focused = inputFocused
+	fieldState.FocusVisible = state.segments.focusVisible(ctx, gtx)
+	tokens := frame.ActiveTheme(ctx).Components
+	resolved := field.Resolve(ctx, gtx, frame.FullKey(ctx, d.key), fieldState, d.variant, field.DeclarationOptions{
+		Radius:         tokens.DatePicker.Radius,
+		FocusRingWidth: tokens.Input.FocusRingWidth, InvalidOutlineWidth: tokens.Input.InvalidOutlineWidth,
+		ShadowColor: tokens.Input.ShadowColor, ShadowOpacity: tokens.Input.ShadowOpacity,
+		ShadowStrength: tokens.Input.ShadowStrength,
+	}, d.customStyle)
+	var dims layout.Dimensions
+	var anchor image.Rectangle
+	dims = layoutui.LayoutStyled(ctx, gtx, frame.FullKey(ctx, d.key), styleState, d.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		dims, anchor = d.layoutField(ctx, gtx, state, resolved, enabled, invalid)
+		return dims
+	}))
 
 	progress := state.popoverProgress(gtx, state.open && enabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 && (!state.open || !enabled) {

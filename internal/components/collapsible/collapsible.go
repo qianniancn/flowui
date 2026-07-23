@@ -6,8 +6,9 @@ import (
 	"slices"
 
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Item describes one entry in a CollapsibleGroup.
@@ -22,7 +23,6 @@ type Item struct {
 
 // Widget presents one controlled expandable section.
 type Widget struct {
-	theme            func(*theme.Theme)
 	key              string
 	expanded         bool
 	label            string
@@ -31,6 +31,7 @@ type Widget struct {
 	trailing         frame.Widget
 	disabled         bool
 	onExpandedChange func(bool)
+	customStyle      flowstyle.Style
 }
 
 // Collapsible creates one controlled expandable section.
@@ -58,15 +59,13 @@ func (w Widget) OnExpandedChange(fn func(bool)) Widget {
 	return w
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
+	rootKey := frame.FullKey(ctx, w.key)
 	state := collapsibleStateFor(ctx, w.key)
 	disabled := w.disabled || !gtx.Enabled()
 	presses := activePresses(&state.item)
@@ -81,25 +80,35 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 
 	restore := frame.PushKey(ctx, w.key)
 	defer restore()
-	return layoutItem(ctx, gtx, &state.item, Item{
-		Key:      w.key,
-		Label:    w.label,
-		Leading:  w.leading,
-		Trailing: w.trailing,
-		Content:  w.content,
-		Disabled: w.disabled,
-	}, w.expanded, disabled)
+	focused := gtx.Focused(&state.item.clickable)
+	return layoutui.LayoutStyled(ctx, gtx, rootKey, flowstyle.StyleState{
+		Hovered:      state.item.clickable.Hovered(),
+		Pressed:      state.item.clickable.Pressed(),
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, &state.item.clickable, focused),
+		Disabled:     disabled,
+		Expanded:     w.expanded,
+	}, w.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutItem(ctx, gtx, &state.item, Item{
+			Key:      w.key,
+			Label:    w.label,
+			Leading:  w.leading,
+			Trailing: w.trailing,
+			Content:  w.content,
+			Disabled: w.disabled,
+		}, w.expanded, disabled)
+	}))
 }
 
 // GroupWidget coordinates a controlled collection of collapsible sections.
 type GroupWidget struct {
-	theme                 func(*theme.Theme)
 	key                   string
 	expandedKeys          []string
 	items                 []Item
 	allowMultipleExpanded bool
 	disabled              bool
 	onExpandedChange      func([]string)
+	customStyle           flowstyle.Style
 }
 
 // CollapsibleGroup creates a controlled group that allows one expanded item by default.
@@ -126,15 +135,13 @@ func (g GroupWidget) OnExpandedChange(fn func([]string)) GroupWidget {
 	return g
 }
 
-func (g GroupWidget) Theme(fn func(*theme.Theme)) GroupWidget {
-	g.theme = fn
+func (g GroupWidget) Style(value flowstyle.Style) GroupWidget {
+	g.customStyle = value
 	return g
 }
 
 func (g GroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
-		defer restore()
-	}
+	rootKey := frame.FullKey(ctx, g.key)
 	state := collapsibleStateFor(ctx, g.key)
 	state.beginFrame()
 	defer state.endFrame()
@@ -162,7 +169,25 @@ func (g GroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 
 	restore := frame.PushKey(ctx, g.key)
 	defer restore()
-	return g.layout(ctx, gtx, state)
+	hovered, pressed, focused, focusVisible := false, false, false, false
+	for _, item := range g.items {
+		itemState := state.itemFor(item.Key)
+		hovered = hovered || itemState.clickable.Hovered()
+		pressed = pressed || itemState.clickable.Pressed()
+		itemFocused := gtx.Focused(&itemState.clickable)
+		focused = focused || itemFocused
+		focusVisible = focusVisible || frame.FocusVisible(ctx, &itemState.clickable, itemFocused)
+	}
+	return layoutui.LayoutStyled(ctx, gtx, rootKey, flowstyle.StyleState{
+		Hovered:      hovered,
+		Pressed:      pressed,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     g.disabled || !gtx.Enabled(),
+		Expanded:     len(g.expandedKeys) > 0,
+	}, g.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return g.layout(ctx, gtx, state)
+	}))
 }
 
 func (g GroupWidget) layout(ctx *frame.Context, gtx layout.Context, state *collapsibleState) layout.Dimensions {

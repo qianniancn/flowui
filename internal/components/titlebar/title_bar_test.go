@@ -14,8 +14,32 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
+
+func TestTitleBarStyleUsesValueSemantics(t *testing.T) {
+	base := New("workspace", "FlowUI", nil)
+	styled := base.Style(flowstyle.Style{}.Height(40))
+	if base.customStyle.Resolve(flowstyle.StyleState{}).Box != nil || styled.customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
+		t.Fatal("TitleBar style did not preserve value semantics")
+	}
+}
+
+func TestTitleBarLabelPartUsesCommonBoxRenderer(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(300, 100)}, Ops: new(op.Ops)}
+	base := New("base", "FlowUI", nil).resolveStyle(ctx, gtx, "base", false)
+	styled := New("styled", "FlowUI", nil).
+		Style(flowstyle.Style{}.Part(flowstyle.PartLabel, flowstyle.Style{}.PaddingY(7))).
+		resolveStyle(ctx, gtx, "styled", false)
+	baseDims := layoutTitle(ctx, gtx, "FlowUI", base.title)
+	gtx.Ops = new(op.Ops)
+	styledDims := layoutTitle(ctx, gtx, "FlowUI", styled.title)
+	if styledDims.Size.Y != baseDims.Size.Y+14 {
+		t.Fatalf("styled title height = %d, want %d", styledDims.Size.Y, baseDims.Size.Y+14)
+	}
+}
 
 func TestTitleBarFillsWidthAndLimitsMoveRegion(t *testing.T) {
 	activeTheme := theme.DefaultTheme()

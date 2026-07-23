@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -460,12 +461,7 @@ func (s *tableRowState) clickInInteractiveCell() bool {
 		return false
 	}
 	s.handledPress = press.Start
-	for _, cell := range s.interactiveCells {
-		if press.Position.In(cell) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(s.interactiveCells, press.Position.In)
 }
 
 type tableColumnState struct {

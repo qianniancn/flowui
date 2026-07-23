@@ -4,6 +4,7 @@ import (
 	"image/color"
 
 	"gioui.org/unit"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -14,6 +15,23 @@ type surfaceStyle struct {
 	borderWidth unit.Dp
 }
 
+func surfaceDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	return flowstyle.Style{}.
+		BorderColor(flowstyle.SolidColor{Color: activeTheme.Palette.Border}).
+		BorderWidth(activeTheme.Components.Surface.BorderWidth).
+		Opacity(1)
+
+}
+
+func surfaceVariantDeclaration(activeTheme *theme.Theme, variant SurfaceVariant) flowstyle.Style {
+	resolved := surfaceStyleFor(activeTheme, variant)
+	builder := flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: resolved.foreground})
+	if variant != SurfaceTransparent {
+		builder = builder.Background(flowstyle.SolidColor{Color: resolved.background})
+	}
+	return builder
+}
+
 func surfaceStyleFor(activeTheme *theme.Theme, variant SurfaceVariant) surfaceStyle {
 	style := surfaceStyle{
 		border:      activeTheme.Palette.Border,
@@ -21,16 +39,16 @@ func surfaceStyleFor(activeTheme *theme.Theme, variant SurfaceVariant) surfaceSt
 	}
 	switch variant {
 	case SurfaceSecondary:
-		style.background = theme.ColorOr(activeTheme.Palette.SurfaceSecondary, activeTheme.Palette.SurfaceRaised)
-		style.foreground = theme.ColorOr(activeTheme.Palette.SurfaceSecondaryForeground, activeTheme.Palette.Foreground)
+		style.background = activeTheme.Palette.SurfaceSecondary
+		style.foreground = activeTheme.Palette.SurfaceSecondaryForeground
 	case SurfaceTertiary:
-		style.background = theme.ColorOr(activeTheme.Palette.SurfaceTertiary, activeTheme.Palette.SurfacePressed)
-		style.foreground = theme.ColorOr(activeTheme.Palette.SurfaceTertiaryForeground, activeTheme.Palette.Foreground)
+		style.background = activeTheme.Palette.SurfaceTertiary
+		style.foreground = activeTheme.Palette.SurfaceTertiaryForeground
 	case SurfaceTransparent:
 		style.foreground = activeTheme.Palette.Foreground
 	default:
 		style.background = activeTheme.Palette.Surface
-		style.foreground = theme.ColorOr(activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Foreground)
+		style.foreground = activeTheme.Palette.SurfaceForeground
 	}
 	return style
 }

@@ -128,6 +128,7 @@ func TestDarkThemeMatchesHeroUI32Palette(t *testing.T) {
 		SegmentForeground:          color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		Accent:                     color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
 		AccentHover:                color.NRGBA{R: 0x35, G: 0x92, B: 0xf9, A: 0xff},
+		AccentPressed:              color.NRGBA{R: 0x00, G: 0x6f, B: 0xd8, A: 0xff},
 		AccentForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		AccentSoft:                 color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x1f},
 		AccentSoftHover:            color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x29},
@@ -142,6 +143,7 @@ func TestDarkThemeMatchesHeroUI32Palette(t *testing.T) {
 		WarningSoftForeground:      color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff},
 		Danger:                     color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0xff},
 		DangerHover:                color.NRGBA{R: 0xe1, G: 0x54, B: 0x51, A: 0xff},
+		DangerPressed:              color.NRGBA{R: 0xc6, G: 0x2f, B: 0x33, A: 0xff},
 		DangerForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		DangerSoft:                 color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0x26},
 		DangerSoftHover:            color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0x33},
@@ -167,8 +169,8 @@ func TestDarkThemeDefinesThemedSurfaceAndShadow(t *testing.T) {
 	if dark.Palette.Surface == theme.DefaultTheme().Palette.Surface {
 		t.Fatal("dark theme did not override surface")
 	}
-	if dark.Palette.Shadow == theme.DefaultTheme().Palette.Shadow {
-		t.Fatal("dark theme did not override shadow")
+	if dark.Palette.OverlayShadow == theme.DefaultTheme().Palette.OverlayShadow {
+		t.Fatal("dark theme did not override overlay shadow")
 	}
 }
 
@@ -180,5 +182,21 @@ func TestSelectionColorsMatchTheme(t *testing.T) {
 	}
 	if got := theme.DarkTheme().Palette.Selection; got != dark {
 		t.Fatalf("dark selection = %#v, want %#v", got, dark)
+	}
+}
+
+func TestPalettePreservesTransparentSemanticColors(t *testing.T) {
+	palette := theme.Palette{
+		Surface:           color.NRGBA{R: 1, A: 0xff},
+		Overlay:           color.NRGBA{},
+		Default:           color.NRGBA{},
+		FieldBackground:   color.NRGBA{},
+		Separator:         color.NRGBA{},
+		OverlayForeground: color.NRGBA{},
+	}
+	if palette.OverlayColor().A != 0 || palette.DefaultColor().A != 0 ||
+		palette.FieldBackgroundColor().A != 0 || palette.SeparatorColor().A != 0 ||
+		palette.OverlayForegroundColor().A != 0 {
+		t.Fatalf("transparent semantic colors were replaced: %#v", palette)
 	}
 }

@@ -55,7 +55,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context, state *sidebarSta
 	macro := op.Record(rootGtx.Ops)
 	var content layout.Dimensions
 	func() {
-		restore := frame.PushColors(ctx, theme.ColorOr(activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Foreground), activeTheme.Palette.Surface)
+		restore := frame.PushColors(ctx, activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Surface)
 		defer restore()
 		content = layoutui.LayoutTrackedInset(ctx, rootGtx, layout.UniformInset(tokens.Padding), func(gtx layout.Context) layout.Dimensions {
 			children := make([]frame.Widget, 0, 3)
@@ -358,16 +358,16 @@ type sidebarItemStyle struct {
 func sidebarItemStyleFor(activeTheme *theme.Theme, selected, hovered, pressed, disabled bool) sidebarItemStyle {
 	style := sidebarItemStyle{foreground: activeTheme.Palette.Foreground, focus: activeTheme.Palette.Focus, opacity: 1}
 	if hovered {
-		style.background = theme.ColorOr(activeTheme.Palette.SurfaceTertiary, activeTheme.Palette.SurfaceRaised)
+		style.background = activeTheme.Palette.SurfaceTertiary
 	}
 	if pressed {
 		style.background = activeTheme.Palette.SurfacePressed
 	}
 	if selected {
 		style.background = activeTheme.Palette.AccentSoft
-		style.foreground = theme.ColorOr(activeTheme.Palette.AccentSoftForeground, activeTheme.Palette.Accent)
+		style.foreground = activeTheme.Palette.AccentSoftForeground
 		if hovered || pressed {
-			style.background = theme.ColorOr(activeTheme.Palette.AccentSoftHover, activeTheme.Palette.AccentSoft)
+			style.background = activeTheme.Palette.AccentSoftHover
 		}
 	}
 	if disabled {

@@ -5,7 +5,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/modal"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Status identifies the semantic tone of an AlertDialog icon.
@@ -51,7 +51,6 @@ const (
 
 // Widget presents a controlled confirmation dialog that requires an explicit action by default.
 type Widget struct {
-	theme                   func(*theme.Theme)
 	key                     string
 	open                    bool
 	title                   string
@@ -68,6 +67,7 @@ type Widget struct {
 	dismissable             bool
 	keyboardDismissDisabled bool
 	closeButton             bool
+	customStyle             flowstyle.Style
 }
 
 // New creates a controlled alert dialog with HeroUI's danger status defaults.
@@ -157,15 +157,12 @@ func (a Widget) CloseButton(show bool) Widget {
 	return a
 }
 
-func (a Widget) Theme(fn func(*theme.Theme)) Widget {
-	a.theme = fn
+func (a Widget) Style(value flowstyle.Style) Widget {
+	a.customStyle = value
 	return a
 }
 
 func (a Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, a.theme); restore != nil {
-		defer restore()
-	}
 	return a.modal().Layout(ctx, gtx)
 }
 
@@ -187,7 +184,8 @@ func (a Widget) modal() modal.ModalWidget {
 		Backdrop(a.modalBackdrop()).
 		Dismissable(a.dismissable).
 		KeyboardDismissDisabled(a.keyboardDismissDisabled).
-		CloseButton(a.closeButton)
+		CloseButton(a.closeButton).
+		Style(a.customStyle)
 }
 
 func (a Widget) defaultHeader() dialogHeader {

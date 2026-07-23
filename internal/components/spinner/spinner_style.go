@@ -3,12 +3,65 @@ package spinner
 import (
 	"image/color"
 
+	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type spinnerStyle struct {
 	color color.NRGBA
+}
+
+type spinnerResolvedStyle struct {
+	root   flowstyle.ResolvedStyle
+	visual spinnerStyle
+	size   spinnerSizeStyle
+}
+
+func (s SpinnerWidget) resolveStyle(ctx *frame.Context, gtx layout.Context) spinnerResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	state := flowstyle.StyleState{}
+	defaults := flowstyle.Style{}
+	variant := spinnerColorDeclaration(activeTheme, s.color)
+	size := spinnerSizeDeclaration(activeTheme, s.size)
+	root := styleruntime.ResolveStatic(
+		ctx,
+		state,
+		defaults,
+		variant,
+		size,
+		s.customStyle,
+	)
+	indicator := styleruntime.ResolvePartStatic(ctx, flowstyle.PartIndicator, state, defaults, variant, size, s.customStyle)
+	if styleruntime.HasTransitions(root, indicator) {
+		key := frame.ClaimKey(ctx, stateutil.KindStyle, "spinner")
+		root = styleruntime.ApplyTransitions(ctx, gtx, key, root)
+		indicator = styleruntime.ApplyPartTransitions(ctx, gtx, key, flowstyle.PartIndicator, indicator)
+	}
+	visual := spinnerStyleFor(activeTheme, s.color)
+	geometry := spinnerSizeStyleFor(activeTheme, s.size)
+	if indicator.Text != nil {
+		visual.color, _ = styleruntime.Color(indicator.Text.Color)
+	}
+	if indicator.Paint != nil {
+		visual.color = styleruntime.ApplyOpacity(visual.color, indicator.Paint.Opacity)
+	}
+	return spinnerResolvedStyle{root: root, visual: visual, size: geometry}
+}
+
+func spinnerColorDeclaration(activeTheme *theme.Theme, spinnerColor SpinnerColor) flowstyle.Style {
+	return flowstyle.Style{}.
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: spinnerStyleFor(activeTheme, spinnerColor).color}))
+
+}
+
+func spinnerSizeDeclaration(activeTheme *theme.Theme, size SpinnerSize) flowstyle.Style {
+	diameter := spinnerSizeStyleFor(activeTheme, size).diameter
+	return flowstyle.Style{}.Width(diameter).Height(diameter).AspectRatio(1)
 }
 
 type spinnerSizeStyle struct {

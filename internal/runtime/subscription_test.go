@@ -9,8 +9,7 @@ import (
 )
 
 func TestSubscriptionSetStartsOnceAndCancelsWhenRemoved(t *testing.T) {
-	root, cancelRoot := context.WithCancel(context.Background())
-	defer cancelRoot()
+	root := t.Context()
 	var set subscriptionSet[int]
 	var effects effectGroup
 	var starts atomic.Int32
@@ -52,8 +51,7 @@ func TestSubscriptionSetStartsOnceAndCancelsWhenRemoved(t *testing.T) {
 }
 
 func TestSubscriptionSetReportsKeyedError(t *testing.T) {
-	root, cancelRoot := context.WithCancel(context.Background())
-	defer cancelRoot()
+	root := t.Context()
 	var set subscriptionSet[int]
 	var effects effectGroup
 	want := errors.New("stream failed")
@@ -81,8 +79,7 @@ func TestSubscriptionSetReportsKeyedError(t *testing.T) {
 }
 
 func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T) {
-	root, cancelRoot := context.WithCancel(context.Background())
-	defer cancelRoot()
+	root := t.Context()
 	var set subscriptionSet[int]
 	var effects effectGroup
 	oldStarted := make(chan struct{})
@@ -134,8 +131,7 @@ func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T)
 }
 
 func TestSubscriptionSetStartsReplacementAfterBoundedGracePeriod(t *testing.T) {
-	root, cancelRoot := context.WithCancel(context.Background())
-	defer cancelRoot()
+	root := t.Context()
 	set := subscriptionSet[int]{stopGracePeriod: 10 * time.Millisecond}
 	var effects effectGroup
 	oldStarted := make(chan struct{})
@@ -182,8 +178,7 @@ func TestLoopCoreDropsQueuedMessageFromStoppedSubscription(t *testing.T) {
 		model.messages = append(model.messages, msg)
 		return nil
 	})
-	root, cancelRoot := context.WithCancel(context.Background())
-	defer cancelRoot()
+	root := t.Context()
 	var set subscriptionSet[int]
 	var effects effectGroup
 	started := make(chan struct{})

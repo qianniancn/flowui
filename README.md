@@ -148,51 +148,89 @@ func main() {
 }
 ```
 
-Application theme customization applies to the application or window. Widgets
-backed by component themes provide a matching `Theme` chain method for the
-current instance. Its callback receives a copy of the active theme, so
-unchanged fields still inherit the application theme:
+Application theme customization applies to the application or window. Component
+instances use reusable `Style` snapshots. Defaults, variants, sizes, inherited
+`StyleScope` values, and the instance style are cascaded in that order:
 
 ```go
-ui.Button("save", ui.Text("Save")).Theme(func(theme *ui.Theme) {
-	theme.Components.Button.Radius = 8
-	theme.Components.Button.BorderWidth = 2
-	theme.Components.Button.PressedScaleMedium = 0.9
-	theme.Palette.Accent = color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
-})
+primary := ui.Background(ui.TokenAccent).
+	TextColor(ui.TokenAccentForeground).
+	Radius(8).
+	Cursor(ui.CursorPointer).
+	BoxShadow(0, 6, 18, 0, ui.RGBA(0x00000030)).
+	When(ui.Hovered, ui.Background(ui.TokenAccentHover)).
+	When(ui.Pressed, ui.Background(ui.TokenAccentPressed).
+		Scale(0.96, 0.96))
+
+ui.StyleScope(
+	ui.FontSize(14),
+	ui.Button("save", ui.Text("Save")).Style(primary),
+)
 ```
 
-Every widget backed by a component theme provides a `Theme(func(*Theme))`
-method. The callback receives a copy of the full application theme, so shared
-`Palette`, `Spacing`, and `Typography` values and component-specific fields
-under `Components` are all available. Overrides
-support valid zero values. They do not mutate the application theme or leak to
-sibling widgets; composed children inherit the instance theme while that widget
-is being laid out. The callback runs during layout and should only modify the
-provided theme without side effects.
+`When` receives runtime states such as `Hovered`, `Pressed`, `Focused`,
+`Disabled`, `Selected`, and `Invalid`. `StyleScope` applies to descendants, and
+the instance `Style` has the final precedence. Theme color tokens are resolved
+at layout time, so the same declaration follows light or dark application themes.
+MVU model values use the same path with `When(ui.If(model.Highlighted), ...)`;
+the View rebuilds the declaration when the model changes.
 
-`Surface` uses `Components.Surface.BorderWidth` and `Palette.Border` for its
-default border. The current instance can override either value directly:
+`RGB` uses packed `0xRRGGBB`, `RGBA` uses packed `0xRRGGBBAA`, `Color` accepts
+any standard-library `color.Color`, and `WithAlpha` changes the alpha of either
+a concrete color or a theme token. Geometry includes fixed/min/max sizes,
+fill, margin, padding, overflow clipping, cursor, and aspect ratio:
 
 ```go
-ui.Surface(content).
-	Radius(12).
+square := ui.Width(40).AspectRatio(1).Background(ui.RGBA(0x9333eacc))
+```
+
+Root properties always style the component's outer box. Compound internals use
+named parts. The built-in parts are `PartContent`, `PartLabel`,
+`PartDescription`, `PartIcon`, `PartTrack`, `PartFill`, `PartThumb`,
+`PartIndicator`, `PartPanel`, `PartItem`, `PartBackdrop`, `PartPlaceholder`,
+`PartSelection`, `PartPrefix`, and `PartSuffix`:
+
+```go
+barStyle := ui.Background(ui.RGBA(0x111827cc)). // outer component
+	Part(ui.PartTrack, ui.Height(6).Background(ui.TokenSurfaceRaised)).
+	Part(ui.PartFill, ui.Background(ui.TokenAccent)).
+	Part(ui.PartLabel, ui.TextColor(ui.TokenMutedForeground))
+
+ui.ProgressBar("upload", 42).Label("Upload").Style(barStyle)
+```
+
+For compound field controls such as Select, ComboBox, and the date controls,
+`PartContent` is the styled field face; the root remains the outer component.
+
+Custom components resolve the same cascade and reuse the same renderer with
+`ResolveStyle`, `ResolveStylePart`, `LayoutResolvedStyle`, and
+`LayoutInteractiveResolvedStyle`; see `examples/custom_widgets`.
+
+`Surface` uses the same style API for per-instance geometry and paint:
+
+```go
+ui.Surface(content).Style(ui.Radius(12).
 	BorderWidth(1).
-	BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
+	BorderColor(ui.RGB(0x9333ea)))
 ```
 
-Shadow geometry is also part of the instance theme. Profiles contain three
-layers ordered from tightest to broadest; a layer with zero opacity is disabled:
+Transitions need stable identity. Interactive components already have one;
+wrap each non-interactive transitioning sibling in a distinct `ui.Key` scope.
+A `Box` may use its own `.Key(...)` instead.
+
+Shadow geometry is configured at the application theme level. Profiles contain
+three layers ordered from tightest to broadest; a layer with zero opacity is
+disabled:
 
 ```go
-ui.Surface(content).Shadow(true).Theme(func(theme *ui.Theme) {
+ui.Run(Model{}, Update, View, ui.CustomizeTheme(func(theme *ui.Theme) {
 	theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
 	theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
 		{OffsetY: 2, Blur: 4, Opacity: 0.65},
 		{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
 		{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
 	}
-})
+}))
 ```
 
 `Layers[0]`, `Layers[1]`, and `Layers[2]` are the near, middle, and far
@@ -211,6 +249,7 @@ window at runtime with `Application.SetTheme` and `Application.SetLanguage`.
 Runnable programs are in [`examples/`](examples/). Start with:
 
 ```bash
+go run ./examples/components
 go run ./examples/counter
 go run ./examples/async
 go run ./examples/tables

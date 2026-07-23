@@ -13,25 +13,6 @@ import (
 	"gioui.org/unit"
 )
 
-func drawButton(gtx layout.Context, size image.Point, style buttonStyle) {
-	radius := min(max(gtx.Dp(style.radius), 0), min(size.X, size.Y)/2)
-	rect := image.Rectangle{Max: size}
-	rr := buttonRoundedRect(rect, radius, style.corners)
-
-	if style.bg.A != 0 {
-		paint.FillShape(gtx.Ops, style.bg, rr.Op(gtx.Ops))
-	}
-	if style.hasBorder && style.borderWidth > 0 {
-		stroke := clip.Stroke{
-			Path:  rr.Path(gtx.Ops),
-			Width: float32(max(gtx.Dp(style.borderWidth), 1)),
-		}.Op().Push(gtx.Ops)
-		paint.Fill(gtx.Ops, style.border)
-		stroke.Pop()
-	}
-	drawButtonFocus(gtx, size, radius, style)
-}
-
 func drawButtonSpinner(gtx layout.Context, size, strokeWidthDp unit.Dp, col color.NRGBA, period time.Duration) layout.Dimensions {
 	d := max(gtx.Dp(size), 1)
 	strokeWidth := float32(max(gtx.Dp(strokeWidthDp), 1))
@@ -66,45 +47,6 @@ func drawButtonSpinner(gtx layout.Context, size, strokeWidthDp unit.Dp, col colo
 	paint.Fill(gtx.Ops, col)
 	stroke.Pop()
 	return layout.Dimensions{Size: image.Pt(d, d)}
-}
-
-func drawButtonFocus(gtx layout.Context, size image.Point, radius int, style buttonStyle) {
-	if style.focus == 0 {
-		return
-	}
-	width := max(gtx.Dp(style.focusWidth), 1)
-	inset := width + 1
-	rect := image.Rectangle{
-		Min: image.Pt(inset, inset),
-		Max: image.Pt(size.X-inset, size.Y-inset),
-	}
-	if rect.Empty() {
-		return
-	}
-	ring := style.focusColor
-	ring.A = byte(float32(ring.A)*style.focus + 0.5)
-	stroke := clip.Stroke{
-		Path:  buttonRoundedRect(rect, max(radius-inset, 0), style.corners).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, ring)
-	stroke.Pop()
-}
-
-func buttonRoundedRect(rect image.Rectangle, radius int, corners buttonCorners) clip.RRect {
-	corner := func(enabled bool) int {
-		if enabled {
-			return radius
-		}
-		return 0
-	}
-	return clip.RRect{
-		Rect: rect,
-		NW:   corner(corners.nw),
-		NE:   corner(corners.ne),
-		SE:   corner(corners.se),
-		SW:   corner(corners.sw),
-	}
 }
 
 func buttonSpinnerPhase(now time.Time, period time.Duration) float32 {

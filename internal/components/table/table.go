@@ -1,13 +1,16 @@
 package table
 
 import (
+	"slices"
+
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Variant selects the Table container treatment.
@@ -89,7 +92,6 @@ type RowContextMenu func(Row) menu.Widget
 
 // Widget presents structured data with controlled sorting and selection.
 type Widget struct {
-	theme              func(*theme.Theme)
 	key                string
 	columns            []Column
 	rows               []Row
@@ -127,6 +129,7 @@ type Widget struct {
 	gridLines          bool
 	gridLinesSet       bool
 	bordered           bool
+	customStyle        flowstyle.Style
 }
 
 // New creates a controlled Table.
@@ -315,15 +318,12 @@ func (t Widget) showsFullGrid() bool {
 	return t.gridLinesSet && t.gridLines
 }
 
-func (t Widget) Theme(fn func(*theme.Theme)) Widget {
-	t.theme = fn
+func (t Widget) Style(value flowstyle.Style) Widget {
+	t.customStyle = value
 	return t
 }
 
 func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
-		defer restore()
-	}
 	state := tableStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
@@ -370,7 +370,30 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	if t.disabled {
 		gtx = gtx.Disabled()
 	}
-	return t.layout(ctx, gtx, state)
+	hovered, pressed, focused := false, false, false
+	for _, row := range state.rows {
+		hovered = hovered || row.clickable.Hovered()
+		pressed = pressed || row.clickable.Pressed()
+		focused = focused || gtx.Focused(&row.clickable)
+	}
+	for _, column := range state.columns {
+		hovered = hovered || column.clickable.Hovered()
+		pressed = pressed || column.clickable.Pressed()
+		focused = focused || gtx.Focused(&column.clickable)
+	}
+	hovered = hovered || state.selectAll.Hovered()
+	pressed = pressed || state.selectAll.Pressed()
+	focused = focused || gtx.Focused(&state.selectAll)
+	return layoutui.LayoutStyled(ctx, gtx, frame.FullKey(ctx, t.key), flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: t.disabled || !gtx.Enabled(),
+		Selected: t.selectedKey != "" || len(t.selectedKeys) > 0,
+		Loading:  t.loadingMore,
+	}, t.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return t.layout(ctx, gtx, state)
+	}))
 }
 
 func (t Widget) updateColumnResizers(ctx *frame.Context, gtx layout.Context, stateValue *tableState) {
@@ -668,12 +691,7 @@ func toggleKey(keys []string, key string) []string {
 }
 
 func containsKey(keys []string, key string) bool {
-	for _, current := range keys {
-		if current == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keys, key)
 }
 
 func sameKeys(a, b []string) bool {

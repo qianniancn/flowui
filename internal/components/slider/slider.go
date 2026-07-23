@@ -7,8 +7,9 @@ import (
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type SliderOrientation uint8
@@ -19,7 +20,6 @@ const (
 )
 
 type SliderWidget struct {
-	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	upperValue    float64
@@ -36,6 +36,7 @@ type SliderWidget struct {
 	formatValue   func(float64) string
 	onChange      func(float64)
 	onRangeChange func(float64, float64)
+	customStyle   flowstyle.Style
 }
 
 func Slider(key string, value float64) SliderWidget {
@@ -122,15 +123,12 @@ func (s SliderWidget) Disabled(disabled bool) SliderWidget {
 	return s
 }
 
-func (s SliderWidget) Theme(fn func(*theme.Theme)) SliderWidget {
-	s.theme = fn
+func (s SliderWidget) Style(value flowstyle.Style) SliderWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	key, state := sliderStateFor(ctx, s.key)
 	values := s.resolvedValues()
 	axis := s.axis()
@@ -153,13 +151,33 @@ func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 		}
 	}
 
-	style := sliderStyleFor(frame.ActiveTheme(ctx), !enabled)
+	hovered := state.lowerThumb.clickable.Hovered() || values.rangeMode && state.upperThumb.clickable.Hovered()
+	dragging := state.lower.Dragging() || values.rangeMode && state.upper.Dragging()
+	pressed := state.lowerThumb.clickable.Pressed() || dragging || values.rangeMode && state.upperThumb.clickable.Pressed()
+	lowerFocused := gtx.Focused(&state.lowerThumb.clickable)
+	upperFocused := values.rangeMode && gtx.Focused(&state.upperThumb.clickable)
+	focused := lowerFocused || upperFocused
+	focusVisible := frame.FocusVisible(ctx, &state.lowerThumb.clickable, lowerFocused)
+	if values.rangeMode {
+		focusVisible = focusVisible || frame.FocusVisible(ctx, &state.upperThumb.clickable, upperFocused)
+	}
+	styleState := flowstyle.StyleState{
+		Hovered:      hovered,
+		Pressed:      pressed,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     !enabled,
+		Dragging:     dragging,
+	}
+	componentStyle := s.resolveStyle(ctx, gtx, key, styleState)
 	layoutSlider := frame.WithFieldSemantics(ctx, key, func(gtx layout.Context) layout.Dimensions {
 		semantic.EnabledOp(enabled).Add(gtx.Ops)
 		semantic.DescriptionOp(s.semanticDescription(values)).Add(gtx.Ops)
-		return s.layout(ctx, gtx, state, style, values)
+		return s.layout(ctx, gtx, state, componentStyle, values)
 	})
-	return layoutSlider(gtx)
+	return layoutui.LayoutStyled(ctx, gtx, key, styleState, s.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutSlider(gtx)
+	}))
 }
 
 func (s SliderWidget) axis() layout.Axis {

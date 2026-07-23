@@ -96,7 +96,7 @@ func easingCurveCards(forward bool) []ui.Widget {
 func curveCard(label string, curve ui.Widget) ui.Widget {
 	return ui.Column(
 		ui.Text(label).Size(13),
-		ui.Surface(curve).Radius(6),
+		ui.Surface(curve).Style(ui.Radius(6)),
 	).Gap(6)
 }
 

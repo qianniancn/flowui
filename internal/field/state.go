@@ -2,24 +2,16 @@ package field
 
 import (
 	"image"
-	"image/color"
-	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
-	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-const colorDuration = 150 * time.Millisecond
 
 type State struct {
 	Hovered bool
-	bg      animation.ColorTransition
-	border  animation.ColorTransition
 }
 
 func (s *State) Update(ctx *frame.Context, gtx layout.Context, disabled bool, tag event.Tag) {
@@ -64,12 +56,4 @@ func (s *State) AddPointer(gtx layout.Context, size image.Point, disabled bool) 
 	event.Op(gtx.Ops, s)
 	stack.Pop()
 	area.Pop()
-}
-
-func (s *State) Background(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
-	return s.bg.Value(gtx, target, colorDuration, animation.EaseSmoothstep, motions...)
-}
-
-func (s *State) BorderColor(gtx layout.Context, target color.NRGBA, motions ...theme.MotionTheme) color.NRGBA {
-	return s.border.Value(gtx, target, colorDuration, animation.EaseSmoothstep, motions...)
 }

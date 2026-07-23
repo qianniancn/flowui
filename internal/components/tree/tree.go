@@ -7,10 +7,11 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Item describes one node in a Tree.
@@ -93,7 +94,6 @@ type DropEvent struct {
 
 // Widget presents hierarchical, expandable data with controlled selection and expansion.
 type Widget struct {
-	theme             func(*theme.Theme)
 	key               string
 	selectedKey       string
 	selectedKeys      []string
@@ -128,6 +128,7 @@ type Widget struct {
 	guideStyle        GuideStyle
 	expandOnRowClick  bool
 	maxHeight         int
+	customStyle       flowstyle.Style
 }
 
 // New creates a controlled Tree.
@@ -301,15 +302,12 @@ func (t Widget) MaxHeight(dp int) Widget {
 	return t
 }
 
-func (t Widget) Theme(fn func(*theme.Theme)) Widget {
-	t.theme = fn
+func (t Widget) Style(value flowstyle.Style) Widget {
+	t.customStyle = value
 	return t
 }
 
 func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
-		defer restore()
-	}
 	state := treeStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
@@ -432,7 +430,27 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 			t.activateWithModifiers(state, visible, result.actionKey, result.actionModifiers)
 		}
 	}
-	dims := t.layout(ctx, gtx, state, visible)
+	hovered, pressed, focused, focusVisible := false, false, false, false
+	for _, item := range state.items {
+		hovered = hovered || item.clickable.Hovered() || item.toggle.Hovered()
+		pressed = pressed || item.clickable.Pressed()
+		itemFocused := gtx.Focused(&item.clickable)
+		focused = focused || itemFocused
+		focusVisible = focusVisible || frame.FocusVisible(ctx, &item.clickable, itemFocused)
+	}
+	dims := layoutui.LayoutStyled(ctx, gtx, frame.FullKey(ctx, t.key), flowstyle.StyleState{
+		Hovered:      hovered,
+		Pressed:      pressed,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     t.disabled || !gtx.Enabled(),
+		Selected:     t.selectedKey != "" || len(t.selectedKeys) > 0,
+		Expanded:     len(t.expandedKeys) > 0,
+		Dragging:     state.dragSource != "",
+		DropTarget:   state.dropTarget.key != "",
+	}, t.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return t.layout(ctx, gtx, state, visible)
+	}))
 	if state.dragSource != "" {
 		dragIndex := treeVisibleIndex(visible, state.dragSource)
 		if dragIndex >= 0 && !treeListPositionContains(state.list.Position, dragIndex) {

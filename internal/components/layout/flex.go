@@ -92,6 +92,11 @@ func (r RowWidget) AlignMiddle() RowWidget {
 	return r
 }
 
+func (r RowWidget) AlignBaseline() RowWidget {
+	r.align = layout.Baseline
+	return r
+}
+
 func (r RowWidget) AlignEnd() RowWidget {
 	r.align = layout.End
 	return r
@@ -127,12 +132,14 @@ const (
 type FlexWidget struct {
 	child  frame.Widget
 	weight float32
+	tight  bool
 }
 
 func Expanded(child frame.Widget) FlexWidget {
 	return FlexWidget{
 		child:  child,
 		weight: 1,
+		tight:  true,
 	}
 }
 
@@ -206,7 +213,11 @@ func flexLayout(ctx *frame.Context, gtx layout.Context, axis layout.Axis, gap un
 			flexSize = min(flexSize, remaining)
 		}
 		childGtx := gtx
-		childGtx.Constraints = flexConstraints(axis, flexSize, flexSize, crossMin, crossMax)
+		flexMin := 0
+		if flex.tight {
+			flexMin = flexSize
+		}
+		childGtx.Constraints = flexConstraints(axis, flexMin, flexSize, crossMin, crossMax)
 		macro := op.Record(gtx.Ops)
 		dims, placement := frame.TrackWidgetPlacement(ctx, childGtx, flex.child)
 		placements[index] = childPlacement{dims: dims, call: macro.Stop(), placement: placement}

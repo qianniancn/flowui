@@ -66,7 +66,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								OnExpandedChange(func(keys []string) {
 									send(Msg{Target: "panels", Keys: keys})
 								}),
-						).Variant(ui.SurfaceSecondary).Radius(12),
+						).Variant(ui.SurfaceSecondary).Style(ui.Radius(12)),
 					),
 				).Gap(22),
 			).Vertical(),

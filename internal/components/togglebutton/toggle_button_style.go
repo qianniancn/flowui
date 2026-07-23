@@ -3,20 +3,101 @@ package togglebutton
 import (
 	"image/color"
 
+	"gioui.org/font"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type toggleButtonStyle struct {
-	background  color.NRGBA
-	foreground  color.NRGBA
-	radius      unit.Dp
-	focusColor  color.NRGBA
-	focusWidth  unit.Dp
-	focusOffset unit.Dp
-	focus       float32
-	opacity     float32
+	background color.NRGBA
+	foreground color.NRGBA
+	radius     unit.Dp
+	opacity    float32
+}
+
+type toggleButtonResolvedStyle struct {
+	root    flowstyle.ResolvedStyle
+	content flowstyle.ResolvedStyle
+}
+
+func (b ToggleButtonWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState) toggleButtonResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults := toggleButtonDefaultDeclaration(activeTheme)
+	variant := toggleButtonVariantDeclaration(activeTheme, ctx.ForegroundColor(), b.variant)
+	size := toggleButtonSizeDeclaration(activeTheme, b.size, b.iconOnly)
+	part := flowstyle.PartLabel
+	if b.iconOnly {
+		part = flowstyle.PartIcon
+	}
+	return toggleButtonResolvedStyle{
+		root:    styleruntime.Resolve(ctx, gtx, key, state, defaults, variant, size, b.customStyle),
+		content: styleruntime.ResolvePart(ctx, gtx, key, part, state, defaults, variant, size, b.customStyle),
+	}
+}
+
+func toggleButtonDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	tokens := activeTheme.Components.ToggleButton
+	return flowstyle.Style{}.
+		Radius(tokens.Radius).
+		Outline(tokens.FocusRingWidth, tokens.FocusRingOffset, flowstyle.WithAlpha(flowstyle.TokenFocus, 0)).
+		Opacity(1).
+		Scale(1, 1).
+		Cursor(pointer.CursorPointer).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontWeight(int(font.Medium))).
+		Transition(flowstyle.PropBackgroundColor, toggleButtonColorDuration).
+		Transition(flowstyle.PropOutlineColor, toggleButtonColorDuration).
+		Transition(flowstyle.PropTransform, toggleButtonScaleDuration).
+		When(flowstyle.All(flowstyle.FocusVisible, flowstyle.Not(flowstyle.Disabled)),
+			flowstyle.Style{}.Outline(tokens.FocusRingWidth, tokens.FocusRingOffset, flowstyle.TokenFocus),
+		).
+		When(flowstyle.Disabled,
+			flowstyle.Style{}.Opacity(activeTheme.DisabledOpacityValue()).Cursor(pointer.CursorDefault),
+		)
+
+}
+
+func toggleButtonVariantDeclaration(activeTheme *theme.Theme, foreground color.NRGBA, variant ToggleButtonVariant) flowstyle.Style {
+	idle := toggleButtonStyleFor(activeTheme, foreground, variant, false, false, false, false)
+	hovered := toggleButtonStyleFor(activeTheme, foreground, variant, false, true, false, false)
+	selected := toggleButtonStyleFor(activeTheme, foreground, variant, true, false, false, false)
+	selectedHovered := toggleButtonStyleFor(activeTheme, foreground, variant, true, true, false, false)
+	hoveredOrPressed := flowstyle.Any(flowstyle.Hovered, flowstyle.Pressed)
+	return flowstyle.Style{}.
+		Background(flowstyle.SolidColor{Color: idle.background}).
+		TextColor(flowstyle.SolidColor{Color: idle.foreground}).
+		When(hoveredOrPressed,
+			flowstyle.Style{}.Background(flowstyle.SolidColor{Color: hovered.background}),
+		).
+		When(flowstyle.Selected,
+			flowstyle.Style{}.
+				Background(flowstyle.SolidColor{Color: selected.background}).
+				TextColor(flowstyle.SolidColor{Color: selected.foreground}),
+		).
+		When(flowstyle.All(flowstyle.Selected, hoveredOrPressed),
+			flowstyle.Style{}.Background(flowstyle.SolidColor{Color: selectedHovered.background}),
+		)
+
+}
+
+func toggleButtonSizeDeclaration(activeTheme *theme.Theme, size ToggleButtonSize, iconOnly bool) flowstyle.Style {
+	resolved := toggleButtonSizeStyleFor(activeTheme, size)
+	pressedScale := resolvedToggleButtonPressedScale(resolved.pressedScale, size)
+	builder := flowstyle.Style{}.
+		Height(resolved.height).
+		PaddingX(resolved.paddingX).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontSize(unit.Sp(resolved.textSize))).
+		When(flowstyle.Pressed,
+			flowstyle.Style{}.Scale(pressedScale, pressedScale),
+		)
+	if iconOnly {
+		builder = builder.AspectRatio(1).PaddingX(0)
+	}
+	return builder
 }
 
 type toggleButtonSizeStyle struct {
@@ -48,13 +129,10 @@ func toggleButtonStyleFor(activeTheme *theme.Theme, currentForeground color.NRGB
 		opacity = activeTheme.DisabledOpacityValue()
 	}
 	return toggleButtonStyle{
-		background:  background,
-		foreground:  foreground,
-		radius:      activeTheme.Components.ToggleButton.Radius,
-		focusColor:  activeTheme.Palette.Focus,
-		focusWidth:  activeTheme.Components.ToggleButton.FocusRingWidth,
-		focusOffset: activeTheme.Components.ToggleButton.FocusRingOffset,
-		opacity:     opacity,
+		background: background,
+		foreground: foreground,
+		radius:     activeTheme.Components.ToggleButton.Radius,
+		opacity:    opacity,
 	}
 }
 
@@ -79,13 +157,6 @@ func toggleButtonSizeStyleFor(activeTheme *theme.Theme, size ToggleButtonSize) t
 		style.pressedScale = tokens.PressedScaleLarge
 	}
 	return style
-}
-
-func (s toggleButtonSizeStyle) inset(iconOnly bool) layout.Inset {
-	if iconOnly {
-		return layout.Inset{}
-	}
-	return layout.Inset{Left: s.paddingX, Right: s.paddingX}
 }
 
 func resolvedToggleButtonPressedScale(scale float32, size ToggleButtonSize) float32 {

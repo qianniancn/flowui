@@ -15,6 +15,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -191,38 +192,41 @@ func TestInputGroupTextAreaHeightDoesNotOverflow(t *testing.T) {
 
 func TestInputGroupStylesMatchHeroUIStates(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	primary := inputGroupStyleFor(&activeTheme, InputPrimary, false, false, false, false)
-	hovered := inputGroupStyleFor(&activeTheme, InputPrimary, true, false, false, false)
-	focused := inputGroupStyleFor(&activeTheme, InputPrimary, true, true, false, false)
-	secondary := inputGroupStyleFor(&activeTheme, InputSecondary, false, false, false, false)
-	secondaryHovered := inputGroupStyleFor(&activeTheme, InputSecondary, true, false, false, false)
-	invalid := inputGroupStyleFor(&activeTheme, InputPrimary, false, false, false, true)
-	disabled := inputGroupStyleFor(&activeTheme, InputPrimary, false, false, true, false)
+	primaryDeclaration := inputGroupDefaultDeclaration(&activeTheme, InputPrimary, false, 0)
+	secondaryDeclaration := inputGroupDefaultDeclaration(&activeTheme, InputSecondary, false, 0)
+	primary := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{})
+	hovered := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Hovered: true})
+	focused := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Focused: true})
+	secondary := resolveInputTestStyle(&activeTheme, secondaryDeclaration, flowstyle.StyleState{})
+	secondaryHovered := resolveInputTestStyle(&activeTheme, secondaryDeclaration, flowstyle.StyleState{Hovered: true})
+	invalid := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Invalid: true})
+	disabled := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Disabled: true})
+	divider := resolveInputTestPart(&activeTheme, primaryDeclaration, flowstyle.PartIndicator, flowstyle.StyleState{})
 
-	if primary.Background != activeTheme.Palette.FieldBackgroundColor() || primary.ShadowOpacity != 1 || primary.Divider != activeTheme.Palette.Border {
+	if resolvedBackground(primary) != activeTheme.Palette.FieldBackgroundColor() || primary.Paint == nil || len(primary.Paint.Shadows) != 3 || resolvedBackground(divider) != activeTheme.Palette.Border {
 		t.Fatalf("primary style = %#v", primary)
 	}
 	wantPrimaryHover := color.NRGBA{R: 0xf8, G: 0xf8, B: 0xf9, A: 0xff}
-	if hovered.Background != wantPrimaryHover {
-		t.Fatalf("primary hover = %#v, want %#v", hovered.Background, wantPrimaryHover)
+	if resolvedBackground(hovered) != wantPrimaryHover {
+		t.Fatalf("primary hover = %#v, want %#v", resolvedBackground(hovered), wantPrimaryHover)
 	}
-	if focused.Background != activeTheme.Palette.FieldFocusColor() || focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 {
+	if resolvedBackground(focused) != activeTheme.Palette.FieldFocusColor() || focused.Paint.Outline.Color != (flowstyle.SolidColor{Color: activeTheme.Palette.Focus}) || focused.Paint.Outline.Width != 2 {
 		t.Fatalf("focused style = %#v", focused)
 	}
-	if secondary.Background != activeTheme.Palette.DefaultColor() || secondary.ShadowOpacity != 0 {
+	if resolvedBackground(secondary) != activeTheme.Palette.DefaultColor() || secondary.Paint == nil || len(secondary.Paint.Shadows) != 0 {
 		t.Fatalf("secondary style = %#v", secondary)
 	}
-	if secondaryHovered.Background != activeTheme.Palette.DefaultHoverColor() {
+	if resolvedBackground(secondaryHovered) != activeTheme.Palette.DefaultHoverColor() {
 		t.Fatalf("secondary hover = %#v", secondaryHovered)
 	}
-	if invalid.Ring != activeTheme.Palette.Danger || invalid.RingWidth != 1 {
+	if invalid.Paint.Outline.Color != (flowstyle.SolidColor{Color: activeTheme.Palette.Danger}) || invalid.Paint.Outline.Width != 1 {
 		t.Fatalf("invalid style = %#v", invalid)
 	}
-	if disabled.Opacity != activeTheme.DisabledOpacityValue() {
-		t.Fatalf("disabled opacity = %v", disabled.Opacity)
+	if disabled.Paint.Opacity == nil || *disabled.Paint.Opacity != activeTheme.DisabledOpacityValue() {
+		t.Fatalf("disabled opacity = %#v", disabled.Paint)
 	}
 	darkTheme := theme.DarkTheme()
-	if dark := inputGroupStyleFor(&darkTheme, InputPrimary, false, false, false, false); dark.Background != darkTheme.Palette.FieldBackgroundColor() || dark.ShadowOpacity != 0 {
+	if dark := resolveInputTestStyle(&darkTheme, inputGroupDefaultDeclaration(&darkTheme, InputPrimary, false, 0), flowstyle.StyleState{}); resolvedBackground(dark) != darkTheme.Palette.FieldBackgroundColor() || len(dark.Paint.Shadows) != 0 {
 		t.Fatalf("dark input group style = %#v", dark)
 	}
 }

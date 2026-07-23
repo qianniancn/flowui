@@ -2,6 +2,7 @@ package layoutui
 
 import (
 	"image"
+	"image/color"
 	"math"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -24,7 +26,8 @@ func TestScrollbarOptionsAndState(t *testing.T) {
 		StickToEnd().
 		ScrollAnyAxis().
 		Overlay().
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Width(12))
 	value.Layout(ctx, testLayoutContext())
 
 	state := testComponentState[scrollbarState](ctx, "body", stateSlotScrollbar)
@@ -33,6 +36,9 @@ func TestScrollbarOptionsAndState(t *testing.T) {
 	}
 	if !state.list.ScrollToEnd || !state.list.ScrollAnyAxis || !value.overlay || !value.disabled {
 		t.Fatalf("scrollbar options = %#v state = %#v", value, state.list)
+	}
+	if value.customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
+		t.Fatal("scrollbar style was not retained")
 	}
 }
 
@@ -53,6 +59,19 @@ func TestScrollbarThemeMatchesHeroUIThinStyle(t *testing.T) {
 	style := scrollbarStyleFor(&activeTheme, new(widget.Scrollbar), false)
 	if style.Width() != 10 || style.Indicator.Color.A != 38 || style.Track.Color.A != 0 {
 		t.Fatalf("scrollbar style width/color = %v/%#v", style.Width(), style.Indicator.Color)
+	}
+}
+
+func TestScrollbarResolvesTrackAndThumbParts(t *testing.T) {
+	track := color.NRGBA{R: 1, A: 0xff}
+	thumb := color.NRGBA{G: 2, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Width(14).Background(flowstyle.SolidColor{Color: track})).
+		Part(flowstyle.PartThumb, flowstyle.Style{}.Width(4).Background(flowstyle.SolidColor{Color: thumb}).Radius(2))
+
+	style := resolvedScrollbarStyle(newContext(nil), testLayoutContext(), "scrollbar", new(widget.Scrollbar), false, custom)
+	if style.Width() != 14 || style.Track.Color != track || style.Indicator.Color != thumb || style.Indicator.MinorWidth != 4 || style.Indicator.CornerRadius != 2 {
+		t.Fatalf("parts = width %v track %#v thumb %#v/%v radius %v", style.Width(), style.Track.Color, style.Indicator.Color, style.Indicator.MinorWidth, style.Indicator.CornerRadius)
 	}
 }
 

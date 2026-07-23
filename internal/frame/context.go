@@ -12,6 +12,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -45,6 +46,8 @@ type Context struct {
 	hasBackground                bool
 	windowState                  WindowState
 	overlays                     overlayHost
+	styles                       []style.Style
+	inheritedStyles              []style.Style
 }
 
 // New creates a per-window frame context. Application state remains in the
@@ -161,21 +164,6 @@ func UpdateWindowConfig(ctx *Context, config app.Config) WindowState {
 // frame. It is only reachable by packages inside this module's internal tree.
 func ActiveTheme(ctx *Context) *theme.Theme {
 	return ctx.theme
-}
-
-// PushInstanceTheme customizes a copy of the active theme for the current layout scope.
-func PushInstanceTheme(ctx *Context, customize func(*theme.Theme)) func() {
-	if ctx == nil || customize == nil {
-		return nil
-	}
-	activeTheme := ctx.Theme()
-	customize(&activeTheme)
-	theme.SyncMaterialTheme(&activeTheme)
-	previous := ctx.theme
-	ctx.theme = &activeTheme
-	return func() {
-		ctx.theme = previous
-	}
 }
 
 // ActiveLanguage returns the resolved language used by internal components.
@@ -442,6 +430,46 @@ func PushColors(ctx *Context, foreground, background color.NRGBA) func() {
 		ctx.foreground, ctx.hasForeground = previousForeground, hadForeground
 		ctx.background, ctx.hasBackground = previousBackground, hadBackground
 	}
+}
+
+// PushStyle adds a cascading style for descendant component layout.
+func PushStyle(ctx *Context, value style.Style) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	previous := len(ctx.styles)
+	ctx.styles = append(ctx.styles, value)
+	return func() {
+		ctx.styles = ctx.styles[:previous]
+	}
+}
+
+// ActiveStyles returns the styles inherited by the current layout scope.
+func ActiveStyles(ctx *Context) []style.Style {
+	if ctx == nil {
+		return nil
+	}
+	return append([]style.Style(nil), ctx.styles...)
+}
+
+// PushInheritedStyle propagates a computed parent style with lower precedence
+// than a child's variant, size, scope, and instance declarations.
+func PushInheritedStyle(ctx *Context, value style.Style) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	previous := len(ctx.inheritedStyles)
+	ctx.inheritedStyles = append(ctx.inheritedStyles, value)
+	return func() {
+		ctx.inheritedStyles = ctx.inheritedStyles[:previous]
+	}
+}
+
+func ActiveInheritedStyles(ctx *Context) []style.Style {
+	if ctx == nil {
+		return nil
+	}
+	return append([]style.Style(nil), ctx.inheritedStyles...)
 }
 
 func (ctx *Context) ForegroundColor() color.NRGBA {

@@ -8,11 +8,10 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type SwitchWidget struct {
-	theme       func(*theme.Theme)
 	key         string
 	checked     bool
 	label       string
@@ -23,6 +22,7 @@ type SwitchWidget struct {
 	size        SwitchSize
 	labelBefore bool
 	thumb       func(bool) frame.Widget
+	customStyle flowstyle.Style
 }
 
 type SwitchSize int
@@ -81,15 +81,12 @@ func (s SwitchWidget) Thumb(content func(checked bool) frame.Widget) SwitchWidge
 	return s
 }
 
-func (s SwitchWidget) Theme(fn func(*theme.Theme)) SwitchWidget {
-	s.theme = fn
+func (s SwitchWidget) Style(value flowstyle.Style) SwitchWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	componentState := switchStateFor(ctx, s.key)
 	key := frame.FullKey(ctx, s.key)
 	if s.description != "" {
@@ -119,11 +116,23 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 			frame.FocusOnPress(ctx, &componentState.value, componentState.value.History(), presses)
 		}
 		focusVisible := frame.FocusVisible(ctx, &componentState.value, gtx.Focused(&componentState.value))
-		style := switchStyleFor(frame.ActiveTheme(ctx), componentState.value.Hovered(), componentState.value.Pressed(), disabled, s.invalid)
+		styleState := flowstyle.StyleState{
+			Hovered:      componentState.value.Hovered(),
+			Pressed:      componentState.value.Pressed(),
+			Focused:      gtx.Focused(&componentState.value),
+			FocusVisible: focusVisible,
+			Disabled:     disabled,
+			Selected:     componentState.value.Value,
+			Checked:      componentState.value.Value,
+			Invalid:      s.invalid,
+		}
+		style, size := s.resolveStyle(ctx, animGtx, key, styleState)
 		motion := frame.ActiveTheme(ctx).Motion
 		style.selected = componentState.selection(animGtx, componentState.value.Value, motion)
 		style.focus = componentState.focusOpacity(animGtx, focusVisible && !disabled, motion)
-		return s.layoutContent(ctx, gtx, style, switchSizeStyleFor(frame.ActiveTheme(ctx), s.size), componentState.value.Value)
+		return layoutui.LayoutStyled(ctx, gtx, key, styleState, s.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return s.layoutContent(ctx, gtx, style, size, componentState.value.Value)
+		}))
 	})
 	if !disabled && componentState.value.Value != s.checked && s.onChange != nil {
 		s.onChange(componentState.value.Value)
@@ -132,9 +141,9 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 }
 
 type SwitchGroupWidget struct {
-	theme      func(*theme.Theme)
-	children   []frame.Widget
-	horizontal bool
+	children    []frame.Widget
+	horizontal  bool
+	customStyle flowstyle.Style
 }
 
 func SwitchGroup(children ...frame.Widget) SwitchGroupWidget {
@@ -146,21 +155,20 @@ func (g SwitchGroupWidget) Horizontal() SwitchGroupWidget {
 	return g
 }
 
-func (g SwitchGroupWidget) Theme(fn func(*theme.Theme)) SwitchGroupWidget {
-	g.theme = fn
+func (g SwitchGroupWidget) Style(value flowstyle.Style) SwitchGroupWidget {
+	g.customStyle = value
 	return g
 }
 
 func (g SwitchGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
-		defer restore()
-	}
-	theme := frame.ActiveTheme(ctx).Components.SwitchGroup
-	children := make([]layout.Widget, 0, len(g.children))
-	for _, child := range g.children {
-		children = append(children, func(gtx layout.Context) layout.Dimensions {
-			return child.Layout(ctx, gtx)
-		})
-	}
-	return layoutui.LayoutItems(ctx, gtx, g.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	return layoutui.Box(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		theme := frame.ActiveTheme(ctx).Components.SwitchGroup
+		children := make([]layout.Widget, 0, len(g.children))
+		for _, child := range g.children {
+			children = append(children, func(gtx layout.Context) layout.Dimensions {
+				return child.Layout(ctx, gtx)
+			})
+		}
+		return layoutui.LayoutItems(ctx, gtx, g.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	})).Style(g.customStyle).Layout(ctx, gtx)
 }

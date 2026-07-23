@@ -10,7 +10,6 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
-	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -25,7 +24,6 @@ func datePickerStateFor(ctx *frame.Context, key string) *datePickerState {
 }
 
 type datePickerState struct {
-	input             field.State
 	segments          dateSegmentsState
 	hover             dateInputHoverState
 	trigger           widget.Clickable
@@ -205,6 +203,17 @@ func (s *datePickerState) calendarFocused(gtx layout.Context) bool {
 		datePickerCellsFocused(gtx, s.years)
 }
 
+func (s *datePickerState) focusVisible(ctx *frame.Context, gtx layout.Context) bool {
+	return s.segments.focusVisible(ctx, gtx) ||
+		frame.FocusVisible(ctx, &s.trigger, gtx.Focused(&s.trigger)) ||
+		frame.FocusVisible(ctx, &s.header, gtx.Focused(&s.header)) ||
+		frame.FocusVisible(ctx, &s.prev, gtx.Focused(&s.prev)) ||
+		frame.FocusVisible(ctx, &s.next, gtx.Focused(&s.next)) ||
+		datePickerCellsFocusVisible(ctx, gtx, s.days) ||
+		datePickerCellsFocusVisible(ctx, gtx, s.months) ||
+		datePickerCellsFocusVisible(ctx, gtx, s.years)
+}
+
 func (s *datePickerState) calendarEscapePressed(gtx layout.Context) bool {
 	return datePickerEscapePressed(gtx, &s.header) ||
 		datePickerEscapePressed(gtx, &s.prev) ||
@@ -217,6 +226,15 @@ func (s *datePickerState) calendarEscapePressed(gtx layout.Context) bool {
 func datePickerCellsFocused(gtx layout.Context, cells map[string]*datePickerCellState) bool {
 	for _, cell := range cells {
 		if gtx.Focused(&cell.clickable) {
+			return true
+		}
+	}
+	return false
+}
+
+func datePickerCellsFocusVisible(ctx *frame.Context, gtx layout.Context, cells map[string]*datePickerCellState) bool {
+	for _, cell := range cells {
+		if frame.FocusVisible(ctx, &cell.clickable, gtx.Focused(&cell.clickable)) {
 			return true
 		}
 	}

@@ -60,6 +60,75 @@ All implementation packages live below `internal/`. Theme, locale, layout, and
 drawing types needed by applications are re-exported through `ui`; their
 implementation paths are not additional public entry points.
 
+## Style Cascade
+
+`ui.Style` is the public immutable declaration used by components and custom
+widgets. Public declarations start from an attribute function such as
+`ui.Background`, `ui.Padding`, or `ui.Part`, then continue through value-returning
+fluent methods. Components use the same immutable chain from a zero-value
+`style.Style`; there is no separate builder or build step. The runtime resolves
+declarations in this order:
+
+```text
+component defaults -> variant -> size -> StyleScope ancestors -> instance Style
+```
+
+`When` stores predicates for interaction state (`Hovered`, `Pressed`,
+`FocusVisible`, `Dragging`), semantic state (`Disabled`, `Checked`, `Invalid`,
+`Loading`), or an MVU model value adapted with `If(bool)`. `Cascade` is the pure
+merge step: matching rules are applied and later properties take precedence.
+`Resolve` adds the active scopes, expands theme metric/color tokens, and retains
+transition state under the component key. `StyleScope` carries declarations
+down the widget tree; it never mutates the application theme.
+
+```text
+Style declaration -> Cascade(state) -> Resolve(theme, key) -> LayoutResolvedStyle
+                            |                    |
+                            |                    +-> transition state
+                            +-> root + named Parts
+```
+
+## Interaction Core
+
+Button-like controls share one internal interaction core for clicks, keyboard
+activation, focus, disabled state, and accessibility semantics. `ui.Button`
+adds FlowUI defaults, variants, sizes, loading, and compound content. A custom
+control uses `ui.Box(...).Key(...).OnClick(...)`; its interaction state is
+available to `Style.When` without inheriting Button visuals. Raw Gio events
+remain available for interactions such as dragging that do not share button
+semantics.
+
+Root `Box`, `Paint`, `Text`, and `Transform` properties always describe the
+component's outer box. A compound component exposes internal elements through
+`Part`: content, labels, descriptions, icons, tracks, fills, thumbs,
+indicators, panels, items, backdrops, placeholders, selections, prefixes, and
+suffixes. Compound field controls use `PartContent` for the field face. Part
+text inherits root text properties; box, paint, and transform properties do
+not. Applications may use a custom `StylePart` string for their own components.
+
+The common renderer owns margin, constraints, aspect ratio, padding, overflow
+clipping, cursor, background/gradient, per-corner radius, shadows, border,
+outline, opacity, and transforms. Components must not duplicate a partial
+adapter for these properties. They retain only domain-specific geometry such as
+progress ratios, slider thumb positions, or chart paths.
+
+Components use the same runtime for root layout and interaction state. A custom
+widget calls `ui.ResolveStyle` for its root, `ui.ResolveStylePart` for internals,
+then renders with `ui.LayoutResolvedStyle` or
+`ui.LayoutInteractiveResolvedStyle`. The latter keeps margin outside the input
+host while making padding and the remaining visual box part of the hit area.
+`ui.StyleScope` styles descendants. Component-level theme mutation is
+intentionally not part of the API.
+
+Transition state needs stable widget identity. Stateful components claim their
+component key; each non-interactive transitioning sibling uses a distinct
+`ui.Key` scope. A `Box` may use its own key directly.
+
+Parent-owned layout policy stays outside Style: flex growth, sibling gap,
+alignment, absolute/portal placement, z-order, and scroll state belong to their
+layout containers. This prevents CSS-like syntax from hiding MVU state or
+changing ownership boundaries.
+
 ## State Ownership
 
 Application and business state belongs in the user's `Model`. A controlled

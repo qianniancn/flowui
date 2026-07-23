@@ -95,12 +95,10 @@ func TestSoftShadowCacheConcurrentMissesTrackBytesOnce(t *testing.T) {
 	start := make(chan struct{})
 	var group sync.WaitGroup
 	for range 16 {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			<-start
 			_ = softShadowEntry(image.Pt(320, 180), shape, 22, 4, 0, 8, col)
-		}()
+		})
 	}
 	close(start)
 	group.Wait()

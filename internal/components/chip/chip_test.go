@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -38,7 +39,8 @@ func TestChipOptionsUseValueSemantics(t *testing.T) {
 		Variant(VariantSoft).
 		Size(SizeLarge).
 		StartContent(start).
-		EndContent(end)
+		EndContent(end).
+		Style(flowstyle.Style{}.Radius(4))
 
 	if base.color != ColorDefault || base.variant != VariantSecondary || base.size != SizeMedium || base.startContent != nil || base.endContent != nil {
 		t.Fatal("configuring a Chip mutated the base value")
@@ -48,6 +50,9 @@ func TestChipOptionsUseValueSemantics(t *testing.T) {
 	}
 	if configured.startContent != start || configured.endContent != end {
 		t.Fatal("content options were not retained")
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured Chip did not retain its style")
 	}
 }
 

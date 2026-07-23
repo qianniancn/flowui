@@ -14,6 +14,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -133,6 +135,20 @@ func TestSwitchControlOnlyLayout(t *testing.T) {
 	}
 }
 
+func TestSwitchTrackPartControlsGeometry(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	gtx := testLayoutContext()
+	dims := Switch("compact", false, "").
+		Style(flowstyle.Style{}.Part(flowstyle.PartTrack, flowstyle.Style{}.Width(30).Height(14))).
+		Layout(ctx, gtx)
+	focusSpace := max(gtx.Dp(activeTheme.Components.Switch.FocusSpace), 1)
+	want := image.Pt(gtx.Dp(30)+focusSpace*2, gtx.Dp(14)+focusSpace*2)
+	if dims.Size != want {
+		t.Fatalf("styled switch size = %v, want %v", dims.Size, want)
+	}
+}
+
 func TestSwitchRespectsConstraints(t *testing.T) {
 	gtx := testLayoutContext()
 	gtx.Constraints = layout.Constraints{Max: image.Pt(12, 12)}
@@ -207,6 +223,56 @@ func TestSwitchSizeStyle(t *testing.T) {
 	}
 	if got := switchSizeStyleFor(&theme, SwitchLarge).thumbHeight; got != theme.Components.Switch.LargeThumbHeight {
 		t.Fatalf("large thumb height = %v, want %v", got, theme.Components.Switch.LargeThumbHeight)
+	}
+}
+
+func TestSwitchResolvesCheckedTrackAndThumbParts(t *testing.T) {
+	off := color.NRGBA{R: 1, A: 0xff}
+	on := color.NRGBA{G: 2, A: 0xff}
+	thumb := color.NRGBA{B: 3, A: 0xff}
+	description := color.NRGBA{R: 4, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: off}).
+			BorderWidth(2).
+			Radius(11).
+			BoxShadow(1, 2, 3, 4, flowstyle.RGBA(0x01020380)).
+			When(flowstyle.Checked, flowstyle.Style{}.Background(flowstyle.LinearGradient(
+				flowstyle.ColorStop(0, flowstyle.SolidColor{Color: off}),
+				flowstyle.ColorStop(1, flowstyle.SolidColor{Color: on}),
+			)))).
+		Part(flowstyle.PartThumb, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: thumb}).Scale(.9, .8)).
+		Part(flowstyle.PartDescription, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: description}))
+
+	resolved, _ := Switch("notifications", true, "").Style(custom).resolveStyle(newContext(nil), layout.Context{Ops: new(op.Ops)}, "notifications", flowstyle.StyleState{Checked: true, Selected: true})
+	if got, ok := styleruntime.Brush(resolved.trackOff.Paint.Background); !ok || got.ColorAt(.5) != off {
+		t.Fatalf("off track background = %#v, ok %v", got, ok)
+	}
+	if _, ok := resolved.trackOn.Paint.Background.(flowstyle.StyleGradient); !ok {
+		t.Fatalf("on track background = %T, want gradient", resolved.trackOn.Paint.Background)
+	}
+	if resolved.trackOn.Paint.Border == nil || *resolved.trackOn.Paint.Border.Width != 2 || *resolved.trackOn.Paint.Radius != 11 || len(resolved.trackOn.Paint.Shadows) != 1 {
+		t.Fatalf("on track paint = %#v", resolved.trackOn.Paint)
+	}
+	if got, ok := styleruntime.Brush(resolved.thumbOff.Paint.Background); !ok || got.ColorAt(.5) != thumb {
+		t.Fatalf("off thumb background = %#v, ok %v", got, ok)
+	}
+	if resolved.thumbOn.Trans == nil || *resolved.thumbOn.Trans.ScaleX != .9 || *resolved.thumbOn.Trans.ScaleY != .8 {
+		t.Fatalf("thumb transform = %#v", resolved.thumbOn.Trans)
+	}
+	if resolved.description.Text == nil || resolved.description.Text.Color.(flowstyle.SolidColor).Color != description {
+		t.Fatalf("description part = %#v", resolved.description.Text)
+	}
+}
+
+func TestSwitchLabelPartUsesCommonBoxRenderer(t *testing.T) {
+	base := Switch("notifications", false, "Notifications").
+		Layout(newContext(nil), testLayoutContext())
+	styled := Switch("notifications", false, "Notifications").
+		Style(flowstyle.Style{}.Part(flowstyle.PartLabel, flowstyle.Style{}.PaddingY(7))).
+		Layout(newContext(nil), testLayoutContext())
+	if styled.Size.Y <= base.Size.Y {
+		t.Fatalf("styled label height = %d, want greater than %d", styled.Size.Y, base.Size.Y)
 	}
 }
 
@@ -296,25 +362,21 @@ func TestSwitchGroupHorizontalWraps(t *testing.T) {
 	}
 }
 
-func TestSwitchThumbContentColorUsesThemePalette(t *testing.T) {
+func TestSwitchThumbContentStyleUsesThemePalette(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Palette.MutedForeground = color.NRGBA{R: 1, G: 2, B: 3, A: 255}
 	theme.Palette.Accent = color.NRGBA{R: 4, G: 5, B: 6, A: 255}
 	style := switchStyleFor(&theme, false, false, false, false)
-	style.selected = 0
-
-	if got := switchThumbContentColor(style); got != theme.Palette.MutedForeground {
+	if got := style.thumbFgOff; got != theme.Palette.MutedForeground {
 		t.Fatalf("off thumb content color = %#v, want %#v", got, theme.Palette.MutedForeground)
 	}
 }
 
-func TestSwitchThumbContentColorUsesDisabledStyle(t *testing.T) {
+func TestSwitchThumbContentStyleUsesDisabledColor(t *testing.T) {
 	theme := DefaultTheme()
 	theme.DisabledOpacity = 0.25
 	style := switchStyleFor(&theme, false, false, true, false)
-	style.selected = 0
-
-	if got := switchThumbContentColor(style); got.A != byte(float32(theme.Palette.MutedForeground.A)*0.25) {
+	if got := style.thumbFgOff; got.A != byte(float32(theme.Palette.MutedForeground.A)*0.25) {
 		t.Fatalf("disabled off thumb content alpha = %d, want %d", got.A, byte(float32(theme.Palette.MutedForeground.A)*0.25))
 	}
 }

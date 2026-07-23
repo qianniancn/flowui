@@ -9,6 +9,8 @@ import (
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -18,7 +20,6 @@ const (
 )
 
 type ScrollbarWidget struct {
-	theme         func(*theme.Theme)
 	key           string
 	child         frame.Widget
 	axis          layout.Axis
@@ -27,6 +28,7 @@ type ScrollbarWidget struct {
 	stickToEnd    bool
 	scrollAnyAxis bool
 	overlay       bool
+	customStyle   flowstyle.Style
 }
 
 type scrollbarState struct {
@@ -83,15 +85,12 @@ func (s ScrollbarWidget) Overlay() ScrollbarWidget {
 	return s
 }
 
-func (s ScrollbarWidget) Theme(fn func(*theme.Theme)) ScrollbarWidget {
-	s.theme = fn
+func (s ScrollbarWidget) Style(value flowstyle.Style) ScrollbarWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	prepareFieldAssociations(ctx, s.child)
 	key := frame.ClaimKey(ctx, stateutil.KindScrollbar, s.key)
 	state := frame.UseState[scrollbarState](ctx, key, stateSlotScrollbar)
@@ -103,9 +102,12 @@ func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	if s.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutScrollbarList(ctx, gtx, &state.list, &state.bar, 1, s.disabled, s.overlay, func(gtx layout.Context, _ int) layout.Dimensions {
-		return s.child.Layout(ctx, gtx)
-	})
+	styleState := scrollbarStyleState(&state.bar, s.disabled)
+	return LayoutStyled(ctx, gtx, key, styleState, s.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutScrollbarList(ctx, gtx, key, &state.list, &state.bar, 1, s.disabled, s.overlay, s.customStyle, func(gtx layout.Context, _ int) layout.Dimensions {
+			return s.child.Layout(ctx, gtx)
+		})
+	}))
 }
 
 func derivedScrollbarState(ctx *frame.Context, owner string) *widget.Scrollbar {
@@ -113,12 +115,12 @@ func derivedScrollbarState(ctx *frame.Context, owner string) *widget.Scrollbar {
 	return frame.UseState[widget.Scrollbar](ctx, key, stateSlotScrollbarBar)
 }
 
-func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
+func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, key string, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, custom flowstyle.Style, item layout.ListElement) layout.Dimensions {
 	if disabled {
 		gtx = gtx.Disabled()
 	}
 	activeTheme := frame.ActiveTheme(ctx)
-	style := scrollbarStyleFor(activeTheme, bar, disabled)
+	style := resolvedScrollbarStyle(ctx, gtx, key, bar, disabled, custom)
 	axis := list.Axis
 	originalConstraints := gtx.Constraints
 	barWidth := gtx.Dp(style.Width())
@@ -173,7 +175,63 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, list *layout.Li
 
 // LayoutTrackedScrollbar lays out a Gio list with FlowUI's scrollbar style.
 func LayoutTrackedScrollbar(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
-	return layoutScrollbarList(ctx, gtx, list, bar, count, disabled, overlay, item)
+	return layoutScrollbarList(ctx, gtx, "", list, bar, count, disabled, overlay, flowstyle.Style{}, item)
+}
+
+func resolvedScrollbarStyle(ctx *frame.Context, gtx layout.Context, key string, bar *widget.Scrollbar, disabled bool, custom flowstyle.Style) material.ScrollbarStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.Scrollbar
+	base := scrollbarStyleFor(activeTheme, bar, disabled)
+	state := scrollbarStyleState(bar, disabled)
+	defaults := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Width(tokens.TrackWidth).
+			Background(flowstyle.SolidColor{Color: base.Track.Color})).
+		Part(flowstyle.PartThumb, flowstyle.Style{}.
+			Width(tokens.ThumbWidth).
+			Background(flowstyle.SolidColor{Color: base.Indicator.Color}).
+			Radius(tokens.Radius))
+
+	track := resolveScrollbarPart(ctx, gtx, key, flowstyle.PartTrack, state, defaults, custom)
+	thumb := resolveScrollbarPart(ctx, gtx, key, flowstyle.PartThumb, state, defaults, custom)
+	trackWidth := tokens.TrackWidth
+	thumbWidth := tokens.ThumbWidth
+	if track.Box != nil && track.Box.Width != nil {
+		trackWidth = max(*track.Box.Width, 1)
+	}
+	if thumb.Box != nil && thumb.Box.Width != nil {
+		thumbWidth = max(*thumb.Box.Width, 1)
+	}
+	base.Indicator.MinorWidth = thumbWidth
+	base.Track.MinorPadding = max((trackWidth-thumbWidth)/2, 0)
+	if track.Paint != nil {
+		if brush, ok := styleruntime.Brush(track.Paint.Background); ok {
+			base.Track.Color = styleruntime.ApplyOpacity(brush.ColorAt(.5), track.Paint.Opacity)
+		}
+	}
+	if thumb.Paint != nil {
+		if brush, ok := styleruntime.Brush(thumb.Paint.Background); ok {
+			indicator := styleruntime.ApplyOpacity(brush.ColorAt(.5), thumb.Paint.Opacity)
+			base.Indicator.Color = indicator
+			base.Indicator.HoverColor = indicator
+		}
+		if thumb.Paint.Radius != nil {
+			base.Indicator.CornerRadius = *thumb.Paint.Radius
+		}
+	}
+	return base
+}
+
+func scrollbarStyleState(bar *widget.Scrollbar, disabled bool) flowstyle.StyleState {
+	dragging := !disabled && bar.Dragging()
+	return flowstyle.StyleState{Pressed: dragging, Dragging: dragging, Disabled: disabled}
+}
+
+func resolveScrollbarPart(ctx *frame.Context, gtx layout.Context, key string, part flowstyle.Part, state flowstyle.StyleState, defaults, custom flowstyle.Style) flowstyle.ResolvedStyle {
+	if key == "" {
+		return styleruntime.ResolvePartStatic(ctx, part, state, defaults, flowstyle.Style{}, flowstyle.Style{}, custom)
+	}
+	return styleruntime.ResolvePart(ctx, gtx, key, part, state, defaults, flowstyle.Style{}, flowstyle.Style{}, custom)
 }
 
 func scrollbarStyleFor(activeTheme *theme.Theme, state *widget.Scrollbar, disabled bool) material.ScrollbarStyle {

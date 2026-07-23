@@ -19,7 +19,6 @@ func LayoutItems(ctx *frame.Context, gtx layout.Context, horizontal bool, column
 		tracked := make([]trackedChild, len(children))
 		flexChildren := make([]layout.FlexChild, 0, len(children))
 		for index, child := range children {
-			index, child := index, child
 			flexChildren = append(flexChildren, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 					return child(gtx)

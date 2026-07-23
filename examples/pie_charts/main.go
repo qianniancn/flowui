@@ -81,9 +81,9 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			ui.Column(
 				ui.Text("Traffic overview").Size(24),
 				ui.Text(selected).Size(14),
-				ui.Surface(ui.Box(standard).Padding(16)).Radius(8),
-				ui.Surface(ui.Box(donut).Padding(16)).Radius(8),
-				ui.Surface(ui.Box(rose).Padding(16)).Radius(8),
+				ui.Surface(ui.Box(standard).Padding(16)).Style(ui.Radius(8)),
+				ui.Surface(ui.Box(donut).Padding(16)).Style(ui.Radius(8)),
+				ui.Surface(ui.Box(rose).Padding(16)).Style(ui.Radius(8)),
 			).Gap(16),
 		).FillWidth().MaxWidth(920).Padding(24),
 	)

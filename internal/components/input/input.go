@@ -7,24 +7,25 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 type InputWidget struct {
-	theme     func(*theme.Theme)
-	key       string
-	value     string
-	hint      string
-	onChange  func(string)
-	onSubmit  func(string)
-	variant   InputVariant
-	disabled  bool
-	invalid   bool
-	fullWidth bool
-	inputType InputType
-	readOnly  bool
-	maxLength int
-	label     string
+	key         string
+	value       string
+	hint        string
+	onChange    func(string)
+	onSubmit    func(string)
+	variant     InputVariant
+	disabled    bool
+	invalid     bool
+	fullWidth   bool
+	inputType   InputType
+	readOnly    bool
+	maxLength   int
+	label       string
+	customStyle flowstyle.Style
 }
 
 type InputVariant = field.Variant
@@ -109,27 +110,36 @@ func (i InputWidget) Label(label string) InputWidget {
 	return i
 }
 
-func (i InputWidget) Theme(fn func(*theme.Theme)) InputWidget {
-	i.theme = fn
+func (i InputWidget) Style(value flowstyle.Style) InputWidget {
+	i.customStyle = value
 	return i
 }
 
 func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, i.theme); restore != nil {
-		defer restore()
-	}
 	gtx, key, editor, enabled := i.prepareEditor(ctx, gtx, i.disabled)
 	disabled := !enabled
 	state := inputStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
-	style := inputStyleFor(frame.ActiveTheme(ctx), i.variant, state.Hovered, focused, disabled, i.invalid)
-	motion := frame.ActiveTheme(ctx).Motion
-	style.Background = state.Background(gtx, style.Background, motion)
-	style.Ring = state.BorderColor(gtx, style.Ring, motion)
-
-	return i.layoutFrame(ctx, gtx, state, style, enabled, i.editorLayout(ctx, key, enabled, editor, style))
+	focusVisible := frame.FocusVisible(ctx, editor, focused)
+	styleState := flowstyle.StyleState{
+		Hovered:      state.Hovered,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     disabled,
+		ReadOnly:     i.readOnly,
+		Invalid:      i.invalid,
+	}
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults := inputDefaultDeclaration(activeTheme, i.variant, i.fullWidth)
+	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
+	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
+	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
+	style := resolvedInputStyle(root, placeholder, selection, activeTheme)
+	textSize, lineHeight := resolvedTypography(root, activeTheme.Components.Input.TextSize, activeTheme.Components.Input.LineHeight)
+	editorLayout := i.editorLayoutWithTypography(ctx, key, enabled, editor, style, textSize, lineHeight)
+	return i.layoutFrame(ctx, gtx, state, root, enabled, editorLayout)
 }
 
 func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disabled bool) (layout.Context, string, *widget.Editor, bool) {

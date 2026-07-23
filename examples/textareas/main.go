@@ -69,7 +69,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 												Variant(ui.TextAreaSecondary).
 												FullWidth(),
 										).Padding(16),
-									).Variant(ui.SurfaceSecondary).Radius(20),
+									).Variant(ui.SurfaceSecondary).Style(ui.Radius(20)),
 								).Width(340),
 							),
 						).Gap(28),

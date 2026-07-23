@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -23,12 +24,16 @@ func TestToolbarOptionsUseValueSemantics(t *testing.T) {
 		Attached(true).
 		Disabled(true).
 		LoopFocus(false).
-		Alt("Editor tools")
+		Alt("Editor tools").
+		Style(flowstyle.Style{}.Radius(4))
 	if base.orientation != Horizontal || base.attached || base.disabled || !base.loopFocus || base.alt != "" {
 		t.Fatalf("base Toolbar mutated: %#v", base)
 	}
 	if styled.orientation != Vertical || !styled.attached || !styled.disabled || styled.loopFocus || styled.alt != "Editor tools" {
 		t.Fatalf("styled Toolbar options = %#v", styled)
+	}
+	if styled.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil || Separator().Style(flowstyle.Style{}.Width(2)).customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
+		t.Fatal("Toolbar styles were not retained")
 	}
 }
 
@@ -92,6 +97,19 @@ func TestToolbarThemeAndSeparatorOrientation(t *testing.T) {
 	}
 	if dims := layoutToolbarFrame(ctx, new(input.Router), New(Separator()).Orientation(Vertical), time.Unix(6, 0)); dims.Size != image.Pt(40, 1) {
 		t.Fatalf("vertical Toolbar separator = %v, want (40,1)", dims.Size)
+	}
+}
+
+func TestToolbarOwnsTransitioningSeparatorIdentity(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	transitioning := func() SeparatorWidget {
+		return Separator().Style(flowstyle.Style{}.
+			Opacity(1).
+			Transition(flowstyle.PropOpacity, time.Second))
+	}
+	layoutToolbarFrame(ctx, new(input.Router), New(transitioning(), transitioning()), time.Unix(7, 0))
+	if got := frame.StateLen(ctx); got != 2 {
+		t.Fatalf("separator transition states = %d, want 2", got)
 	}
 }
 

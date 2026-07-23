@@ -3,15 +3,86 @@ package progress
 import (
 	"image/color"
 
+	"gioui.org/font"
+	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type progressBarStyle struct {
-	track  color.NRGBA
-	fill   color.NRGBA
-	label  color.NRGBA
-	output color.NRGBA
+	track color.NRGBA
+	fill  color.NRGBA
+}
+
+type progressBarResolvedStyle struct {
+	root  flowstyle.ResolvedStyle
+	track flowstyle.ResolvedStyle
+	fill  flowstyle.ResolvedStyle
+	label flowstyle.ResolvedStyle
+}
+
+func (p ProgressBarWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string) progressBarResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	state := flowstyle.StyleState{Disabled: p.disabled}
+	defaults := progressBarDefaultDeclaration(activeTheme, p.disabled)
+	variant := progressBarVariantDeclaration(activeTheme, p.color, p.disabled)
+	size := progressBarSizeDeclaration(activeTheme, p.size)
+	root := styleruntime.Resolve(
+		ctx,
+		gtx,
+		key,
+		state,
+		defaults,
+		variant,
+		size,
+		p.customStyle,
+	)
+	track := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartTrack, state, defaults, variant, size, p.customStyle)
+	fill := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartFill, state, defaults, variant, size, p.customStyle)
+	label := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartLabel, state, defaults, variant, size, p.customStyle)
+	return progressBarResolvedStyle{root: root, track: track, fill: fill, label: label}
+}
+
+func progressBarDefaultDeclaration(activeTheme *theme.Theme, disabled bool) flowstyle.Style {
+	label := progressBarLabelDeclaration(activeTheme, disabled)
+	return flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			FillWidth().
+			Overflow(flowstyle.OverflowHidden).
+			Background(flowstyle.SolidColor{Color: activeTheme.Palette.SurfaceRaised})).
+		Part(flowstyle.PartLabel, label)
+
+}
+
+func progressBarVariantDeclaration(activeTheme *theme.Theme, barColor ProgressBarColor, disabled bool) flowstyle.Style {
+	resolved := progressBarStyleFor(activeTheme, barColor, disabled)
+	return flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: resolved.track})).
+		Part(flowstyle.PartFill, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: resolved.fill}))
+
+}
+
+func progressBarSizeDeclaration(activeTheme *theme.Theme, size ProgressBarSize) flowstyle.Style {
+	resolved := progressBarSizeStyleFor(activeTheme, size)
+	return flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Height(resolved.height).Radius(resolved.radius)).
+		Part(flowstyle.PartFill, flowstyle.Style{}.Radius(resolved.radius))
+
+}
+
+func progressBarLabelDeclaration(activeTheme *theme.Theme, disabled bool) flowstyle.Style {
+	foreground := activeTheme.Palette.Foreground
+	if disabled {
+		foreground = activeTheme.DisabledColor(foreground)
+	}
+	return flowstyle.Style{}.
+		TextColor(flowstyle.SolidColor{Color: foreground}).
+		FontSize(activeTheme.Components.ProgressBar.TextSize).
+		FontWeight(int(font.Medium))
+
 }
 
 type progressBarSizeStyle struct {
@@ -21,10 +92,8 @@ type progressBarSizeStyle struct {
 
 func progressBarStyleFor(theme *theme.Theme, barColor ProgressBarColor, disabled bool) progressBarStyle {
 	style := progressBarStyle{
-		track:  theme.Palette.SurfaceRaised,
-		fill:   theme.Palette.Accent,
-		label:  theme.Palette.Foreground,
-		output: theme.Palette.Foreground,
+		track: theme.Palette.SurfaceRaised,
+		fill:  theme.Palette.Accent,
 	}
 	switch barColor {
 	case ProgressBarDefault:
@@ -41,8 +110,6 @@ func progressBarStyleFor(theme *theme.Theme, barColor ProgressBarColor, disabled
 	if disabled {
 		style.track = theme.DisabledColor(style.track)
 		style.fill = theme.DisabledColor(style.fill)
-		style.label = theme.DisabledColor(style.label)
-		style.output = theme.DisabledColor(style.output)
 	}
 	return style
 }

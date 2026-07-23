@@ -91,6 +91,14 @@ type ColorTransition struct {
 	ready bool
 }
 
+func (t *ColorTransition) Set(value, target color.NRGBA, now time.Time) {
+	t.value = value
+	t.from = value
+	t.to = target
+	t.at = now
+	t.ready = true
+}
+
 func (t *ColorTransition) Value(gtx layout.Context, target color.NRGBA, duration time.Duration, easing Easing, motions ...theme.MotionTheme) color.NRGBA {
 	if len(motions) > 0 {
 		duration = theme.ResolveMotionDuration(motions[0], duration)

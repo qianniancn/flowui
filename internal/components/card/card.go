@@ -6,6 +6,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/surface"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -21,17 +22,13 @@ const (
 
 // CardWidget groups related content on a HeroUI-style semantic surface.
 type CardWidget struct {
-	theme      func(*theme.Theme)
-	children   []frame.Widget
-	variant    CardVariant
-	padding    unit.Dp
-	gap        unit.Dp
-	radius     unit.Dp
-	shadow     bool
-	hasPadding bool
-	hasGap     bool
-	hasRadius  bool
-	hasShadow  bool
+	children    []frame.Widget
+	customStyle flowstyle.Style
+	variant     CardVariant
+	padding     unit.Dp
+	gap         unit.Dp
+	hasPadding  bool
+	hasGap      bool
 }
 
 func Card(children ...frame.Widget) CardWidget {
@@ -55,27 +52,12 @@ func (c CardWidget) Gap(dp int) CardWidget {
 	return c
 }
 
-func (c CardWidget) Radius(dp int) CardWidget {
-	c.radius = unit.Dp(max(dp, 0))
-	c.hasRadius = true
-	return c
-}
-
-func (c CardWidget) Shadow(enabled bool) CardWidget {
-	c.shadow = enabled
-	c.hasShadow = true
-	return c
-}
-
-func (c CardWidget) Theme(fn func(*theme.Theme)) CardWidget {
-	c.theme = fn
+func (c CardWidget) Style(value flowstyle.Style) CardWidget {
+	c.customStyle = value
 	return c
 }
 
 func (c CardWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
-		defer restore()
-	}
 	prepareCardFieldAssociations(ctx, c.children...)
 	tokens := frame.ActiveTheme(ctx).Components.Card
 	padding := tokens.Padding
@@ -86,20 +68,24 @@ func (c CardWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if c.hasGap {
 		gap = c.gap
 	}
-	radius := tokens.Radius
-	if c.hasRadius {
-		radius = c.radius
-	}
-
 	content := layoutui.Box(
 		layoutui.Column(nonNilWidgets(c.children)...).Gap(int(gap)),
-	).Padding(int(padding))
+	)
+	root := cardRootDeclaration(frame.ActiveTheme(ctx), c.variant).
+		Padding(padding)
 
 	return surface.Surface(content).
 		Variant(cardSurfaceVariant(c.variant)).
-		Radius(int(radius)).
-		Shadow(c.resolvedShadow()).
+		Style(flowstyle.Join(root, c.customStyle)).
 		Layout(ctx, gtx)
+}
+
+func cardRootDeclaration(activeTheme *theme.Theme, variant CardVariant) flowstyle.Style {
+	builder := flowstyle.Style{}.Radius(activeTheme.Components.Card.Radius)
+	if variant != CardTransparent {
+		builder = builder.Shadow(flowstyle.ShadowSurface)
+	}
+	return builder
 }
 
 func prepareCardFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
@@ -115,13 +101,6 @@ func prepareCardFieldAssociations(ctx *frame.Context, widgets ...frame.Widget) {
 			layoutui.PrepareFieldAssociations(ctx, widget)
 		}
 	}
-}
-
-func (c CardWidget) resolvedShadow() bool {
-	if c.hasShadow {
-		return c.shadow
-	}
-	return c.variant != CardTransparent
 }
 
 func cardSurfaceVariant(variant CardVariant) surface.SurfaceVariant {

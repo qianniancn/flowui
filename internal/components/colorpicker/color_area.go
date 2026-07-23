@@ -6,23 +6,24 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const stateSlotColorArea = "color-area"
 
 type ColorAreaWidget struct {
-	theme    func(*theme.Theme)
-	key      string
-	value    color.NRGBA
-	label    string
-	onChange func(color.NRGBA)
-	disabled bool
-	showDots bool
-	color    *colorValueState
+	key         string
+	value       color.NRGBA
+	label       string
+	onChange    func(color.NRGBA)
+	disabled    bool
+	showDots    bool
+	color       *colorValueState
+	customStyle flowstyle.Style
 }
 
 type colorAreaState struct {
@@ -59,15 +60,12 @@ func (area ColorAreaWidget) withColorState(state *colorValueState) ColorAreaWidg
 	return area
 }
 
-func (area ColorAreaWidget) Theme(fn func(*theme.Theme)) ColorAreaWidget {
-	area.theme = fn
+func (area ColorAreaWidget) Style(value flowstyle.Style) ColorAreaWidget {
+	area.customStyle = value
 	return area
 }
 
 func (area ColorAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, area.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, state.KindColorArea, area.key)
 	areaState := frame.UseState[colorAreaState](ctx, key, stateSlotColorArea)
 	valueState := &areaState.color
@@ -93,33 +91,42 @@ func (area ColorAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layou
 		current = next
 	}
 
-	opacity := paint.PushOpacity(gtx.Ops, func() float32 {
-		if enabled {
-			return 1
-		}
-		return frame.ActiveTheme(ctx).DisabledOpacityValue()
-	}())
-	drawColorArea(
-		gtx,
-		size,
-		current,
-		gtx.Dp(tokens.Radius),
-		func() int {
-			if areaState.control.dragging {
-				return max(gtx.Dp(tokens.DraggingThumbSize), 1)
+	focused := gtx.Focused(&areaState.control)
+	return layoutui.LayoutStyled(ctx, gtx, key, flowstyle.StyleState{
+		Pressed:      areaState.control.dragging,
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, &areaState.control, focused),
+		Disabled:     !enabled,
+		Dragging:     areaState.control.dragging,
+	}, area.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		opacity := paint.PushOpacity(gtx.Ops, func() float32 {
+			if enabled {
+				return 1
 			}
-			return max(gtx.Dp(tokens.ThumbSize), 1)
-		}(),
-		max(gtx.Dp(tokens.ThumbBorderWidth), 1),
-		areaState.control.focusOpacity(ctx, gtx),
-		frame.ActiveTheme(ctx).Palette.Focus,
-		area.showDots,
-		max(gtx.Dp(tokens.DotSize), 1),
-		max(gtx.Dp(tokens.DotGap), 1),
-	)
-	opacity.Pop()
-	addColorControlInput(gtx, &areaState.control, size, enabled, true, area.semanticLabel(ctx), formatHexColor(area.value, area.value.A != 255))
-	return layout.Dimensions{Size: size}
+			return frame.ActiveTheme(ctx).DisabledOpacityValue()
+		}())
+		drawColorArea(
+			gtx,
+			size,
+			current,
+			gtx.Dp(tokens.Radius),
+			func() int {
+				if areaState.control.dragging {
+					return max(gtx.Dp(tokens.DraggingThumbSize), 1)
+				}
+				return max(gtx.Dp(tokens.ThumbSize), 1)
+			}(),
+			max(gtx.Dp(tokens.ThumbBorderWidth), 1),
+			areaState.control.focusOpacity(ctx, gtx),
+			frame.ActiveTheme(ctx).Palette.Focus,
+			area.showDots,
+			max(gtx.Dp(tokens.DotSize), 1),
+			max(gtx.Dp(tokens.DotGap), 1),
+		)
+		opacity.Pop()
+		addColorControlInput(gtx, &areaState.control, size, enabled, true, area.semanticLabel(ctx), formatHexColor(area.value, area.value.A != 255))
+		return layout.Dimensions{Size: size}
+	}))
 }
 
 func (area ColorAreaWidget) semanticLabel(ctx *frame.Context) string {

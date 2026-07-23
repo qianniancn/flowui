@@ -19,6 +19,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -100,33 +101,64 @@ func TestButtonOptions(t *testing.T) {
 	}
 }
 
-func TestButtonThemeAppliesOnlyToCurrentInstance(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
-	themedProbe := &themeProbeWidget{}
-	baseProbe := &themeProbeWidget{}
-	base := Button("default", baseProbe)
-	accent := color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
-	themed := Button("themed", themedProbe).Theme(func(theme *theme.Theme) {
-		theme.Components.Button.Radius = 0
-		theme.Components.Button.PressedScaleMedium = 0.9
-		theme.Palette.Accent = accent
-	})
-	resolved := themed.activeTheme(ctx)
+func TestButtonStyleCascadesScopeBeforeInstance(t *testing.T) {
+	ctx := newContext(nil)
+	scope := flowstyle.Style{}.
+		PaddingX(12).
+		Background(flowstyle.TokenSurface).
+		TextColor(flowstyle.TokenForeground)
 
-	themed.Layout(ctx, testLayoutContext())
-	if resolved.Components.Button.Radius != 0 || resolved.Components.Button.PressedScaleMedium != 0.9 || resolved.Palette.Accent != accent {
-		t.Fatalf("resolved button theme = %#v", resolved)
+	restore := frame.PushStyle(ctx, scope)
+	defer restore()
+	instanceBackground := color.NRGBA{R: 0x11, G: 0x22, B: 0x33, A: 0xff}
+	button := Button("styled", text.New("Styled")).Style(
+		flowstyle.Style{}.
+			PaddingX(20).
+			Background(solid(instanceBackground)).
+			When(flowstyle.Loading, flowstyle.Style{}.Opacity(0.25)),
+	)
+
+	resolved := button.staticStyle(ctx, flowstyle.StyleState{Loading: true})
+	if resolved.inset.Left != 20 || resolved.inset.Right != 20 {
+		t.Fatalf("instance padding = %+v, want horizontal 20", resolved.inset)
 	}
-	if themedProbe.radius != 0 {
-		t.Fatalf("button child radius = %v, want inherited instance radius 0", themedProbe.radius)
+	if resolved.bg != instanceBackground {
+		t.Fatalf("instance background = %#v, want %#v", resolved.bg, instanceBackground)
 	}
-	if activeTheme.Components.Button.Radius != 24 || activeTheme.Components.Button.PressedScaleMedium != 0.97 || activeTheme.Palette.Accent == accent {
-		t.Fatalf("button theme mutated active theme: %#v", activeTheme)
+	if resolved.fg != frame.ActiveTheme(ctx).Palette.Foreground {
+		t.Fatalf("scoped foreground = %#v", resolved.fg)
 	}
-	base.Layout(ctx, testLayoutContext())
-	if baseProbe.radius != 24 {
-		t.Fatalf("sibling button radius = %v, want 24", baseProbe.radius)
+	if resolved.opacity != 0.25 {
+		t.Fatalf("loading opacity = %v, want 0.25", resolved.opacity)
+	}
+}
+
+func TestButtonStylePartsOverrideContentAndIndicator(t *testing.T) {
+	ctx := newContext(nil)
+	labelColor := color.NRGBA{R: 1, A: 0xff}
+	iconColor := color.NRGBA{G: 2, A: 0xff}
+	indicatorColor := color.NRGBA{B: 3, A: 0xff}
+	declaration := flowstyle.Style{}.
+		Part(flowstyle.PartLabel, flowstyle.Style{}.TextColor(solid(labelColor)).FontSize(18)).
+		Part(flowstyle.PartIcon, flowstyle.Style{}.TextColor(solid(iconColor))).
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.TextColor(solid(indicatorColor)))
+
+	label := Button("label", text.New("Label")).Style(declaration).staticStyle(ctx, flowstyle.StyleState{})
+	if label.fg != labelColor || label.textSize != 18 || label.indicator != indicatorColor {
+		t.Fatalf("label button parts = fg %#v size %v indicator %#v", label.fg, label.textSize, label.indicator)
+	}
+	icon := Button("icon", text.New("Icon")).IconOnly().Style(declaration).staticStyle(ctx, flowstyle.StyleState{})
+	if icon.fg != iconColor {
+		t.Fatalf("icon part = %#v, want %#v", icon.fg, iconColor)
+	}
+}
+
+func TestButtonStyleCanOverrideHeight(t *testing.T) {
+	dims := Button("tall", text.New("Tall")).
+		Style(flowstyle.Style{}.Height(52)).
+		Layout(newContext(nil), testLayoutContext())
+	if dims.Size.Y != 52 {
+		t.Fatalf("styled button height = %d, want 52", dims.Size.Y)
 	}
 }
 
@@ -204,9 +236,10 @@ func TestButtonLoadingKeepsIntrinsicWidth(t *testing.T) {
 
 func TestButtonSizeStyle(t *testing.T) {
 	theme := DefaultTheme()
-	small := buttonSizeStyle(&theme, ButtonSmall, false)
-	large := buttonSizeStyle(&theme, ButtonLarge, false)
-	icon := buttonSizeStyle(&theme, ButtonMedium, true)
+	ctx := frame.New(nil, &theme, locale.LanguageAuto)
+	small := Button("small", text.New("Small")).Size(ButtonSmall).staticStyle(ctx, flowstyle.StyleState{})
+	large := Button("large", text.New("Large")).Size(ButtonLarge).staticStyle(ctx, flowstyle.StyleState{})
+	icon := Button("icon", text.New("Icon")).IconOnly().staticStyle(ctx, flowstyle.StyleState{})
 
 	if small.height != 36 {
 		t.Fatalf("small height = %v, want 36", small.height)
@@ -217,7 +250,7 @@ func TestButtonSizeStyle(t *testing.T) {
 	if icon.inset.Left != 0 || icon.inset.Right != 0 {
 		t.Fatalf("icon inset = %+v, want horizontal zero", icon.inset)
 	}
-	styled := Button("shape", text.New("Shape")).style(&theme, new(widget.Clickable))
+	styled := Button("shape", text.New("Shape")).staticStyle(ctx, flowstyle.StyleState{})
 	if styled.radius != 24 || styled.borderWidth != 1 || theme.Components.Button.SpinnerStrokeWidth != 2 {
 		t.Fatalf("button shape = radius %v border %v spinner stroke %v, want 24/1/2", styled.radius, styled.borderWidth, theme.Components.Button.SpinnerStrokeWidth)
 	}
@@ -277,7 +310,8 @@ func TestButtonVariantColors(t *testing.T) {
 func TestButtonFocusDoesNotChangeBackground(t *testing.T) {
 	theme := DefaultTheme()
 	button := Button("ghost", text.New("Ghost")).Variant(ButtonGhost)
-	style := button.style(&theme, new(widget.Clickable))
+	ctx := frame.New(nil, &theme, locale.LanguageAuto)
+	style := button.staticStyle(ctx, flowstyle.StyleState{})
 	colors := buttonColors(&theme, ButtonGhost)
 
 	if style.bg != colors.bg {
@@ -363,83 +397,63 @@ func TestButtonPressedScale(t *testing.T) {
 	}
 }
 
-func TestButtonAnimationScalePressIn(t *testing.T) {
+func TestButtonScaleTransitionUsesPressAndReleaseDurations(t *testing.T) {
 	start := time.Unix(1, 0)
 	gtx := testLayoutContext()
+	theme := DefaultTheme()
+	ctx := frame.New(nil, &theme, locale.LanguageAuto)
+	button := Button("scale", text.New("Scale"))
+	target := buttonPressedScale(&theme, ButtonMedium)
+
+	gtx.Now = start
+	button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{})
+	button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{Pressed: true})
 	gtx.Now = start.Add(buttonPressInDuration / 2)
-	theme := DefaultTheme()
-
-	scale := buttonAnimationScale(gtx, []widget.Press{{Start: start}}, &theme, ButtonMedium, false)
-
-	if scale <= buttonPressedScale(&theme, ButtonMedium) || scale >= 1 {
-		t.Fatalf("press scale = %v, want between pressed and rest", scale)
+	pressed := button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{Pressed: true}).scaleX
+	if pressed <= target || pressed >= 1 {
+		t.Fatalf("press scale = %v, want between %v and 1", pressed, target)
 	}
-}
 
-func TestButtonAnimationScaleRelease(t *testing.T) {
-	end := time.Unix(1, 0)
-	gtx := testLayoutContext()
-	gtx.Now = end.Add(buttonPressOutDuration / 2)
-	theme := DefaultTheme()
-
-	scale := buttonAnimationScale(gtx, []widget.Press{{Start: end.Add(-time.Second), End: end}}, &theme, ButtonMedium, false)
-
-	if scale <= buttonPressedScale(&theme, ButtonMedium) || scale >= 1 {
-		t.Fatalf("release scale = %v, want between pressed and rest", scale)
-	}
-}
-
-func TestButtonAnimationScaleDone(t *testing.T) {
-	end := time.Unix(1, 0)
-	gtx := testLayoutContext()
-	gtx.Now = end.Add(buttonPressOutDuration)
-	theme := DefaultTheme()
-
-	scale := buttonAnimationScale(gtx, []widget.Press{{Start: end.Add(-time.Second), End: end}}, &theme, ButtonMedium, false)
-
-	if scale != 1 {
-		t.Fatalf("scale = %v, want 1", scale)
-	}
-}
-
-func TestButtonAnimationScaleDisabled(t *testing.T) {
-	start := time.Unix(1, 0)
-	gtx := testLayoutContext()
-	gtx.Now = start.Add(buttonPressInDuration / 2)
-	theme := DefaultTheme()
-
-	scale := buttonAnimationScale(gtx, []widget.Press{{Start: start}}, &theme, ButtonMedium, true)
-
-	if scale != 1 {
-		t.Fatalf("disabled scale = %v, want 1", scale)
+	gtx.Now = start.Add(buttonPressInDuration)
+	button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{Pressed: true})
+	button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{})
+	gtx.Now = start.Add(buttonPressInDuration + buttonPressOutDuration/2)
+	released := button.resolveStyle(ctx, gtx, "scale", flowstyle.StyleState{}).scaleX
+	if released <= target || released >= 1 {
+		t.Fatalf("release scale = %v, want between %v and 1", released, target)
 	}
 }
 
 func TestButtonBackgroundTransition(t *testing.T) {
-	state := new(buttonState)
 	start := time.Unix(1, 0)
 	from := color.NRGBA{R: 10, G: 20, B: 30, A: 255}
 	to := color.NRGBA{R: 110, G: 120, B: 130, A: 255}
+	button := Button("transition", text.New("Transition")).Style(
+		flowstyle.Style{}.
+			Background(solid(from)).
+			When(flowstyle.Hovered, flowstyle.Style{}.Background(solid(to))),
+	)
+	ctx := newContext(nil)
 
 	gtx := testLayoutContext()
 	gtx.Now = start
-	if got := state.background(gtx, from); got != from {
+	if got := button.resolveStyle(ctx, gtx, "transition", flowstyle.StyleState{}).bg; got != from {
 		t.Fatalf("initial background = %v, want %v", got, from)
 	}
 
 	gtx.Now = start
-	if got := state.background(gtx, to); got != from {
+	if got := button.resolveStyle(ctx, gtx, "transition", flowstyle.StyleState{Hovered: true}).bg; got != from {
 		t.Fatalf("transition start = %v, want %v", got, from)
 	}
 
 	gtx.Now = start.Add(buttonColorDuration / 2)
-	mid := state.background(gtx, to)
+	mid := button.resolveStyle(ctx, gtx, "transition", flowstyle.StyleState{Hovered: true}).bg
 	if mid == from || mid == to {
 		t.Fatalf("transition midpoint = %v, want between %v and %v", mid, from, to)
 	}
 
 	gtx.Now = start.Add(buttonColorDuration)
-	if got := state.background(gtx, to); got != to {
+	if got := button.resolveStyle(ctx, gtx, "transition", flowstyle.StyleState{Hovered: true}).bg; got != to {
 		t.Fatalf("transition end = %v, want %v", got, to)
 	}
 }
@@ -464,39 +478,10 @@ func TestButtonTransparentBackgroundTransitionKeepsColor(t *testing.T) {
 	}
 }
 
-func TestButtonFocusOpacityTransition(t *testing.T) {
-	state := new(buttonState)
-	start := time.Unix(1, 0)
-	gtx := testLayoutContext()
-	gtx.Now = start
-
-	if got := state.focusOpacity(gtx, false); got != 0 {
-		t.Fatalf("initial focus = %v, want 0", got)
-	}
-
-	gtx.Now = start
-	if got := state.focusOpacity(gtx, true); got != 0 {
-		t.Fatalf("focus start = %v, want 0", got)
-	}
-
-	gtx.Now = start.Add(buttonFocusDuration / 2)
-	mid := state.focusOpacity(gtx, true)
-	if mid <= 0 || mid >= 1 {
-		t.Fatalf("focus midpoint = %v, want between 0 and 1", mid)
-	}
-
-	gtx.Now = start.Add(buttonFocusDuration)
-	if got := state.focusOpacity(gtx, true); got != 1 {
-		t.Fatalf("focus end = %v, want 1", got)
-	}
-}
-
 func TestDisabledButtonAnimationInvalidates(t *testing.T) {
 	var router input.Router
 	var ops op.Ops
 	now := time.Unix(1, 0)
-	theme := DefaultTheme()
-	normal := buttonColors(&theme, ButtonPrimary).bg
 	gtx := layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Source:      router.Source(),
@@ -504,9 +489,7 @@ func TestDisabledButtonAnimationInvalidates(t *testing.T) {
 		Now:         now,
 	}
 	ctx := newContext(nil)
-	state := new(buttonState)
-	state.background(gtx, normal)
-	testSetComponentState(ctx, "save", stateSlotButton, state)
+	Button("save", text.New("Save")).resolveStyle(ctx, gtx, "save", flowstyle.StyleState{})
 
 	Button("save", text.New("Save")).Disabled(true).Layout(ctx, gtx)
 	router.Frame(&ops)
@@ -592,15 +575,6 @@ type foregroundProbeWidget struct {
 
 func (w *foregroundProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
 	w.foreground = ctx.ForegroundColor()
-	return layout.Dimensions{Size: image.Pt(16, 16)}
-}
-
-type themeProbeWidget struct {
-	radius unit.Dp
-}
-
-func (w *themeProbeWidget) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
-	w.radius = frame.ActiveTheme(ctx).Components.Button.Radius
 	return layout.Dimensions{Size: image.Pt(16, 16)}
 }
 

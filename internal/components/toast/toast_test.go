@@ -289,11 +289,11 @@ func TestToastStylesUseVariantColors(t *testing.T) {
 	}
 	activeTheme.Palette.SuccessSoftForeground = color.NRGBA{}
 	activeTheme.Palette.WarningSoftForeground = color.NRGBA{}
-	if got := toastStyleFor(&activeTheme, ToastSuccess).title; got != activeTheme.Palette.Success {
-		t.Fatalf("success fallback = %#v, want %#v", got, activeTheme.Palette.Success)
+	if got := toastStyleFor(&activeTheme, ToastSuccess).title; got.A != 0 {
+		t.Fatalf("success title = %#v, want transparent", got)
 	}
-	if got := toastStyleFor(&activeTheme, ToastWarning).title; got != activeTheme.Palette.Warning {
-		t.Fatalf("warning fallback = %#v, want %#v", got, activeTheme.Palette.Warning)
+	if got := toastStyleFor(&activeTheme, ToastWarning).title; got.A != 0 {
+		t.Fatalf("warning title = %#v, want transparent", got)
 	}
 }
 

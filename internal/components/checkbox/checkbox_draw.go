@@ -8,8 +8,12 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -25,106 +29,108 @@ type ControlOptions struct {
 	Invalid         bool
 	CustomIndicator bool
 	Indicator       frame.Widget
+	resolvedStyle   *checkboxIndicatorStyle
 }
 
 // DrawControl renders a HeroUI-aligned checkbox control without owning interaction state.
 func DrawControl(ctx *frame.Context, gtx layout.Context, options ControlOptions) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
-	style := checkboxStyleFor(activeTheme, options.Variant, options.Hovered, options.Pressed, options.Disabled, options.Invalid)
-	style.selected = min(max(options.Selection, 0), 1)
-	style.focus = min(max(options.Focused, 0), 1)
-	return drawCheckbox(ctx, gtx, activeTheme, style, options.Indeterminate, options.CustomIndicator, options.Indicator)
+	style := resolveControlStyle(ctx, activeTheme, options)
+	if options.resolvedStyle != nil {
+		style = *options.resolvedStyle
+	}
+	return drawCheckbox(ctx, gtx, activeTheme, style, min(max(options.Selection, 0), 1), min(max(options.Focused, 0), 1), options.Indeterminate, options.CustomIndicator, options.Indicator)
 }
 
-func drawCheckbox(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, style checkboxStyle, indeterminate, customIndicator bool, indicator frame.Widget) layout.Dimensions {
-	size := gtx.Dp(activeTheme.Components.Checkbox.Size)
+func resolveControlStyle(ctx *frame.Context, activeTheme *theme.Theme, options ControlOptions) checkboxIndicatorStyle {
+	state := flowstyle.StyleState{
+		Hovered: options.Hovered, Pressed: options.Pressed,
+		FocusVisible: options.Focused > 0, Disabled: options.Disabled,
+		Selected: options.Selection > 0, Checked: options.Selection > 0,
+		Indeterminate: options.Indeterminate, Invalid: options.Invalid,
+	}
+	visual := checkboxStyleFor(activeTheme, options.Variant, state.Hovered, state.Pressed, state.Disabled, state.Invalid)
+	defaults := checkboxStyleDeclaration(activeTheme, visual, state)
+	offState := state
+	offState.Checked, offState.Selected, offState.Indeterminate = false, false, false
+	onState := state
+	onState.Checked, onState.Selected = true, true
+	return checkboxIndicatorStyle{
+		off: styleruntime.ResolvePartStatic(ctx, flowstyle.PartIndicator, offState, defaults, flowstyle.Style{}, flowstyle.Style{}, flowstyle.Style{}),
+		on:  styleruntime.ResolvePartStatic(ctx, flowstyle.PartIndicator, onState, defaults, flowstyle.Style{}, flowstyle.Style{}, flowstyle.Style{}),
+	}
+}
+
+func drawCheckbox(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, style checkboxIndicatorStyle, selected, focused float32, indeterminate, customIndicator bool, indicator frame.Widget) layout.Dimensions {
+	controlSize := checkboxIndicatorSize(gtx, style, activeTheme.Components.Checkbox.Size)
 	focusSpace := max(gtx.Dp(activeTheme.Components.Checkbox.FocusSpace), 1)
-	maxSize := min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y) - focusSpace*2
-	size = min(size, max(maxSize, 0))
-	bounds := image.Pt(size+focusSpace*2, size+focusSpace*2)
+	controlSize.X = min(controlSize.X, max(gtx.Constraints.Max.X-focusSpace*2, 0))
+	controlSize.Y = min(controlSize.Y, max(gtx.Constraints.Max.Y-focusSpace*2, 0))
+	bounds := controlSize.Add(image.Pt(focusSpace*2, focusSpace*2))
 	dims := gtx.Constraints.Constrain(bounds)
-	if size <= 0 {
+	if controlSize.X <= 0 || controlSize.Y <= 0 {
 		return layout.Dimensions{Size: dims}
 	}
 
-	origin := image.Pt((dims.X-size)/2, (dims.Y-size)/2)
+	origin := image.Pt((dims.X-controlSize.X)/2, (dims.Y-controlSize.Y)/2)
 	rect := image.Rectangle{
 		Min: origin,
-		Max: origin.Add(image.Pt(size, size)),
+		Max: origin.Add(controlSize),
 	}
-	radius := min(max(gtx.Dp(activeTheme.Shape.CheckboxRadius), 1), size/2)
-
-	drawCheckboxFocus(gtx, activeTheme, rect, radius, style)
-	drawCheckboxFrame(gtx, activeTheme, rect, radius, style)
-	drawCheckboxFill(gtx, rect, radius, style)
-	if !customIndicator {
-		if indeterminate {
-			drawCheckboxIndeterminate(gtx, activeTheme, rect, style)
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		local := image.Rectangle{Max: gtx.Constraints.Min}
+		if customIndicator {
+			layoutCheckboxIndicator(ctx, gtx, activeTheme, local, indicator)
+		} else if indeterminate {
+			drawCheckboxIndeterminate(ctx, gtx, activeTheme, local, selected)
 		} else {
-			drawCheckboxCheck(gtx, activeTheme, rect, style)
+			drawCheckboxCheck(ctx, gtx, activeTheme, local, selected)
 		}
-	} else if indicator != nil {
-		layoutCheckboxIndicator(ctx, gtx, activeTheme, rect, style, indicator)
-	}
+		return layout.Dimensions{Size: gtx.Constraints.Min}
+	})
+	layoutCheckboxLayer(ctx, gtx, rect, style.off, 1-selected, focused, nil)
+	layoutCheckboxLayer(ctx, gtx, rect, style.on, selected, focused, content)
 
 	return layout.Dimensions{Size: dims}
 }
 
-func drawCheckboxFrame(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, style checkboxStyle) {
-	if style.shadow > 0 {
-		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius, theme.Shape.CheckboxRadius), render.ThemeShadow(theme.Shadows.Checkbox, theme.Palette.Shadow, style.shadow))
+func checkboxIndicatorSize(gtx layout.Context, style checkboxIndicatorStyle, fallbackDp unit.Dp) image.Point {
+	var size image.Point
+	var hasWidth, hasHeight bool
+	for _, endpoint := range [...]flowstyle.ResolvedStyle{style.off, style.on} {
+		if endpoint.Box == nil {
+			continue
+		}
+		if endpoint.Box.Width != nil {
+			size.X = max(size.X, gtx.Dp(*endpoint.Box.Width))
+			hasWidth = true
+		}
+		if endpoint.Box.Height != nil {
+			size.Y = max(size.Y, gtx.Dp(*endpoint.Box.Height))
+			hasHeight = true
+		}
 	}
-	border := style.border
-	border.A = byte(float32(border.A)*(1-style.selected) + 0.5)
-	if border.A == 0 {
-		paint.FillShape(gtx.Ops, style.bg, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-		return
+	if !hasWidth {
+		size.X = gtx.Dp(fallbackDp)
 	}
-
-	width := max(gtx.Dp(theme.Components.Checkbox.BorderWidth), 1)
-	paint.FillShape(gtx.Ops, border, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	inner := rect.Inset(width)
-	if inner.Empty() {
-		return
+	if !hasHeight {
+		size.Y = gtx.Dp(fallbackDp)
 	}
-	paint.FillShape(gtx.Ops, style.bg, clip.UniformRRect(inner, max(radius-width, 0)).Op(gtx.Ops))
+	return size
 }
 
-func drawCheckboxFocus(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style checkboxStyle) {
-	if style.focus == 0 {
-		return
-	}
-	width := max(gtx.Dp(activeTheme.Components.Checkbox.FocusRingWidth), 1)
-	focusRect := rect.Inset(-max(width/2, 1))
-	col := style.focusColor
-	col.A = byte(float32(col.A)*style.focus + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(focusRect, radius+width).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
-}
-
-func drawCheckboxFill(gtx layout.Context, rect image.Rectangle, radius int, style checkboxStyle) {
-	if style.selected == 0 {
-		return
-	}
-	scale := 0.7 + 0.3*style.selected
-	size := rect.Size()
-	center := f32.Pt(
-		float32(rect.Min.X)+float32(size.X)/2,
-		float32(rect.Min.Y)+float32(size.Y)/2,
-	)
-	stack := op.Affine(f32.AffineId().Scale(center, f32.Pt(scale, scale))).Push(gtx.Ops)
-	col := style.accent
-	col.A = byte(float32(col.A)*style.selected + 0.5)
-	paint.FillShape(gtx.Ops, col, clip.UniformRRect(rect, radius).Op(gtx.Ops))
+func layoutCheckboxLayer(ctx *frame.Context, gtx layout.Context, rect image.Rectangle, style flowstyle.ResolvedStyle, opacity, focused float32, child frame.Widget) {
+	layerGtx := gtx
+	layerGtx.Constraints = layout.Exact(rect.Size())
+	stack := op.Offset(rect.Min).Push(gtx.Ops)
+	fade := paint.PushOpacity(gtx.Ops, opacity)
+	layoutui.LayoutResolved(ctx, layerGtx, styleruntime.ApplyOutlineOpacity(style, focused), child)
+	fade.Pop()
 	stack.Pop()
 }
 
-func drawCheckboxCheck(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, style checkboxStyle) {
-	if style.selected == 0 {
+func drawCheckboxCheck(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, selected float32) {
+	if selected == 0 {
 		return
 	}
 	width := float32(rect.Dx())
@@ -136,45 +142,37 @@ func drawCheckboxCheck(gtx layout.Context, theme *theme.Theme, rect image.Rectan
 		f32.Pt(x+width*0.43, y+height*0.68),
 		f32.Pt(x+width*0.75, y+height*0.31),
 	}
-	path := render.CheckPath(gtx.Ops, points, style.selected)
-	col := style.accentFg
-	col.A = byte(float32(col.A)*style.selected + 0.5)
+	path := render.CheckPath(gtx.Ops, points, selected)
+	col := ctx.ForegroundColor()
+	col.A = byte(float32(col.A)*selected + 0.5)
 	stroke := clip.Stroke{
 		Path:  path,
-		Width: max(render.DpFloat(gtx, theme.Components.Checkbox.CheckStroke), 1),
+		Width: max(render.DpFloat(gtx, activeTheme.Components.Checkbox.CheckStroke), 1),
 	}.Op().Push(gtx.Ops)
 	paint.Fill(gtx.Ops, col)
 	stroke.Pop()
 }
 
-func drawCheckboxIndeterminate(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, style checkboxStyle) {
-	if style.selected == 0 {
+func drawCheckboxIndeterminate(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, selected float32) {
+	if selected == 0 {
 		return
 	}
-	length := max(int(float32(rect.Dx())*0.58*style.selected+0.5), 1)
+	length := max(int(float32(rect.Dx())*0.58*selected+0.5), 1)
 	thickness := max(gtx.Dp(activeTheme.Components.Checkbox.IndeterminateStroke), 1)
 	center := rect.Min.Add(image.Pt(rect.Dx()/2, rect.Dy()/2))
 	line := image.Rect(center.X-length/2, center.Y-thickness/2, center.X+(length+1)/2, center.Y+(thickness+1)/2)
-	col := style.accentFg
-	col.A = byte(float32(col.A)*style.selected + 0.5)
+	col := ctx.ForegroundColor()
+	col.A = byte(float32(col.A)*selected + 0.5)
 	paint.FillShape(gtx.Ops, col, clip.UniformRRect(line, max(thickness/2, 1)).Op(gtx.Ops))
 }
 
-func layoutCheckboxIndicator(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, style checkboxStyle, indicator frame.Widget) {
+func layoutCheckboxIndicator(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, indicator frame.Widget) {
 	diameter := min(gtx.Dp(activeTheme.Components.Checkbox.IndicatorSize), min(rect.Dx(), rect.Dy()))
 	if diameter <= 0 {
 		return
 	}
 	indicatorRect := image.Rectangle{Min: image.Pt((rect.Min.X+rect.Max.X-diameter)/2, (rect.Min.Y+rect.Max.Y-diameter)/2)}
 	indicatorRect.Max = indicatorRect.Min.Add(image.Pt(diameter, diameter))
-	foreground := style.fg
-	background := style.bg
-	if style.selected > 0 {
-		foreground = style.accentFg
-		background = style.accent
-	}
-	restore := frame.PushColors(ctx, foreground, background)
-	defer restore()
 	stack := op.Offset(indicatorRect.Min).Push(gtx.Ops)
 	indicatorGtx := gtx
 	indicatorGtx.Constraints = layout.Exact(indicatorRect.Size())

@@ -298,12 +298,12 @@ func customMemberRow(value member) ui.TableRow {
 }
 
 func memberIdentity(value member) ui.Widget {
-	initials := ""
-	for _, part := range strings.Fields(value.name) {
-		initials += part[:1]
+	var initials strings.Builder
+	for part := range strings.FieldsSeq(value.name) {
+		initials.WriteString(part[:1])
 	}
 	return ui.Row(
-		ui.Avatar(initials).Size(ui.AvatarSmall).Variant(ui.AvatarSoft),
+		ui.Avatar(initials.String()).Size(ui.AvatarSmall).Variant(ui.AvatarSoft),
 		ui.Column(
 			ui.Text(value.name).Size(13),
 			ui.Text("ID "+strings.ToUpper(value.key)).Size(11),

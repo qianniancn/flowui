@@ -2,19 +2,21 @@ package label
 
 import (
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 // LabelWidget identifies and describes a form field.
 type LabelWidget struct {
-	theme    func(*theme.Theme)
-	text     string
-	forKey   string
-	required bool
-	disabled bool
-	invalid  bool
+	text        string
+	forKey      string
+	required    bool
+	disabled    bool
+	invalid     bool
+	customStyle flowstyle.Style
 }
 
 // Label creates a form label.
@@ -43,25 +45,23 @@ func (l LabelWidget) Invalid(invalid bool) LabelWidget {
 	return l
 }
 
-func (l LabelWidget) Theme(fn func(*theme.Theme)) LabelWidget {
-	l.theme = fn
+func (l LabelWidget) Style(value flowstyle.Style) LabelWidget {
+	l.customStyle = value
 	return l
 }
 
 func (l LabelWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, l.theme); restore != nil {
-		defer restore()
-	}
 	disabled := l.disabled || !gtx.Enabled()
-	content := func(gtx layout.Context) layout.Dimensions {
-		return l.layoutContent(ctx, gtx, labelStyleFor(frame.ActiveTheme(ctx), ctx.ForegroundColor(), disabled, l.invalid))
-	}
+	styleState := flowstyle.StyleState{Disabled: disabled, Invalid: l.invalid}
 	if l.forKey == "" {
-		return content(gtx)
+		resolved := l.resolveLayoutStyle(ctx, gtx, styleState)
+		return layoutui.LayoutResolved(ctx, gtx, resolved, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return l.layoutContent(ctx, gtx, resolved, labelRequiredColor(frame.ActiveTheme(ctx), disabled))
+		}))
 	}
 
 	fieldKey := l.registerFieldAssociation(ctx)
-	_, clickable := frame.DerivedClickableWithKey(ctx, l.forKey, "label")
+	key, clickable := frame.DerivedClickableWithKey(ctx, l.forKey, "label")
 	presses := state.SnapshotPresses(clickable.History())
 	if disabled {
 		gtx = gtx.Disabled()
@@ -70,7 +70,51 @@ func (l LabelWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 			frame.RequestFieldFocusVisible(ctx, fieldKey, presses.ClickFocusVisible(clickable.History()))
 		}
 	}
-	return clickable.Layout(gtx, content)
+	focused := gtx.Focused(clickable)
+	styleState.Hovered = clickable.Hovered()
+	styleState.Pressed = clickable.Pressed()
+	styleState.Focused = focused
+	styleState.FocusVisible = frame.FocusVisible(ctx, clickable, focused)
+	resolved := l.resolveStyle(ctx, gtx, key, styleState)
+	child := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return l.layoutContent(ctx, gtx, resolved, labelRequiredColor(frame.ActiveTheme(ctx), disabled))
+	})
+	return layoutui.LayoutInteractiveResolved(ctx, gtx, resolved, child, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return clickable.Layout(gtx, visual)
+	})
+}
+
+func (l LabelWidget) resolveLayoutStyle(ctx *frame.Context, gtx layout.Context, styleState flowstyle.StyleState) flowstyle.ResolvedStyle {
+	resolved := l.resolveStyleStatic(ctx, styleState)
+	if len(resolved.Transitions) == 0 {
+		return resolved
+	}
+	key := frame.ClaimKey(ctx, state.KindStyle, "label")
+	return styleruntime.ApplyTransitions(ctx, gtx, key, resolved)
+}
+
+func (l LabelWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState) flowstyle.ResolvedStyle {
+	return styleruntime.Resolve(
+		ctx,
+		gtx,
+		key,
+		state,
+		labelDefaultDeclaration(frame.ActiveTheme(ctx), ctx.ForegroundColor()),
+		labelStateDeclaration(frame.ActiveTheme(ctx), ctx.ForegroundColor(), state),
+		flowstyle.Style{},
+		l.customStyle,
+	)
+}
+
+func (l LabelWidget) resolveStyleStatic(ctx *frame.Context, state flowstyle.StyleState) flowstyle.ResolvedStyle {
+	return styleruntime.ResolveStatic(
+		ctx,
+		state,
+		labelDefaultDeclaration(frame.ActiveTheme(ctx), ctx.ForegroundColor()),
+		labelStateDeclaration(frame.ActiveTheme(ctx), ctx.ForegroundColor(), state),
+		flowstyle.Style{},
+		l.customStyle,
+	)
 }
 
 func (l LabelWidget) registerFieldAssociation(ctx *frame.Context) string {
@@ -79,27 +123,12 @@ func (l LabelWidget) registerFieldAssociation(ctx *frame.Context) string {
 	return fieldKey
 }
 
-func (l LabelWidget) prepareFieldAssociation(ctx *frame.Context) {
-	frame.PrepareFieldLabel(ctx, frame.FullKey(ctx, l.forKey), l.text)
-}
-
-// PrepareFieldAssociation registers a LabelWidget before its layout order is
-// evaluated by an internal container.
-func PrepareFieldAssociation(ctx *frame.Context, widget frame.Widget) bool {
-	switch label := widget.(type) {
-	case LabelWidget:
-		if label.forKey == "" {
-			return false
-		}
-		label.prepareFieldAssociation(ctx)
-		return true
-	case *LabelWidget:
-		if label == nil || label.forKey == "" {
-			return false
-		}
-		label.prepareFieldAssociation(ctx)
-		return true
-	default:
+// PrepareFieldAssociation registers the label before a container chooses its
+// child layout order.
+func (l LabelWidget) PrepareFieldAssociation(ctx *frame.Context) bool {
+	if l.forKey == "" {
 		return false
 	}
+	frame.PrepareFieldLabel(ctx, frame.FullKey(ctx, l.forKey), l.text)
+	return true
 }

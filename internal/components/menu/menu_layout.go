@@ -7,47 +7,30 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/icon"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuState, interactive bool) layout.Dimensions {
 	m.applyConstraints(ctx, &gtx)
-	style := menuPanelStyle(frame.ActiveTheme(ctx))
-	macro := op.Record(gtx.Ops)
-	var contentDims layout.Dimensions
-	func() {
-		restore := frame.PushColors(ctx, style.foreground, style.background)
-		defer restore()
-		children := make([]frame.Widget, 0, 3)
-		if m.beforeContent != nil {
-			children = append(children, m.beforeContent)
-		}
-		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-			return m.layoutContent(ctx, gtx, menuState, interactive)
-		}))
-		if m.afterContent != nil {
-			children = append(children, m.afterContent)
-		}
-		contentDims = layoutui.LayoutTrackedFlex(ctx, gtx, layout.Vertical, 0, layout.Start, children...)
-	}()
-	call := macro.Stop()
-	contentDims.Size = gtx.Constraints.Constrain(contentDims.Size)
-	rect := image.Rectangle{Max: contentDims.Size}
-	radius := min(max(gtx.Dp(m.themeTokens(ctx).Radius), 1), min(rect.Dx(), rect.Dy())/2)
-	drawMenuPanel(gtx, frame.ActiveTheme(ctx), rect, radius, style)
-	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
-	call.Add(gtx.Ops)
-	clipStack.Pop()
-	return contentDims
+	children := make([]frame.Widget, 0, 3)
+	if m.beforeContent != nil {
+		children = append(children, m.beforeContent)
+	}
+	children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return m.layoutContent(ctx, gtx, menuState, interactive)
+	}))
+	if m.afterContent != nil {
+		children = append(children, m.afterContent)
+	}
+	return layoutui.LayoutTrackedFlex(ctx, gtx, layout.Vertical, 0, layout.Start, children...)
 }
 
 func (m Widget) applyConstraints(ctx *frame.Context, gtx *layout.Context) {
@@ -243,7 +226,43 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		frame.FocusOnPress(ctx, &itemState.clickable, history, presses)
 	}
 
-	dims := itemState.clickable.Layout(eventGtx, func(gtx layout.Context) layout.Dimensions {
+	focused := animGtx.Focused(&itemState.clickable)
+	focusVisible := menuItemFocusVisible(ctx, itemState, focused)
+	selected := m.selected(entry)
+	styleDisabled := disabled || !interactive
+	styleState := flowstyle.StyleState{
+		Hovered:      !styleDisabled && itemState.clickable.Hovered(),
+		Pressed:      !styleDisabled && itemState.clickable.Pressed(),
+		Focused:      focused,
+		FocusVisible: !styleDisabled && focusVisible,
+		Disabled:     styleDisabled,
+		Selected:     selected,
+		Checked:      selected && (item.Kind == ItemCheckbox || item.Kind == ItemRadio),
+		Open:         itemHasSubmenu(item) && menuState.openSubmenu == item.Key,
+	}
+	part := styleruntime.ResolvePart(
+		ctx,
+		animGtx,
+		frame.DerivedKey(ctx, menuState.key, "item:"+item.Key),
+		flowstyle.PartItem,
+		styleState,
+		menuItemDefaultDeclaration(frame.ActiveTheme(ctx), m.themeTokens(ctx)),
+		menuItemVariantDeclaration(frame.ActiveTheme(ctx), item.Variant),
+		flowstyle.Style{},
+		m.customStyle,
+	)
+	style := menuItemStyle(frame.ActiveTheme(ctx), item.Variant)
+	if part.Text != nil {
+		if col, ok := styleruntime.Color(part.Text.Color); ok {
+			style.foreground = col
+			style.description = col
+			style.shortcut = col
+			style.indicator = col
+		}
+	}
+	itemState.focus.Opacity(animGtx, focusVisible && !styleDisabled, frame.ActiveTheme(ctx).Motion)
+
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		class := semantic.Button
 		mode, _, _ := m.selection(entry)
 		if mode == SelectionMultiple {
@@ -256,31 +275,12 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		if item.Description != "" {
 			semantic.DescriptionOp(item.Description).Add(gtx.Ops)
 		}
-		semantic.SelectedOp(m.selected(entry)).Add(gtx.Ops)
+		semantic.SelectedOp(selected).Add(gtx.Ops)
 		semantic.EnabledOp(!disabled).Add(gtx.Ops)
-
-		tokens := m.themeTokens(ctx)
-		minHeight := min(gtx.Dp(tokens.ItemMinHeight), gtx.Constraints.Max.Y)
-		focusVisible := menuItemFocusVisible(ctx, itemState, gtx.Focused(&itemState.clickable))
-		style := menuItemStyle(frame.ActiveTheme(ctx), item.Variant, itemState.clickable.Hovered(), disabled)
-		style.focus = itemState.focus.Opacity(animGtx, focusVisible && !disabled, frame.ActiveTheme(ctx).Motion)
-		scale := menuItemScale(animGtx, itemState.clickable.History(), frame.ActiveTheme(ctx), disabled)
-		macro := op.Record(gtx.Ops)
-		contentGtx := gtx
-		contentGtx.Constraints.Min.Y = 0
-		contentDims := m.layoutItemContent(ctx, contentGtx, entry, style)
-		call := macro.Stop()
-		size := gtx.Constraints.Constrain(image.Pt(max(contentDims.Size.X, gtx.Constraints.Min.X), max(minHeight, contentDims.Size.Y)))
-		radius := min(max(gtx.Dp(tokens.ItemRadius), 1), min(size.X, size.Y)/2)
-		opacity := paint.PushOpacity(gtx.Ops, style.opacity)
-		transform := render.Scale(size, scale).Push(gtx.Ops)
-		drawMenuItem(gtx, frame.ActiveTheme(ctx), size, radius, style)
-		offset := op.Offset(image.Pt(0, max((size.Y-contentDims.Size.Y)/2, 0))).Push(gtx.Ops)
-		call.Add(gtx.Ops)
-		offset.Pop()
-		transform.Pop()
-		opacity.Pop()
-		return layout.Dimensions{Size: size}
+		return m.layoutItemContent(ctx, gtx, entry, style)
+	})
+	dims := layoutui.LayoutInteractiveResolved(ctx, eventGtx, part, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return itemState.clickable.Layout(gtx, visual)
 	})
 	if interactive && !disabled {
 		m.updateSubmenuHover(gtx, menuState, item, itemState.clickable.Hovered())
@@ -295,50 +295,48 @@ func menuItemFocusVisible(ctx *frame.Context, itemState *menuItemState, focused 
 func (m Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, entry entry, style itemStyle) layout.Dimensions {
 	tokens := m.themeTokens(ctx)
 	item := entry.item
-	return layout.Inset{Top: tokens.ItemPaddingY, Right: tokens.ItemPaddingX, Bottom: tokens.ItemPaddingY, Left: tokens.ItemPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		children := make([]layout.FlexChild, 0, 11)
-		gap := func(dp unit.Dp) layout.FlexChild {
-			return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return layout.Spacer{Width: dp}.Layout(gtx)
-			})
-		}
-		if m.itemHasIndicator(entry) {
-			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return m.layoutIndicator(ctx, gtx, entry, style)
-			}), gap(tokens.IndicatorContentGap))
-		}
-		if item.Leading != nil {
-			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return m.layoutLeading(ctx, gtx, item, style)
-			}), gap(tokens.ItemContentGap))
-		}
-		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return m.layoutItemText(ctx, gtx, item, style)
+	children := make([]layout.FlexChild, 0, 11)
+	gap := func(dp unit.Dp) layout.FlexChild {
+		return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Spacer{Width: dp}.Layout(gtx)
+		})
+	}
+	if m.itemHasIndicator(entry) {
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return m.layoutIndicator(ctx, gtx, entry, style)
+		}), gap(tokens.IndicatorContentGap))
+	}
+	if item.Leading != nil {
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return m.layoutLeading(ctx, gtx, item, style)
+		}), gap(tokens.ItemContentGap))
+	}
+	children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+		return m.layoutItemText(ctx, gtx, item, style)
+	}))
+	if item.Shortcut != "" {
+		children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return m.layoutShortcut(ctx, gtx, item.Shortcut, style)
 		}))
-		if item.Shortcut != "" {
-			children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return m.layoutShortcut(ctx, gtx, item.Shortcut, style)
-			}))
-		}
-		if item.Trailing != nil {
-			children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+	}
+	if item.Trailing != nil {
+		children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			restore := frame.PushColors(ctx, style.shortcut, ctx.BackgroundColor())
+			defer restore()
+			return item.Trailing.Layout(ctx, gtx)
+		}))
+	}
+	if itemHasSubmenu(item) {
+		children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if item.SubmenuIndicator != nil {
 				restore := frame.PushColors(ctx, style.shortcut, ctx.BackgroundColor())
 				defer restore()
-				return item.Trailing.Layout(ctx, gtx)
-			}))
-		}
-		if itemHasSubmenu(item) {
-			children = append(children, gap(tokens.ItemContentGap), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				if item.SubmenuIndicator != nil {
-					restore := frame.PushColors(ctx, style.shortcut, ctx.BackgroundColor())
-					defer restore()
-					return item.SubmenuIndicator.Layout(ctx, gtx)
-				}
-				return icon.New(lucide.ChevronRight).Size(float32(tokens.SubmenuIndicatorSize)).Color(style.shortcut).Layout(ctx, gtx)
-			}))
-		}
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
-	})
+				return item.SubmenuIndicator.Layout(ctx, gtx)
+			}
+			return icon.New(lucide.ChevronRight).Size(float32(tokens.SubmenuIndicatorSize)).Color(style.shortcut).Layout(ctx, gtx)
+		}))
+	}
+	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
 }
 
 func (m Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, item Item, style itemStyle) layout.Dimensions {

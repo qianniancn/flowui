@@ -2,16 +2,21 @@ package tabs
 
 import (
 	"image"
+	"image/color"
 
+	"gioui.org/font"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 func (t TabsWidget) layout(ctx *frame.Context, gtx layout.Context, state *tabsState, selectedKey string, disabled bool) layout.Dimensions {
@@ -265,38 +270,63 @@ func (t TabsWidget) layoutTab(ctx *frame.Context, gtx layout.Context, componentS
 			drawTabSeparator(gtx, frame.ActiveTheme(ctx), size, t.orientation, style.separator)
 		}
 		foreground := render.LerpColor(style.foreground, style.selectedForeground, progress)
-		label := material.Label(frame.ActiveTheme(ctx).Material, sizeStyle.textSize, item.Label)
-		label.Font.Weight = sizeStyle.weight
-		label.Color = foreground
-		layout.Center.Layout(gtx, label.Layout)
-		drawTabFocus(gtx, frame.ActiveTheme(ctx), size, t.variant, focus, style.focus)
-		return layout.Dimensions{Size: size}
+		styleState := flowstyle.StyleState{
+			Hovered: itemState.clickable.Hovered(), Pressed: itemState.clickable.Pressed(),
+			Focused: gtx.Focused(&itemState.clickable), FocusVisible: focusVisible,
+			Disabled: disabled, Selected: selected,
+		}
+		resolved := t.resolveItemStyle(ctx, animGtx, item.Key, styleState, foreground, sizeStyle)
+		return layoutui.LayoutResolved(ctx, gtx, resolved, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+			textSize := sizeStyle.textSize
+			weight := sizeStyle.weight
+			color := foreground
+			if resolved.Text != nil {
+				if resolved.Text.FontSize != nil {
+					textSize = *resolved.Text.FontSize
+				}
+				if resolved.Text.FontWeight != nil {
+					weight = font.Weight(*resolved.Text.FontWeight)
+				}
+				if value, ok := styleruntime.Color(resolved.Text.Color); ok {
+					color = value
+				}
+			}
+			label := material.Label(frame.ActiveTheme(ctx).Material, textSize, item.Label)
+			label.Font.Weight = weight
+			label.Color = color
+			layout.Center.Layout(gtx, label.Layout)
+			drawTabFocus(gtx, frame.ActiveTheme(ctx), size, t.variant, focus, style.focus)
+			return layout.Dimensions{Size: size}
+		}))
 	})
+}
+
+func (t TabsWidget) resolveItemStyle(ctx *frame.Context, gtx layout.Context, itemKey string, state flowstyle.StyleState, foreground color.NRGBA, size tabsSizeStyle) flowstyle.ResolvedStyle {
+	defaults := flowstyle.Style{}.
+		Part(flowstyle.PartItem, flowstyle.Style{}.
+			TextColor(flowstyle.SolidColor{Color: foreground}).
+			FontSize(size.textSize).
+			FontWeight(int(size.weight)))
+
+	return styleruntime.ResolvePart(
+		ctx, gtx, frame.DerivedKey(ctx, frame.FullKey(ctx, t.key), "item:"+itemKey),
+		flowstyle.PartItem, state, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle,
+	)
 }
 
 func (t TabsWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, panel frame.Widget) layout.Dimensions {
 	if t.orientation != TabsVertical {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	}
-	padding := frame.ActiveTheme(ctx).Components.Tabs.PanelPadding
-	var placement frame.OverlayPlacement
-	dims := layout.UniformInset(padding).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		var dims layout.Dimensions
-		dims, placement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-			return panel.Layout(ctx, gtx)
-		})
-		return dims
-	})
-	offset := gtx.Dp(padding)
-	position := image.Pt(offset, offset)
-	if gtx.Constraints.Max.X-offset*2 < 0 {
-		position.X = 0
-	}
-	if gtx.Constraints.Max.Y-offset*2 < 0 {
-		position.Y = 0
-	}
-	placement.PlaceOffset(position)
-	return dims
+	defaults := flowstyle.Style{}.
+		Part(flowstyle.PartPanel, flowstyle.Style{}.Padding(frame.ActiveTheme(ctx).Components.Tabs.PanelPadding))
+
+	resolved := styleruntime.ResolvePart(
+		ctx, gtx, frame.FullKey(ctx, t.key), flowstyle.PartPanel,
+		flowstyle.StyleState{Selected: true, Disabled: !gtx.Enabled()},
+		defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle,
+	)
+	return layoutui.LayoutResolved(ctx, gtx, resolved, panel)
 }
 
 func (t TabsWidget) layoutScrollButtons(ctx *frame.Context, gtx layout.Context, state *tabsState, size image.Point, disabled bool) {

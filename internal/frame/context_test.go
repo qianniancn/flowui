@@ -8,6 +8,7 @@ import (
 	"gioui.org/app"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -25,26 +26,24 @@ func TestNewUsesProvidedTheme(t *testing.T) {
 	}
 }
 
-func TestPushInstanceThemeRestoresActiveTheme(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	ctx := New(nil, &activeTheme, locale.LanguageAuto)
-	restore := PushInstanceTheme(ctx, func(active *theme.Theme) {
-		active.Components.Button.Radius = 7
-		active.Palette.Accent = color.NRGBA{R: 7, A: 0xff}
-	})
+func TestPushStyleRestoresCascadeScope(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	first := style.Style{}.Background(style.RGB(0x112233))
+	second := style.Style{}.PaddingX(12)
+	restoreFirst := PushStyle(ctx, first)
+	restoreSecond := PushStyle(ctx, second)
 
-	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 7 {
-		t.Fatalf("component radius = %v, want 7", radius)
+	active := ActiveStyles(ctx)
+	if len(active) != 2 || active[0].Resolve(style.StyleState{}).Paint.Background != style.RGB(0x112233) {
+		t.Fatalf("active styles = %#v", active)
 	}
-	if accent := ActiveTheme(ctx).Palette.Accent; accent.R != 7 {
-		t.Fatalf("component accent = %#v, want red 7", accent)
+	restoreSecond()
+	if len(ActiveStyles(ctx)) != 1 {
+		t.Fatalf("nested style was not restored")
 	}
-	restore()
-	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 24 {
-		t.Fatalf("restored radius = %v, want 24", radius)
-	}
-	if ActiveTheme(ctx).Palette.Accent.R == 7 {
-		t.Fatal("instance palette leaked into active theme")
+	restoreFirst()
+	if len(ActiveStyles(ctx)) != 0 {
+		t.Fatalf("style scope leaked")
 	}
 }
 

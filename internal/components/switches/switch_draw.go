@@ -2,12 +2,10 @@ package switches
 
 import (
 	"image"
-	"image/color"
 
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/render"
+	"gioui.org/unit"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -17,21 +15,12 @@ type switchDrawResult struct {
 	thumbRect image.Rectangle
 }
 
-func drawSwitch(gtx layout.Context, theme *theme.Theme, style switchStyle, size switchSizeStyle) switchDrawResult {
-	rects := switchRects(gtx, theme, style, size)
-	if rects.trackRect.Empty() {
-		return rects
-	}
-	drawSwitchFocus(gtx, theme, rects.trackRect, style)
-	drawSwitchTrack(gtx, rects.trackRect, style)
-	drawSwitchThumb(gtx, theme, rects.thumbRect, style, size)
-	return rects
-}
-
 func switchRects(gtx layout.Context, theme *theme.Theme, style switchStyle, size switchSizeStyle) switchDrawResult {
 	focusSpace := max(gtx.Dp(theme.Components.Switch.FocusSpace), 1)
-	trackWidth := min(gtx.Dp(size.trackWidth), max(gtx.Constraints.Max.X-focusSpace*2, 0))
-	trackHeight := min(gtx.Dp(size.trackHeight), max(gtx.Constraints.Max.Y-focusSpace*2, 0))
+	trackWidthDp, trackHeightDp := switchTrackDpSize(style, size)
+	thumbWidthDp, thumbHeightDp := switchThumbDpSize(style, size)
+	trackWidth := min(gtx.Dp(trackWidthDp), max(gtx.Constraints.Max.X-focusSpace*2, 0))
+	trackHeight := min(gtx.Dp(trackHeightDp), max(gtx.Constraints.Max.Y-focusSpace*2, 0))
 	bounds := image.Pt(trackWidth+focusSpace*2, trackHeight+focusSpace*2)
 	dims := layout.Dimensions{Size: gtx.Constraints.Constrain(bounds)}
 	if trackWidth <= 0 || trackHeight <= 0 {
@@ -43,8 +32,8 @@ func switchRects(gtx layout.Context, theme *theme.Theme, style switchStyle, size
 		Min: trackOrigin,
 		Max: trackOrigin.Add(image.Pt(trackWidth, trackHeight)),
 	}
-	thumbWidth := min(gtx.Dp(size.thumbWidth), trackWidth)
-	thumbHeight := min(gtx.Dp(size.thumbHeight), trackHeight)
+	thumbWidth := min(gtx.Dp(thumbWidthDp), trackWidth)
+	thumbHeight := min(gtx.Dp(thumbHeightDp), trackHeight)
 	padding := max((trackHeight-thumbHeight)/2, 0)
 	travel := max(trackWidth-padding*2-thumbWidth, 0)
 	thumbX := track.Min.X + padding + int(float32(travel)*style.selected+0.5)
@@ -60,51 +49,35 @@ func switchRects(gtx layout.Context, theme *theme.Theme, style switchStyle, size
 	}
 }
 
-func drawSwitchFocus(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, style switchStyle) {
-	if style.focus == 0 {
-		return
+func switchTrackDpSize(style switchStyle, fallback switchSizeStyle) (unit.Dp, unit.Dp) {
+	return switchPartDpSize(style.trackOff, style.trackOn, fallback.trackWidth, fallback.trackHeight)
+}
+
+func switchThumbDpSize(style switchStyle, fallback switchSizeStyle) (unit.Dp, unit.Dp) {
+	return switchPartDpSize(style.thumbOff, style.thumbOn, fallback.thumbWidth, fallback.thumbHeight)
+}
+
+func switchPartDpSize(first, second flowstyle.ResolvedStyle, fallbackWidth, fallbackHeight unit.Dp) (unit.Dp, unit.Dp) {
+	var width, height unit.Dp
+	var hasWidth, hasHeight bool
+	for _, value := range [...]flowstyle.ResolvedStyle{first, second} {
+		if value.Box == nil {
+			continue
+		}
+		if value.Box.Width != nil {
+			width = max(width, *value.Box.Width)
+			hasWidth = true
+		}
+		if value.Box.Height != nil {
+			height = max(height, *value.Box.Height)
+			hasHeight = true
+		}
 	}
-	width := max(gtx.Dp(theme.Components.Switch.FocusRingWidth), 1)
-	focusRect := rect.Inset(-max(width/2, 1))
-	radius := min(rect.Dy()/2+width, focusRect.Dy()/2)
-	col := style.focusColor
-	col.A = byte(float32(col.A)*style.focus + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(focusRect, radius).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
-}
-
-func drawSwitchTrack(gtx layout.Context, rect image.Rectangle, style switchStyle) {
-	bg := render.LerpColor(style.trackOff, style.trackOn, style.selected)
-	paint.FillShape(gtx.Ops, bg, clip.UniformRRect(rect, rect.Dy()/2).Op(gtx.Ops))
-}
-
-func drawSwitchThumb(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, style switchStyle, size switchSizeStyle) {
-	if rect.Empty() {
-		return
+	if !hasWidth {
+		width = fallbackWidth
 	}
-	drawSwitchThumbShadow(gtx, theme, rect, size)
-	bg := render.LerpColor(style.thumb, style.thumbOn, style.selected)
-	paint.FillShape(gtx.Ops, bg, clip.UniformRRect(rect, rect.Dy()/2).Op(gtx.Ops))
-}
-
-func drawSwitchThumbShadow(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, size switchSizeStyle) {
-	shadow := theme.Palette.Shadow
-	if shadow.A == 0 {
-		return
+	if !hasHeight {
+		height = fallbackHeight
 	}
-	render.DrawShadow(gtx, rect, switchThumbShadowShape(size), render.ThemeShadow(theme.Shadows.SwitchThumb, shadow, 1))
-
-}
-
-func switchThumbShadowShape(size switchSizeStyle) render.ShadowShape {
-	radius := size.thumbHeight / 2
-	return render.RoundedShadowCorners(radius, radius, radius, radius)
-}
-
-func switchThumbContentColor(style switchStyle) color.NRGBA {
-	return render.LerpColor(style.thumbFgOff, style.thumbFg, style.selected)
+	return width, height
 }

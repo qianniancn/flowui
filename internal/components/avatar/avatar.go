@@ -4,7 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Color selects the semantic color of an Avatar fallback.
@@ -37,7 +37,6 @@ const (
 
 // Widget displays a profile image or fallback content.
 type Widget struct {
-	theme        func(*theme.Theme)
 	fallbackText string
 	fallback     frame.Widget
 	image        paint.ImageOp
@@ -45,6 +44,7 @@ type Widget struct {
 	color        Color
 	variant      Variant
 	size         Size
+	customStyle  flowstyle.Style
 }
 
 // New creates an Avatar with optional text fallback content.
@@ -88,14 +88,11 @@ func (a Widget) Size(size Size) Widget {
 	return a
 }
 
-func (a Widget) Theme(fn func(*theme.Theme)) Widget {
-	a.theme = fn
+func (a Widget) Style(value flowstyle.Style) Widget {
+	a.customStyle = value
 	return a
 }
 
 func (a Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, a.theme); restore != nil {
-		defer restore()
-	}
 	return a.layout(ctx, gtx)
 }

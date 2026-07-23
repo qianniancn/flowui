@@ -14,10 +14,12 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/components/closebutton"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/spinner"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type toastRecord struct {
@@ -94,7 +96,15 @@ func (p ToastProviderWidget) layoutOverlay(ctx *frame.Context, gtx layout.Contex
 		}
 		restoreItem := frame.PushKey(ctx, entry.item.key)
 		macro := op.Record(gtx.Ops)
-		dims := p.layoutToast(ctx, toastGtx, entry, interactive, mobile, expandedLayout || providerState.touchMode)
+		dims := layoutui.LayoutStyled(ctx, toastGtx, frame.FullKey(ctx, ""), flowstyle.StyleState{
+			Hovered:  entry.hovered,
+			Focused:  toastGtx.Focused(&entry.action) || toastGtx.Focused(&entry.close),
+			Disabled: !interactive,
+			Expanded: expanded,
+			Loading:  entry.item.loading,
+		}, p.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return p.layoutToast(ctx, gtx, entry, interactive, mobile, expandedLayout || providerState.touchMode)
+		}))
 		call := macro.Stop()
 		restoreItem()
 		if targetIndex == 0 && !exiting {
@@ -396,7 +406,7 @@ func (p ToastProviderWidget) layoutToastClose(ctx *frame.Context, gtx layout.Con
 	closeGtx := gtx
 	closeGtx.Constraints = layout.Exact(image.Pt(size, size))
 	offset := op.Offset(position).Push(gtx.Ops)
-	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton(""), ctx, closeGtx, &entry.close, &entry.closeButton)
+	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton("close"), ctx, closeGtx, &entry.close)
 	offset.Pop()
 }
 

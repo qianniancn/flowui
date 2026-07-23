@@ -12,6 +12,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -42,7 +43,8 @@ func TestProgressBarOptions(t *testing.T) {
 		Indeterminate().
 		Color(ProgressBarSuccess).
 		Size(ProgressBarLarge).
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Radius(4))
 
 	if bar.key != "upload" || bar.value != 40 || bar.label != "Uploading" {
 		t.Fatal("progress bar constructor/options did not set fields")
@@ -55,6 +57,9 @@ func TestProgressBarOptions(t *testing.T) {
 	}
 	if !bar.indeterminate || bar.color != ProgressBarSuccess || bar.size != ProgressBarLarge || !bar.disabled {
 		t.Fatal("progress bar visual options were not set")
+	}
+	if bar.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("progress bar style was not retained")
 	}
 }
 
@@ -141,6 +146,34 @@ func TestProgressBarSizeStyle(t *testing.T) {
 	}
 }
 
+func TestProgressBarSeparatesRootTrackAndIndicatorStyles(t *testing.T) {
+	rootColor := color.NRGBA{R: 1, A: 0xff}
+	trackColor := color.NRGBA{G: 2, A: 0xff}
+	fillColor := color.NRGBA{B: 3, A: 0xff}
+	custom := flowstyle.Style{}.
+		Height(60).
+		Background(flowstyle.SolidColor{Color: rootColor}).
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Height(4).Background(flowstyle.SolidColor{Color: trackColor})).
+		Part(flowstyle.PartFill, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: fillColor}))
+
+	resolved := ProgressBar("upload", 50).Style(custom).resolveStyle(newContext(nil), testLayoutContext(), "upload")
+	if resolved.root.Box == nil || resolved.root.Box.Height == nil || *resolved.root.Box.Height != 60 {
+		t.Fatalf("root height = %#v", resolved.root.Box)
+	}
+	if got := resolved.root.Paint.Background.(flowstyle.SolidColor).Color; got != rootColor {
+		t.Fatalf("root background = %#v", got)
+	}
+	if resolved.track.Box == nil || resolved.track.Box.Height == nil || *resolved.track.Box.Height != 4 {
+		t.Fatalf("track box = %#v", resolved.track.Box)
+	}
+	if got := resolved.track.Paint.Background.(flowstyle.SolidColor).Color; got != trackColor {
+		t.Fatalf("track background = %#v", got)
+	}
+	if got := resolved.fill.Paint.Background.(flowstyle.SolidColor).Color; got != fillColor {
+		t.Fatalf("fill background = %#v", got)
+	}
+}
+
 func TestProgressBarAnimation(t *testing.T) {
 	state := new(progressBarState)
 	start := time.Unix(1, 0)
@@ -224,6 +257,29 @@ func TestProgressBarLayoutWithHeader(t *testing.T) {
 	}
 	if dims.Size.Y <= 8 {
 		t.Fatalf("header height = %d, want greater than track height", dims.Size.Y)
+	}
+}
+
+func TestProgressBarLabelPartUsesCommonBoxRenderer(t *testing.T) {
+	base := ProgressBar("upload", 50).
+		Label("Upload").
+		Layout(newContext(nil), progressBarTestContext())
+	styled := ProgressBar("upload", 50).
+		Label("Upload").
+		Style(flowstyle.Style{}.Part(flowstyle.PartLabel, flowstyle.Style{}.PaddingY(7))).
+		Layout(newContext(nil), progressBarTestContext())
+	if styled.Size.Y != base.Size.Y+14 {
+		t.Fatalf("styled label height = %d, want %d", styled.Size.Y, base.Size.Y+14)
+	}
+}
+
+func TestProgressBarTrackPartUsesCommonBoxRenderer(t *testing.T) {
+	base := ProgressBar("upload", 50).Layout(newContext(nil), progressBarTestContext())
+	styled := ProgressBar("upload", 50).
+		Style(flowstyle.Style{}.Part(flowstyle.PartTrack, flowstyle.Style{}.MarginY(7))).
+		Layout(newContext(nil), progressBarTestContext())
+	if styled.Size.Y != base.Size.Y+14 {
+		t.Fatalf("styled track height = %d, want %d", styled.Size.Y, base.Size.Y+14)
 	}
 }
 

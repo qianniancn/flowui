@@ -3,6 +3,7 @@ package menu
 import (
 	"image/color"
 
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -15,14 +16,62 @@ type panelStyle struct {
 }
 
 type itemStyle struct {
-	background  color.NRGBA
 	foreground  color.NRGBA
 	description color.NRGBA
 	shortcut    color.NRGBA
 	indicator   color.NRGBA
-	focusColor  color.NRGBA
-	focus       float32
-	opacity     float32
+}
+
+func menuRootDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	panel := menuPanelStyle(activeTheme)
+	tokens := activeTheme.Components.Menu
+	return flowstyle.Style{}.
+		Background(flowstyle.SolidColor{Color: panel.background}).
+		TextColor(flowstyle.SolidColor{Color: panel.foreground}).
+		BorderColor(flowstyle.SolidColor{Color: panel.border}).
+		BorderWidth(tokens.BorderWidth).
+		Radius(tokens.Radius).
+		Shadow(flowstyle.ShadowMenu).
+		Overflow(flowstyle.OverflowHidden)
+
+}
+
+func menuItemDefaultDeclaration(activeTheme *theme.Theme, tokens theme.MenuTheme) flowstyle.Style {
+	pressedScale := tokens.PressedScale
+	if pressedScale <= 0 || pressedScale > 1 {
+		pressedScale = 0.98
+	}
+	item := flowstyle.Style{}.
+		MinHeight(tokens.ItemMinHeight).
+		PaddingX(tokens.ItemPaddingX).
+		PaddingY(tokens.ItemPaddingY).
+		Radius(tokens.ItemRadius).
+		Background(flowstyle.RGBA(0x00000000)).
+		TextColor(flowstyle.SolidColor{Color: menuForegroundColor(activeTheme)}).
+		BorderWidth(tokens.FocusRingWidth).
+		BorderColor(flowstyle.WithAlpha(flowstyle.TokenFocus, 0)).
+		Opacity(1).
+		Scale(1, 1).
+		Transition(flowstyle.PropBackgroundColor, menuItemColorDuration).
+		Transition(flowstyle.PropBorderColor, menuItemFocusDuration).
+		Transition(flowstyle.PropTransform, menuItemPressDuration).
+		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.TokenDefault)).
+		When(flowstyle.Pressed, flowstyle.Style{}.Scale(pressedScale, pressedScale)).
+		When(flowstyle.FocusVisible, flowstyle.Style{}.BorderColor(flowstyle.SolidColor{Color: menuFocusColor(activeTheme)})).
+		When(flowstyle.Disabled, flowstyle.Style{}.Opacity(activeTheme.DisabledOpacityValue()))
+	return flowstyle.Style{}.Part(flowstyle.PartItem, item)
+}
+
+func menuItemVariantDeclaration(activeTheme *theme.Theme, variant ItemVariant) flowstyle.Style {
+	if variant != ItemDanger {
+		return flowstyle.Style{}
+	}
+	item := flowstyle.Style{}.
+		TextColor(flowstyle.SolidColor{Color: menuDangerColor(activeTheme)}).
+		When(flowstyle.FocusVisible, flowstyle.Style{}.BorderColor(
+			flowstyle.WithAlpha(flowstyle.SolidColor{Color: menuDangerColor(activeTheme)}, float32(menuFocusColor(activeTheme).A)/255),
+		))
+	return flowstyle.Style{}.Part(flowstyle.PartItem, item)
 }
 
 func menuPanelStyle(activeTheme *theme.Theme) panelStyle {
@@ -44,27 +93,16 @@ func menuPanelStyle(activeTheme *theme.Theme) panelStyle {
 	}
 }
 
-func menuItemStyle(activeTheme *theme.Theme, variant ItemVariant, hovered, disabled bool) itemStyle {
+func menuItemStyle(activeTheme *theme.Theme, variant ItemVariant) itemStyle {
 	foreground := menuForegroundColor(activeTheme)
-	background := color.NRGBA{}
-	if hovered {
-		background = activeTheme.Palette.DefaultColor()
-	}
 	if variant == ItemDanger {
 		foreground = menuDangerColor(activeTheme)
 	}
-	opacity := float32(1)
-	if disabled {
-		opacity = activeTheme.DisabledOpacityValue()
-	}
 	style := itemStyle{
-		background:  background,
 		foreground:  foreground,
 		description: menuMutedColor(activeTheme),
 		shortcut:    menuMutedColor(activeTheme),
 		indicator:   menuMutedColor(activeTheme),
-		focusColor:  menuFocusColor(activeTheme),
-		opacity:     opacity,
 	}
 	if variant == ItemDanger {
 		style.indicator = menuDangerColor(activeTheme)

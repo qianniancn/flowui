@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
@@ -112,37 +111,22 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 								Disabled(true),
 						),
 					),
-					section("Instance theme",
+					section("Instance style",
 						buttonRow(
-							ui.Button("theme-default", ui.Text("Default")).
+							ui.Button("style-default", ui.Text("Default")).
 								Size(ui.ButtonLarge).
 								OnClick(func() {
-									send(Pressed{Label: "Default theme"})
+									send(Pressed{Label: "Default style"})
 								}),
-							ui.Button("theme-accent", ui.Text("Accent")).
-								Size(ui.ButtonLarge).
-								Theme(func(theme *ui.Theme) {
-									theme.Components.Button.Radius = 4
-									theme.Components.Button.PressedScaleLarge = 0.98
-									theme.Palette.Accent = color.NRGBA{R: 0x3d, G: 0x63, B: 0xdd, A: 0xff}
-									theme.Palette.AccentHover = color.NRGBA{R: 0x31, G: 0x53, B: 0xc4, A: 0xff}
-									theme.Palette.AccentForeground = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
-								}).
-								OnClick(func() {
-									send(Pressed{Label: "Accent theme"})
-								}),
-							ui.Button("theme-spinner", ui.Text("Spinner")).
+							customStyleButton(send),
+							ui.Button("style-spinner", ui.Text("Spinner")).
 								Variant(ui.ButtonSecondary).
 								Size(ui.ButtonLarge).
 								Loading(m.Loading).
-								Theme(func(theme *ui.Theme) {
-									theme.Components.Button.ContentGap = 16
-									theme.Components.Button.SpinnerLarge = 24
-									theme.Components.Button.SpinnerStrokeWidth = 3
-									theme.Palette.Default = color.NRGBA{R: 0xe8, G: 0xf3, B: 0xec, A: 0xff}
-									theme.Palette.DefaultHover = color.NRGBA{R: 0xd7, G: 0xe9, B: 0xde, A: 0xff}
-									theme.Palette.AccentSoftForeground = color.NRGBA{R: 0x12, G: 0x5e, B: 0x39, A: 0xff}
-								}).
+								Style(ui.Background(ui.RGB(0xe8f3ec)).
+									TextColor(ui.RGB(0x125e39)).
+									When(ui.Hovered, ui.Background(ui.RGB(0xd7e9de))),
+								).
 								OnClick(func() {
 									send(StartLoading{})
 								}),

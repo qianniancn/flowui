@@ -11,57 +11,57 @@ func ColorOr(value, fallback color.NRGBA) color.NRGBA {
 }
 
 func (p Palette) OverlayColor() color.NRGBA {
-	return ColorOr(p.Overlay, p.Surface)
+	return p.Overlay
 }
 
 func (p Palette) OverlayForegroundColor() color.NRGBA {
-	return ColorOr(p.OverlayForeground, p.Foreground)
+	return p.OverlayForeground
 }
 
 func (p Palette) OverlayShadowColor() color.NRGBA {
-	return ColorOr(p.OverlayShadow, p.Shadow)
+	return p.OverlayShadow
 }
 
 func (p Palette) DefaultColor() color.NRGBA {
-	return ColorOr(p.Default, p.SurfaceRaised)
+	return p.Default
 }
 
 func (p Palette) DefaultForegroundColor() color.NRGBA {
-	return ColorOr(p.DefaultForeground, p.Foreground)
+	return p.DefaultForeground
 }
 
 func (p Palette) DefaultHoverColor() color.NRGBA {
-	return ColorOr(p.DefaultHover, p.SurfacePressed)
+	return p.DefaultHover
 }
 
 func (p Palette) FieldBackgroundColor() color.NRGBA {
-	return ColorOr(p.FieldBackground, p.Surface)
+	return p.FieldBackground
 }
 
 func (p Palette) FieldHoverColor() color.NRGBA {
-	return ColorOr(p.FieldHover, p.SurfaceHover)
+	return p.FieldHover
 }
 
 func (p Palette) FieldForegroundColor() color.NRGBA {
-	return ColorOr(p.FieldForeground, p.Foreground)
+	return p.FieldForeground
 }
 
 func (p Palette) FieldPlaceholderColor() color.NRGBA {
-	return ColorOr(p.FieldPlaceholder, p.MutedForeground)
+	return p.FieldPlaceholder
 }
 
 func (p Palette) FieldFocusColor() color.NRGBA {
-	return ColorOr(p.FieldFocus, p.FieldBackgroundColor())
+	return p.FieldFocus
 }
 
 func (p Palette) SeparatorColor() color.NRGBA {
-	return ColorOr(p.Separator, p.Border)
+	return p.Separator
 }
 
 func (p Palette) SuccessSoftForegroundColor() color.NRGBA {
-	return ColorOr(p.SuccessSoftForeground, p.Success)
+	return p.SuccessSoftForeground
 }
 
 func (p Palette) WarningSoftForegroundColor() color.NRGBA {
-	return ColorOr(p.WarningSoftForeground, p.Warning)
+	return p.WarningSoftForeground
 }

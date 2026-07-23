@@ -3,15 +3,22 @@ package layoutui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"testing"
+	"time"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
+	"gioui.org/io/pointer"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const (
@@ -27,9 +34,22 @@ type enabledProbeWidget struct {
 	enabled bool
 }
 
+type styledBoxProbe struct {
+	constraints layout.Constraints
+	foreground  color.NRGBA
+	background  color.NRGBA
+}
+
 func (w *enabledProbeWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 	w.enabled = gtx.Enabled()
 	return layout.Dimensions{Size: image.Pt(16, 16)}
+}
+
+func (w *styledBoxProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	w.constraints = gtx.Constraints
+	w.foreground = ctx.ForegroundColor()
+	w.background = ctx.BackgroundColor()
+	return layout.Dimensions{Size: gtx.Constraints.Min}
 }
 
 func testComponentState[T any](ctx *frame.Context, key, slot string) *T {
@@ -61,6 +81,208 @@ func TestBoxAppliesWidthAndPadding(t *testing.T) {
 	}
 	if child.constraints.Min.X != 80 || child.constraints.Max.X != 80 {
 		t.Fatalf("child width constraints = %v, want exact 80", child.constraints)
+	}
+}
+
+func TestBoxAllowsExplicitZeroSize(t *testing.T) {
+	child := &constraintWidget{}
+	dims := Box(child).Width(0).Height(0).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size != (image.Point{}) || child.constraints != layout.Exact(image.Point{}) {
+		t.Fatalf("zero-sized Box = %v/%v, want zero size and constraints", dims.Size, child.constraints)
+	}
+}
+
+func TestInteractiveBoxOptionsUseValueSemantics(t *testing.T) {
+	base := Box(nil)
+	configured := base.
+		Key("save").
+		Label("Save").
+		Disabled(true).
+		OnClick(func() {})
+
+	if base.key != "" || base.label != "" || base.disabled || base.interactive {
+		t.Fatalf("configuring Box mutated base: %#v", base)
+	}
+	if configured.key != "save" || configured.label != "Save" || !configured.disabled || !configured.interactive || configured.onClick == nil {
+		t.Fatalf("configured Box = %#v", configured)
+	}
+}
+
+func TestInteractiveBoxHandlesClickAndDisabledState(t *testing.T) {
+	for _, test := range []struct {
+		key      string
+		disabled bool
+		want     int
+	}{
+		{key: "enabled", want: 1},
+		{key: "disabled", disabled: true},
+	} {
+		ctx := newContext(nil)
+		clickable := new(widget.Clickable)
+		clickable.Click()
+		frame.UseStateWith(ctx, test.key, "clickable", func() *widget.Clickable { return clickable })
+		clicks := 0
+		dims := Box(nil).
+			Key(test.key).
+			Disabled(test.disabled).
+			Style(flowstyle.Style{}.
+				Width(80).
+				Height(30).
+				When(flowstyle.Disabled, flowstyle.Style{}.Width(90)),
+			).
+			OnClick(func() { clicks++ }).
+			Layout(ctx, testLayoutContext())
+
+		wantWidth := 80
+		if test.disabled {
+			wantWidth = 90
+		}
+		if clicks != test.want || dims.Size != image.Pt(wantWidth, 30) {
+			t.Fatalf("%s clicks/size = %d/%v, want %d/(%d,30)", test.key, clicks, dims.Size, test.want, wantWidth)
+		}
+	}
+}
+
+func TestInteractiveBoxSemantics(t *testing.T) {
+	var router input.Router
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 40)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	Box(nil).
+		Key("save").
+		Label("Save changes").
+		Disabled(true).
+		Style(flowstyle.Style{}.Width(80).Height(30)).
+		OnClick(nil).
+		Layout(newContext(nil), gtx)
+	router.Frame(&ops)
+	node, ok := semanticButton(router.AppendSemantics(nil))
+	if !ok || node.Desc.Label != "Save changes" || !node.Desc.Disabled {
+		t.Fatalf("interactive Box semantics = %#v", node.Desc)
+	}
+}
+
+func semanticButton(nodes []input.SemanticNode) (input.SemanticNode, bool) {
+	for _, node := range nodes {
+		if node.Desc.Class == semantic.Button {
+			return node, true
+		}
+		if child, ok := semanticButton(node.Children); ok {
+			return child, true
+		}
+	}
+	return input.SemanticNode{}, false
+}
+
+func TestBoxStyleCascadesPropertiesScopeAndInstance(t *testing.T) {
+	ctx := newContext(nil)
+	restore := frame.PushStyle(ctx, flowstyle.Style{}.
+		PaddingX(12).
+		TextColor(flowstyle.RGB(0x112233)),
+	)
+	defer restore()
+	probe := new(styledBoxProbe)
+	instanceForeground := flowstyle.RGB(0x445566)
+	instanceBackground := flowstyle.RGB(0x778899)
+
+	dims := Box(probe).
+		Width(100).
+		Padding(4).
+		Style(flowstyle.Style{}.
+			Width(120).
+			PaddingLeft(20).
+			TextColor(instanceForeground).
+			Background(instanceBackground),
+		).
+		Layout(ctx, layout.Context{Constraints: layout.Constraints{Max: image.Pt(300, 100)}, Ops: new(op.Ops)})
+
+	wantConstraints := layout.Constraints{Min: image.Pt(88, 0), Max: image.Pt(88, 92)}
+	if dims.Size.X != 120 || probe.constraints != wantConstraints {
+		t.Fatalf("box size/child constraints = %v/%v", dims.Size, probe.constraints)
+	}
+	if probe.foreground != instanceForeground.Color || probe.background != instanceBackground.Color {
+		t.Fatalf("box colors = %#v/%#v", probe.foreground, probe.background)
+	}
+}
+
+func TestBoxConditionalStyleTransition(t *testing.T) {
+	ctx := newContext(nil)
+	start := time.Unix(1, 0)
+	from := flowstyle.RGB(0x102030).Color
+	to := flowstyle.RGB(0x8090a0).Color
+	layoutAt := func(now time.Time, active bool) color.NRGBA {
+		probe := new(styledBoxProbe)
+		frame.BeginFrame(ctx)
+		Box(probe).
+			Key("status").
+			Style(flowstyle.Style{}.Background(flowstyle.SolidColor{Color: from}).
+				Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
+				When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to}))).
+			Layout(ctx, layout.Context{
+				Constraints: layout.Exact(image.Pt(20, 20)),
+				Ops:         new(op.Ops),
+				Now:         now,
+			})
+		frame.EndFrame(ctx)
+		return probe.background
+	}
+
+	if got := layoutAt(start, false); got != from {
+		t.Fatalf("initial background = %#v, want %#v", got, from)
+	}
+	if got := layoutAt(start, true); got != from {
+		t.Fatalf("transition start = %#v, want %#v", got, from)
+	}
+	middle := layoutAt(start.Add(50*time.Millisecond), true)
+	if middle == from || middle == to {
+		t.Fatalf("transition midpoint = %#v", middle)
+	}
+	if got := layoutAt(start.Add(100*time.Millisecond), true); got != to {
+		t.Fatalf("transition end = %#v, want %#v", got, to)
+	}
+}
+
+func TestBoxStyleTransformMovesOverlayPlacement(t *testing.T) {
+	got := resolveOverlayAnchor(t, layout.Constraints{Max: image.Pt(100, 80)}, Box(&overlayProbeWidget{
+		key:    "styled-box",
+		size:   image.Pt(20, 10),
+		anchor: image.Rect(0, 0, 20, 10),
+	}).Style(flowstyle.Style{}.Translate(10, 5)))
+	if want := image.Rect(10, 5, 30, 15); got != want {
+		t.Fatalf("transformed anchor = %v, want %v", got, want)
+	}
+}
+
+func TestBoxStyleTranslateUsesDp(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(100, 80)
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: viewport},
+		Metric:      unit.Metric{PxPerDp: 2, PxPerSp: 2},
+		Ops:         new(op.Ops),
+	}
+	var got image.Rectangle
+	probe := &overlayProbeWidget{
+		key:    "scaled-translate",
+		size:   image.Pt(20, 10),
+		anchor: image.Rect(0, 0, 20, 10),
+		got:    &got,
+	}
+
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Box(probe).Style(flowstyle.Style{}.Translate(10, 5)).Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	if want := image.Rect(20, 10, 40, 20); got != want {
+		t.Fatalf("translated anchor = %v, want %v", got, want)
 	}
 }
 
@@ -115,6 +337,75 @@ func TestBoxFill(t *testing.T) {
 
 	if child.constraints.Min != image.Pt(300, 200) || child.constraints.Max != image.Pt(300, 200) {
 		t.Fatalf("constraints = %v, want exact (300,200)", child.constraints)
+	}
+}
+
+func TestBoxStyleFill(t *testing.T) {
+	child := &constraintWidget{}
+	Box(child).Style(flowstyle.Style{}.FillWidth().FillHeight()).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Ops:         new(op.Ops),
+	})
+
+	if child.constraints != layout.Exact(image.Pt(300, 200)) {
+		t.Fatalf("constraints = %v, want exact (300,200)", child.constraints)
+	}
+}
+
+func TestBoxStyleAspectRatioResolvesFromWidth(t *testing.T) {
+	child := &constraintWidget{}
+	dims := Box(child).Style(flowstyle.Style{}.Width(80).AspectRatio(2)).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size != image.Pt(80, 40) || child.constraints != layout.Exact(image.Pt(80, 40)) {
+		t.Fatalf("aspect box/constraints = %v/%v, want (80,40)", dims.Size, child.constraints)
+	}
+}
+
+func TestBoxStyleAspectRatioShrinksFixedAxisToFit(t *testing.T) {
+	dims := Box(nil).Style(flowstyle.Style{}.Width(80).AspectRatio(1)).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 50)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size != image.Pt(50, 50) {
+		t.Fatalf("aspect box = %v, want (50,50)", dims.Size)
+	}
+}
+
+func TestBoxStyleCursor(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	box := Box(Spacer(40, 20)).Style(flowstyle.Style{}.Cursor(pointer.CursorPointer))
+	layoutFrame := func() {
+		var ops op.Ops
+		box.Layout(ctx, layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+			Source:      router.Source(),
+			Ops:         &ops,
+		})
+		router.Frame(&ops)
+	}
+
+	layoutFrame()
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(10, 10)})
+	layoutFrame()
+	if got := router.Cursor(); got != pointer.CursorPointer {
+		t.Fatalf("cursor = %v, want %v", got, pointer.CursorPointer)
+	}
+}
+
+func TestBoxPaddingUsesBorderBoxMinimum(t *testing.T) {
+	child := &constraintWidget{}
+	dims := Box(child).Style(flowstyle.Style{}.MinHeight(36).PaddingY(6)).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size.Y != 36 || child.constraints.Min.Y != 24 {
+		t.Fatalf("box/child height = %d/%v, want total 36 and child minimum 24", dims.Size.Y, child.constraints)
 	}
 }
 
@@ -217,6 +508,9 @@ func TestBoxOverflowHidden(t *testing.T) {
 func TestRowColumnAlignment(t *testing.T) {
 	if Row().AlignMiddle().align != layout.Middle {
 		t.Fatal("row alignment was not middle")
+	}
+	if Row().AlignBaseline().align != layout.Baseline {
+		t.Fatal("row alignment was not baseline")
 	}
 	if Column().AlignEnd().align != layout.End {
 		t.Fatal("column alignment was not end")
@@ -422,7 +716,7 @@ func TestExpandedUsesRemainingRowSpace(t *testing.T) {
 	}
 }
 
-func TestFlexibleSplitsRemainingSpaceByWeight(t *testing.T) {
+func TestFlexibleOffersRemainingSpaceByWeight(t *testing.T) {
 	left := &constraintWidget{}
 	right := &constraintWidget{}
 	var ops op.Ops
@@ -435,11 +729,22 @@ func TestFlexibleSplitsRemainingSpaceByWeight(t *testing.T) {
 		Ops:         &ops,
 	})
 
-	if left.constraints.Min.X != 100 || left.constraints.Max.X != 100 {
-		t.Fatalf("left constraints = %v, want exact 100", left.constraints)
+	if left.constraints.Min.X != 0 || left.constraints.Max.X != 100 {
+		t.Fatalf("left constraints = %v, want loose maximum 100", left.constraints)
 	}
-	if right.constraints.Min.X != 200 || right.constraints.Max.X != 200 {
-		t.Fatalf("right constraints = %v, want exact 200", right.constraints)
+	if right.constraints.Min.X != 0 || right.constraints.Max.X != 200 {
+		t.Fatalf("right constraints = %v, want loose maximum 200", right.constraints)
+	}
+}
+
+func TestFlexibleCanUseLessThanItsShare(t *testing.T) {
+	dims := Row(Flexible(1, Spacer(20, 10))).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 40)},
+		Ops:         new(op.Ops),
+	})
+
+	if dims.Size != image.Pt(20, 10) {
+		t.Fatalf("loose Flexible size = %v, want (20,10)", dims.Size)
 	}
 }
 
@@ -513,45 +818,6 @@ func TestWrapPreservesZeroHeightRowBoundaries(t *testing.T) {
 
 	if first.Min.X != 0 || second.Min.X != 60 {
 		t.Fatalf("zero-height row positions = %v/%v, want x=0/60", first, second)
-	}
-}
-
-func TestAdaptiveReceivesAvailableSize(t *testing.T) {
-	var got ViewSize
-	var ops op.Ops
-
-	Adaptive(func(size ViewSize) frame.Widget {
-		got = size
-		return Spacer(10, 10)
-	}).Layout(newContext(nil), layout.Context{
-		Constraints: layout.Constraints{Max: image.Pt(400, 200)},
-		Metric:      unit.Metric{PxPerDp: 2, PxPerSp: 2},
-		Ops:         &ops,
-	})
-
-	if got.Width != 200 || got.Height != 100 {
-		t.Fatalf("size = %v, want (200dp,100dp)", got)
-	}
-}
-
-func TestAdaptiveSelectsLargestMatchingWidthBreakpoint(t *testing.T) {
-	selected := "base"
-	Adaptive(func(ViewSize) frame.Widget {
-		return Spacer(10, 10)
-	}).AtLeastWidth(300, func(ViewSize) frame.Widget {
-		selected = "wide"
-		return Spacer(10, 10)
-	}).AtLeastWidth(600, func(ViewSize) frame.Widget {
-		selected = "extra-wide"
-		return Spacer(10, 10)
-	}).Layout(newContext(nil), layout.Context{
-		Constraints: layout.Constraints{Max: image.Pt(1200, 200)},
-		Metric:      unit.Metric{PxPerDp: 2, PxPerSp: 2},
-		Ops:         new(op.Ops),
-	})
-
-	if selected != "extra-wide" {
-		t.Fatalf("adaptive view = %q, want extra-wide", selected)
 	}
 }
 

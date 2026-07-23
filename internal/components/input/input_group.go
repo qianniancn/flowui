@@ -5,7 +5,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 const stateSlotInputGroup = "input-group"
@@ -13,7 +14,6 @@ const stateSlotInputGroup = "input-group"
 // InputGroupWidget combines an Input or TextArea with optional prefix and suffix content
 // inside one HeroUI-style field shell.
 type InputGroupWidget struct {
-	theme              func(*theme.Theme)
 	input              InputWidget
 	textArea           TextAreaWidget
 	multiline          bool
@@ -29,6 +29,7 @@ type InputGroupWidget struct {
 	suffixRightPadding unit.Dp
 	hasPrefixPadding   bool
 	hasSuffixPadding   bool
+	customStyle        flowstyle.Style
 }
 
 func InputGroup(input InputWidget) InputGroupWidget {
@@ -96,15 +97,12 @@ func (g InputGroupWidget) FullWidth() InputGroupWidget {
 	return g
 }
 
-func (g InputGroupWidget) Theme(fn func(*theme.Theme)) InputGroupWidget {
-	g.theme = fn
+func (g InputGroupWidget) Style(value flowstyle.Style) InputGroupWidget {
+	g.customStyle = value
 	return g
 }
 
 func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, g.theme); restore != nil {
-		defer restore()
-	}
 	var key string
 	var editor *widget.Editor
 	var enabled bool
@@ -118,22 +116,34 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
-	style := inputGroupStyleFor(frame.ActiveTheme(ctx), g.variant, state.Hovered, focused, disabled, g.invalid)
-	motion := frame.ActiveTheme(ctx).Motion
-	style.Background = state.Background(gtx, style.Background, motion)
-	style.Ring = state.BorderColor(gtx, style.Ring, motion)
-
-	inputStyle := inputStyle{
-		Foreground:  style.Foreground,
-		Placeholder: style.Placeholder,
-		Selection:   style.Selection,
+	focusVisible := frame.FocusVisible(ctx, editor, focused)
+	styleState := flowstyle.StyleState{
+		Hovered: state.Hovered, Focused: focused, FocusVisible: focusVisible,
+		Disabled: disabled, ReadOnly: editor.ReadOnly, Invalid: g.invalid,
 	}
-	tokens := frame.ActiveTheme(ctx).Components.InputGroup
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.InputGroup
+	minHeight := tokens.MinHeight
+	if g.multiline {
+		contentHeight := gtx.Sp(tokens.LineHeight)*g.textArea.resolvedRows() + gtx.Dp(tokens.TextAreaPaddingY)*2
+		minHeight = max(tokens.TextAreaMinHeight, gtx.Metric.PxToDp(contentHeight))
+	}
+	defaults := inputGroupDefaultDeclaration(activeTheme, g.variant, g.fullWidth, minHeight)
+	resolved := inputGroupResolvedStyle{
+		root:        styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		prefix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPrefix, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		suffix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSuffix, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		divider:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		placeholder: styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		selection:   styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+	}
+	inputStyle := resolvedInputStyle(resolved.root, resolved.placeholder, resolved.selection, activeTheme)
+	textSize, lineHeight := resolvedTypography(resolved.root, tokens.TextSize, tokens.LineHeight)
 	var editorLayout layout.Widget
 	if g.multiline {
-		editorLayout = g.textArea.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, tokens.TextSize, tokens.LineHeight)
+		editorLayout = g.textArea.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, textSize, lineHeight)
 	} else {
-		editorLayout = g.input.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, tokens.TextSize, tokens.LineHeight)
+		editorLayout = g.input.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, textSize, lineHeight)
 	}
-	return g.layoutFrame(ctx, gtx, state, style, enabled, editorLayout)
+	return g.layoutFrame(ctx, gtx, state, resolved, enabled, editorLayout)
 }

@@ -5,9 +5,10 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/widget/material"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ComboBoxItem struct {
@@ -18,7 +19,6 @@ type ComboBoxItem struct {
 }
 
 type ComboBoxWidget struct {
-	theme            func(*theme.Theme)
 	key              string
 	selectedKey      string
 	items            []ComboBoxItem
@@ -35,6 +35,7 @@ type ComboBoxWidget struct {
 	fullWidth        bool
 	hasInputValue    bool
 	allowCustomValue bool
+	customStyle      flowstyle.Style
 }
 
 const (
@@ -113,15 +114,12 @@ func (c ComboBoxWidget) AllowCustomValue() ComboBoxWidget {
 	return c
 }
 
-func (c ComboBoxWidget) Theme(fn func(*theme.Theme)) ComboBoxWidget {
-	c.theme = fn
+func (c ComboBoxWidget) Style(value flowstyle.Style) ComboBoxWidget {
+	c.customStyle = value
 	return c
 }
 
 func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
-		defer restore()
-	}
 	state := comboBoxStateFor(ctx, c.key)
 	key := frame.FullKey(ctx, c.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
@@ -156,17 +154,33 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	}
 
 	focused := gtx.Focused(editor)
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), c.variant, state.input.Hovered, focused, c.disabled, c.invalid)
-	style.Background = state.input.Background(gtx, style.Background, frame.ActiveTheme(ctx).Motion)
-	style.Border = state.input.BorderColor(gtx, style.Border, frame.ActiveTheme(ctx).Motion)
+	focusVisible := frame.FocusVisible(ctx, editor, focused)
+	styleState := flowstyle.StyleState{
+		Hovered:      state.input.Hovered,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     c.disabled || !gtx.Enabled(),
+		Selected:     c.selectedKey != "",
+		Invalid:      c.invalid,
+		Open:         state.open,
+	}
+	tokens := frame.ActiveTheme(ctx).Components
+	resolved := field.Resolve(ctx, gtx, key, styleState, c.variant, field.DeclarationOptions{
+		Radius:         tokens.ComboBox.Radius,
+		FocusRingWidth: tokens.Input.FocusRingWidth, InvalidOutlineWidth: tokens.Input.InvalidOutlineWidth,
+		ShadowColor: tokens.Input.ShadowColor, ShadowOpacity: tokens.Input.ShadowOpacity,
+		ShadowStrength: tokens.Input.ShadowStrength,
+	}, c.customStyle)
 
 	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, c.hint)
 	editorStyle.TextSize = frame.ActiveTheme(ctx).Components.ComboBox.TextSize
-	editorStyle.Color = style.Foreground
-	editorStyle.HintColor = style.Placeholder
-	editorStyle.SelectionColor = style.Selection
+	editorStyle.Color = resolved.Colors.Foreground
+	editorStyle.HintColor = resolved.Colors.Placeholder
+	editorStyle.SelectionColor = resolved.Colors.Selection
 
-	dims := c.layoutInput(ctx, eventGtx, state, editor, style, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
+	dims := layoutui.LayoutStyled(ctx, eventGtx, key, styleState, c.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return c.layoutInput(ctx, gtx, state, editor, resolved, frame.WithFieldSemantics(ctx, key, editorStyle.Layout))
+	}))
 	progress := state.popoverProgress(gtx, state.open && !c.disabled, frame.ActiveTheme(ctx).Motion)
 	if progress == 0 {
 		state.endFrame()

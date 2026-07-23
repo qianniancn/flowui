@@ -16,6 +16,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -27,13 +28,17 @@ func TestCloseButtonOptionsUseValueSemantics(t *testing.T) {
 		OnClick(func() { clicked = true }).
 		Disabled(true).
 		Icon(icon).
-		Label("Dismiss")
+		Label("Dismiss").
+		Style(flowstyle.Style{}.Radius(4))
 
 	if base.onClick != nil || base.disabled || base.icon != nil || base.label != "" {
 		t.Fatal("close button options mutated the original value")
 	}
 	if configured.key != "dismiss" || configured.onClick == nil || !configured.disabled || configured.icon != icon || configured.label != "Dismiss" {
 		t.Fatalf("configured close button = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured close button did not retain its style")
 	}
 	configured.onClick()
 	if !clicked {
@@ -150,16 +155,6 @@ func TestDisabledCloseButtonDoesNotBlockUnderlyingPointerTarget(t *testing.T) {
 	}
 }
 
-func TestCloseButtonFocusGeometryFitsExpandedBounds(t *testing.T) {
-	rect, radius := closeButtonFocusGeometry(image.Rect(0, 0, 24, 24), 12, 2)
-	if rect != image.Rect(-1, -1, 25, 25) {
-		t.Fatalf("focus rect = %v, want (-1,-1)-(25,25)", rect)
-	}
-	if radius != 13 {
-		t.Fatalf("focus radius = %d, want 13", radius)
-	}
-}
-
 func TestCloseButtonPointerAndKeyboardFocusVisibility(t *testing.T) {
 	start := time.Unix(1, 0)
 	{
@@ -179,7 +174,7 @@ func TestCloseButtonPointerAndKeyboardFocusVisibility(t *testing.T) {
 			Position:  f32.Pt(12, 12),
 		})
 		layoutCloseButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		if _, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton); !ok || !router.Source().Focused(clickable) {
+		if !router.Source().Focused(clickable) {
 			t.Fatal("pointer press did not focus the close button")
 		}
 		if frame.FocusVisible(ctx, clickable, true) {
@@ -198,37 +193,9 @@ func TestCloseButtonPointerAndKeyboardFocusVisibility(t *testing.T) {
 		}
 		router.Source().Execute(key.FocusCmd{Tag: clickable})
 		layoutCloseButtonFrame(ctx, router, button, start.Add(time.Millisecond))
-		if _, ok := frame.PeekState[closeButtonState](ctx, "close", stateSlotCloseButton); !ok || !frame.FocusVisible(ctx, clickable, true) {
+		if !frame.FocusVisible(ctx, clickable, true) {
 			t.Fatal("keyboard focus should show the focus ring")
 		}
-	}
-}
-
-func TestCloseButtonPressedScale(t *testing.T) {
-	if got := closeButtonPressedScale(0.93); got != 0.93 {
-		t.Fatalf("pressed scale = %v, want 0.93", got)
-	}
-	if got := closeButtonPressedScale(0); got != 0.93 {
-		t.Fatalf("invalid pressed scale fallback = %v, want 0.93", got)
-	}
-}
-
-func TestCloseButtonScaleTransitionStaysContinuousOnQuickRelease(t *testing.T) {
-	var buttonState closeButtonState
-	gtx := closeButtonTestContext()
-	start := time.Unix(1, 0)
-	gtx.Now = start
-	if got := buttonState.scale(gtx, 1); got != 1 {
-		t.Fatalf("initial scale = %v, want 1", got)
-	}
-	buttonState.scale(gtx, 0.93)
-	gtx.Now = start.Add(closeButtonScaleDuration / 4)
-	pressed := buttonState.scale(gtx, 0.93)
-	if pressed <= 0.93 || pressed >= 1 {
-		t.Fatalf("partial press scale = %v, want between 0.93 and 1", pressed)
-	}
-	if released := buttonState.scale(gtx, 1); released != pressed {
-		t.Fatalf("release scale jumped from %v to %v", pressed, released)
 	}
 }
 

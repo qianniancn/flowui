@@ -17,6 +17,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -864,6 +866,23 @@ func TestModalBackdropStyle(t *testing.T) {
 	}
 }
 
+func TestModalBackdropPartOverridesColorAndOpacity(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+	want := flowstyle.RGB(0x123456)
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartBackdrop, flowstyle.Style{}.Background(want).Opacity(.35))
+
+	resolved := styleruntime.ResolvePartStatic(
+		ctx, flowstyle.PartBackdrop, flowstyle.StyleState{Open: true},
+		modalDefaultDeclaration(&activeTheme, ModalBackdropOpaque, ModalMedium),
+		flowstyle.Style{}, flowstyle.Style{}, custom,
+	)
+	if resolved.Paint == nil || resolved.Paint.Background != want || resolved.Paint.Opacity == nil || *resolved.Paint.Opacity != .35 {
+		t.Fatalf("backdrop part = %#v", resolved.Paint)
+	}
+}
+
 func TestModalBodyTextStyle(t *testing.T) {
 	ctx := newContext(nil)
 	body, ok := Modal("settings", true, "Settings", text.New("Body")).
@@ -871,10 +890,11 @@ func TestModalBodyTextStyle(t *testing.T) {
 	if !ok {
 		t.Fatal("styled body is not TextWidget")
 	}
-	if body.ConfiguredSize() != frame.ActiveTheme(ctx).Components.Modal.BodyTextSize {
-		t.Fatalf("body text size = %v, want %v", body.ConfiguredSize(), frame.ActiveTheme(ctx).Components.Modal.BodyTextSize)
+	resolved := text.ResolveStyleStatic(ctx, body)
+	if resolved.Text == nil || resolved.Text.FontSize == nil || *resolved.Text.FontSize != frame.ActiveTheme(ctx).Components.Modal.BodyTextSize {
+		t.Fatalf("body text style = %#v", resolved.Text)
 	}
-	if col, _ := body.ConfiguredColor(); col != frame.ActiveTheme(ctx).Palette.MutedForeground {
+	if col := resolved.Text.Color.(flowstyle.SolidColor).Color; col != frame.ActiveTheme(ctx).Palette.MutedForeground {
 		t.Fatalf("body text color = %#v, want muted foreground", col)
 	}
 }

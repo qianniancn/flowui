@@ -3,14 +3,13 @@ package button
 import (
 	"time"
 
-	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/widget"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/FlowUI/internal/interaction"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -31,7 +30,7 @@ type ButtonWidget struct {
 	group       buttonGroupItemStyle
 	prepared    buttonPreparedContent
 	preparedSet bool
-	theme       func(*theme.Theme)
+	customStyle flowstyle.Style
 }
 
 type ButtonVariant int
@@ -109,9 +108,10 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 	return b
 }
 
-// Theme customizes a copy of the active theme for this button's layout scope.
-func (b ButtonWidget) Theme(fn func(*theme.Theme)) ButtonWidget {
-	b.theme = fn
+// Style applies an instance style after the Button defaults, variant, size,
+// and inherited StyleScope declarations.
+func (b ButtonWidget) Style(value flowstyle.Style) ButtonWidget {
+	b.customStyle = value
 	return b
 }
 
@@ -131,101 +131,36 @@ func LayoutWithClickableNoEvents(b ButtonWidget, ctx *frame.Context, gtx layout.
 }
 
 func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) layout.Dimensions {
-	if restore := b.pushTheme(ctx); restore != nil {
-		defer restore()
-	}
 	activeTheme := frame.ActiveTheme(ctx)
-	var key string
-	if clickable == nil {
-		key, clickable = frame.ClickableWithKey(ctx, b.key)
-	} else {
-		key = frame.ClaimKey(ctx, state.KindClickable, b.key)
-	}
-	buttonState := buttonStateFor(ctx, key)
-	frame.RegisterFocusGroupItem(ctx, clickable, gtx.Enabled() && !b.disabled && !b.loading)
 	animGtx := gtx
-	presses := state.ActivePresses(clickable.History())
-	if b.disabled || b.loading {
-		gtx = gtx.Disabled()
-	} else if handleEvents {
-		for clickable.Clicked(gtx) {
-			if b.onClick != nil {
-				b.onClick()
-			}
-		}
-		frame.FocusOnPress(ctx, clickable, clickable.History(), presses)
-	}
-
-	sizeStyle := buttonSizeStyle(activeTheme, b.size, b.iconOnly)
+	click := interaction.BeginClick(ctx, gtx, b.key, clickable, !b.disabled && !b.loading, handleEvents, b.onClick)
+	styleState := click.StyleState
+	styleState.Disabled = b.disabled || !gtx.Enabled()
+	styleState.Loading = b.loading
+	resolvedStyle := b.resolveStyle(ctx, animGtx, click.Key, styleState)
 
 	if b.fullWidth {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	}
-	height := min(gtx.Dp(sizeStyle.height), gtx.Constraints.Max.Y)
-	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
-	if b.iconOnly && !b.fullWidth {
-		width := min(height, gtx.Constraints.Max.X)
-		gtx.Constraints.Max.X = width
-		gtx.Constraints.Min.X = width
+	if b.loading && !b.iconOnly && !b.fullWidth {
+		resolvedStyle = buttonLoadingStyle(gtx, activeTheme, b.size, resolvedStyle)
 	}
 
-	dims := clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		focused := gtx.Focused(clickable)
-		focusVisible := frame.FocusVisible(ctx, clickable, focused)
-		style := b.style(activeTheme, clickable)
-		if b.loading && !b.iconOnly && !b.fullWidth {
-			style.inset = buttonLoadingInset(gtx, activeTheme, b.size, style.inset)
-		}
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		motion := activeTheme.Motion
-		style.bg = buttonState.background(animGtx, style.bg, motion)
-		style.focus = buttonState.focusOpacity(animGtx, focusVisible && !b.disabled, motion)
-		child := b.styleChild(style)
 		if b.loading && theme.ResolveMotionDuration(motion, buttonSpinnerPeriod) > 0 {
 			animGtx.Execute(op.InvalidateCmd{})
 		}
-		macro := op.Record(gtx.Ops)
-		dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			if b.preparedSet {
 				b.prepared.call.Add(gtx.Ops)
 				return b.prepared.dims
 			}
-			return style.inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				restore := frame.PushColors(ctx, style.fg, style.bg)
-				defer restore()
-				return b.layoutContent(ctx, gtx, style, child, activeTheme)
-			})
+			return b.layoutContent(ctx, gtx, resolvedStyle, activeTheme)
 		})
-		call := macro.Stop()
-		semanticClip := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-		semantic.Button.Add(gtx.Ops)
-		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
-		if b.label != "" {
-			semantic.LabelOp(b.label).Add(gtx.Ops)
-		}
-
-		scale := float32(1)
-		if !b.group.grouped {
-			scale = buttonAnimationScale(gtx, clickable.History(), activeTheme, b.size, b.disabled)
-		}
-		stack := render.Scale(dims.Size, scale).Push(gtx.Ops)
-		drawButton(gtx, dims.Size, style)
-		call.Add(gtx.Ops)
-		stack.Pop()
-		semanticClip.Pop()
-		return dims
 	})
-	return dims
-}
 
-func (b ButtonWidget) activeTheme(ctx *frame.Context) *theme.Theme {
-	restore := b.pushTheme(ctx)
-	activeTheme := frame.ActiveTheme(ctx)
-	if restore != nil {
-		restore()
-	}
-	return activeTheme
-}
-
-func (b ButtonWidget) pushTheme(ctx *frame.Context) func() {
-	return frame.PushInstanceTheme(ctx, b.theme)
+	return layoutui.LayoutInteractiveResolved(ctx, gtx, resolvedStyle.root, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return click.Layout(gtx, visual, b.label)
+	})
 }

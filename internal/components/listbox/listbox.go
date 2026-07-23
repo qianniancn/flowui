@@ -1,13 +1,15 @@
 package listbox
 
 import (
+	"slices"
 	"time"
 
 	"gioui.org/layout"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ListBoxItem struct {
@@ -42,7 +44,6 @@ const (
 )
 
 type ListBoxWidget struct {
-	theme             func(*theme.Theme)
 	key               string
 	derivedOwner      string
 	derivedRole       string
@@ -67,6 +68,8 @@ type ListBoxWidget struct {
 	maxHeight         int
 	padding           unit.Dp
 	hasPadding        bool
+	customStyle       flowstyle.Style
+	partsStyle        flowstyle.Style
 }
 
 func (l ListBoxWidget) withPadding(padding unit.Dp) ListBoxWidget {
@@ -77,6 +80,13 @@ func (l ListBoxWidget) withPadding(padding unit.Dp) ListBoxWidget {
 
 func WithPadding(widget ListBoxWidget, padding unit.Dp) ListBoxWidget {
 	return widget.withPadding(padding)
+}
+
+// WithPartsStyle supplies compound-owner parts without applying the owner's
+// root declaration to the embedded ListBox root.
+func WithPartsStyle(widget ListBoxWidget, value flowstyle.Style) ListBoxWidget {
+	widget.partsStyle = value
+	return widget
 }
 
 // WithDerivedIdentity binds an embedded ListBox to an already-resolved owner
@@ -198,14 +208,15 @@ func (l ListBoxWidget) MaxHeight(dp int) ListBoxWidget {
 	return l
 }
 
-func (l ListBoxWidget) Theme(fn func(*theme.Theme)) ListBoxWidget {
-	l.theme = fn
+func (l ListBoxWidget) Style(value flowstyle.Style) ListBoxWidget {
+	l.customStyle = value
 	return l
 }
 
 func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, l.theme); restore != nil {
-		defer restore()
+	rootKey := frame.FullKey(ctx, l.key)
+	if l.derivedOwner != "" {
+		rootKey = frame.DerivedKey(ctx, l.derivedOwner, l.derivedRole)
 	}
 	state := l.stateFor(ctx)
 	state.beginFrame()
@@ -226,7 +237,23 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	if l.disabled {
 		gtx = gtx.Disabled()
 	}
-	return l.layout(ctx, gtx, state, entries, len(items) > 0)
+	hovered, pressed, focused := false, false, false
+	for _, item := range items {
+		itemState := state.item(item.Key)
+		hovered = hovered || itemState.Clickable.Hovered()
+		pressed = pressed || itemState.Clickable.Pressed()
+		focused = focused || gtx.Focused(&itemState.Clickable)
+	}
+	selected := l.selectedKey != "" || len(l.selectedKeys) > 0
+	return layoutui.LayoutStyled(ctx, gtx, rootKey, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: l.disabled || !gtx.Enabled(),
+		Selected: selected,
+	}, l.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return l.layout(ctx, gtx, rootKey, state, entries, len(items) > 0)
+	}))
 }
 
 func (l ListBoxWidget) activate(key string) {
@@ -326,12 +353,7 @@ func listBoxToggleSelectedKeys(selectedKeys []string, key string) []string {
 }
 
 func listBoxContainsKey(keys []string, key string) bool {
-	for _, current := range keys {
-		if current == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keys, key)
 }
 
 func listBoxSameKeys(a, b []string) bool {

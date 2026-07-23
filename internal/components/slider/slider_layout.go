@@ -3,15 +3,18 @@ package slider
 import (
 	"image"
 
-	"gioui.org/font"
+	"gioui.org/f32"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 func (s SliderWidget) layout(ctx *frame.Context, gtx layout.Context, state *sliderState, style sliderStyle, values sliderValues) layout.Dimensions {
@@ -87,45 +90,62 @@ func (s SliderWidget) layoutHeader(ctx *frame.Context, gtx layout.Context, style
 
 func (s SliderWidget) layoutLabel(ctx *frame.Context, gtx layout.Context, style sliderStyle) layout.Dimensions {
 	semantic.LabelOp(s.label).Add(gtx.Ops)
-	return text.New(s.label).
-		Size(float32(frame.ActiveTheme(ctx).Components.Slider.TextSize)).
-		Weight(font.Medium).
-		Color(style.label).
-		Layout(ctx, gtx)
+	return layoutui.LayoutResolved(ctx, gtx, style.label, text.New(s.label))
 }
 
 func (s SliderWidget) layoutOutput(ctx *frame.Context, gtx layout.Context, style sliderStyle, output string) layout.Dimensions {
-	return text.New(output).
-		Size(float32(frame.ActiveTheme(ctx).Components.Slider.TextSize)).
-		Weight(font.Medium).
-		Color(style.output).
-		Layout(ctx, gtx)
+	return layoutui.LayoutResolved(ctx, gtx, style.label, text.New(output))
 }
 
 func (s SliderWidget) layoutTrack(ctx *frame.Context, gtx layout.Context, state *sliderState, style sliderStyle, values sliderValues) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.Slider
-	thickness := max(gtx.Dp(tokens.TrackThickness), 1)
 	edge := max(gtx.Dp(tokens.EdgeInset), 0)
 	minimumLength := 2*edge + max(gtx.Dp(tokens.ThumbExtra), 1)
-	var size image.Point
-	if s.orientation == SliderVertical {
-		height := max(gtx.Constraints.Max.Y, minimumLength)
-		size = gtx.Constraints.Constrain(image.Pt(thickness, height))
-	} else {
-		width := max(gtx.Constraints.Max.X, minimumLength)
-		size = gtx.Constraints.Constrain(image.Pt(width, thickness))
-	}
+	return layoutui.LayoutResolved(ctx, gtx, style.track, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		size := gtx.Constraints.Constrain(gtx.Constraints.Min)
+		axisSize := s.axis().Convert(size)
+		axisSize.X = max(axisSize.X, minimumLength)
+		size = gtx.Constraints.Constrain(s.axis().Convert(axisSize))
+		thumbSize := sliderThumbSize(gtx, style.thumb, image.Pt(gtx.Dp(tokens.ThumbLength+tokens.ThumbExtra), gtx.Dp(tokens.TrackThickness)))
+		if s.orientation == SliderVertical {
+			thumbSize = sliderThumbSize(gtx, style.thumb, image.Pt(gtx.Dp(tokens.TrackThickness), gtx.Dp(tokens.ThumbLength+tokens.ThumbExtra)))
+		}
+		geometry := newSliderGeometry(size, s.axis(), edge, state.lower.Value, state.upper.Value, values.rangeMode, thumbSize)
+		s.layoutFill(ctx, gtx, style.fill, geometry, values.rangeMode)
+		s.layoutThumb(ctx, gtx, state, style.thumb, values, geometry, 0)
+		if values.rangeMode {
+			s.layoutThumb(ctx, gtx, state, style.thumb, values, geometry, 1)
+		}
+		// Float input ops are registered last so dragging owns pointer gestures even
+		// when the press starts directly over a thumb's keyboard focus region.
+		s.layoutFloatInputs(gtx, state, geometry, tokens.EdgeInset, values.rangeMode)
+		return layout.Dimensions{Size: size}
+	}))
+}
 
-	geometry := newSliderGeometry(size, s.axis(), edge, state.lower.Value, state.upper.Value, values.rangeMode, gtx.Dp(tokens.ThumbLength), gtx.Dp(tokens.ThumbExtra))
-	drawSliderTrack(gtx, frame.ActiveTheme(ctx), style, geometry, values.rangeMode)
-	s.layoutThumb(ctx, gtx, state, style, values, geometry, 0)
-	if values.rangeMode {
-		s.layoutThumb(ctx, gtx, state, style, values, geometry, 1)
+func sliderThumbSize(gtx layout.Context, style flowstyle.ResolvedStyle, fallback image.Point) image.Point {
+	if style.Box == nil {
+		return fallback
 	}
-	// Float input ops are registered last so dragging owns pointer gestures even
-	// when the press starts directly over a thumb's keyboard focus region.
-	s.layoutFloatInputs(gtx, state, geometry, tokens.EdgeInset, values.rangeMode)
-	return layout.Dimensions{Size: size}
+	if style.Box.Width != nil {
+		fallback.X = max(gtx.Dp(*style.Box.Width), 1)
+	}
+	if style.Box.Height != nil {
+		fallback.Y = max(gtx.Dp(*style.Box.Height), 1)
+	}
+	return fallback
+}
+
+func (s SliderWidget) layoutFill(ctx *frame.Context, gtx layout.Context, style flowstyle.ResolvedStyle, geometry sliderGeometry, rangeMode bool) {
+	rect := sliderFillRect(geometry, rangeMode)
+	if rect.Empty() {
+		return
+	}
+	fillGtx := gtx
+	fillGtx.Constraints = layout.Exact(rect.Size())
+	stack := op.Offset(rect.Min).Push(gtx.Ops)
+	layoutui.LayoutResolved(ctx, fillGtx, style, nil)
+	stack.Pop()
 }
 
 func (s SliderWidget) layoutFloatInputs(gtx layout.Context, state *sliderState, geometry sliderGeometry, pointerMargin unit.Dp, rangeMode bool) {
@@ -157,16 +177,19 @@ func (s SliderWidget) layoutFloatInputs(gtx layout.Context, state *sliderState, 
 	layoutInput(&state.upper, image.Rect(split, 0, geometry.size.X, geometry.size.Y))
 }
 
-func (s SliderWidget) layoutThumb(ctx *frame.Context, gtx layout.Context, state *sliderState, style sliderStyle, values sliderValues, geometry sliderGeometry, index int) {
+func (s SliderWidget) layoutThumb(ctx *frame.Context, gtx layout.Context, state *sliderState, style flowstyle.ResolvedStyle, values sliderValues, geometry sliderGeometry, index int) {
 	thumb := state.thumb(index)
 	rect := geometry.thumbRects[index]
 	focus := thumb.focusOpacity(ctx, gtx, gtx.Focused(&thumb.clickable))
 	scale := thumb.draggingScale(ctx, gtx, state.dragging(index), frame.ActiveTheme(ctx).Components.Slider.DraggingScale)
-	drawSliderThumb(gtx, frame.ActiveTheme(ctx), style, rect, s.axis(), focus, scale)
 
 	stack := op.Offset(rect.Min).Push(gtx.Ops)
 	thumbGtx := gtx
 	thumbGtx.Constraints = layout.Exact(rect.Size())
+	center := f32.Pt(float32(rect.Dx())/2, float32(rect.Dy())/2)
+	transform := op.Affine(f32.AffineId().Scale(center, f32.Pt(scale, scale))).Push(gtx.Ops)
+	layoutui.LayoutResolved(ctx, thumbGtx, styleruntime.ApplyOutlineOpacity(style, focus), nil)
+	transform.Pop()
 	thumb.clickable.Layout(thumbGtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.LabelOp(s.thumbSemanticLabel(values, index)).Add(gtx.Ops)
 		return layout.Dimensions{Size: rect.Size()}

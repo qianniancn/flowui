@@ -3,7 +3,7 @@ package badge
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Color selects the semantic color of a Badge.
@@ -47,15 +47,15 @@ const (
 
 // Widget displays a small status or count over an anchor component.
 type Widget struct {
-	theme     func(*theme.Theme)
-	anchor    frame.Widget
-	label     string
-	content   frame.Widget
-	alt       string
-	color     Color
-	variant   Variant
-	size      Size
-	placement Placement
+	anchor      frame.Widget
+	label       string
+	content     frame.Widget
+	alt         string
+	color       Color
+	variant     Variant
+	size        Size
+	placement   Placement
+	customStyle flowstyle.Style
 }
 
 // New creates a Badge. An empty label renders a dot indicator.
@@ -99,14 +99,11 @@ func (b Widget) Placement(placement Placement) Widget {
 	return b
 }
 
-func (b Widget) Theme(fn func(*theme.Theme)) Widget {
-	b.theme = fn
+func (b Widget) Style(value flowstyle.Style) Widget {
+	b.customStyle = value
 	return b
 }
 
 func (b Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, b.theme); restore != nil {
-		defer restore()
-	}
 	return b.layout(ctx, gtx)
 }

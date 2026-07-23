@@ -9,8 +9,10 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type menubarTriggerPlacement struct {
@@ -39,7 +41,26 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	progress := state.progress(gtx, openKey != "", frame.ActiveTheme(ctx).Motion)
 
 	macro := op.Record(gtx.Ops)
-	dims, panelAnchor, hasPanelAnchor := m.layoutTriggers(ctx, gtx, state, openKey, state.panelKey)
+	var panelAnchor image.Rectangle
+	var hasPanelAnchor bool
+	hovered, pressed, focused := false, false, false
+	for _, item := range m.items {
+		trigger := state.trigger(item.key)
+		hovered = hovered || trigger.clickable.Hovered()
+		pressed = pressed || trigger.clickable.Pressed()
+		focused = focused || gtx.Focused(&trigger.clickable)
+	}
+	dims := layoutui.LayoutStyled(ctx, gtx, state.key, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: m.disabled || !gtx.Enabled(),
+		Open:     openKey != "",
+	}, m.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		var dims layout.Dimensions
+		dims, panelAnchor, hasPanelAnchor = m.layoutTriggers(ctx, gtx, state, openKey, state.panelKey)
+		return dims
+	}))
 	call := macro.Stop()
 	root := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	semantic.EnabledOp(!m.disabled).Add(gtx.Ops)

@@ -3,7 +3,13 @@ package chip
 import (
 	"image/color"
 
+	"gioui.org/font"
+	"gioui.org/layout"
 	"gioui.org/unit"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -11,6 +17,64 @@ type chipStyle struct {
 	background color.NRGBA
 	foreground color.NRGBA
 	radius     unit.Dp
+}
+
+type chipResolvedStyle struct {
+	root          flowstyle.ResolvedStyle
+	label         flowstyle.ResolvedStyle
+	icon          flowstyle.ResolvedStyle
+	labelPaddingX unit.Dp
+	contentGap    unit.Dp
+}
+
+func (c Widget) resolveStyle(ctx *frame.Context, gtx layout.Context) chipResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults := chipDefaultDeclaration(activeTheme)
+	variant := chipVariantDeclaration(activeTheme, c.color, c.variant)
+	size := chipSizeDeclaration(activeTheme, c.size)
+	state := flowstyle.StyleState{}
+	tokens := chipSizeStyleFor(activeTheme, c.size)
+	resolved := chipResolvedStyle{
+		root:          styleruntime.ResolveStatic(ctx, state, defaults, variant, size, c.customStyle),
+		label:         styleruntime.ResolvePartStatic(ctx, flowstyle.PartLabel, state, defaults, variant, size, c.customStyle),
+		icon:          styleruntime.ResolvePartStatic(ctx, flowstyle.PartIcon, state, defaults, variant, size, c.customStyle),
+		labelPaddingX: tokens.labelPaddingX,
+		contentGap:    tokens.contentGap,
+	}
+	if !styleruntime.HasTransitions(resolved.root, resolved.label, resolved.icon) {
+		return resolved
+	}
+	key := frame.ClaimKey(ctx, stateutil.KindStyle, "chip")
+	resolved.root = styleruntime.ApplyTransitions(ctx, gtx, key, resolved.root)
+	resolved.label = styleruntime.ApplyPartTransitions(ctx, gtx, key, flowstyle.PartLabel, resolved.label)
+	resolved.icon = styleruntime.ApplyPartTransitions(ctx, gtx, key, flowstyle.PartIcon, resolved.icon)
+	return resolved
+}
+
+func chipDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	return flowstyle.Style{}.
+		Radius(activeTheme.Components.Chip.Radius).
+		Opacity(1).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontWeight(int(font.Medium)).MaxLines(1))
+
+}
+
+func chipVariantDeclaration(activeTheme *theme.Theme, chipColor Color, variant Variant) flowstyle.Style {
+	resolved := chipStyleFor(activeTheme, chipColor, variant)
+	return flowstyle.Style{}.
+		Background(flowstyle.SolidColor{Color: resolved.background}).
+		TextColor(flowstyle.SolidColor{Color: resolved.foreground})
+
+}
+
+func chipSizeDeclaration(activeTheme *theme.Theme, size Size) flowstyle.Style {
+	resolved := chipSizeStyleFor(activeTheme, size)
+	return flowstyle.Style{}.
+		Height(resolved.height).
+		PaddingX(resolved.paddingX).
+		PaddingY(resolved.paddingY).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontSize(resolved.textSize).LineHeight(resolved.lineHeight))
+
 }
 
 type chipSizeStyle struct {
@@ -25,8 +89,8 @@ type chipSizeStyle struct {
 
 func chipStyleFor(activeTheme *theme.Theme, chipColor Color, variant Variant) chipStyle {
 	palette := activeTheme.Palette
-	defaultBackground := theme.ColorOr(palette.SurfaceTertiary, palette.SurfacePressed)
-	defaultForeground := theme.ColorOr(palette.SurfaceTertiaryForeground, palette.Foreground)
+	defaultBackground := palette.SurfaceTertiary
+	defaultForeground := palette.SurfaceTertiaryForeground
 	style := chipStyle{
 		background: defaultBackground,
 		foreground: defaultForeground,
@@ -54,13 +118,13 @@ func chipStyleFor(activeTheme *theme.Theme, chipColor Color, variant Variant) ch
 func chipSolidColors(palette theme.Palette, chipColor Color, defaultBackground, defaultForeground color.NRGBA) (color.NRGBA, color.NRGBA) {
 	switch chipColor {
 	case ColorAccent:
-		return palette.Accent, theme.ColorOr(palette.AccentForeground, defaultForeground)
+		return palette.Accent, palette.AccentForeground
 	case ColorSuccess:
-		return palette.Success, theme.ColorOr(palette.SuccessForeground, defaultForeground)
+		return palette.Success, palette.SuccessForeground
 	case ColorWarning:
-		return palette.Warning, theme.ColorOr(palette.WarningForeground, defaultForeground)
+		return palette.Warning, palette.WarningForeground
 	case ColorDanger:
-		return palette.Danger, theme.ColorOr(palette.DangerForeground, defaultForeground)
+		return palette.Danger, palette.DangerForeground
 	default:
 		return defaultBackground, defaultForeground
 	}
@@ -69,15 +133,15 @@ func chipSolidColors(palette theme.Palette, chipColor Color, defaultBackground, 
 func chipSoftColors(palette theme.Palette, chipColor Color, defaultForeground color.NRGBA) (color.NRGBA, color.NRGBA) {
 	switch chipColor {
 	case ColorAccent:
-		return softColor(palette.AccentSoft, palette.Accent), theme.ColorOr(palette.AccentSoftForeground, palette.Accent)
+		return palette.AccentSoft, palette.AccentSoftForeground
 	case ColorSuccess:
-		return softColor(palette.SuccessSoft, palette.Success), palette.SuccessSoftForegroundColor()
+		return palette.SuccessSoft, palette.SuccessSoftForegroundColor()
 	case ColorWarning:
-		return softColor(palette.WarningSoft, palette.Warning), palette.WarningSoftForegroundColor()
+		return palette.WarningSoft, palette.WarningSoftForegroundColor()
 	case ColorDanger:
-		return softColor(palette.DangerSoft, palette.Danger), theme.ColorOr(palette.DangerSoftForeground, palette.Danger)
+		return palette.DangerSoft, palette.DangerSoftForeground
 	default:
-		return defaultSoftColor(theme.ColorOr(palette.SurfaceTertiary, palette.SurfacePressed)), defaultForeground
+		return defaultSoftColor(palette.SurfaceTertiary), defaultForeground
 	}
 }
 
@@ -110,14 +174,4 @@ func chipSizeStyleFor(activeTheme *theme.Theme, size Size) chipSizeStyle {
 		style.textSize = tokens.LargeTextSize
 	}
 	return style
-}
-
-func softColor(value, fallback color.NRGBA) color.NRGBA {
-	if value.A != 0 {
-		return value
-	}
-	if fallback.A != 0 {
-		fallback.A = 0x26
-	}
-	return fallback
 }

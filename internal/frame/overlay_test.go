@@ -2,7 +2,6 @@ package frame
 
 import (
 	"image"
-	"image/color"
 	"math"
 	"reflect"
 	"testing"
@@ -12,41 +11,34 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/FlowUI/internal/style"
 )
 
-func TestOverlayCapturesInstanceTheme(t *testing.T) {
-	ctx := New(nil, nil, locale.LanguageAuto)
-	BeginFrameWithViewport(ctx, image.Pt(100, 100))
-	restore := PushInstanceTheme(ctx, func(active *theme.Theme) {
-		active.Components.Button.Radius = 7
-		active.Palette.Accent = color.NRGBA{R: 7, A: 0xff}
-	})
-	var radiusSeen unit.Dp
-	var accentSeen color.NRGBA
+func TestOverlayCapturesStyleScopeForLayoutTailAndAfterWork(t *testing.T) {
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	value := style.Style{}.Background(style.RGB(0x123456))
+	restore := PushStyle(ctx, value)
+	seen := make([]int, 0, 3)
+	record := func() { seen = append(seen, len(ActiveStyles(ctx))) }
 	RegisterOverlay(ctx, OverlayRequest{
-		Key: "themed",
+		Key: "styled",
 		Layout: func(layout.Context, image.Rectangle, bool) layout.Dimensions {
-			radiusSeen = ActiveTheme(ctx).Components.Button.Radius
-			accentSeen = ActiveTheme(ctx).Palette.Accent
+			record()
 			return layout.Dimensions{}
 		},
+		Tail: func(layout.Context) { record() },
 	})
+	AfterOverlays(ctx, record)
 	restore()
-	gtx := layout.Context{Constraints: layout.Exact(image.Pt(100, 100)), Ops: new(op.Ops)}
-	LayoutOverlays(ctx, gtx)
 
-	if radiusSeen != 7 {
-		t.Fatalf("overlay radius = %v, want 7", radiusSeen)
+	LayoutOverlays(ctx, gtx)
+	if want := []int{1, 1, 1}; !reflect.DeepEqual(seen, want) {
+		t.Fatalf("captured style counts = %v, want %v", seen, want)
 	}
-	if accentSeen.R != 7 {
-		t.Fatalf("overlay accent = %#v, want red 7", accentSeen)
-	}
-	if radius := ActiveTheme(ctx).Components.Button.Radius; radius != 24 {
-		t.Fatalf("active radius after overlays = %v, want 24", radius)
+	if len(ActiveStyles(ctx)) != 0 {
+		t.Fatal("overlay style scope leaked")
 	}
 }
 
@@ -555,7 +547,6 @@ func TestOverlayEventOwnerTransfersOneFrameAfterCurrentTop(t *testing.T) {
 	layoutFrame := func(keys ...string) map[string]bool {
 		interactive := make(map[string]bool, len(keys))
 		for _, key := range keys {
-			key := key
 			RegisterOverlay(ctx, OverlayRequest{
 				Key: key,
 				Layout: func(_ layout.Context, _ image.Rectangle, ownsEvents bool) layout.Dimensions {

@@ -15,6 +15,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
@@ -54,13 +55,79 @@ func TestAlertOptionsUseValueSemantics(t *testing.T) {
 		Status(StatusDanger).
 		Indicator(indicator).
 		Content(content).
-		Action(action)
+		Action(action).
+		Style(flowstyle.Style{}.Radius(4))
 
 	if base.status != StatusDefault || base.indicator != nil || base.content != nil || base.action != nil {
 		t.Fatalf("base alert was mutated: %#v", base)
 	}
 	if configured.status != StatusDanger || configured.indicator != indicator || configured.content != content || configured.action != action {
 		t.Fatalf("configured alert = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured alert did not retain its style")
+	}
+}
+
+func TestAlertStylePartsSeparateRootLabelAndIndicator(t *testing.T) {
+	rootColor := color.NRGBA{R: 1, A: 0xff}
+	labelColor := color.NRGBA{G: 2, A: 0xff}
+	indicatorColor := color.NRGBA{B: 3, A: 0xff}
+	descriptionColor := color.NRGBA{R: 4, A: 0xff}
+	resolved := New("Title", "Description").Style(
+		flowstyle.Style{}.
+			TextColor(flowstyle.SolidColor{Color: rootColor}).
+			Part(flowstyle.PartLabel, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: labelColor})).
+			Part(flowstyle.PartDescription, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: descriptionColor})).
+			Part(flowstyle.PartIndicator, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: indicatorColor})),
+	).resolveStyle(newAlertContext(nil), alertTestContext())
+
+	rootText := resolved.root.Text.Color.(flowstyle.SolidColor).Color
+	titleText := resolved.title.Text.Color.(flowstyle.SolidColor).Color
+	descriptionText := resolved.description.Text.Color.(flowstyle.SolidColor).Color
+	indicatorText := resolved.indicator.Text.Color.(flowstyle.SolidColor).Color
+	if rootText != rootColor || titleText != labelColor || descriptionText != descriptionColor || indicatorText != indicatorColor {
+		t.Fatalf("alert parts = root %#v title %#v description %#v indicator %#v", rootText, titleText, descriptionText, indicatorText)
+	}
+}
+
+func TestAlertConditionalTransitionsAnimateRootAndPart(t *testing.T) {
+	ctx := newAlertContext(nil)
+	start := time.Unix(1, 0)
+	rootFrom := flowstyle.RGB(0x102030).Color
+	rootTo := flowstyle.RGB(0x8090a0).Color
+	labelFrom := flowstyle.RGB(0x203040).Color
+	labelTo := flowstyle.RGB(0x90a0b0).Color
+	resolveAt := func(now time.Time, active bool) (color.NRGBA, color.NRGBA) {
+		frame.BeginFrame(ctx)
+		resolved := New("Status", "").Style(
+			flowstyle.Style{}.
+				Background(flowstyle.SolidColor{Color: rootFrom}).
+				Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
+				When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: rootTo})).
+				Part(flowstyle.PartLabel, flowstyle.Style{}.
+					TextColor(flowstyle.SolidColor{Color: labelFrom}).
+					Transition(flowstyle.PropTextColor, 100*time.Millisecond).
+					When(flowstyle.If(active), flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: labelTo}))),
+		).resolveStyle(ctx, layout.Context{Ops: new(op.Ops), Now: now})
+		frame.EndFrame(ctx)
+		root := resolved.root.Paint.Background.(flowstyle.SolidColor).Color
+		label := resolved.title.Text.Color.(flowstyle.SolidColor).Color
+		return root, label
+	}
+
+	if root, label := resolveAt(start, false); root != rootFrom || label != labelFrom {
+		t.Fatalf("initial colors = %#v/%#v", root, label)
+	}
+	if root, label := resolveAt(start, true); root != rootFrom || label != labelFrom {
+		t.Fatalf("transition start = %#v/%#v", root, label)
+	}
+	root, label := resolveAt(start.Add(50*time.Millisecond), true)
+	if root == rootFrom || root == rootTo || label == labelFrom || label == labelTo {
+		t.Fatalf("transition midpoint = %#v/%#v", root, label)
+	}
+	if root, label := resolveAt(start.Add(100*time.Millisecond), true); root != rootTo || label != labelTo {
+		t.Fatalf("transition end = %#v/%#v", root, label)
 	}
 }
 
@@ -118,27 +185,27 @@ func TestAlertStatusColorsMatchHeroUI(t *testing.T) {
 	}
 }
 
-func TestAlertStatusColorsUsePaletteFallbacks(t *testing.T) {
+func TestAlertStatusColorsHonorTransparentPaletteValues(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	activeTheme.Palette.SurfaceForeground = color.NRGBA{}
 	activeTheme.Palette.AccentSoftForeground = color.NRGBA{}
 	activeTheme.Palette.SuccessSoftForeground = color.NRGBA{}
 	activeTheme.Palette.WarningSoftForeground = color.NRGBA{}
 	activeTheme.Palette.DangerSoftForeground = color.NRGBA{}
-	if got := alertStyleFor(&activeTheme, StatusDefault).title; got != activeTheme.Palette.Foreground {
-		t.Fatalf("default fallback = %#v", got)
+	if got := alertStyleFor(&activeTheme, StatusDefault).title; got.A != 0 {
+		t.Fatalf("default color = %#v, want transparent", got)
 	}
-	if got := alertStyleFor(&activeTheme, StatusAccent).title; got != activeTheme.Palette.Accent {
-		t.Fatalf("accent fallback = %#v", got)
+	if got := alertStyleFor(&activeTheme, StatusAccent).title; got.A != 0 {
+		t.Fatalf("accent color = %#v, want transparent", got)
 	}
-	if got := alertStyleFor(&activeTheme, StatusSuccess).title; got != activeTheme.Palette.Success {
-		t.Fatalf("success fallback = %#v", got)
+	if got := alertStyleFor(&activeTheme, StatusSuccess).title; got.A != 0 {
+		t.Fatalf("success color = %#v, want transparent", got)
 	}
-	if got := alertStyleFor(&activeTheme, StatusWarning).title; got != activeTheme.Palette.Warning {
-		t.Fatalf("warning fallback = %#v", got)
+	if got := alertStyleFor(&activeTheme, StatusWarning).title; got.A != 0 {
+		t.Fatalf("warning color = %#v, want transparent", got)
 	}
-	if got := alertStyleFor(&activeTheme, StatusDanger).title; got != activeTheme.Palette.Danger {
-		t.Fatalf("danger fallback = %#v", got)
+	if got := alertStyleFor(&activeTheme, StatusDanger).title; got.A != 0 {
+		t.Fatalf("danger color = %#v, want transparent", got)
 	}
 }
 

@@ -1,13 +1,11 @@
 package button
 
 import (
-	"image"
-
-	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/text"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -18,74 +16,57 @@ type buttonPreparedContent struct {
 }
 
 func (b ButtonWidget) prepareContent(ctx *frame.Context, gtx layout.Context) buttonPreparedContent {
-	if restore := b.pushTheme(ctx); restore != nil {
-		defer restore()
-	}
 	activeTheme := frame.ActiveTheme(ctx)
-	style := buttonSizeStyle(activeTheme, b.size, b.iconOnly)
-	height := min(gtx.Dp(style.height), gtx.Constraints.Max.Y)
-	colors := buttonColors(activeTheme, b.variant)
-	style.fg = colors.fg
-	style.bg = colors.bg
-	if b.disabled {
-		style.fg = activeTheme.DisabledColor(style.fg)
-		style.bg = activeTheme.DisabledColor(style.bg)
-	}
+	style := b.staticStyle(ctx, flowstyle.StyleState{Disabled: b.disabled, Loading: b.loading})
 	if b.loading && !b.iconOnly && !b.fullWidth {
-		style.inset = buttonLoadingInset(gtx, activeTheme, b.size, style.inset)
+		style = buttonLoadingStyle(gtx, activeTheme, b.size, style)
 	}
-	child := b.styleChild(style)
 	measureGtx := gtx
 	if b.disabled || b.loading {
 		measureGtx = measureGtx.Disabled()
 	}
-	measureGtx.Constraints.Min = image.Point{}
-	measureGtx.Constraints.Max.Y = height
+	measureGtx.Constraints.Min.X = 0
+	measureGtx.Constraints.Min.Y = 0
 	macro := op.Record(gtx.Ops)
-	dims := style.inset.Layout(measureGtx, func(gtx layout.Context) layout.Dimensions {
-		restore := frame.PushColors(ctx, style.fg, style.bg)
-		defer restore()
-		return b.layoutContent(ctx, gtx, style, child, activeTheme)
-	})
+	dims := b.layoutContent(ctx, measureGtx, style, activeTheme)
 	call := macro.Stop()
-	width := dims.Size.X
-	if b.iconOnly {
-		width = height
-	}
-	return buttonPreparedContent{call: call, dims: dims, width: width}
+	visualMacro := op.Record(gtx.Ops)
+	visualDims := layoutui.LayoutResolved(ctx, measureGtx, style.root, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			call.Add(gtx.Ops)
+			return dims
+		})
+	}))
+	_ = visualMacro.Stop()
+	return buttonPreparedContent{call: call, dims: dims, width: visualDims.Size.X}
 }
 
-func (b ButtonWidget) layoutContent(ctx *frame.Context, gtx layout.Context, style buttonStyle, child frame.Widget, activeTheme *theme.Theme) layout.Dimensions {
+func (b ButtonWidget) layoutContent(ctx *frame.Context, gtx layout.Context, style buttonStyle, activeTheme *theme.Theme) layout.Dimensions {
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutui.LayoutResolved(ctx, gtx, style.content, b.child)
+	})
 	if !b.loading {
-		return child.Layout(ctx, gtx)
+		return content.Layout(ctx, gtx)
 	}
-	spinner := func(gtx layout.Context) layout.Dimensions {
-		period := theme.ResolveMotionDuration(activeTheme.Motion, buttonSpinnerPeriod)
-		return drawButtonSpinner(gtx, buttonSpinnerSize(activeTheme, b.size), activeTheme.Components.Button.SpinnerStrokeWidth, style.fg, period)
-	}
+	spinner := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutui.LayoutResolved(ctx, gtx, style.indicatorPart, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			period := theme.ResolveMotionDuration(activeTheme.Motion, buttonSpinnerPeriod)
+			return drawButtonSpinner(gtx, buttonSpinnerSize(activeTheme, b.size), activeTheme.Components.Button.SpinnerStrokeWidth, ctx.ForegroundColor(), period)
+		}))
+	})
 	if b.iconOnly {
-		return spinner(gtx)
+		return spinner.Layout(ctx, gtx)
 	}
 	return layout.Flex{
 		Axis:      layout.Horizontal,
 		Alignment: layout.Middle,
 		Gap:       gtx.Dp(activeTheme.Components.Button.ContentGap),
 	}.Layout(gtx,
-		layout.Rigid(spinner),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return child.Layout(ctx, gtx)
+			return spinner.Layout(ctx, gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return content.Layout(ctx, gtx)
 		}),
 	)
-}
-
-func (b ButtonWidget) styleChild(style buttonStyle) frame.Widget {
-	child := b.child
-	text, ok := child.(text.Widget)
-	if !ok {
-		return child
-	}
-	text = text.DefaultColor(style.fg)
-	text = text.DefaultSize(style.textSize)
-	text = text.DefaultWeight(font.Medium)
-	return text
 }

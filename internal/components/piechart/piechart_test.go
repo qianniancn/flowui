@@ -14,8 +14,17 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
+
+func TestPieChartStyleUsesValueSemantics(t *testing.T) {
+	base := New("share", []Data{Slice("one", "One", 1)})
+	styled := base.Style(flowstyle.Style{}.Radius(4))
+	if base.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil || styled.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("PieChart style did not preserve value semantics")
+	}
+}
 
 func TestPieChartAllocatesEChartsAngles(t *testing.T) {
 	slices := []resolvedSlice{{value: 1}, {value: 3}}

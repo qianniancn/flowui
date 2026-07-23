@@ -15,6 +15,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -114,14 +115,14 @@ func TestSliderDecimalStepDoesNotLeakFloatingPointNoise(t *testing.T) {
 }
 
 func TestSliderHeroUIGeometry(t *testing.T) {
-	horizontal := newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, .25, .75, true, 24, 4)
+	horizontal := newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, .25, .75, true, image.Pt(28, 20))
 	if horizontal.centers[0] != image.Pt(81, 10) || horizontal.centers[1] != image.Pt(219, 10) {
 		t.Fatalf("horizontal centers = %v", horizontal.centers)
 	}
 	if horizontal.thumbRects[0].Size() != image.Pt(28, 20) {
 		t.Fatalf("horizontal thumb = %v, want (28,20)", horizontal.thumbRects[0].Size())
 	}
-	vertical := newSliderGeometry(image.Pt(20, 300), layout.Vertical, 12, .25, .75, true, 24, 4)
+	vertical := newSliderGeometry(image.Pt(20, 300), layout.Vertical, 12, .25, .75, true, image.Pt(20, 28))
 	if vertical.centers[0] != image.Pt(10, 219) || vertical.centers[1] != image.Pt(10, 81) {
 		t.Fatalf("vertical centers = %v", vertical.centers)
 	}
@@ -131,7 +132,7 @@ func TestSliderHeroUIGeometry(t *testing.T) {
 }
 
 func TestSliderGeometryKeepsCentersInsideTinyConstraints(t *testing.T) {
-	geometry := newSliderGeometry(image.Pt(10, 20), layout.Horizontal, 12, 0, 1, true, 24, 4)
+	geometry := newSliderGeometry(image.Pt(10, 20), layout.Horizontal, 12, 0, 1, true, image.Pt(28, 20))
 	if geometry.centers[0].X < 0 || geometry.centers[0].X > 10 || geometry.centers[1].X < 0 || geometry.centers[1].X > 10 {
 		t.Fatalf("tiny slider centers = %v, want centers within width", geometry.centers)
 	}
@@ -141,7 +142,7 @@ func TestSliderGeometryKeepsCentersInsideTinyConstraints(t *testing.T) {
 }
 
 func TestSliderFillGeometry(t *testing.T) {
-	geometry := newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, .25, .75, true, 24, 4)
+	geometry := newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, .25, .75, true, image.Pt(28, 20))
 	if got := sliderFillRect(geometry, true); got != image.Rect(81, 0, 219, 20) {
 		t.Fatalf("range fill = %v", got)
 	}
@@ -152,8 +153,8 @@ func TestSliderFillGeometry(t *testing.T) {
 
 func TestDisabledSliderStyleUsesThemeOpacity(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	enabled := sliderStyleFor(&activeTheme, false)
-	disabled := sliderStyleFor(&activeTheme, true)
+	enabled := sliderColorsFor(&activeTheme, false)
+	disabled := sliderColorsFor(&activeTheme, true)
 	if enabled.fill != activeTheme.Palette.Accent || enabled.track != activeTheme.Palette.SurfaceRaised {
 		t.Fatalf("enabled style = %#v", enabled)
 	}
@@ -162,6 +163,44 @@ func TestDisabledSliderStyleUsesThemeOpacity(t *testing.T) {
 	}
 	if disabled.focus != (color.NRGBA{}) {
 		t.Fatal("disabled slider should not draw a focus ring")
+	}
+}
+
+func TestSliderResolvesSemanticParts(t *testing.T) {
+	track := color.NRGBA{R: 1, A: 0xff}
+	fill := color.NRGBA{G: 2, A: 0xff}
+	thumb := color.NRGBA{B: 3, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: track}).
+			BorderWidth(2)).
+		Part(flowstyle.PartFill, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: fill})).
+		Part(flowstyle.PartThumb, flowstyle.Style{}.
+			Width(32).
+			Height(24).
+			Background(flowstyle.SolidColor{Color: thumb}).
+			Radius(7))
+
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	var ops op.Ops
+	resolved := Slider("volume", 50).Style(custom).resolveStyle(ctx, layout.Context{Constraints: layout.Constraints{Max: image.Pt(200, 40)}, Ops: &ops}, "volume", flowstyle.StyleState{})
+	if got := resolved.track.Paint.Background.(flowstyle.SolidColor).Color; got != track {
+		t.Fatalf("track background = %#v", got)
+	}
+	if resolved.track.Paint.Border == nil || resolved.track.Paint.Border.Width == nil || *resolved.track.Paint.Border.Width != 2 {
+		t.Fatalf("track border = %#v", resolved.track.Paint.Border)
+	}
+	if got := resolved.fill.Paint.Background.(flowstyle.SolidColor).Color; got != fill {
+		t.Fatalf("fill background = %#v", got)
+	}
+	if got := resolved.thumb.Paint.Background.(flowstyle.SolidColor).Color; got != thumb {
+		t.Fatalf("thumb background = %#v", got)
+	}
+	if resolved.thumb.Box == nil || resolved.thumb.Box.Width == nil || *resolved.thumb.Box.Width != 32 || resolved.thumb.Box.Height == nil || *resolved.thumb.Box.Height != 24 {
+		t.Fatalf("thumb box = %#v", resolved.thumb.Box)
+	}
+	if resolved.thumb.Paint.Radius == nil || *resolved.thumb.Paint.Radius != 7 {
+		t.Fatalf("thumb radius = %#v", resolved.thumb.Paint)
 	}
 }
 
@@ -184,6 +223,33 @@ func TestSliderDefaultAndVerticalLayout(t *testing.T) {
 	})
 	if dims.Size != image.Pt(80, 300) {
 		t.Fatalf("vertical size = %v, want (80,300)", dims.Size)
+	}
+}
+
+func TestSliderLabelPartUsesCommonBoxRenderer(t *testing.T) {
+	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(300, 200)}, Ops: new(op.Ops)}
+	base := Slider("volume", 30).
+		Label("Volume").
+		Layout(sliderTestContext(), gtx)
+	gtx.Ops = new(op.Ops)
+	styled := Slider("volume", 30).
+		Label("Volume").
+		Style(flowstyle.Style{}.Part(flowstyle.PartLabel, flowstyle.Style{}.PaddingY(7))).
+		Layout(sliderTestContext(), gtx)
+	if styled.Size.Y != base.Size.Y+14 {
+		t.Fatalf("styled label height = %d, want %d", styled.Size.Y, base.Size.Y+14)
+	}
+}
+
+func TestSliderTrackPartUsesCommonBoxRenderer(t *testing.T) {
+	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(300, 200)}, Ops: new(op.Ops)}
+	base := Slider("volume", 30).Layout(sliderTestContext(), gtx)
+	gtx.Ops = new(op.Ops)
+	styled := Slider("volume", 30).
+		Style(flowstyle.Style{}.Part(flowstyle.PartTrack, flowstyle.Style{}.MarginY(7))).
+		Layout(sliderTestContext(), gtx)
+	if styled.Size.Y != base.Size.Y+14 {
+		t.Fatalf("styled track height = %d, want %d", styled.Size.Y, base.Size.Y+14)
 	}
 }
 

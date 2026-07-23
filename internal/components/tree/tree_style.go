@@ -36,7 +36,7 @@ func treeRootStyleFor(activeTheme *theme.Theme, variant Variant) treeRootStyle {
 	style := treeRootStyle{foreground: activeTheme.Palette.Foreground}
 	if variant == VariantSurface {
 		style.background = activeTheme.Palette.Surface
-		style.foreground = theme.ColorOr(activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Foreground)
+		style.foreground = activeTheme.Palette.SurfaceForeground
 		style.shadow = true
 	}
 	return style
@@ -60,16 +60,16 @@ func treeItemStyleFor(activeTheme *theme.Theme, selected, hovered, disabled bool
 		opacity:     1,
 	}
 	if hovered {
-		style.background = theme.ColorOr(activeTheme.Palette.SurfaceTertiary, activeTheme.Palette.SurfaceRaised)
+		style.background = activeTheme.Palette.SurfaceTertiary
 	}
 	if selected {
 		style.background = activeTheme.Palette.AccentSoft
-		style.foreground = theme.ColorOr(activeTheme.Palette.AccentSoftForeground, activeTheme.Palette.Accent)
+		style.foreground = activeTheme.Palette.AccentSoftForeground
 		style.description = style.foreground
 		style.description.A = byte(float32(style.description.A)*0.78 + 0.5)
 		style.chevron = style.foreground
 		if hovered {
-			style.background = theme.ColorOr(activeTheme.Palette.AccentSoftHover, activeTheme.Palette.AccentSoft)
+			style.background = activeTheme.Palette.AccentSoftHover
 		}
 	}
 	if disabled {

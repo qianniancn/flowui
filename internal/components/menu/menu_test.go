@@ -13,10 +13,10 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -246,21 +246,6 @@ func TestSubmenuItemFocusRingUsesRequestedOrigin(t *testing.T) {
 	}
 }
 
-func TestMenuFocusRingStaysInsideItemBounds(t *testing.T) {
-	itemRect := image.Rect(0, 0, 200, 36)
-	focusRect, focusRadius := menuFocusRingGeometry(itemRect, 12, 2, 2)
-	if focusRect != image.Rect(3, 3, 197, 33) {
-		t.Fatalf("focus rect = %v, want an inset ring", focusRect)
-	}
-	if focusRadius != 9 {
-		t.Fatalf("focus radius = %d, want 9", focusRadius)
-	}
-	strokeBounds := focusRect.Inset(-1)
-	if !strokeBounds.In(itemRect) {
-		t.Fatalf("focus ring stroke %v escapes item bounds %v", strokeBounds, itemRect)
-	}
-}
-
 func TestMenuHeroUIOverlayShadow(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	style := menuPanelStyle(&activeTheme)
@@ -281,13 +266,15 @@ func TestMenuShadowHonorsThemeColorAlpha(t *testing.T) {
 	}
 }
 
-func TestMenuHeroUIPressedScale(t *testing.T) {
+func TestMenuPartItemUsesPressedScale(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	start := time.Unix(1, 0)
-	gtx := menuTestLayoutContext(nil, start.Add(menuItemPressDuration/2))
-	scale := menuItemScale(gtx, []widget.Press{{Start: start}}, &activeTheme, false)
-	if scale <= activeTheme.Components.Menu.PressedScale || scale >= 1 {
-		t.Fatalf("pressed menu scale = %v", scale)
+	resolved := flowstyle.CascadePart(
+		flowstyle.StyleState{Pressed: true},
+		flowstyle.PartItem,
+		menuItemDefaultDeclaration(&activeTheme, activeTheme.Components.Menu),
+	)
+	if resolved.Trans == nil || resolved.Trans.ScaleX == nil || *resolved.Trans.ScaleX != activeTheme.Components.Menu.PressedScale {
+		t.Fatalf("pressed menu item style = %#v", resolved.Trans)
 	}
 }
 

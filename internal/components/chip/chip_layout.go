@@ -2,63 +2,29 @@ package chip
 
 import (
 	"image"
-	"image/color"
 
-	"gioui.org/font"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
-	"gioui.org/widget/material"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	textui "github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func (c Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	activeTheme := frame.ActiveTheme(ctx)
-	style := chipStyleFor(activeTheme, c.color, c.variant)
-	sizeStyle := chipSizeStyleFor(activeTheme, c.size)
-	height := min(max(gtx.Dp(sizeStyle.height), gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
-	gtx.Constraints.Min.Y = height
-	gtx.Constraints.Max.Y = height
-
-	macro := op.Record(gtx.Ops)
-	var contentDims layout.Dimensions
-	func() {
-		contentBackground := style.background
-		if contentBackground.A == 0 {
-			contentBackground = ctx.BackgroundColor()
+	resolved := c.resolveStyle(ctx, gtx)
+	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		if c.label != "" {
+			semantic.LabelOp(c.label).Add(gtx.Ops)
 		}
-		restore := frame.PushColors(ctx, style.foreground, contentBackground)
-		defer restore()
-		contentDims = layout.Inset{
-			Top:    sizeStyle.paddingY,
-			Right:  sizeStyle.paddingX,
-			Bottom: sizeStyle.paddingY,
-			Left:   sizeStyle.paddingX,
-		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return c.layoutContent(ctx, gtx, sizeStyle, style.foreground)
-		})
-	}()
-	content := macro.Stop()
-
-	size := gtx.Constraints.Constrain(contentDims.Size)
-	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(style.radius), 0), min(size.X, size.Y)/2)
-	if !rect.Empty() && style.background.A != 0 {
-		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-	}
-	root := clip.UniformRRect(rect, radius).Push(gtx.Ops)
-	if c.label != "" {
-		semantic.LabelOp(c.label).Add(gtx.Ops)
-	}
-	content.Add(gtx.Ops)
-	root.Pop()
-	return layout.Dimensions{Size: size, Baseline: contentDims.Baseline}
+		return c.layoutContent(ctx, gtx, resolved)
+	})
+	return layoutui.LayoutResolved(ctx, gtx, resolved.root, content)
 }
 
-func (c Widget) layoutContent(ctx *frame.Context, gtx layout.Context, sizeStyle chipSizeStyle, foreground color.NRGBA) layout.Dimensions {
-	gap := max(gtx.Dp(sizeStyle.contentGap), 0)
+func (c Widget) layoutContent(ctx *frame.Context, gtx layout.Context, style chipResolvedStyle) layout.Dimensions {
+	gap := max(gtx.Dp(style.contentGap), 0)
 	gapCount := 0
 	if c.startContent != nil {
 		gapCount++
@@ -67,20 +33,20 @@ func (c Widget) layoutContent(ctx *frame.Context, gtx layout.Context, sizeStyle 
 		gapCount++
 	}
 	gapsWidth := gap * gapCount
-	labelMinimum := min(gtx.Dp(sizeStyle.labelPaddingX)*2, max(gtx.Constraints.Max.X-gapsWidth, 0))
+	labelMinimum := min(gtx.Dp(style.labelPaddingX)*2, max(gtx.Constraints.Max.X-gapsWidth, 0))
 	accessoryWidth := max(gtx.Constraints.Max.X-gapsWidth-labelMinimum, 0)
 
 	accessoryGtx := gtx
 	accessoryGtx.Constraints.Min = image.Point{}
 	accessoryGtx.Constraints.Max.X = accessoryWidth
-	end := recordChipWidget(ctx, accessoryGtx, c.endContent)
+	end := recordChipWidget(ctx, accessoryGtx, style.icon, c.endContent)
 	accessoryGtx.Constraints.Max.X = max(accessoryWidth-end.dims.Size.X, 0)
-	start := recordChipWidget(ctx, accessoryGtx, c.startContent)
+	start := recordChipWidget(ctx, accessoryGtx, style.icon, c.startContent)
 
 	labelGtx := gtx
 	labelGtx.Constraints.Min = image.Point{}
 	labelGtx.Constraints.Max.X = max(gtx.Constraints.Max.X-gapsWidth-start.dims.Size.X-end.dims.Size.X, 0)
-	label := c.recordLabel(ctx, labelGtx, sizeStyle, foreground)
+	label := c.recordLabel(ctx, labelGtx, style)
 
 	width := start.dims.Size.X + label.dims.Size.X + end.dims.Size.X + gapsWidth
 	height := max(gtx.Constraints.Min.Y, max(start.dims.Size.Y, max(label.dims.Size.Y, end.dims.Size.Y)))
@@ -109,27 +75,22 @@ type recordedChipChild struct {
 	placement frame.OverlayPlacement
 }
 
-func recordChipWidget(ctx *frame.Context, gtx layout.Context, child frame.Widget) recordedChipChild {
+func recordChipWidget(ctx *frame.Context, gtx layout.Context, style flowstyle.ResolvedStyle, child frame.Widget) recordedChipChild {
 	if child == nil {
 		return recordedChipChild{}
 	}
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return child.Layout(ctx, gtx)
+		return layoutui.LayoutResolved(ctx, gtx, style, child)
 	})
 	return recordedChipChild{call: macro.Stop(), dims: dims, placement: placement}
 }
 
-func (c Widget) recordLabel(ctx *frame.Context, gtx layout.Context, sizeStyle chipSizeStyle, foreground color.NRGBA) recordedChipChild {
+func (c Widget) recordLabel(ctx *frame.Context, gtx layout.Context, style chipResolvedStyle) recordedChipChild {
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return layout.Inset{Left: sizeStyle.labelPaddingX, Right: sizeStyle.labelPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			label := material.Label(frame.ActiveTheme(ctx).Material, sizeStyle.textSize, c.label)
-			label.Color = foreground
-			label.Font.Weight = font.Medium
-			label.LineHeight = sizeStyle.lineHeight
-			label.MaxLines = 1
-			return label.Layout(gtx)
+		return layout.Inset{Left: style.labelPaddingX, Right: style.labelPaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layoutui.LayoutResolved(ctx, gtx, style.label, textui.New(c.label))
 		})
 	})
 	return recordedChipChild{call: macro.Stop(), dims: dims, placement: placement}

@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -430,10 +431,11 @@ func TestPopoverBodyTextStyle(t *testing.T) {
 	if !ok {
 		t.Fatal("styled body is not TextWidget")
 	}
-	if body.ConfiguredSize() != frame.ActiveTheme(ctx).Components.Popover.BodyTextSize {
-		t.Fatalf("body text size = %v, want %v", body.ConfiguredSize(), frame.ActiveTheme(ctx).Components.Popover.BodyTextSize)
+	resolved := text.ResolveStyleStatic(ctx, body)
+	if resolved.Text == nil || resolved.Text.FontSize == nil || *resolved.Text.FontSize != frame.ActiveTheme(ctx).Components.Popover.BodyTextSize {
+		t.Fatalf("body text style = %#v", resolved.Text)
 	}
-	if col, _ := body.ConfiguredColor(); col != frame.ActiveTheme(ctx).Palette.MutedForeground {
+	if col := resolved.Text.Color.(flowstyle.SolidColor).Color; col != frame.ActiveTheme(ctx).Palette.MutedForeground {
 		t.Fatalf("body text color = %#v, want muted foreground", col)
 	}
 }

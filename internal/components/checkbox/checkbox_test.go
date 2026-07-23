@@ -14,6 +14,8 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -197,6 +199,20 @@ func TestCheckboxControlOnlyLayout(t *testing.T) {
 	}
 }
 
+func TestCheckboxIndicatorPartControlsGeometry(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	gtx := testLayoutContext()
+	dims := Checkbox("compact", false, "").
+		Style(flowstyle.Style{}.Part(flowstyle.PartIndicator, flowstyle.Style{}.Width(12).Height(10))).
+		Layout(ctx, gtx)
+	focusSpace := max(gtx.Dp(activeTheme.Components.Checkbox.FocusSpace), 1)
+	want := image.Pt(gtx.Dp(12)+focusSpace*2, gtx.Dp(10)+focusSpace*2)
+	if dims.Size != want {
+		t.Fatalf("styled checkbox size = %v, want %v", dims.Size, want)
+	}
+}
+
 func TestCheckboxDescriptionAndErrorLayout(t *testing.T) {
 	ctx := newContext(nil)
 	dims := Checkbox("updates", false, "Email updates").
@@ -246,6 +262,54 @@ func TestCheckboxCustomIndicatorCanSuppressDefaultCheck(t *testing.T) {
 	options := ControlOptions{Selection: 1, CustomIndicator: true, Indicator: configured.indicatorWidget(state)}
 	if !options.CustomIndicator || options.Indicator != nil {
 		t.Fatal("custom Indicator presence is ambiguous")
+	}
+}
+
+func TestCheckboxPartsResolveStateAndOverrides(t *testing.T) {
+	ctx := newContext(nil)
+	off := color.NRGBA{R: 0x10, G: 0x20, B: 0x30, A: 0xff}
+	on := color.NRGBA{R: 0x40, G: 0x50, B: 0x60, A: 0xff}
+	indicatorText := color.NRGBA{R: 0x70, G: 0x80, B: 0x90, A: 0xff}
+	label := color.NRGBA{R: 0xa0, G: 0xb0, B: 0xc0, A: 0xff}
+	description := color.NRGBA{R: 0xd0, G: 0xe0, B: 0xf0, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: off}).
+			BorderWidth(3).
+			Radius(9).
+			BoxShadow(1, 2, 3, 4, flowstyle.RGBA(0x01020380)).
+			Translate(2, 3).
+			TextColor(flowstyle.SolidColor{Color: indicatorText}).
+			Opacity(.5).
+			When(flowstyle.Checked, flowstyle.Style{}.Background(flowstyle.LinearGradient(
+				flowstyle.ColorStop(0, flowstyle.SolidColor{Color: off}),
+				flowstyle.ColorStop(1, flowstyle.SolidColor{Color: on}),
+			)))).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: label}).FontSize(22)).
+		Part(flowstyle.PartDescription, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: description}))
+
+	resolved := Checkbox("parts", true, "Parts").Style(custom).resolveStyle(ctx, layout.Context{Ops: new(op.Ops)}, "parts", flowstyle.StyleState{Checked: true, Selected: true})
+	indicator := resolved.indicator.on
+	if indicator.Paint == nil || indicator.Paint.Opacity == nil || *indicator.Paint.Opacity != .5 || indicator.Paint.Border == nil || *indicator.Paint.Border.Width != 3 || *indicator.Paint.Radius != 9 || len(indicator.Paint.Shadows) != 1 {
+		t.Fatalf("indicator paint = %#v", indicator.Paint)
+	}
+	if _, ok := indicator.Paint.Background.(flowstyle.StyleGradient); !ok {
+		t.Fatalf("indicator background = %T, want gradient", indicator.Paint.Background)
+	}
+	if indicator.Trans == nil || indicator.Trans.TranslateX == nil || *indicator.Trans.TranslateX != 2 || indicator.Trans.TranslateY == nil || *indicator.Trans.TranslateY != 3 {
+		t.Fatalf("indicator transform = %#v", indicator.Trans)
+	}
+	if got, ok := styleruntime.Color(indicator.Text.Color); !ok || got != indicatorText {
+		t.Fatalf("indicator text = %#v, ok %v", got, ok)
+	}
+	if resolved.label.Text == nil || resolved.label.Text.FontSize == nil || *resolved.label.Text.FontSize != 22 {
+		t.Fatalf("label style = %#v", resolved.label.Text)
+	}
+	if got, ok := styleruntime.Color(resolved.label.Text.Color); !ok || got != label {
+		t.Fatalf("label color = %#v, ok %v", got, ok)
+	}
+	if got, ok := styleruntime.Color(resolved.description.Text.Color); !ok || got != description {
+		t.Fatalf("description color = %#v, ok %v", got, ok)
 	}
 }
 

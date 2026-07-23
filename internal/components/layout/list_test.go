@@ -10,7 +10,6 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -19,7 +18,7 @@ func TestListKeepsState(t *testing.T) {
 	var ops op.Ops
 
 	List("items", 2, func(i int) frame.Widget {
-		return text.New("item")
+		return Spacer(20, 20)
 	}).Gap(8).Layout(ctx, layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         &ops,
@@ -52,7 +51,7 @@ func TestListClampsNegativeGap(t *testing.T) {
 
 func TestListDisabled(t *testing.T) {
 	l := List("items", 1, func(int) frame.Widget {
-		return text.New("item")
+		return Spacer(20, 20)
 	}).Disabled(true)
 
 	if !l.disabled {

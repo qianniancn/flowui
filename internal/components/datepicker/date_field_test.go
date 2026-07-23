@@ -337,7 +337,11 @@ func TestDateSegmentPlaceholderExpandsPastThemeMinimum(t *testing.T) {
 	gtx := testLayoutContext()
 	segments := new(dateSegmentsState)
 	segments.sync(time.Time{})
-	style := field.ResolveStyle(frame.ActiveTheme(ctx), field.Primary, false, false, false, false)
+	style := field.Colors{
+		Foreground:  frame.ActiveTheme(ctx).Palette.FieldForegroundColor(),
+		Placeholder: frame.ActiveTheme(ctx).Palette.FieldPlaceholderColor(),
+		Selection:   frame.ActiveTheme(ctx).Palette.Selection,
+	}
 	dimensions := segments.layoutSegment(ctx, gtx, int(DatePartMonth), style, true, false)
 	minimum := gtx.Dp(frame.ActiveTheme(ctx).Components.DatePicker.SegmentWidth)
 

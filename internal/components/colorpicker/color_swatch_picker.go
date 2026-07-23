@@ -3,6 +3,7 @@ package colorpicker
 import (
 	"image"
 	"image/color"
+	"slices"
 	"time"
 
 	"gioui.org/io/pointer"
@@ -13,9 +14,10 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const (
@@ -25,7 +27,6 @@ const (
 )
 
 type ColorSwatchPickerWidget struct {
-	theme          func(*theme.Theme)
 	key            string
 	value          color.NRGBA
 	colors         []color.NRGBA
@@ -35,6 +36,7 @@ type ColorSwatchPickerWidget struct {
 	shape          ColorSwatchShape
 	arrangement    ColorSwatchPickerLayout
 	disabled       bool
+	customStyle    flowstyle.Style
 }
 
 type colorSwatchPickerState struct {
@@ -101,15 +103,12 @@ func (picker ColorSwatchPickerWidget) DisabledColors(values []color.NRGBA) Color
 	return picker
 }
 
-func (picker ColorSwatchPickerWidget) Theme(fn func(*theme.Theme)) ColorSwatchPickerWidget {
-	picker.theme = fn
+func (picker ColorSwatchPickerWidget) Style(value flowstyle.Style) ColorSwatchPickerWidget {
+	picker.customStyle = value
 	return picker
 }
 
 func (picker ColorSwatchPickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, picker.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, state.KindColorSwatchPicker, picker.key)
 	pickerState := frame.UseState[colorSwatchPickerState](ctx, key, stateSlotColorSwatchPicker)
 	if pickerState.items == nil {
@@ -130,6 +129,7 @@ func (picker ColorSwatchPickerWidget) Layout(ctx *frame.Context, gtx layout.Cont
 
 	gap := max(gtx.Dp(frame.ActiveTheme(ctx).Components.ColorSwatchPicker.Gap), 0)
 	recorded := make([]recordedColorSwatch, 0, len(picker.colors))
+	hovered, pressed := false, false
 	for index, value := range picker.colors {
 		itemKey := colorSwatchItemKey{index: index, value: value}
 		pickerState.frameItems[itemKey] = struct{}{}
@@ -139,8 +139,18 @@ func (picker ColorSwatchPickerWidget) Layout(ctx *frame.Context, gtx layout.Cont
 			pickerState.items[itemKey] = itemState
 		}
 		recorded = append(recorded, picker.recordItem(ctx, gtx, itemState, value, picker.colorDisabled(value)))
+		hovered = hovered || itemState.clickable.Hovered()
+		pressed = pressed || itemState.clickable.Pressed()
 	}
-	return picker.layoutItems(gtx, recorded, gap)
+	return layoutui.LayoutStyled(ctx, gtx, key, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  false,
+		Disabled: picker.disabled || !gtx.Enabled(),
+		Selected: slices.Contains(picker.colors, picker.value),
+	}, picker.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		return picker.layoutItems(gtx, recorded, gap)
+	}))
 }
 
 func (picker ColorSwatchPickerWidget) recordItem(ctx *frame.Context, gtx layout.Context, itemState *colorSwatchItemState, value color.NRGBA, disabled bool) recordedColorSwatch {
@@ -221,12 +231,7 @@ func (picker ColorSwatchPickerWidget) layoutItems(gtx layout.Context, items []re
 }
 
 func (picker ColorSwatchPickerWidget) colorDisabled(value color.NRGBA) bool {
-	for _, disabled := range picker.disabledColors {
-		if disabled == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(picker.disabledColors, value)
 }
 
 func boolFloat(value bool) float32 {

@@ -11,19 +11,23 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/components/description"
 	"github.com/qianniancn/FlowUI/internal/components/label"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/listbox"
 	"github.com/qianniancn/FlowUI/internal/components/text"
+	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
+	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 func (s SelectWidget) layout(ctx *frame.Context, gtx layout.Context, state *selectState, open bool) layout.Dimensions {
-	style := selectStyleFor(frame.ActiveTheme(ctx), s.variant, state.trigger.Hovered(), false, s.disabled, s.invalid)
+	style := selectStyleFor(frame.ActiveTheme(ctx), s.disabled)
 	gap := gtx.Dp(frame.ActiveTheme(ctx).Components.Select.ContentGap)
 	var labelDims, triggerDims layout.Dimensions
 	children := make([]layout.FlexChild, 0, 3)
@@ -87,6 +91,7 @@ func (s SelectWidget) supportMessage() (string, bool) {
 
 func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *selectState, open bool) layout.Dimensions {
 	animGtx := gtx
+	key := s.resolvedKey(ctx, state)
 	if s.fullWidth {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	}
@@ -94,22 +99,35 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 	height := min(gtx.Dp(theme.Height), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 
-	return state.trigger.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	focused := gtx.Focused(&state.trigger)
+	focusVisible := frame.FocusVisible(ctx, &state.trigger, focused)
+	styleState := flowstyle.StyleState{
+		Hovered: state.trigger.Hovered(), Pressed: state.trigger.Pressed(),
+		Focused: focused, FocusVisible: focusVisible,
+		Disabled: s.disabled || !gtx.Enabled(), Invalid: s.invalid,
+		Selected: s.selectedKey != "" || len(s.selectedKeys) > 0, Open: open,
+	}
+	tokens := frame.ActiveTheme(ctx).Components
+	resolved := field.Resolve(ctx, animGtx, key, styleState, s.variant, field.DeclarationOptions{
+		Radius:         tokens.Select.Radius,
+		FocusRingWidth: tokens.Input.FocusRingWidth, InvalidOutlineWidth: tokens.Input.InvalidOutlineWidth,
+		ShadowColor: tokens.Input.ShadowColor, ShadowOpacity: tokens.Input.ShadowOpacity,
+		ShadowStrength: tokens.Input.ShadowStrength,
+	}, s.customStyle)
+	style := selectStyleFor(frame.ActiveTheme(ctx), s.disabled)
+	style.field = resolved.Colors
+	content := frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
 		value, selected := s.displayValueCached(state)
-		focusVisible := frame.FocusVisible(ctx, &state.trigger, gtx.Focused(&state.trigger))
-		style := selectStyleFor(frame.ActiveTheme(ctx), s.variant, state.trigger.Hovered(), focusVisible, s.disabled, s.invalid)
-		style.field.Background = state.field.Background(animGtx, style.field.Background, frame.ActiveTheme(ctx).Motion)
-		style.field.Border = state.field.BorderColor(animGtx, style.field.Border, frame.ActiveTheme(ctx).Motion)
 
 		semantic.Button.Add(gtx.Ops)
 		label := s.label
 		if label == "" {
-			label = frame.FieldLabel(ctx, state.key)
+			label = frame.FieldLabel(ctx, key)
 		}
 		semantic.LabelOp(selectSemanticLabel(label, value)).Add(gtx.Ops)
 		description := s.description
 		if description == "" {
-			description = frame.FieldDescription(ctx, state.key)
+			description = frame.FieldDescription(ctx, key)
 		}
 		if s.invalid {
 			description = s.errorMessage
@@ -133,10 +151,6 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 
 		size := image.Pt(valueDims.Size.X+left+right, max(valueDims.Size.Y+vertical*2, height))
 		size = gtx.Constraints.Constrain(size)
-		rect := image.Rectangle{Max: size}
-		radius := min(max(gtx.Dp(theme.Radius), 1), min(size.X, size.Y)/2)
-		drawSelectTrigger(gtx, rect, radius, style)
-
 		valueOffset := op.Offset(image.Pt(left, max((size.Y-valueDims.Size.Y)/2, 0))).Push(gtx.Ops)
 		valueCall.Add(gtx.Ops)
 		valueOffset.Pop()
@@ -146,6 +160,9 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 		s.layoutIndicator(ctx, animGtx, indicatorSize, state.iconProgress(animGtx, open, frame.ActiveTheme(ctx).Motion), style.field.Placeholder)
 		indicatorOffset.Pop()
 		return layout.Dimensions{Size: size}
+	})
+	return layoutui.LayoutInteractiveResolved(ctx, gtx, resolved.Content, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+		return state.trigger.Layout(gtx, visual)
 	})
 }
 
@@ -158,8 +175,10 @@ func (s SelectWidget) layoutIndicator(ctx *frame.Context, gtx layout.Context, si
 	center := f32.Pt(float32(size.X)/2, float32(size.Y)/2)
 	transform := op.Affine(f32.AffineId().Rotate(center, progress*float32(math.Pi))).Push(gtx.Ops)
 	indicator := s.indicator
-	if text, ok := indicator.(text.Widget); ok {
-		indicator = text.DefaultColor(color)
+	if value, ok := indicator.(text.Widget); ok {
+		indicator = text.WithDefaults(value, flowstyle.Style{}.
+			TextColor(flowstyle.SolidColor{Color: color}),
+		)
 	}
 	dims := layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		iconSize := min(gtx.Dp(frame.ActiveTheme(ctx).Components.Select.IndicatorSize), min(size.X, size.Y))
@@ -269,23 +288,28 @@ func (s SelectWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, stat
 }
 
 func (s SelectWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, state *selectState, open, interactive bool) layout.Dimensions {
-	macro := op.Record(gtx.Ops)
-	var dims layout.Dimensions
-	func() {
-		restore := frame.PushColors(ctx, frame.ActiveTheme(ctx).Palette.OverlayForegroundColor(), frame.ActiveTheme(ctx).Palette.OverlayColor())
-		defer restore()
-		list := s.listBox(ctx, state, open && interactive)
-		dims = list.Layout(ctx, gtx)
-	}()
-	call := macro.Stop()
+	part := styleruntime.ResolvePart(
+		ctx,
+		gtx,
+		s.resolvedKey(ctx, state),
+		flowstyle.PartPanel,
+		flowstyle.StyleState{Disabled: !interactive, Open: open},
+		selectPanelDefaultDeclaration(frame.ActiveTheme(ctx)),
+		flowstyle.Style{},
+		flowstyle.Style{},
+		s.customStyle,
+	)
+	return layoutui.LayoutResolved(ctx, gtx, part, s.listBox(ctx, state, open && interactive))
+}
 
-	radius := min(max(gtx.Dp(frame.ActiveTheme(ctx).Components.Select.PanelRadius), 1), min(dims.Size.X, dims.Size.Y)/2)
-	rect := image.Rectangle{Max: dims.Size}
-	drawSelectPanel(gtx, frame.ActiveTheme(ctx), rect, radius)
-	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
-	call.Add(gtx.Ops)
-	clipStack.Pop()
-	return dims
+func selectPanelDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	panel := flowstyle.Style{}.
+		Background(flowstyle.TokenOverlay).
+		TextColor(flowstyle.TokenOverlayForeground).
+		Radius(activeTheme.Components.Select.PanelRadius).
+		Shadow(flowstyle.ShadowOverlay).
+		Overflow(flowstyle.OverflowHidden)
+	return flowstyle.Style{}.Part(flowstyle.PartPanel, panel)
 }
 
 func (s SelectWidget) listBox(ctx *frame.Context, state *selectState, open bool) listbox.ListBoxWidget {
@@ -319,6 +343,7 @@ func (s SelectWidget) listBox(ctx *frame.Context, state *selectState, open bool)
 		list = list.DataVersion(s.dataVersion)
 	}
 	list = listbox.WithDerivedIdentity(list, s.resolvedKey(ctx, state), "options")
+	list = listbox.WithPartsStyle(list, s.customStyle)
 	return listbox.WithPadding(list, frame.ActiveTheme(ctx).Components.Select.PanelPadding)
 }
 

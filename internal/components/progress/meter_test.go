@@ -3,6 +3,8 @@ package progress
 import (
 	"reflect"
 	"testing"
+
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func TestMeterDelegatesToProgressBar(t *testing.T) {
@@ -13,7 +15,8 @@ func TestMeterDelegatesToProgressBar(t *testing.T) {
 		Range(0, 120).
 		Color(MeterSuccess).
 		Size(MeterLarge).
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Radius(4))
 
 	if meter.bar.key != "storage" || meter.bar.value != 60 || meter.bar.label != "Storage" {
 		t.Fatal("meter did not configure the shared progress bar")
@@ -23,6 +26,9 @@ func TestMeterDelegatesToProgressBar(t *testing.T) {
 	}
 	if meter.bar.color != ProgressBarSuccess || meter.bar.size != ProgressBarLarge || !meter.bar.disabled {
 		t.Fatal("meter visual options were not delegated")
+	}
+	if meter.bar.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("meter style was not delegated")
 	}
 }
 

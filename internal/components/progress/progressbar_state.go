@@ -4,14 +4,12 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const stateSlotProgressBar = "progress-bar"
 
 func progressBarStateFor(ctx *frame.Context, key string) *progressBarState {
-	key = frame.ClaimKey(ctx, state.KindProgressBar, key)
 	return frame.UseState[progressBarState](ctx, key, stateSlotProgressBar)
 }
 

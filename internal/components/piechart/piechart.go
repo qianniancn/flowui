@@ -10,8 +10,9 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Data describes one pie slice.
@@ -49,7 +50,6 @@ func (d Data) Hidden(hidden bool) Data {
 }
 
 type Widget struct {
-	theme                   func(*theme.Theme)
 	key                     string
 	data                    []Data
 	dataVersion             uint64
@@ -75,6 +75,7 @@ type Widget struct {
 	onLegendChange          func(string, bool)
 	onDataClick             func(chart.Selection)
 	tooltipContent          func(chart.Selection) frame.Widget
+	customStyle             flowstyle.Style
 	label                   string
 	emptyText               string
 	disabled                bool
@@ -244,16 +245,13 @@ func (w Widget) Disabled(disabled bool) Widget {
 	return w
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
-	return w.layout(ctx, gtx)
+	return layoutui.Box(frame.WidgetFunc(w.layout)).Style(w.customStyle).Layout(ctx, gtx)
 }
 
 func (w Widget) legendVisible(data chartData) bool {

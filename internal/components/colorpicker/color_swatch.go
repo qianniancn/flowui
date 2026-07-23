@@ -6,16 +6,17 @@ import (
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ColorSwatchWidget struct {
-	theme func(*theme.Theme)
-	value color.NRGBA
-	size  ColorSwatchSize
-	shape ColorSwatchShape
-	alt   string
+	value       color.NRGBA
+	size        ColorSwatchSize
+	shape       ColorSwatchShape
+	alt         string
+	customStyle flowstyle.Style
 }
 
 func ColorSwatch(value color.NRGBA) ColorSwatchWidget {
@@ -37,20 +38,19 @@ func (swatch ColorSwatchWidget) Alt(alt string) ColorSwatchWidget {
 	return swatch
 }
 
-func (swatch ColorSwatchWidget) Theme(fn func(*theme.Theme)) ColorSwatchWidget {
-	swatch.theme = fn
+func (swatch ColorSwatchWidget) Style(value flowstyle.Style) ColorSwatchWidget {
+	swatch.customStyle = value
 	return swatch
 }
 
 func (swatch ColorSwatchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, swatch.theme); restore != nil {
-		defer restore()
-	}
-	side := min(max(colorSwatchPixels(ctx, gtx, swatch.size), 0), min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y))
-	size := gtx.Constraints.Constrain(image.Pt(side, side))
-	if swatch.alt != "" {
-		semantic.LabelOp(swatch.alt).Add(gtx.Ops)
-	}
-	drawColorSwatch(gtx, size, swatch.value, colorSwatchRadius(ctx, gtx, min(size.X, size.Y), swatch.shape))
-	return layout.Dimensions{Size: size}
+	return layoutui.Box(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		side := min(max(colorSwatchPixels(ctx, gtx, swatch.size), 0), min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y))
+		size := gtx.Constraints.Constrain(image.Pt(side, side))
+		if swatch.alt != "" {
+			semantic.LabelOp(swatch.alt).Add(gtx.Ops)
+		}
+		drawColorSwatch(gtx, size, swatch.value, colorSwatchRadius(ctx, gtx, min(size.X, size.Y), swatch.shape))
+		return layout.Dimensions{Size: size}
+	})).Style(swatch.customStyle).Layout(ctx, gtx)
 }

@@ -8,17 +8,19 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 const spinnerPeriod = 750 * time.Millisecond
 
 type SpinnerWidget struct {
-	theme func(*theme.Theme)
-	color SpinnerColor
-	size  SpinnerSize
-	label string
+	color       SpinnerColor
+	size        SpinnerSize
+	label       string
+	customStyle flowstyle.Style
 }
 
 type SpinnerColor uint8
@@ -59,39 +61,32 @@ func (s SpinnerWidget) Label(label string) SpinnerWidget {
 	return s
 }
 
-func (s SpinnerWidget) Theme(fn func(*theme.Theme)) SpinnerWidget {
-	s.theme = fn
+func (s SpinnerWidget) Style(value flowstyle.Style) SpinnerWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SpinnerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	activeTheme := frame.ActiveTheme(ctx)
-	style := spinnerStyleFor(activeTheme, s.color)
-	sizeStyle := spinnerSizeStyleFor(activeTheme, s.size)
-	diameter := max(gtx.Dp(sizeStyle.diameter), 1)
-	size := gtx.Constraints.Constrain(image.Pt(diameter, diameter))
-	iconSize := min(diameter, size.X, size.Y)
-
-	macro := op.Record(gtx.Ops)
-	if iconSize > 0 {
-		offset := image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)
-		stack := op.Offset(offset).Push(gtx.Ops)
-		period := theme.ResolveMotionDuration(activeTheme.Motion, spinnerPeriod)
-		drawSpinner(gtx, iconSize, sizeStyle.strokeRatio, sizeStyle.insetRatio, style.color, period)
-		stack.Pop()
-	}
-	call := macro.Stop()
-
-	clipStack := clip.Rect{Max: size}.Push(gtx.Ops)
-	label := s.label
-	if label == "" {
-		label = "Loading"
-	}
-	semantic.DescriptionOp(label).Add(gtx.Ops)
-	call.Add(gtx.Ops)
-	clipStack.Pop()
-	return layout.Dimensions{Size: size}
+	resolved := s.resolveStyle(ctx, gtx)
+	return layoutui.LayoutResolved(ctx, gtx, resolved.root, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		diameter := max(min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y), 1)
+		size := gtx.Constraints.Constrain(image.Pt(diameter, diameter))
+		iconSize := min(size.X, size.Y)
+		if iconSize > 0 {
+			offset := image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)
+			stack := op.Offset(offset).Push(gtx.Ops)
+			period := theme.ResolveMotionDuration(activeTheme.Motion, spinnerPeriod)
+			drawSpinner(gtx, iconSize, resolved.size.strokeRatio, resolved.size.insetRatio, resolved.visual.color, period)
+			stack.Pop()
+		}
+		clipStack := clip.Rect{Max: size}.Push(gtx.Ops)
+		label := s.label
+		if label == "" {
+			label = "Loading"
+		}
+		semantic.DescriptionOp(label).Add(gtx.Ops)
+		clipStack.Pop()
+		return layout.Dimensions{Size: size}
+	}))
 }

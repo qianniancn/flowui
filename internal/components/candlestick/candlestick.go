@@ -9,8 +9,9 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/chart"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Candle stores values in ECharts order: open, close, lowest, highest.
@@ -26,7 +27,6 @@ func OHLC(open, close, lowest, highest float64) Candle {
 }
 
 type Widget struct {
-	theme                   func(*theme.Theme)
 	key                     string
 	data                    []Candle
 	categories              []string
@@ -70,6 +70,7 @@ type Widget struct {
 	markLines               []chart.MarkLine
 	markAreas               []chart.MarkArea
 	markPoints              []chart.MarkPoint
+	customStyle             flowstyle.Style
 }
 
 func New(key string, data []Candle) Widget {
@@ -292,16 +293,13 @@ func (w Widget) Disabled(disabled bool) Widget {
 	return w
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
-	return w.layout(ctx, gtx)
+	return layoutui.Box(frame.WidgetFunc(w.layout)).Style(w.customStyle).Layout(ctx, gtx)
 }
 
 func (w Widget) categoryLabel(index int) string {

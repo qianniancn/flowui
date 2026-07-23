@@ -19,7 +19,13 @@ import (
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
-func (c ComboBoxWidget) layoutInput(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, style field.Style, child layout.Widget) layout.Dimensions {
+func (c ComboBoxWidget) layoutInput(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, style field.Resolved, child layout.Widget) layout.Dimensions {
+	return layoutui.LayoutResolved(ctx, gtx, style.Content, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return c.layoutInputContent(ctx, gtx, state, editor, style.Colors, child)
+	}))
+}
+
+func (c ComboBoxWidget) layoutInputContent(ctx *frame.Context, gtx layout.Context, state *comboBoxState, editor *widget.Editor, colors field.Colors, child layout.Widget) layout.Dimensions {
 	frameConstraints := gtx.Constraints
 	if c.fullWidth {
 		frameConstraints.Min.X = frameConstraints.Max.X
@@ -45,20 +51,16 @@ func (c ComboBoxWidget) layoutInput(ctx *frame.Context, gtx layout.Context, stat
 
 	size := image.Pt(childDims.Size.X+horizontalPadding, childDims.Size.Y)
 	size = frameConstraints.Constrain(size)
-	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(theme.Radius), 1), min(size.X, size.Y)/2)
-
-	field.DrawFrame(gtx, rect, radius, style)
 	stack := op.Offset(image.Pt(left, max((size.Y-childDims.Size.Y)/2, 0))).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	stack.Pop()
 
 	state.input.AddPointer(gtx, size, c.disabled)
-	c.layoutTrigger(ctx, gtx, state, editor, size, style)
+	c.layoutTrigger(ctx, gtx, state, editor, size, colors)
 	return layout.Dimensions{Size: size}
 }
 
-func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, size image.Point, style field.Style) {
+func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, comboState *comboBoxState, editor *widget.Editor, size image.Point, colors field.Colors) {
 	triggerSize := image.Pt(min(gtx.Dp(frame.ActiveTheme(ctx).Components.ComboBox.TriggerWidth), size.X), size.Y)
 	presses := state.SnapshotPresses(comboState.trigger.History())
 	if !c.disabled {
@@ -78,7 +80,7 @@ func (c ComboBoxWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, co
 		if !c.disabled {
 			pointer.CursorPointer.Add(gtx.Ops)
 		}
-		drawComboBoxChevron(gtx, frame.ActiveTheme(ctx), triggerSize, comboState.iconProgress(gtx, comboState.open, frame.ActiveTheme(ctx).Motion), style.Placeholder)
+		drawComboBoxChevron(gtx, frame.ActiveTheme(ctx), triggerSize, comboState.iconProgress(gtx, comboState.open, frame.ActiveTheme(ctx).Motion), colors.Placeholder)
 		return layout.Dimensions{Size: triggerSize}
 	})
 	stack.Pop()

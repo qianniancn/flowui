@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/qianniancn/FlowUI/ui"
@@ -436,12 +437,7 @@ func asyncItems() []ui.TreeItem {
 }
 
 func containsKey(keys []string, key string) bool {
-	for _, current := range keys {
-		if current == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keys, key)
 }
 
 func fileItems() []ui.TreeItem {

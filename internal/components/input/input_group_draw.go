@@ -4,32 +4,19 @@ import (
 	"image"
 
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"gioui.org/op"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
-func drawInputGroupFrame(gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, radius int, style inputGroupStyle, ringWidth float32) {
-	if rect.Empty() {
-		return
-	}
-	if style.ShadowOpacity > 0 {
-		tokens := activeTheme.Components.InputGroup
-		render.DrawShadow(
-			gtx,
-			rect,
-			render.RoundedShadowCorners(tokens.Radius, tokens.Radius, tokens.Radius, tokens.Radius),
-			fieldShadow(activeTheme, tokens.ShadowColor, style.ShadowOpacity, tokens.ShadowStrength),
-		)
-	}
-	drawInputRing(gtx, rect, radius, style.Ring, ringWidth)
-	paint.FillShape(gtx.Ops, style.Background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
-}
-
-func drawInputGroupDivider(gtx layout.Context, x, height, width int, style inputGroupStyle) {
+func layoutInputGroupDivider(ctx *frame.Context, gtx layout.Context, x, height, width int, style flowstyle.ResolvedStyle) {
 	if width <= 0 || height <= 0 {
 		return
 	}
-	paint.FillShape(gtx.Ops, style.Divider, clip.Rect(image.Rect(x, 0, x+width, height)).Op())
+	dividerGtx := gtx
+	dividerGtx.Constraints = layout.Exact(image.Pt(width, height))
+	stack := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
+	layoutui.LayoutResolved(ctx, dividerGtx, style, nil)
+	stack.Pop()
 }

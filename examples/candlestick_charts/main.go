@@ -68,7 +68,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 						OnClick(func() { send(ResetView{}) }),
 				).AlignMiddle(),
 				ui.Text(selection).Size(14),
-				ui.Surface(ui.Box(chart).Padding(16)).Radius(8),
+				ui.Surface(ui.Box(chart).Padding(16)).Style(ui.Radius(8)),
 			).Gap(16),
 		).FillWidth().MaxWidth(1100).Padding(24),
 	)

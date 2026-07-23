@@ -16,7 +16,8 @@ import (
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 const stateSlotSplitPane = "split-pane"
@@ -34,7 +35,6 @@ const (
 )
 
 type SplitPaneWidget struct {
-	theme           func(*theme.Theme)
 	key             string
 	first           frame.Widget
 	second          frame.Widget
@@ -48,6 +48,7 @@ type SplitPaneWidget struct {
 	label           string
 	onRatioChange   func(float32)
 	disabled        bool
+	customStyle     flowstyle.Style
 }
 
 type splitPaneState struct {
@@ -123,25 +124,38 @@ func (s SplitPaneWidget) Disabled(disabled bool) SplitPaneWidget {
 	return s
 }
 
-func (s SplitPaneWidget) Theme(fn func(*theme.Theme)) SplitPaneWidget {
-	s.theme = fn
+func (s SplitPaneWidget) Style(value flowstyle.Style) SplitPaneWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SplitPaneWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	prepareFieldAssociations(ctx, s.first, s.second)
 	key := frame.ClaimKey(ctx, state.KindSplitPane, s.key)
 	value := frame.UseState[splitPaneState](ctx, key, stateSlotSplitPane)
 	value.setOrientation(s.orientation)
+	disabled := s.disabled || !gtx.Enabled()
+	focused := gtx.Focused(value)
+	styleState := flowstyle.StyleState{
+		Hovered:      value.hovered && !disabled,
+		Pressed:      value.dragging && !disabled,
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, value, focused),
+		Disabled:     disabled,
+		Dragging:     value.dragging && !disabled,
+	}
+	root, style := s.resolveStyle(ctx, gtx, key, styleState)
+	return LayoutResolved(ctx, gtx, root, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return s.layoutPane(ctx, gtx, value, style, disabled)
+	}))
+}
 
+func (s SplitPaneWidget) layoutPane(ctx *frame.Context, gtx layout.Context, value *splitPaneState, style splitPaneStyle, disabled bool) layout.Dimensions {
 	size := gtx.Constraints.Constrain(gtx.Constraints.Max)
 	axis := s.axis()
 	axisSize := axis.Convert(size)
 	tokens := frame.ActiveTheme(ctx).Components.SplitPane
-	divider := min(max(gtx.Dp(tokens.DividerWidth), 1), axisSize.X)
+	divider := min(max(gtx.Dp(style.dividerWidth), 1), axisSize.X)
 	available := max(axisSize.X-divider, 0)
 	minFirst, maxFirst := s.bounds(gtx, available)
 	first := splitPaneFirstSize(s.resolveRatio(value), available, minFirst, maxFirst)
@@ -168,8 +182,8 @@ func (s SplitPaneWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 
 	focusVisible := frame.FocusVisible(ctx, value, gtx.Focused(value))
 	focusOpacity := value.focus.Opacity(gtx, focusVisible && enabled, frame.ActiveTheme(ctx).Motion)
-	drawSplitPaneDivider(ctx, gtx, axis, size, first, divider, value.hovered, value.dragging, focusOpacity, s.disabled || !gtx.Enabled())
-	s.addHandle(gtx, value, enabled, axis, size, first, divider, max(gtx.Dp(tokens.HitSize), divider))
+	drawSplitPaneDivider(ctx, gtx, axis, size, first, divider, value.hovered, value.dragging, focusOpacity, disabled, style)
+	s.addHandle(gtx, value, enabled, axis, size, first, divider, max(gtx.Dp(tokens.HitSize), divider), style.cursor)
 	return layout.Dimensions{Size: size}
 }
 
@@ -238,7 +252,7 @@ func (s SplitPaneWidget) layoutChild(ctx *frame.Context, gtx layout.Context, chi
 	transform.Pop()
 }
 
-func (s SplitPaneWidget) addHandle(gtx layout.Context, value *splitPaneState, enabled bool, axis layout.Axis, size image.Point, first, divider, hitSize int) {
+func (s SplitPaneWidget) addHandle(gtx layout.Context, value *splitPaneState, enabled bool, axis layout.Axis, size image.Point, first, divider, hitSize int, cursor pointer.Cursor) {
 	hit := splitPaneHitRect(axis, size, first, divider, hitSize)
 	if hit.Empty() {
 		return
@@ -249,11 +263,7 @@ func (s SplitPaneWidget) addHandle(gtx layout.Context, value *splitPaneState, en
 	}
 	semantic.EnabledOp(enabled).Add(gtx.Ops)
 	if enabled {
-		if axis == layout.Horizontal {
-			pointer.CursorColResize.Add(gtx.Ops)
-		} else {
-			pointer.CursorRowResize.Add(gtx.Ops)
-		}
+		cursor.Add(gtx.Ops)
 		event.Op(gtx.Ops, value)
 	}
 	clipped.Pop()
@@ -404,15 +414,9 @@ func splitPaneRatio(ratio float32) float32 {
 	return min(max(ratio, 0), 1)
 }
 
-func drawSplitPaneDivider(ctx *frame.Context, gtx layout.Context, axis layout.Axis, size image.Point, first, divider int, hovered, dragging bool, focus float32, disabled bool) {
-	activeTheme := frame.ActiveTheme(ctx)
-	tokens := activeTheme.Components.SplitPane
-	base := activeTheme.Palette.SeparatorColor()
-	if disabled {
-		base = activeTheme.DisabledColor(base)
-	}
+func drawSplitPaneDivider(ctx *frame.Context, gtx layout.Context, axis layout.Axis, size image.Point, first, divider int, hovered, dragging bool, focus float32, disabled bool, style splitPaneStyle) {
 	dividerRect := splitPaneDividerRect(axis, size, first, divider)
-	paint.FillShape(gtx.Ops, base, clip.Rect(dividerRect).Op())
+	layoutSplitPanePart(ctx, gtx, dividerRect, style.track, 1)
 
 	active := focus
 	if hovered || dragging {
@@ -421,15 +425,99 @@ func drawSplitPaneDivider(ctx *frame.Context, gtx layout.Context, axis layout.Ax
 	if active <= 0 || disabled {
 		return
 	}
-	col := activeTheme.Palette.Accent
-	col.A = byte(float32(col.A)*min(max(active, 0), 1) + 0.5)
-	activeWidth := max(gtx.Dp(tokens.ActiveWidth), divider)
-	handleLength := max(gtx.Dp(tokens.HandleLength), activeWidth)
+	activeWidth := max(gtx.Dp(style.activeWidth), divider)
+	handleLength := max(gtx.Dp(style.handleLength), activeWidth)
 	handle := splitPaneHandleRect(axis, size, first, divider, activeWidth, handleLength).Intersect(image.Rectangle{Max: size})
 	if handle.Empty() {
 		return
 	}
-	paint.FillShape(gtx.Ops, col, clip.UniformRRect(handle, max(activeWidth/2, 1)).Op(gtx.Ops))
+	layoutSplitPanePart(ctx, gtx, handle, style.indicator, min(max(active, 0), 1))
+}
+
+func layoutSplitPanePart(ctx *frame.Context, gtx layout.Context, rect image.Rectangle, style flowstyle.ResolvedStyle, opacity float32) {
+	if rect.Empty() {
+		return
+	}
+	if style.Box != nil && style.Box.Cursor != nil {
+		box := *style.Box
+		box.Cursor = nil
+		style.Box = &box
+	}
+	partGtx := gtx
+	partGtx.Constraints = layout.Exact(rect.Size())
+	offset := op.Offset(rect.Min).Push(gtx.Ops)
+	fade := paint.PushOpacity(gtx.Ops, opacity)
+	LayoutResolved(ctx, partGtx, style, nil)
+	fade.Pop()
+	offset.Pop()
+}
+
+type splitPaneStyle struct {
+	track        flowstyle.ResolvedStyle
+	indicator    flowstyle.ResolvedStyle
+	dividerWidth unit.Dp
+	activeWidth  unit.Dp
+	handleLength unit.Dp
+	cursor       pointer.Cursor
+}
+
+func (s SplitPaneWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState) (flowstyle.ResolvedStyle, splitPaneStyle) {
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.SplitPane
+	base := activeTheme.Palette.SeparatorColor()
+	if state.Disabled {
+		base = activeTheme.DisabledColor(base)
+	}
+	cursor := pointer.CursorColResize
+	if s.orientation == SplitPaneVertical {
+		cursor = pointer.CursorRowResize
+	}
+	defaults := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Width(tokens.DividerWidth).
+			Background(flowstyle.SolidColor{Color: base}).
+			Cursor(cursor)).
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.
+			Width(tokens.ActiveWidth).
+			Height(tokens.HandleLength).
+			Background(flowstyle.SolidColor{Color: activeTheme.Palette.Accent}).
+			Radius(tokens.ActiveWidth/2))
+
+	root := styleruntime.Resolve(
+		ctx,
+		gtx,
+		key,
+		state,
+		defaults,
+		flowstyle.Style{},
+		flowstyle.Style{},
+		s.customStyle,
+	)
+	track := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartTrack, state, defaults, flowstyle.Style{}, flowstyle.Style{}, s.customStyle)
+	indicator := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, state, defaults, flowstyle.Style{}, flowstyle.Style{}, s.customStyle)
+	result := splitPaneStyle{
+		track: track, indicator: indicator,
+		dividerWidth: tokens.DividerWidth, activeWidth: tokens.ActiveWidth,
+		handleLength: tokens.HandleLength,
+		cursor:       cursor,
+	}
+	if track.Box != nil {
+		if track.Box.Width != nil {
+			result.dividerWidth = *track.Box.Width
+		}
+		if track.Box.Cursor != nil {
+			result.cursor = *track.Box.Cursor
+		}
+	}
+	if indicator.Box != nil {
+		if indicator.Box.Width != nil {
+			result.activeWidth = *indicator.Box.Width
+		}
+		if indicator.Box.Height != nil {
+			result.handleLength = *indicator.Box.Height
+		}
+	}
+	return root, result
 }
 
 func splitPaneDividerRect(axis layout.Axis, size image.Point, first, divider int) image.Rectangle {

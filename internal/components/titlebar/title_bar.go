@@ -12,10 +12,13 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/components/icon"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
@@ -34,65 +37,57 @@ type titleBarState struct {
 
 // Widget provides client-side window decorations with an application menu.
 type Widget struct {
-	theme func(*theme.Theme)
-	key   string
-	title string
-	menu  frame.Widget
+	key         string
+	title       string
+	menu        frame.Widget
+	customStyle flowstyle.Style
 }
 
 func New(key, title string, menu frame.Widget) Widget {
 	return Widget{key: key, title: title, menu: menu}
 }
 
-func (w Widget) Theme(fn func(*theme.Theme)) Widget {
-	w.theme = fn
+func (w Widget) Style(value flowstyle.Style) Widget {
+	w.customStyle = value
 	return w
 }
 
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, w.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, stateutil.KindTitleBar, w.key)
 	state := frame.UseState[titleBarState](ctx, key, stateSlotTitleBar)
 	state.decorations.Maximized = ctx.WindowState().Mode == frame.Maximized
 	w.update(ctx, gtx, state)
 
-	activeTheme := frame.ActiveTheme(ctx)
-	tokens := activeTheme.Components.TitleBar
-	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, max(gtx.Dp(tokens.Height), 1)))
-	rootGtx := gtx
-	rootGtx.Constraints = layout.Exact(size)
-	drawRoot(rootGtx, size, activeTheme)
-
-	background := activeTheme.Palette.SurfaceSecondary
-	foreground := activeTheme.Palette.SurfaceSecondaryForeground
-	restore := frame.PushColors(ctx, foreground, background)
-	defer restore()
-
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(rootGtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if w.menu == nil {
-				return layout.Dimensions{}
-			}
-			return layout.Inset{Left: tokens.PaddingX}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	resolved := w.resolveStyle(ctx, gtx, key, !gtx.Enabled())
+	return layoutui.LayoutResolved(ctx, gtx, resolved.root, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		dims := layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				if w.menu == nil {
+					return layout.Dimensions{}
+				}
 				return w.menu.Layout(ctx, gtx)
-			})
-		}),
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return state.decorations.LayoutMove(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return text.New(w.title).
-						Size(float32(tokens.TitleTextSize)).
-						Color(foreground).
-						MaxLines(1).
-						Layout(ctx, gtx)
+			}),
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+				return state.decorations.LayoutMove(gtx, func(gtx layout.Context) layout.Dimensions {
+					return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return layoutTitle(ctx, gtx, w.title, resolved.title)
+					})
 				})
-			})
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return w.layoutControls(ctx, gtx, state)
-		}),
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return w.layoutControls(ctx, gtx, state)
+			}),
+		)
+		layoutTitleBarSeparator(ctx, gtx, dims.Size, resolved.separator)
+		return dims
+	}))
+}
+
+func layoutTitle(ctx *frame.Context, gtx layout.Context, value string, style flowstyle.ResolvedStyle) layout.Dimensions {
+	return layoutui.LayoutResolved(ctx, gtx, style,
+		text.New(value).
+			MaxLines(1).
+			Style(flowstyle.TextDeclaration(style.Text)),
 	)
 }
 
@@ -132,7 +127,7 @@ func (w Widget) layoutControl(ctx *frame.Context, gtx layout.Context, state *tit
 	gtx.Constraints = layout.Exact(size)
 	clickable := state.decorations.Clickable(action)
 	closeAction := action == system.ActionClose
-	style := controlStyleFor(frame.ActiveTheme(ctx), clickable, closeAction)
+	style := controlStyleFor(frame.ActiveTheme(ctx), clickable, closeAction, ctx.ForegroundColor())
 	focusVisible := frame.FocusVisible(ctx, clickable, gtx.Focused(clickable))
 	label := controlLabel(ctx, action, state.decorations.Maximized)
 	data := controlIcon(action, state.decorations.Maximized)
@@ -151,9 +146,9 @@ type controlStyle struct {
 	focus      color.NRGBA
 }
 
-func controlStyleFor(activeTheme *theme.Theme, clickable *widget.Clickable, closeAction bool) controlStyle {
+func controlStyleFor(activeTheme *theme.Theme, clickable *widget.Clickable, closeAction bool, foreground color.NRGBA) controlStyle {
 	style := controlStyle{
-		foreground: activeTheme.Palette.SurfaceSecondaryForeground,
+		foreground: foreground,
 		focus:      activeTheme.Palette.Focus,
 	}
 	if closeAction && clickable.Hovered() {
@@ -173,14 +168,56 @@ func controlStyleFor(activeTheme *theme.Theme, clickable *widget.Clickable, clos
 	return style
 }
 
-func drawRoot(gtx layout.Context, size image.Point, activeTheme *theme.Theme) {
-	if size.X <= 0 || size.Y <= 0 {
+type titleBarResolvedStyle struct {
+	root      flowstyle.ResolvedStyle
+	title     flowstyle.ResolvedStyle
+	separator flowstyle.ResolvedStyle
+}
+
+func (w Widget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, disabled bool) titleBarResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	tokens := activeTheme.Components.TitleBar
+	state := flowstyle.StyleState{Disabled: disabled}
+	defaults := flowstyle.Style{}.
+		Height(tokens.Height).
+		PaddingX(tokens.PaddingX).
+		Background(flowstyle.SolidColor{Color: activeTheme.Palette.SurfaceSecondary}).
+		TextColor(flowstyle.SolidColor{Color: activeTheme.Palette.SurfaceSecondaryForeground}).
+		Part(flowstyle.PartLabel, flowstyle.Style{}.FontSize(tokens.TitleTextSize)).
+		Part(flowstyle.PartIndicator, flowstyle.Style{}.
+			Height(tokens.BorderWidth).
+			Background(flowstyle.SolidColor{Color: activeTheme.Palette.SeparatorColor()}))
+
+	root := styleruntime.Resolve(
+		ctx,
+		gtx,
+		key,
+		state,
+		defaults,
+		flowstyle.Style{},
+		flowstyle.Style{},
+		w.customStyle,
+	)
+	return titleBarResolvedStyle{
+		root:      root,
+		title:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartLabel, state, defaults, flowstyle.Style{}, flowstyle.Style{}, w.customStyle),
+		separator: styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, state, defaults, flowstyle.Style{}, flowstyle.Style{}, w.customStyle),
+	}
+}
+
+func layoutTitleBarSeparator(ctx *frame.Context, gtx layout.Context, size image.Point, style flowstyle.ResolvedStyle) {
+	if style.Box == nil || style.Box.Height == nil || size.X <= 0 || size.Y <= 0 {
 		return
 	}
-	paint.FillShape(gtx.Ops, activeTheme.Palette.SurfaceSecondary, clip.Rect{Max: size}.Op())
-	width := min(max(gtx.Dp(activeTheme.Components.TitleBar.BorderWidth), 1), size.Y)
-	rect := image.Rect(0, size.Y-width, size.X, size.Y)
-	paint.FillShape(gtx.Ops, activeTheme.Palette.SeparatorColor(), clip.Rect(rect).Op())
+	height := min(max(gtx.Dp(*style.Box.Height), 0), size.Y)
+	if height == 0 {
+		return
+	}
+	separatorGtx := gtx
+	separatorGtx.Constraints = layout.Exact(image.Pt(size.X, height))
+	offset := op.Offset(image.Pt(0, size.Y-height)).Push(gtx.Ops)
+	layoutui.LayoutResolved(ctx, separatorGtx, style, nil)
+	offset.Pop()
 }
 
 func drawControl(gtx layout.Context, size image.Point, data []byte, style controlStyle, focusVisible bool, tokens theme.TitleBarTheme) {

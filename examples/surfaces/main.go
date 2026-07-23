@@ -57,26 +57,16 @@ func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow
 		).Gap(8),
 	).Width(320).MinHeight(132).Padding(20)
 
-	surface := ui.Surface(content).
-		Variant(variant).
-		Radius(24).
-		Shadow(shadow)
-	if variant == ui.SurfaceSecondary {
-		surface = surface.
-			BorderWidth(2).
-			BorderColor(color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff})
-	}
+	declaration := ui.Radius(24)
 	if shadow {
-		surface = surface.Theme(func(theme *ui.Theme) {
-			theme.Palette.SurfaceShadow = color.NRGBA{R: 0x93, G: 0x33, B: 0xea, A: 0xff}
-			theme.Shadows.Surface.Layers = [ui.ShadowLayerCount]ui.ShadowLayerTheme{
-				{OffsetY: 2, Blur: 4, Opacity: 0.65},
-				{OffsetY: 7, Blur: 16, Spread: 2, Opacity: 0.4},
-				{OffsetY: 16, Blur: 36, Spread: 6, Opacity: 0.3},
-			}
-		})
+		declaration = declaration.Shadow(ui.ShadowSurface)
 	}
-	return surface
+	if variant == ui.SurfaceSecondary {
+		declaration = declaration.
+			BorderWidth(2).
+			BorderColor(ui.RGB(0x9333ea))
+	}
+	return ui.Surface(content).Variant(variant).Style(declaration)
 }
 
 func main() {

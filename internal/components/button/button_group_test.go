@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -115,26 +116,22 @@ func TestVerticalButtonGroupPassesDisabledContext(t *testing.T) {
 	}
 }
 
-func TestVerticalButtonGroupUsesButtonThemeDuringMeasurement(t *testing.T) {
-	ctx := newContext(nil)
+func TestVerticalButtonGroupUsesStyleDuringMeasurement(t *testing.T) {
 	group := ButtonGroup(
-		Button("themed", text.New("Themed")).Theme(func(theme *theme.Theme) {
-			theme.Components.Button.ContentGap = 64
-		}).Loading(true),
+		Button("styled", text.New("Styled")).Loading(true),
 		Button("default", text.New("Default")),
-	).Orientation(ButtonGroupVertical)
+	).
+		Orientation(ButtonGroupVertical).
+		Style(flowstyle.Style{}.PaddingX(48))
 	defaultGroup := ButtonGroup(
-		Button("themed", text.New("Themed")).Loading(true),
+		Button("styled", text.New("Styled")).Loading(true),
 		Button("default", text.New("Default")),
 	).Orientation(ButtonGroupVertical)
 
-	themedDims := group.Layout(ctx, testLayoutContext())
+	styledDims := group.Layout(newContext(nil), testLayoutContext())
 	defaultDims := defaultGroup.Layout(newContext(nil), testLayoutContext())
-	if themedDims.Size.X <= defaultDims.Size.X || themedDims.Size.Y != 80 {
-		t.Fatalf("themed ButtonGroup size = %v, want wider than %v with height 80", themedDims.Size, defaultDims.Size)
-	}
-	if gap := frame.ActiveTheme(ctx).Components.Button.ContentGap; gap != 8 {
-		t.Fatalf("button theme leaked after group layout: gap = %v, want 8", gap)
+	if styledDims.Size.X <= defaultDims.Size.X || styledDims.Size.Y != 80 {
+		t.Fatalf("styled ButtonGroup size = %v, want wider than %v with height 80", styledDims.Size, defaultDims.Size)
 	}
 }
 

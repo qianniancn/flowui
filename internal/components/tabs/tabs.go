@@ -2,8 +2,9 @@ package tabs
 
 import (
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type TabItem struct {
@@ -42,7 +43,6 @@ const (
 )
 
 type TabsWidget struct {
-	theme       func(*theme.Theme)
 	key         string
 	selectedKey string
 	items       []TabItem
@@ -54,6 +54,7 @@ type TabsWidget struct {
 	disabled    bool
 	separators  bool
 	fit         bool
+	customStyle flowstyle.Style
 }
 
 func Tabs(key, selectedKey string, items []TabItem) TabsWidget {
@@ -105,15 +106,13 @@ func (t TabsWidget) Separators(visible bool) TabsWidget {
 	return t
 }
 
-func (t TabsWidget) Theme(fn func(*theme.Theme)) TabsWidget {
-	t.theme = fn
+func (t TabsWidget) Style(value flowstyle.Style) TabsWidget {
+	t.customStyle = value
 	return t
 }
 
 func (t TabsWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
-		defer restore()
-	}
+	rootKey := frame.FullKey(ctx, t.key)
 	state := tabsStateFor(ctx, t.key)
 	state.beginFrame()
 	defer state.endFrame()
@@ -130,7 +129,22 @@ func (t TabsWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 			frame.RequestFocus(ctx, &state.item(key).clickable)
 		}
 	}
-	return t.layout(ctx, gtx, state, selectedKey, disabled)
+	hovered, pressed, focused := false, false, false
+	for _, item := range t.items {
+		itemState := state.item(item.Key)
+		hovered = hovered || itemState.clickable.Hovered()
+		pressed = pressed || itemState.clickable.Pressed()
+		focused = focused || gtx.Focused(&itemState.clickable)
+	}
+	return layoutui.LayoutStyled(ctx, gtx, rootKey, flowstyle.StyleState{
+		Hovered:  hovered,
+		Pressed:  pressed,
+		Focused:  focused,
+		Disabled: disabled,
+		Selected: selectedKey != "",
+	}, t.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return t.layout(ctx, gtx, state, selectedKey, disabled)
+	}))
 }
 
 func (t TabsWidget) effectiveSelectedKey() string {

@@ -47,7 +47,7 @@ func View(_ *ui.Context, model Model, _ ui.Send[Msg]) ui.Widget {
 
 func preview(label string, content ui.Widget) ui.Widget {
 	return ui.Column(
-		ui.Surface(content).Variant(ui.SurfaceSecondary).Radius(16),
+		ui.Surface(content).Variant(ui.SurfaceSecondary).Style(ui.Radius(16)),
 		ui.Text(label).Size(12),
 	).Gap(6)
 }

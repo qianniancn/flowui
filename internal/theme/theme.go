@@ -75,6 +75,7 @@ type Palette struct {
 	SegmentForeground          color.NRGBA
 	Accent                     color.NRGBA
 	AccentHover                color.NRGBA
+	AccentPressed              color.NRGBA
 	AccentForeground           color.NRGBA
 	AccentSoft                 color.NRGBA
 	AccentSoftHover            color.NRGBA
@@ -89,6 +90,7 @@ type Palette struct {
 	WarningSoftForeground      color.NRGBA
 	Danger                     color.NRGBA
 	DangerHover                color.NRGBA
+	DangerPressed              color.NRGBA
 	DangerForeground           color.NRGBA
 	DangerSoft                 color.NRGBA
 	DangerSoftHover            color.NRGBA
@@ -97,8 +99,6 @@ type Palette struct {
 	Selection                  color.NRGBA
 	SurfaceShadow              color.NRGBA
 	OverlayShadow              color.NRGBA
-	// Shadow is retained for compatibility. New surfaces use SurfaceShadow or OverlayShadow.
-	Shadow color.NRGBA
 }
 
 type Typography struct {
@@ -480,9 +480,7 @@ type SliderTheme struct {
 	TrackRadius     unit.Dp
 	EdgeInset       unit.Dp
 	ThumbLength     unit.Dp
-	ThumbCross      unit.Dp
 	ThumbExtra      unit.Dp
-	ThumbRadius     unit.Dp
 	HeaderGap       unit.Dp
 	VerticalGap     unit.Dp
 	TextSize        unit.Sp
@@ -1105,6 +1103,7 @@ func DefaultTheme() Theme {
 			SegmentForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			Accent:                     color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
 			AccentHover:                color.NRGBA{R: 0x1a, G: 0x7f, B: 0xf0, A: 0xff},
+			AccentPressed:              color.NRGBA{R: 0x00, G: 0x5f, B: 0xce, A: 0xff},
 			AccentForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 			AccentSoft:                 color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x22},
 			AccentSoftHover:            color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x33},
@@ -1119,6 +1118,7 @@ func DefaultTheme() Theme {
 			WarningSoftForeground:      color.NRGBA{R: 0x85, G: 0x5f, B: 0x2e, A: 0xff},
 			Danger:                     color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0xff},
 			DangerHover:                color.NRGBA{R: 0xf5, G: 0x3a, B: 0x79, A: 0xff},
+			DangerPressed:              color.NRGBA{R: 0xcf, G: 0x0b, B: 0x4f, A: 0xff},
 			DangerForeground:           color.NRGBA{R: 0xff, G: 0xf7, B: 0xfb, A: 0xff},
 			DangerSoft:                 color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x26},
 			DangerSoftHover:            color.NRGBA{R: 0xf3, G: 0x12, B: 0x60, A: 0x33},
@@ -1127,7 +1127,6 @@ func DefaultTheme() Theme {
 			Selection:                  color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x50},
 			SurfaceShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x34},
 			OverlayShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
-			Shadow:                     color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
 		},
 		Typography: Typography{
 			BodySize:    14,
@@ -1396,9 +1395,7 @@ func DefaultTheme() Theme {
 				TrackRadius:     12,
 				EdgeInset:       12,
 				ThumbLength:     24,
-				ThumbCross:      16,
 				ThumbExtra:      4,
-				ThumbRadius:     8,
 				HeaderGap:       4,
 				VerticalGap:     8,
 				TextSize:        14,
@@ -2062,6 +2059,7 @@ func DarkTheme() Theme {
 		SegmentForeground:          color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		Accent:                     color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
 		AccentHover:                color.NRGBA{R: 0x35, G: 0x92, B: 0xf9, A: 0xff},
+		AccentPressed:              color.NRGBA{R: 0x00, G: 0x6f, B: 0xd8, A: 0xff},
 		AccentForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		AccentSoft:                 color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x1f},
 		AccentSoftHover:            color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x29},
@@ -2076,6 +2074,7 @@ func DarkTheme() Theme {
 		WarningSoftForeground:      color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff},
 		Danger:                     color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0xff},
 		DangerHover:                color.NRGBA{R: 0xe1, G: 0x54, B: 0x51, A: 0xff},
+		DangerPressed:              color.NRGBA{R: 0xc6, G: 0x2f, B: 0x33, A: 0xff},
 		DangerForeground:           color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfc, A: 0xff},
 		DangerSoft:                 color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0x26},
 		DangerSoftHover:            color.NRGBA{R: 0xdb, G: 0x3b, B: 0x3e, A: 0x33},

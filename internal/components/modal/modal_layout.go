@@ -17,6 +17,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *modalState, progress float32, contentEnabled bool) layout.Dimensions {
@@ -26,8 +28,21 @@ func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state
 	}
 	gtx.Constraints = layout.Exact(size)
 
-	style := modalStyleFor(frame.ActiveTheme(ctx), m.backdrop, m.size)
-	drawModalBackdrop(gtx, size, style, progress)
+	styleState := flowstyle.StyleState{Disabled: !contentEnabled, Open: m.open}
+	defaults := modalDefaultDeclaration(frame.ActiveTheme(ctx), m.backdrop, m.size)
+	backdrop := styleruntime.ResolvePart(
+		ctx, gtx, frame.FullKey(ctx, m.key), flowstyle.PartBackdrop, styleState,
+		defaults, flowstyle.Style{}, flowstyle.Style{}, m.customStyle,
+	)
+	if backdrop.Paint == nil {
+		backdrop.Paint = &flowstyle.PaintStyle{}
+	}
+	backdropOpacity := progress
+	if backdrop.Paint.Opacity != nil {
+		backdropOpacity *= *backdrop.Paint.Opacity
+	}
+	backdrop.Paint.Opacity = &backdropOpacity
+	layoutui.LayoutResolved(ctx, gtx, backdrop, nil)
 	contentGtx := gtx
 	if !contentEnabled {
 		contentGtx = contentGtx.Disabled()
@@ -314,7 +329,21 @@ func (m ModalWidget) layoutDialogFrame(ctx *frame.Context, gtx layout.Context, s
 }
 
 func (m ModalWidget) layoutDialog(ctx *frame.Context, gtx layout.Context, state *modalState) layout.Dimensions {
-	return m.layoutDialogSurface(ctx, gtx, state)
+	focused := gtx.Focused(&state.close)
+	styleState := flowstyle.StyleState{
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, &state.close, focused),
+		Disabled:     !gtx.Enabled(),
+		Open:         m.open,
+	}
+	defaults := modalDefaultDeclaration(frame.ActiveTheme(ctx), m.backdrop, m.size)
+	resolved := styleruntime.Resolve(
+		ctx, gtx, frame.FullKey(ctx, m.key), styleState,
+		defaults, flowstyle.Style{}, flowstyle.Style{}, m.customStyle,
+	)
+	return layoutui.LayoutResolved(ctx, gtx, resolved, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return m.layoutDialogSurface(ctx, gtx, state, resolved)
+	}))
 }
 
 func (m ModalWidget) layoutDialogBlocker(gtx layout.Context, state *modalState, size image.Point) {
@@ -328,42 +357,17 @@ func (m ModalWidget) layoutDialogBlocker(gtx layout.Context, state *modalState, 
 	})
 }
 
-func (m ModalWidget) layoutDialogSurface(ctx *frame.Context, gtx layout.Context, state *modalState) layout.Dimensions {
-	theme := frame.ActiveTheme(ctx).Components.Modal
-	padding := gtx.Dp(theme.Padding)
-	contentGtx := gtx
-	contentGtx.Constraints.Min = shrinkPoint(contentGtx.Constraints.Min, padding*2)
-	contentGtx.Constraints.Max = shrinkPoint(contentGtx.Constraints.Max, padding*2)
-
-	macro := op.Record(gtx.Ops)
-	var contentDims layout.Dimensions
-	var contentPlacement frame.OverlayPlacement
-	func() {
-		restore := frame.PushColors(ctx, frame.ActiveTheme(ctx).Palette.OverlayForegroundColor(), frame.ActiveTheme(ctx).Palette.OverlayColor())
-		defer restore()
-		contentDims, contentPlacement = frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-			return m.layoutDialogContent(ctx, contentGtx, state)
-		})
-	}()
-	contentCall := macro.Stop()
-
-	size := contentDims.Size.Add(image.Pt(padding*2, padding*2))
-	size = gtx.Constraints.Constrain(size)
-	rect := image.Rectangle{Max: size}
-	radius := modalDialogRadius(gtx, frame.ActiveTheme(ctx), m.size, size)
-	drawModalSurface(gtx, frame.ActiveTheme(ctx), rect, radius, m.size)
-
-	clipStack := clip.UniformRRect(rect, radius).Push(gtx.Ops)
-	contentOffset := op.Offset(image.Pt(padding, padding)).Push(gtx.Ops)
-	contentPlacement.PlaceOffset(image.Pt(padding, padding))
-	contentCall.Add(gtx.Ops)
-	contentOffset.Pop()
-	clipStack.Pop()
-
+func (m ModalWidget) layoutDialogSurface(ctx *frame.Context, gtx layout.Context, state *modalState, resolved flowstyle.ResolvedStyle) layout.Dimensions {
+	dims := m.layoutDialogContent(ctx, gtx, state)
 	if m.showCloseButton() {
-		m.layoutCloseButton(ctx, gtx, state, size)
+		padding := resolvedPadding(gtx, resolved.Box)
+		outerSize := dims.Size.Add(image.Pt(padding.Left+padding.Right, padding.Top+padding.Bottom))
+		buttonGtx := gtx
+		stack := op.Offset(image.Pt(-padding.Left, -padding.Top)).Push(gtx.Ops)
+		m.layoutCloseButton(ctx, buttonGtx, state, outerSize)
+		stack.Pop()
 	}
-	return layout.Dimensions{Size: size}
+	return dims
 }
 
 func (m ModalWidget) layoutDialogContent(ctx *frame.Context, gtx layout.Context, state *modalState) layout.Dimensions {
@@ -519,13 +523,14 @@ func (m ModalWidget) layoutBody(ctx *frame.Context, gtx layout.Context, state *m
 }
 
 func (m ModalWidget) styleBody(ctx *frame.Context, body frame.Widget) frame.Widget {
-	text, ok := body.(text.Widget)
+	value, ok := body.(text.Widget)
 	if !ok {
 		return body
 	}
-	text = text.DefaultSize(float32(frame.ActiveTheme(ctx).Components.Modal.BodyTextSize))
-	text = text.DefaultColor(frame.ActiveTheme(ctx).Palette.MutedForeground)
-	return text
+	return text.WithDefaults(value, flowstyle.Style{}.
+		FontSize(frame.ActiveTheme(ctx).Components.Modal.BodyTextSize).
+		TextColor(flowstyle.SolidColor{Color: frame.ActiveTheme(ctx).Palette.MutedForeground}),
+	)
 }
 
 func (m ModalWidget) recordFooter(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
@@ -553,10 +558,20 @@ func (m ModalWidget) layoutCloseButton(ctx *frame.Context, gtx layout.Context, m
 	buttonGtx := gtx
 	buttonGtx.Constraints = layout.Exact(size)
 	stack := op.Offset(pos).Push(gtx.Ops)
-	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton(""), ctx, buttonGtx, &modalStateValue.close, &modalStateValue.closeButton)
+	closebutton.LayoutWithClickableNoEvents(closebutton.CloseButton("close"), ctx, buttonGtx, &modalStateValue.close)
 	stack.Pop()
 }
 
-func shrinkPoint(p image.Point, amount int) image.Point {
-	return image.Pt(max(p.X-amount, 0), max(p.Y-amount, 0))
+type modalPadding struct {
+	Top, Right, Bottom, Left int
+}
+
+func resolvedPadding(gtx layout.Context, box *flowstyle.BoxStyle) modalPadding {
+	if box == nil || box.Padding == nil {
+		return modalPadding{}
+	}
+	return modalPadding{
+		Top: gtx.Dp(box.Padding.Top), Right: gtx.Dp(box.Padding.Right),
+		Bottom: gtx.Dp(box.Padding.Bottom), Left: gtx.Dp(box.Padding.Left),
+	}
 }

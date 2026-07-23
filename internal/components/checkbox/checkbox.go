@@ -5,9 +5,10 @@ import (
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type CheckboxVariant uint8
@@ -26,7 +27,6 @@ type IndicatorState struct {
 }
 
 type CheckboxWidget struct {
-	theme         func(*theme.Theme)
 	key           string
 	checked       bool
 	label         string
@@ -40,6 +40,7 @@ type CheckboxWidget struct {
 	indeterminate bool
 	readOnly      bool
 	required      bool
+	customStyle   flowstyle.Style
 }
 
 const (
@@ -105,15 +106,12 @@ func (c CheckboxWidget) Invalid(invalid bool) CheckboxWidget {
 	return c
 }
 
-func (c CheckboxWidget) Theme(fn func(*theme.Theme)) CheckboxWidget {
-	c.theme = fn
+func (c CheckboxWidget) Style(value flowstyle.Style) CheckboxWidget {
+	c.customStyle = value
 	return c
 }
 
 func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
-		defer restore()
-	}
 	key, valueState := frame.BoolStateWithKey(ctx, c.key)
 	anim := checkboxStateFor(ctx, key)
 	valueState.Value = c.checked
@@ -147,6 +145,19 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			frame.FocusOnPress(ctx, valueState, valueState.History(), presses)
 		}
 		focusVisible := frame.FocusVisible(ctx, valueState, gtx.Focused(valueState))
+		styleState := flowstyle.StyleState{
+			Hovered:       valueState.Hovered(),
+			Pressed:       valueState.Pressed(),
+			Focused:       gtx.Focused(valueState),
+			FocusVisible:  focusVisible,
+			Disabled:      disabled,
+			Selected:      c.checked || c.indeterminate,
+			Checked:       c.checked,
+			Indeterminate: c.indeterminate,
+			ReadOnly:      c.readOnly,
+			Invalid:       c.invalid,
+		}
+		resolved := c.resolveStyle(ctx, animGtx, key, styleState)
 		motion := frame.ActiveTheme(ctx).Motion
 		selection := anim.selection(animGtx, c.checked || c.indeterminate, motion)
 		focus := anim.focusOpacity(animGtx, focusVisible && !disabled, motion)
@@ -154,13 +165,17 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			Checked: c.checked, Indeterminate: c.indeterminate,
 			Disabled: disabled, Invalid: c.invalid,
 		}
-		return c.layoutContent(ctx, gtx, ControlOptions{
+		options := ControlOptions{
 			Variant: c.variant, Selection: selection, Indeterminate: c.indeterminate,
 			Hovered: valueState.Hovered(), Pressed: valueState.Pressed(),
 			Focused: focus, Disabled: disabled, Invalid: c.invalid,
 			CustomIndicator: c.indicator != nil,
 			Indicator:       c.indicatorWidget(indicatorState),
-		}, indicatorState)
+			resolvedStyle:   &resolved.indicator,
+		}
+		return layoutui.LayoutStyled(ctx, gtx, key, styleState, c.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return c.layoutContent(ctx, gtx, options, indicatorState, resolved)
+		}))
 	})
 	return dims
 }

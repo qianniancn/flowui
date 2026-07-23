@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/listbox"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type SelectItem = listbox.ListBoxItem
@@ -29,7 +30,6 @@ const (
 )
 
 type SelectWidget struct {
-	theme             func(*theme.Theme)
 	key               string
 	selectedKey       string
 	selectedKeys      []string
@@ -63,6 +63,7 @@ type SelectWidget struct {
 	invalid           bool
 	required          bool
 	fullWidth         bool
+	customStyle       flowstyle.Style
 }
 
 const (
@@ -223,15 +224,12 @@ func (s SelectWidget) FullWidth() SelectWidget {
 	return s
 }
 
-func (s SelectWidget) Theme(fn func(*theme.Theme)) SelectWidget {
-	s.theme = fn
+func (s SelectWidget) Style(value flowstyle.Style) SelectWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
-	}
 	state := selectStateFor(ctx, s.key)
 	interactive := frame.OverlayInteractive(ctx, frame.OverlayLayerPopup, state.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
@@ -271,7 +269,19 @@ func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	}
 
 	progress := state.progress(gtx, open && !s.disabled, frame.ActiveTheme(ctx).Motion)
-	dims := s.layout(ctx, eventGtx, state, open)
+	focused := eventGtx.Focused(&state.trigger)
+	dims := layoutui.LayoutStyled(ctx, eventGtx, state.key, flowstyle.StyleState{
+		Hovered:      state.trigger.Hovered(),
+		Pressed:      state.trigger.Pressed(),
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, &state.trigger, focused),
+		Disabled:     s.disabled || !gtx.Enabled(),
+		Selected:     s.selectedKey != "" || len(s.selectedKeys) > 0,
+		Invalid:      s.invalid,
+		Open:         open,
+	}, s.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return s.layout(ctx, gtx, state, open)
+	}))
 	if progress == 0 {
 		return dims
 	}

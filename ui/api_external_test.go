@@ -27,90 +27,90 @@ type facadeModel struct {
 
 var _ ui.ToolbarTheme = ui.DefaultTheme().Components.Toolbar
 
-func TestThemeBackedWidgetsExposeThemeMethod(t *testing.T) {
-	themeCallbackType := reflect.TypeOf((func(*ui.Theme))(nil))
-	themeBacked := map[string]reflect.Type{
-		"Alert":             reflect.TypeOf((*ui.AlertWidget)(nil)).Elem(),
-		"AlertDialog":       reflect.TypeOf((*ui.AlertDialogWidget)(nil)).Elem(),
-		"Avatar":            reflect.TypeOf((*ui.AvatarWidget)(nil)).Elem(),
-		"Badge":             reflect.TypeOf((*ui.BadgeWidget)(nil)).Elem(),
-		"BarChart":          reflect.TypeOf((*ui.BarChartWidget)(nil)).Elem(),
-		"Button":            reflect.TypeOf((*ui.ButtonWidget)(nil)).Elem(),
-		"ButtonGroup":       reflect.TypeOf((*ui.ButtonGroupWidget)(nil)).Elem(),
-		"CandlestickChart":  reflect.TypeOf((*ui.CandlestickChartWidget)(nil)).Elem(),
-		"Card":              reflect.TypeOf((*ui.CardWidget)(nil)).Elem(),
-		"Checkbox":          reflect.TypeOf((*ui.CheckboxWidget)(nil)).Elem(),
-		"Chip":              reflect.TypeOf((*ui.ChipWidget)(nil)).Elem(),
-		"CloseButton":       reflect.TypeOf((*ui.CloseButtonWidget)(nil)).Elem(),
-		"Collapsible":       reflect.TypeOf((*ui.CollapsibleWidget)(nil)).Elem(),
-		"CollapsibleGroup":  reflect.TypeOf((*ui.CollapsibleGroupWidget)(nil)).Elem(),
-		"ColorArea":         reflect.TypeOf((*ui.ColorAreaWidget)(nil)).Elem(),
-		"ColorField":        reflect.TypeOf((*ui.ColorFieldWidget)(nil)).Elem(),
-		"ColorPicker":       reflect.TypeOf((*ui.ColorPickerWidget)(nil)).Elem(),
-		"ColorSlider":       reflect.TypeOf((*ui.ColorSliderWidget)(nil)).Elem(),
-		"ColorSwatch":       reflect.TypeOf((*ui.ColorSwatchWidget)(nil)).Elem(),
-		"ColorSwatchPicker": reflect.TypeOf((*ui.ColorSwatchPickerWidget)(nil)).Elem(),
-		"ComboBox":          reflect.TypeOf((*ui.ComboBoxWidget)(nil)).Elem(),
-		"ContextMenu":       reflect.TypeOf((*ui.ContextMenuWidget)(nil)).Elem(),
-		"DateField":         reflect.TypeOf((*ui.DateFieldWidget)(nil)).Elem(),
-		"DatePicker":        reflect.TypeOf((*ui.DatePickerWidget)(nil)).Elem(),
-		"DateRangePicker":   reflect.TypeOf((*ui.DateRangePickerWidget)(nil)).Elem(),
-		"Description":       reflect.TypeOf((*ui.DescriptionWidget)(nil)).Elem(),
-		"Dropdown":          reflect.TypeOf((*ui.DropdownWidget)(nil)).Elem(),
-		"Input":             reflect.TypeOf((*ui.InputWidget)(nil)).Elem(),
-		"InputGroup":        reflect.TypeOf((*ui.InputGroupWidget)(nil)).Elem(),
-		"Label":             reflect.TypeOf((*ui.LabelWidget)(nil)).Elem(),
-		"LineChart":         reflect.TypeOf((*ui.LineChartWidget)(nil)).Elem(),
-		"ListBox":           reflect.TypeOf((*ui.ListBoxWidget)(nil)).Elem(),
-		"Menu":              reflect.TypeOf((*ui.MenuWidget)(nil)).Elem(),
-		"Menubar":           reflect.TypeOf((*ui.MenubarWidget)(nil)).Elem(),
-		"Meter":             reflect.TypeOf((*ui.MeterWidget)(nil)).Elem(),
-		"Modal":             reflect.TypeOf((*ui.ModalWidget)(nil)).Elem(),
-		"Pagination":        reflect.TypeOf((*ui.PaginationWidget)(nil)).Elem(),
-		"PieChart":          reflect.TypeOf((*ui.PieChartWidget)(nil)).Elem(),
-		"Popover":           reflect.TypeOf((*ui.PopoverWidget)(nil)).Elem(),
-		"ProgressBar":       reflect.TypeOf((*ui.ProgressBarWidget)(nil)).Elem(),
-		"ProgressCircle":    reflect.TypeOf((*ui.ProgressCircleWidget)(nil)).Elem(),
-		"RadioGroup":        reflect.TypeOf((*ui.RadioGroupWidget)(nil)).Elem(),
-		"Scrollbar":         reflect.TypeOf((*ui.ScrollbarWidget)(nil)).Elem(),
-		"Select":            reflect.TypeOf((*ui.SelectWidget)(nil)).Elem(),
-		"Sidebar":           reflect.TypeOf((*ui.SidebarWidget)(nil)).Elem(),
-		"Slider":            reflect.TypeOf((*ui.SliderWidget)(nil)).Elem(),
-		"Spinner":           reflect.TypeOf((*ui.SpinnerWidget)(nil)).Elem(),
-		"SplitPane":         reflect.TypeOf((*ui.SplitPaneWidget)(nil)).Elem(),
-		"Surface":           reflect.TypeOf((*ui.SurfaceWidget)(nil)).Elem(),
-		"Switch":            reflect.TypeOf((*ui.SwitchWidget)(nil)).Elem(),
-		"SwitchGroup":       reflect.TypeOf((*ui.SwitchGroupWidget)(nil)).Elem(),
-		"Table":             reflect.TypeOf((*ui.TableWidget)(nil)).Elem(),
-		"Tabs":              reflect.TypeOf((*ui.TabsWidget)(nil)).Elem(),
-		"TextArea":          reflect.TypeOf((*ui.TextAreaWidget)(nil)).Elem(),
-		"TitleBar":          reflect.TypeOf((*ui.WindowTitleBarWidget)(nil)).Elem(),
-		"ToastProvider":     reflect.TypeOf((*ui.ToastProviderWidget)(nil)).Elem(),
-		"ToggleButton":      reflect.TypeOf((*ui.ToggleButtonWidget)(nil)).Elem(),
-		"Toolbar":           reflect.TypeOf((*ui.ToolbarWidget)(nil)).Elem(),
-		"ToolbarSeparator":  reflect.TypeOf((*ui.ToolbarSeparatorWidget)(nil)).Elem(),
-		"Tooltip":           reflect.TypeOf((*ui.TooltipWidget)(nil)).Elem(),
-		"Tree":              reflect.TypeOf((*ui.TreeWidget)(nil)).Elem(),
+func TestStyleBackedWidgetsExposeStyleMethod(t *testing.T) {
+	styleType := reflect.TypeFor[ui.Style]()
+	styleBacked := map[string]reflect.Type{
+		"Alert":             reflect.TypeFor[ui.AlertWidget](),
+		"AlertDialog":       reflect.TypeFor[ui.AlertDialogWidget](),
+		"Avatar":            reflect.TypeFor[ui.AvatarWidget](),
+		"Badge":             reflect.TypeFor[ui.BadgeWidget](),
+		"BarChart":          reflect.TypeFor[ui.BarChartWidget](),
+		"Box":               reflect.TypeFor[ui.BoxWidget](),
+		"Button":            reflect.TypeFor[ui.ButtonWidget](),
+		"ButtonGroup":       reflect.TypeFor[ui.ButtonGroupWidget](),
+		"Card":              reflect.TypeFor[ui.CardWidget](),
+		"CandlestickChart":  reflect.TypeFor[ui.CandlestickChartWidget](),
+		"Checkbox":          reflect.TypeFor[ui.CheckboxWidget](),
+		"Chip":              reflect.TypeFor[ui.ChipWidget](),
+		"ColorArea":         reflect.TypeFor[ui.ColorAreaWidget](),
+		"ColorField":        reflect.TypeFor[ui.ColorFieldWidget](),
+		"ColorPicker":       reflect.TypeFor[ui.ColorPickerWidget](),
+		"ColorSlider":       reflect.TypeFor[ui.ColorSliderWidget](),
+		"ColorSwatch":       reflect.TypeFor[ui.ColorSwatchWidget](),
+		"ColorSwatchPicker": reflect.TypeFor[ui.ColorSwatchPickerWidget](),
+		"CloseButton":       reflect.TypeFor[ui.CloseButtonWidget](),
+		"Collapsible":       reflect.TypeFor[ui.CollapsibleWidget](),
+		"CollapsibleGroup":  reflect.TypeFor[ui.CollapsibleGroupWidget](),
+		"ComboBox":          reflect.TypeFor[ui.ComboBoxWidget](),
+		"ContextMenu":       reflect.TypeFor[ui.ContextMenuWidget](),
+		"DateField":         reflect.TypeFor[ui.DateFieldWidget](),
+		"DatePicker":        reflect.TypeFor[ui.DatePickerWidget](),
+		"DateRangePicker":   reflect.TypeFor[ui.DateRangePickerWidget](),
+		"Description":       reflect.TypeFor[ui.DescriptionWidget](),
+		"Dropdown":          reflect.TypeFor[ui.DropdownWidget](),
+		"Input":             reflect.TypeFor[ui.InputWidget](),
+		"InputGroup":        reflect.TypeFor[ui.InputGroupWidget](),
+		"Label":             reflect.TypeFor[ui.LabelWidget](),
+		"LineChart":         reflect.TypeFor[ui.LineChartWidget](),
+		"ListBox":           reflect.TypeFor[ui.ListBoxWidget](),
+		"Menu":              reflect.TypeFor[ui.MenuWidget](),
+		"Menubar":           reflect.TypeFor[ui.MenubarWidget](),
+		"Meter":             reflect.TypeFor[ui.MeterWidget](),
+		"Modal":             reflect.TypeFor[ui.ModalWidget](),
+		"Pagination":        reflect.TypeFor[ui.PaginationWidget](),
+		"PieChart":          reflect.TypeFor[ui.PieChartWidget](),
+		"Popover":           reflect.TypeFor[ui.PopoverWidget](),
+		"ProgressBar":       reflect.TypeFor[ui.ProgressBarWidget](),
+		"ProgressCircle":    reflect.TypeFor[ui.ProgressCircleWidget](),
+		"RadioGroup":        reflect.TypeFor[ui.RadioGroupWidget](),
+		"Scrollbar":         reflect.TypeFor[ui.ScrollbarWidget](),
+		"Select":            reflect.TypeFor[ui.SelectWidget](),
+		"Sidebar":           reflect.TypeFor[ui.SidebarWidget](),
+		"Slider":            reflect.TypeFor[ui.SliderWidget](),
+		"Spinner":           reflect.TypeFor[ui.SpinnerWidget](),
+		"SplitPane":         reflect.TypeFor[ui.SplitPaneWidget](),
+		"Surface":           reflect.TypeFor[ui.SurfaceWidget](),
+		"Switch":            reflect.TypeFor[ui.SwitchWidget](),
+		"SwitchGroup":       reflect.TypeFor[ui.SwitchGroupWidget](),
+		"Table":             reflect.TypeFor[ui.TableWidget](),
+		"Tabs":              reflect.TypeFor[ui.TabsWidget](),
+		"Text":              reflect.TypeFor[ui.TextWidget](),
+		"TextArea":          reflect.TypeFor[ui.TextAreaWidget](),
+		"ToastProvider":     reflect.TypeFor[ui.ToastProviderWidget](),
+		"ToggleButton":      reflect.TypeFor[ui.ToggleButtonWidget](),
+		"Toolbar":           reflect.TypeFor[ui.ToolbarWidget](),
+		"ToolbarSeparator":  reflect.TypeFor[ui.ToolbarSeparatorWidget](),
+		"TitleBar":          reflect.TypeFor[ui.WindowTitleBarWidget](),
+		"Tooltip":           reflect.TypeFor[ui.TooltipWidget](),
+		"Tree":              reflect.TypeFor[ui.TreeWidget](),
 	}
-
-	for name, widgetType := range themeBacked {
-		method, ok := widgetType.MethodByName("Theme")
+	for name, widgetType := range styleBacked {
+		method, ok := widgetType.MethodByName("Style")
 		if !ok {
-			t.Errorf("%sWidget has no Theme method", name)
+			t.Errorf("%sWidget has no Style method", name)
 			continue
 		}
-		if method.Type.NumIn() != 2 {
-			t.Errorf("%sWidget Theme parameter count = %d, want 1", name, method.Type.NumIn()-1)
-			continue
+		if method.Type.NumIn() != 2 || method.Type.In(1) != styleType {
+			t.Errorf("%sWidget Style signature = %v, want Style", name, method.Type)
 		}
-		if method.Type.In(1) != themeCallbackType {
-			t.Errorf("%sWidget Theme callback = %v, want %v", name, method.Type.In(1), themeCallbackType)
+		if _, ok := widgetType.MethodByName("Theme"); ok {
+			t.Errorf("%sWidget still exposes legacy Theme method", name)
 		}
 	}
 }
 
 func TestContextExposesOnlySupportedMethods(t *testing.T) {
-	contextType := reflect.TypeOf((*ui.Context)(nil))
+	contextType := reflect.TypeFor[*ui.Context]()
 	want := map[string]struct{}{
 		"BackgroundColor":     {},
 		"BoolState":           {},
@@ -132,8 +132,8 @@ func TestContextExposesOnlySupportedMethods(t *testing.T) {
 	if contextType.NumMethod() != len(want) {
 		t.Errorf("ui.Context method count = %d, want %d", contextType.NumMethod(), len(want))
 	}
-	for index := 0; index < contextType.NumMethod(); index++ {
-		name := contextType.Method(index).Name
+	for method := range contextType.Methods() {
+		name := method.Name
 		if _, ok := want[name]; !ok {
 			t.Errorf("ui.Context unexpectedly exposes method %s", name)
 		}
@@ -242,7 +242,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			LineHeightScale(1.1),
 		ui.SelectableText("selectable-text", "Selectable text").
 			Typeface("monospace").
-			Style(font.Italic).
+			FontStyle(font.Italic).
 			Weight(font.SemiBold).
 			Align(ui.TextAlignEnd).
 			MaxLines(1).
@@ -484,11 +484,10 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		),
 		ui.Toolbar(
 			ui.Button("save", ui.Icon(lucide.Save).Size(16)).
-				Theme(func(theme *ui.Theme) {
-					theme.Components.Button.Radius = 8
-					theme.Spacing.ControlPaddingX = 20
-					theme.Palette.Accent = color.NRGBA{R: 0x17, G: 0x72, B: 0x45, A: 0xff}
-				}).
+				Style(ui.Radius(8).
+					PaddingX(20).
+					Background(ui.RGB(0x177245)),
+				).
 				IconOnly(),
 			ui.ToolbarSeparator(),
 			ui.ToggleButton("bold", true, ui.Icon(lucide.Bold).Size(16)).IconOnly(),
@@ -504,6 +503,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		).
 			Variant(ui.ButtonSecondary).
 			Size(ui.ButtonSmall).
+			Style(ui.Radius(6)).
 			Orientation(ui.ButtonGroupHorizontal).
 			Separators(true).
 			FullWidth().
@@ -537,12 +537,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			externalWidget{},
 			ui.Row(ui.Text("Footer")),
 		).Variant(ui.CardSecondary),
-		ui.Surface(externalWidget{}).BorderWidth(1).BorderColor(color.NRGBA{A: 0xff}).Theme(func(theme *ui.Theme) {
-			theme.Shadows.Surface.Layers[1].Blur = 12
-		}),
+		ui.Surface(externalWidget{}).Style(ui.BorderWidth(1).
+			BorderColor(ui.Color(color.NRGBA{A: 0xff})),
+		),
 		ui.Surface(
 			ui.Tabs("settings", "general", tabs).Variant(ui.TabsSecondary),
-		).Variant(ui.SurfaceSecondary).Radius(8),
+		).Variant(ui.SurfaceSecondary).Style(ui.Radius(8)),
 		ui.Collapsible("details", model.open, "Details", ui.Text("More information")).
 			Leading(ui.Icon(lucide.Info).Size(16)).
 			Trailing(ui.Chip("New").Size(ui.ChipSmall)).
@@ -877,6 +877,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	}
 	var _ ui.Widget = externalWidget{}
 	var _ ui.Widget = ui.WidgetFunc(func(*ui.Context, layout.Context) layout.Dimensions { return layout.Dimensions{} })
+	var _ ui.Widget = ui.Box(ui.Text("Save")).Key("save").Label("Save").Disabled(false).OnClick(func() {})
 	var _ func(*ui.Context, string) *int = ui.UseState[int]
 	var _ func(*ui.Context, string, func() *int) *int = ui.UseStateWith[int]
 	var _ ui.PortalContent = func(image.Rectangle, bool) ui.Widget { return ui.Text("Portal") }

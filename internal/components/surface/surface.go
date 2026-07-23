@@ -1,13 +1,12 @@
 package surface
 
 import (
-	"image/color"
-
 	"gioui.org/layout"
-	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 )
 
 type SurfaceVariant uint8
@@ -21,19 +20,9 @@ const (
 
 // SurfaceWidget provides a semantic, theme-aware background for non-overlay content.
 type SurfaceWidget struct {
-	theme          func(*theme.Theme)
-	child          frame.Widget
-	variant        SurfaceVariant
-	radius         unit.Dp
-	shadow         bool
-	background     render.Brush
-	foreground     color.NRGBA
-	borderColor    color.NRGBA
-	borderWidth    unit.Dp
-	hasBackground  bool
-	hasForeground  bool
-	hasBorderColor bool
-	hasBorderWidth bool
+	child       frame.Widget
+	customStyle flowstyle.Style
+	variant     SurfaceVariant
 }
 
 func Surface(child frame.Widget) SurfaceWidget {
@@ -45,58 +34,26 @@ func (s SurfaceWidget) Variant(variant SurfaceVariant) SurfaceWidget {
 	return s
 }
 
-func (s SurfaceWidget) Radius(dp int) SurfaceWidget {
-	s.radius = unit.Dp(max(dp, 0))
-	return s
-}
-
-func (s SurfaceWidget) Shadow(enabled bool) SurfaceWidget {
-	s.shadow = enabled
-	return s
-}
-
-func (s SurfaceWidget) Theme(fn func(*theme.Theme)) SurfaceWidget {
-	s.theme = fn
-	return s
-}
-
-func (s SurfaceWidget) Background(brush render.Brush) SurfaceWidget {
-	s.background = brush
-	s.hasBackground = true
-	return s
-}
-
-func (s SurfaceWidget) Foreground(col color.NRGBA) SurfaceWidget {
-	s.foreground = col
-	s.hasForeground = true
-	return s
-}
-
-func (s SurfaceWidget) BorderColor(col color.NRGBA) SurfaceWidget {
-	s.borderColor = col
-	s.hasBorderColor = true
-	return s
-}
-
-func (s SurfaceWidget) BorderWidth(dp int) SurfaceWidget {
-	s.borderWidth = unit.Dp(max(dp, 0))
-	s.hasBorderWidth = true
+func (s SurfaceWidget) Style(value flowstyle.Style) SurfaceWidget {
+	s.customStyle = value
 	return s
 }
 
 func (s SurfaceWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, s.theme); restore != nil {
-		defer restore()
+	state := flowstyle.StyleState{}
+	defaults := surfaceDefaultDeclaration(frame.ActiveTheme(ctx))
+	variant := surfaceVariantDeclaration(frame.ActiveTheme(ctx), s.variant)
+	resolved := styleruntime.ResolveStatic(
+		ctx,
+		state,
+		defaults,
+		variant,
+		flowstyle.Style{},
+		s.customStyle,
+	)
+	if len(resolved.Transitions) != 0 {
+		key := frame.ClaimKey(ctx, stateutil.KindStyle, "surface")
+		resolved = styleruntime.ApplyTransitions(ctx, gtx, key, resolved)
 	}
-	style := surfaceStyleFor(frame.ActiveTheme(ctx), s.variant)
-	if s.hasForeground {
-		style.foreground = s.foreground
-	}
-	if s.hasBorderColor {
-		style.border = s.borderColor
-	}
-	if s.hasBorderWidth {
-		style.borderWidth = s.borderWidth
-	}
-	return s.layout(ctx, gtx, style)
+	return layoutui.LayoutResolved(ctx, gtx, resolved, s.child)
 }

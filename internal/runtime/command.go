@@ -199,9 +199,7 @@ func startEffect[Msg any](
 	onDone func(),
 ) <-chan struct{} {
 	done := make(chan struct{})
-	group.wait.Add(1)
-	go func() {
-		defer group.wait.Done()
+	group.wait.Go(func() {
 		defer func() {
 			close(done)
 			if onDone != nil {
@@ -228,7 +226,7 @@ func startEffect[Msg any](
 			return
 		}
 		reportEffectError(report, &EffectError{Kind: kind, Key: key, Err: err})
-	}()
+	})
 	return done
 }
 

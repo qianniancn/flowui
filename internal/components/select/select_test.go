@@ -16,10 +16,12 @@ import (
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/listbox"
 	"github.com/qianniancn/FlowUI/internal/components/text"
+	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -871,18 +873,20 @@ func TestSelectSupportMessageMatchesInvalidState(t *testing.T) {
 
 func TestSelectStylesMatchPrimaryAndSecondaryFields(t *testing.T) {
 	theme := DefaultTheme()
-	primary := selectStyleFor(&theme, SelectPrimary, false, false, false, false)
-	secondary := selectStyleFor(&theme, SelectSecondary, false, false, false, false)
-	invalid := selectStyleFor(&theme, SelectPrimary, false, false, false, true)
+	primary := field.DefaultDeclaration(&theme, SelectPrimary, field.DeclarationOptions{TargetPart: flowstyle.PartContent, Radius: theme.Components.Select.Radius, ShadowOpacity: 1, ShadowStrength: 1})
+	secondary := field.DefaultDeclaration(&theme, SelectSecondary, field.DeclarationOptions{TargetPart: flowstyle.PartContent, Radius: theme.Components.Select.Radius, ShadowOpacity: 1, ShadowStrength: 1})
+	primaryStyle := flowstyle.CascadePart(flowstyle.StyleState{}, flowstyle.PartContent, primary)
+	secondaryStyle := flowstyle.CascadePart(flowstyle.StyleState{}, flowstyle.PartContent, secondary)
+	invalidStyle := flowstyle.CascadePart(flowstyle.StyleState{Invalid: true}, flowstyle.PartContent, primary)
 
-	if primary.field.ShadowOpacity == 0 {
+	if primaryStyle.Paint == nil || len(primaryStyle.Paint.Shadows) == 0 {
 		t.Fatal("primary select should keep field shadow")
 	}
-	if secondary.field.ShadowOpacity != 0 || secondary.field.Background != theme.Palette.DefaultColor() {
+	if secondaryStyle.Paint == nil || len(secondaryStyle.Paint.Shadows) != 0 || secondaryStyle.Paint.Background != flowstyle.TokenDefault {
 		t.Fatal("secondary select does not match lower-emphasis field style")
 	}
-	if invalid.field.Border != theme.Palette.Danger {
-		t.Fatal("invalid select does not use danger border")
+	if invalidStyle.Paint == nil || invalidStyle.Paint.Outline == nil || invalidStyle.Paint.Outline.Color != flowstyle.TokenDanger {
+		t.Fatal("invalid select does not use danger outline")
 	}
 }
 
@@ -921,6 +925,28 @@ func TestSelectPanelUsesTriggerWidth(t *testing.T) {
 	}
 	if !listbox.HasDerivedState(ctx, "language", "options") {
 		t.Fatal("select panel did not reuse ListBox")
+	}
+}
+
+func TestSelectPartPanelStylesOnlyPanel(t *testing.T) {
+	measure := func(value SelectWidget) layout.Dimensions {
+		ctx := newContext(nil)
+		state := selectStateFor(ctx, value.key)
+		state.bind(value)
+		return value.layoutPanel(ctx, layout.Context{
+			Constraints: layout.Constraints{Min: image.Pt(180, 0), Max: image.Pt(180, 240)},
+			Ops:         new(op.Ops),
+		}, state, true, true)
+	}
+	base := Select("language", "go", selectTestItems())
+	baseDims := measure(base)
+	styled := base.Style(flowstyle.Style{}.
+		Part(flowstyle.PartPanel, flowstyle.Style{}.PaddingY(10)),
+	)
+	styledDims := measure(styled)
+
+	if styledDims.Size.X != baseDims.Size.X || styledDims.Size.Y != baseDims.Size.Y+20 {
+		t.Fatalf("styled panel = %v, want width %d and height %d", styledDims.Size, baseDims.Size.X, baseDims.Size.Y+20)
 	}
 }
 

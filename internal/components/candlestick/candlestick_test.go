@@ -19,6 +19,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -62,7 +63,8 @@ func TestCandlestickChartOptionsUseValueSemantics(t *testing.T) {
 		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(0, 10)}).
 		Label("Market").
 		EmptyText("Empty").
-		Disabled(true)
+		Disabled(true).
+		Style(flowstyle.Style{}.Radius(4))
 	categories[0] = "Changed"
 	timestamps := []time.Time{time.Date(2026, time.July, 13, 22, 0, 0, 0, time.UTC)}
 	timeConfigured := base.Times(timestamps).FormatTime(func(time.Time) string { return "custom" })
@@ -80,6 +82,9 @@ func TestCandlestickChartOptionsUseValueSemantics(t *testing.T) {
 	}
 	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || configured.showTooltip || configured.showCrosshair || !configured.hasYRange || configured.yMin != 8 || configured.yMax != 14 || configured.yTickCount != 6 || configured.formatY == nil || configured.xAxisLabel != "Date" || configured.yAxisLabel != "Price" || configured.width != 10 || configured.maxWidth != 16 || configured.minWidth != 2 || !configured.hasUpColor || !configured.hasDownColor || !configured.hasDojiColor || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != .25 || configured.dataWindow.End != .75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.label != "Market" || configured.emptyText != "Empty" || !configured.disabled {
 		t.Fatalf("configured CandlestickChart = %#v", configured)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
+		t.Fatal("configured CandlestickChart did not retain its style")
 	}
 }
 

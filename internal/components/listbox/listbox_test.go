@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -492,7 +493,7 @@ func TestListBoxStyleUsesDangerPalette(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Palette.Danger = color.NRGBA{R: 7, G: 8, B: 9, A: 255}
 
-	style := listBoxItemStyleFor(&theme, ListBoxItemDanger, false, false, false)
+	style := listBoxItemStyleFor(&theme, ListBoxItemDanger, false)
 
 	if style.fg != theme.Palette.Danger {
 		t.Fatalf("danger foreground = %#v, want %#v", style.fg, theme.Palette.Danger)
@@ -654,18 +655,23 @@ func TestListBoxThemeControlsItemHeight(t *testing.T) {
 	}
 }
 
-func TestListBoxItemFrameVerticallyCentersContent(t *testing.T) {
-	constraints := layout.Constraints{
-		Min: image.Pt(120, 0),
-		Max: image.Pt(120, 100),
-	}
-	size, offset := listBoxItemFrame(constraints, 72, image.Pt(120, 20))
+func TestListBoxPartItemResolvesPerItemState(t *testing.T) {
+	activeTheme := DefaultTheme()
+	activeTheme.Components.ListBox.Padding = 0
+	activeTheme.Components.ListBox.Gap = 0
+	ctx := newContextWithTheme(nil, &activeTheme)
+	declaration := flowstyle.Style{}.
+		Part(flowstyle.PartItem, flowstyle.Style{}.
+			Height(44).
+			When(flowstyle.Selected, flowstyle.Style{}.Height(64)))
 
-	if size != image.Pt(120, 72) {
-		t.Fatalf("item frame size = %v, want (120,72)", size)
-	}
-	if offset != image.Pt(0, 26) {
-		t.Fatalf("item content offset = %v, want (0,26)", offset)
+	dims := ListBox("languages", "go", []ListBoxItem{
+		{Key: "go", Label: "Go"},
+		{Key: "rust", Label: "Rust"},
+	}).Style(declaration).Layout(ctx, testLayoutContext())
+
+	if dims.Size.Y != 108 {
+		t.Fatalf("listbox height = %d, want selected 64 + default 44", dims.Size.Y)
 	}
 }
 

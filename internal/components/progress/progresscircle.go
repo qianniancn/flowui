@@ -11,13 +11,15 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	statepkg "github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
 type ProgressCircleWidget struct {
-	theme         func(*theme.Theme)
 	key           string
 	value         float64
 	minValue      float64
@@ -29,6 +31,7 @@ type ProgressCircleWidget struct {
 	color         ProgressCircleColor
 	size          ProgressCircleSize
 	disabled      bool
+	customStyle   flowstyle.Style
 }
 
 type ProgressCircleColor = ProgressBarColor
@@ -94,41 +97,36 @@ func (p ProgressCircleWidget) Disabled(disabled bool) ProgressCircleWidget {
 	return p
 }
 
-func (p ProgressCircleWidget) Theme(fn func(*theme.Theme)) ProgressCircleWidget {
-	p.theme = fn
+func (p ProgressCircleWidget) Style(value flowstyle.Style) ProgressCircleWidget {
+	p.customStyle = value
 	return p
 }
 
 func (p ProgressCircleWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, p.theme); restore != nil {
-		defer restore()
-	}
 	activeTheme := frame.ActiveTheme(ctx)
-	progressState := progressCircleStateFor(ctx, p.key)
+	key := frame.ClaimKey(ctx, statepkg.KindProgressCircle, p.key)
+	progressState := progressCircleStateFor(ctx, key)
 	progress := progressState.progress(gtx, p.ratio(), p.indeterminate, frame.ActiveTheme(ctx).Motion)
-	style := progressCircleStyleFor(activeTheme, p.color, p.disabled)
-	diameter := max(gtx.Dp(progressCircleSizeFor(activeTheme, p.size)), 1)
-	size := gtx.Constraints.Constrain(image.Pt(diameter, diameter))
-	iconSize := min(diameter, size.X, size.Y)
-
-	macro := op.Record(gtx.Ops)
-	if iconSize > 0 {
-		offset := op.Offset(image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)).Push(gtx.Ops)
-		period := time.Duration(0)
-		if !p.disabled {
-			period = theme.ResolveMotionDuration(activeTheme.Motion, progressCircleSpinDuration)
+	resolved := p.resolveStyle(ctx, gtx, key)
+	return layoutui.LayoutResolved(ctx, gtx, resolved.root, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		diameter := max(min(gtx.Constraints.Max.X, gtx.Constraints.Max.Y), 1)
+		size := gtx.Constraints.Constrain(image.Pt(diameter, diameter))
+		iconSize := min(size.X, size.Y)
+		if iconSize > 0 {
+			offset := op.Offset(image.Pt((size.X-iconSize)/2, (size.Y-iconSize)/2)).Push(gtx.Ops)
+			period := time.Duration(0)
+			if !p.disabled {
+				period = theme.ResolveMotionDuration(activeTheme.Motion, progressCircleSpinDuration)
+			}
+			drawProgressCircle(gtx, iconSize, activeTheme.Components.ProgressCircle.StrokeRatio, resolved.visual, progress, p.indeterminate, period)
+			offset.Pop()
 		}
-		drawProgressCircle(gtx, iconSize, activeTheme.Components.ProgressCircle.StrokeRatio, style, progress, p.indeterminate, period)
-		offset.Pop()
-	}
-	call := macro.Stop()
-
-	clipped := clip.Rect{Max: size}.Push(gtx.Ops)
-	semantic.EnabledOp(!p.disabled).Add(gtx.Ops)
-	semantic.DescriptionOp(p.semanticDescription()).Add(gtx.Ops)
-	call.Add(gtx.Ops)
-	clipped.Pop()
-	return layout.Dimensions{Size: size}
+		clipped := clip.Rect{Max: size}.Push(gtx.Ops)
+		semantic.EnabledOp(!p.disabled).Add(gtx.Ops)
+		semantic.DescriptionOp(p.semanticDescription()).Add(gtx.Ops)
+		clipped.Pop()
+		return layout.Dimensions{Size: size}
+	}))
 }
 
 func (p ProgressCircleWidget) ratio() float32 {
@@ -151,13 +149,70 @@ func (p ProgressCircleWidget) semanticDescription() string {
 }
 
 func progressCircleStateFor(ctx *frame.Context, key string) *progressBarState {
-	key = frame.ClaimKey(ctx, statepkg.KindProgressCircle, key)
 	return frame.UseState[progressBarState](ctx, key, stateSlotProgressCircle)
 }
 
 type progressCircleStyle struct {
 	track color.NRGBA
 	fill  color.NRGBA
+}
+
+type progressCircleResolvedStyle struct {
+	root   flowstyle.ResolvedStyle
+	visual progressCircleStyle
+}
+
+func (p ProgressCircleWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string) progressCircleResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
+	state := flowstyle.StyleState{Disabled: p.disabled}
+	defaults := progressCircleDefaultDeclaration(activeTheme)
+	variant := progressCircleVariantDeclaration(activeTheme, p.color, p.disabled)
+	size := progressCircleSizeDeclaration(activeTheme, p.size)
+	root := styleruntime.Resolve(
+		ctx,
+		gtx,
+		key,
+		state,
+		defaults,
+		variant,
+		size,
+		p.customStyle,
+	)
+	track := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartTrack, state, defaults, variant, size, p.customStyle)
+	indicator := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartFill, state, defaults, variant, size, p.customStyle)
+	result := progressCircleStyleFor(activeTheme, p.color, p.disabled)
+	if track.Paint != nil {
+		if brush, ok := styleruntime.Brush(track.Paint.Background); ok {
+			result.track = brush.ColorAt(.5)
+		}
+		result.track = styleruntime.ApplyOpacity(result.track, track.Paint.Opacity)
+	}
+	if indicator.Paint != nil {
+		if brush, ok := styleruntime.Brush(indicator.Paint.Background); ok {
+			result.fill = brush.ColorAt(.5)
+		}
+		result.fill = styleruntime.ApplyOpacity(result.fill, indicator.Paint.Opacity)
+	}
+	return progressCircleResolvedStyle{root: root, visual: result}
+}
+
+func progressCircleDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+	return flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: activeTheme.Palette.DefaultColor()}))
+
+}
+
+func progressCircleVariantDeclaration(activeTheme *theme.Theme, circleColor ProgressCircleColor, disabled bool) flowstyle.Style {
+	resolved := progressCircleStyleFor(activeTheme, circleColor, disabled)
+	return flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: resolved.track})).
+		Part(flowstyle.PartFill, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: resolved.fill}))
+
+}
+
+func progressCircleSizeDeclaration(activeTheme *theme.Theme, size ProgressCircleSize) flowstyle.Style {
+	diameter := progressCircleSizeFor(activeTheme, size)
+	return flowstyle.Style{}.Width(diameter).Height(diameter).AspectRatio(1)
 }
 
 func progressCircleStyleFor(activeTheme *theme.Theme, circleColor ProgressCircleColor, disabled bool) progressCircleStyle {

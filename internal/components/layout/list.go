@@ -4,6 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ListWidget struct {
@@ -71,7 +72,7 @@ func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if l.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutScrollbarList(ctx, gtx, state, bar, l.count, l.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, "", state, bar, l.count, l.disabled, false, flowstyle.Style{}, func(gtx layout.Context, index int) layout.Dimensions {
 		item := l.item(index)
 		prepareFieldAssociations(ctx, item)
 		return item.Layout(ctx, gtx)

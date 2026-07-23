@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -44,17 +45,19 @@ type overlayIdentity struct {
 
 type overlayRequest struct {
 	OverlayRequest
-	identity    overlayIdentity
-	host        *overlayHost
-	transform   int
-	scope       []string
-	group       OverlayLayer
-	order       uint64
-	rootOrder   uint64
-	parent      *overlayRequest
-	activeTheme *theme.Theme
-	rendered    bool
-	dismissed   bool
+	identity        overlayIdentity
+	host            *overlayHost
+	transform       int
+	scope           []string
+	group           OverlayLayer
+	order           uint64
+	rootOrder       uint64
+	parent          *overlayRequest
+	activeTheme     *theme.Theme
+	styles          []style.Style
+	inheritedStyles []style.Style
+	rendered        bool
+	dismissed       bool
 }
 
 type overlayTransform struct {
@@ -152,16 +155,18 @@ func RegisterOverlay(ctx *Context, request OverlayRequest) {
 		rootOrder = host.active.rootOrder
 	}
 	host.requests = append(host.requests, &overlayRequest{
-		OverlayRequest: request,
-		identity:       identity,
-		host:           host,
-		transform:      host.current,
-		scope:          ctx.keys.Scope(),
-		group:          group,
-		order:          order,
-		rootOrder:      rootOrder,
-		parent:         host.active,
-		activeTheme:    ctx.theme,
+		OverlayRequest:  request,
+		identity:        identity,
+		host:            host,
+		transform:       host.current,
+		scope:           ctx.keys.Scope(),
+		group:           group,
+		order:           order,
+		rootOrder:       rootOrder,
+		parent:          host.active,
+		activeTheme:     ctx.theme,
+		styles:          append([]style.Style(nil), ctx.styles...),
+		inheritedStyles: append([]style.Style(nil), ctx.inheritedStyles...),
 	})
 }
 
@@ -219,10 +224,20 @@ func OverlayNaturallyDisabled(gtx layout.Context) bool {
 func AfterOverlays(ctx *Context, fn func()) {
 	if fn != nil {
 		activeTheme := ctx.theme
+		styles := append([]style.Style(nil), ctx.styles...)
+		inheritedStyles := append([]style.Style(nil), ctx.inheritedStyles...)
 		ctx.overlays.afterLayout = append(ctx.overlays.afterLayout, func() {
 			previous := ctx.theme
+			previousStyles := ctx.styles
+			previousInheritedStyles := ctx.inheritedStyles
 			ctx.theme = activeTheme
-			defer func() { ctx.theme = previous }()
+			ctx.styles = styles
+			ctx.inheritedStyles = inheritedStyles
+			defer func() {
+				ctx.theme = previous
+				ctx.styles = previousStyles
+				ctx.inheritedStyles = previousInheritedStyles
+			}()
 			fn()
 		})
 	}
@@ -265,7 +280,11 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 			host.active = request
 			previousCurrent := host.current
 			previousTheme := ctx.theme
+			previousStyles := ctx.styles
+			previousInheritedStyles := ctx.inheritedStyles
 			ctx.theme = request.activeTheme
+			ctx.styles = request.styles
+			ctx.inheritedStyles = request.inheritedStyles
 			requestRoot := host.appendTransform(overlayTransform{
 				parent:  invalidOverlayTransform,
 				local:   f32.AffineId(),
@@ -277,6 +296,8 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 			defer func() {
 				restoreScope()
 				ctx.theme = previousTheme
+				ctx.styles = previousStyles
+				ctx.inheritedStyles = previousInheritedStyles
 				host.current = previousCurrent
 				host.active = nil
 			}()
@@ -329,8 +350,16 @@ func (h *overlayHost) layoutTail(ctx *Context, rootGtx layout.Context, request *
 	restoreScope := ctx.keys.UseScope(request.scope)
 	defer restoreScope()
 	previousTheme := ctx.theme
+	previousStyles := ctx.styles
+	previousInheritedStyles := ctx.inheritedStyles
 	ctx.theme = request.activeTheme
-	defer func() { ctx.theme = previousTheme }()
+	ctx.styles = request.styles
+	ctx.inheritedStyles = request.inheritedStyles
+	defer func() {
+		ctx.theme = previousTheme
+		ctx.styles = previousStyles
+		ctx.inheritedStyles = previousInheritedStyles
+	}()
 	h.inTail = true
 	defer func() { h.inTail = false }()
 	if inheritedOpacity < 1 {

@@ -5,12 +5,12 @@ import (
 
 	"gioui.org/io/event"
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type ContextMenuWidget struct {
-	theme             func(*theme.Theme)
 	key               string
 	trigger           frame.Widget
 	menu              Widget
@@ -23,6 +23,7 @@ type ContextMenuWidget struct {
 	focusTargets      []event.Tag
 	disabled          bool
 	longPressDisabled bool
+	customStyle       flowstyle.Style
 }
 
 func ContextMenu(key string, trigger frame.Widget, menu Widget) ContextMenuWidget {
@@ -69,15 +70,12 @@ func (c ContextMenuWidget) LongPressDisabled(disabled bool) ContextMenuWidget {
 	return c
 }
 
-func (c ContextMenuWidget) Theme(fn func(*theme.Theme)) ContextMenuWidget {
-	c.theme = fn
+func (c ContextMenuWidget) Style(value flowstyle.Style) ContextMenuWidget {
+	c.customStyle = value
 	return c
 }
 
 func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
-		defer restore()
-	}
 	state := contextMenuStateFor(ctx, c.key)
 	state.bind(c)
 	open := state.isOpen(c)
@@ -85,7 +83,13 @@ func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout
 		open = state.requestOpen(ctx, c, false)
 	}
 
-	dims := c.layoutTrigger(ctx, gtx, state, &open)
+	dims := layoutui.LayoutStyled(ctx, gtx, state.key, flowstyle.StyleState{
+		Focused:  gtx.Focused(c.defaultFocusTarget(state)),
+		Disabled: c.disabled || !gtx.Enabled(),
+		Open:     open,
+	}, c.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return c.layoutTrigger(ctx, gtx, state, &open)
+	}))
 	if open && !state.wasOpen {
 		state.focusTarget = c.focusedTarget(gtx, state)
 	}

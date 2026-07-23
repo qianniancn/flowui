@@ -4,9 +4,9 @@ import (
 	"image"
 	"image/color"
 	"testing"
-	"time"
 
 	"gioui.org/f32"
+	"gioui.org/gpu/headless"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -19,6 +19,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -29,6 +31,24 @@ const (
 
 func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
+}
+
+func resolveInputTestStyle(activeTheme *theme.Theme, declaration flowstyle.Style, state flowstyle.StyleState) flowstyle.ResolvedStyle {
+	ctx := frame.New(nil, activeTheme, locale.LanguageAuto)
+	return styleruntime.ResolveStatic(ctx, state, declaration, flowstyle.Style{}, flowstyle.Style{}, flowstyle.Style{})
+}
+
+func resolveInputTestPart(activeTheme *theme.Theme, declaration flowstyle.Style, part flowstyle.Part, state flowstyle.StyleState) flowstyle.ResolvedStyle {
+	ctx := frame.New(nil, activeTheme, locale.LanguageAuto)
+	return styleruntime.ResolvePartStatic(ctx, part, state, declaration, flowstyle.Style{}, flowstyle.Style{}, flowstyle.Style{})
+}
+
+func resolvedBackground(value flowstyle.ResolvedStyle) color.NRGBA {
+	if value.Paint == nil {
+		return color.NRGBA{}
+	}
+	brush, _ := styleruntime.Brush(value.Paint.Background)
+	return brush.ColorAt(.5)
 }
 
 func Button(key string, child frame.Widget) button.ButtonWidget {
@@ -182,13 +202,15 @@ func TestInputFrameKeepsInnerWidth(t *testing.T) {
 		return layout.Dimensions{Size: image.Pt(1, 1)}
 	}
 
-	Input("name", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), inputStyle{Opacity: 1}, true, child)
+	activeTheme := theme.DefaultTheme()
+	resolved := resolveInputTestStyle(&activeTheme, inputDefaultDeclaration(&activeTheme, InputPrimary, true), flowstyle.StyleState{})
+	Input("name", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), resolved, true, child)
 
 	if got.Min.X != 276 {
 		t.Fatalf("inner min width = %d, want 276", got.Min.X)
 	}
-	if got.Min.Y != 0 {
-		t.Fatalf("inner min height = %d, want 0", got.Min.Y)
+	if got.Min.Y != 36 {
+		t.Fatalf("inner min height = %d, want 36", got.Min.Y)
 	}
 }
 
@@ -254,39 +276,41 @@ func TestInputNumberFiltersTextAndTypeSwitchResetsEditor(t *testing.T) {
 
 func TestInputStylesMatchHeroUIStates(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	primary := inputStyleFor(&activeTheme, InputPrimary, false, false, false, false)
-	secondary := inputStyleFor(&activeTheme, InputSecondary, false, false, false, false)
-	secondaryHovered := inputStyleFor(&activeTheme, InputSecondary, true, false, false, false)
-	hovered := inputStyleFor(&activeTheme, InputPrimary, true, false, false, false)
-	focused := inputStyleFor(&activeTheme, InputPrimary, true, true, false, false)
-	invalid := inputStyleFor(&activeTheme, InputPrimary, false, false, false, true)
-	focusedInvalid := inputStyleFor(&activeTheme, InputPrimary, false, true, false, true)
-	disabled := inputStyleFor(&activeTheme, InputPrimary, false, false, true, false)
+	primaryDeclaration := inputDefaultDeclaration(&activeTheme, InputPrimary, false)
+	secondaryDeclaration := inputDefaultDeclaration(&activeTheme, InputSecondary, false)
+	primary := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{})
+	secondary := resolveInputTestStyle(&activeTheme, secondaryDeclaration, flowstyle.StyleState{})
+	secondaryHovered := resolveInputTestStyle(&activeTheme, secondaryDeclaration, flowstyle.StyleState{Hovered: true})
+	hovered := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Hovered: true})
+	focused := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Focused: true})
+	invalid := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Invalid: true})
+	focusedInvalid := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Focused: true, Invalid: true})
+	disabled := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Disabled: true})
 
-	if primary.Background != activeTheme.Palette.FieldBackgroundColor() || primary.ShadowOpacity != 1 {
+	if resolvedBackground(primary) != activeTheme.Palette.FieldBackgroundColor() || primary.Paint == nil || len(primary.Paint.Shadows) != 3 {
 		t.Fatalf("primary style = %#v", primary)
 	}
-	if secondary.Background != activeTheme.Palette.DefaultColor() || secondary.ShadowOpacity != 0 {
+	if resolvedBackground(secondary) != activeTheme.Palette.DefaultColor() || secondary.Paint == nil || len(secondary.Paint.Shadows) != 0 {
 		t.Fatalf("secondary style = %#v", secondary)
 	}
-	if secondaryHovered.Background != activeTheme.Palette.DefaultHoverColor() {
-		t.Fatalf("secondary hover background = %#v", secondaryHovered.Background)
+	if resolvedBackground(secondaryHovered) != activeTheme.Palette.DefaultHoverColor() {
+		t.Fatalf("secondary hover background = %#v", resolvedBackground(secondaryHovered))
 	}
 	wantPrimaryHover := color.NRGBA{R: 0xf8, G: 0xf8, B: 0xf9, A: 0xff}
-	if hovered.Background != wantPrimaryHover {
-		t.Fatalf("hover background = %#v, want %#v", hovered.Background, wantPrimaryHover)
+	if resolvedBackground(hovered) != wantPrimaryHover {
+		t.Fatalf("hover background = %#v, want %#v", resolvedBackground(hovered), wantPrimaryHover)
 	}
-	if focused.Ring != activeTheme.Palette.Focus || focused.RingWidth != 2 || focused.Background != activeTheme.Palette.FieldFocusColor() {
+	if focused.Paint == nil || focused.Paint.Outline == nil || focused.Paint.Outline.Color != (flowstyle.SolidColor{Color: activeTheme.Palette.Focus}) || focused.Paint.Outline.Width != 2 || resolvedBackground(focused) != activeTheme.Palette.FieldFocusColor() {
 		t.Fatalf("focused style = %#v", focused)
 	}
-	if invalid.Ring != activeTheme.Palette.Danger || invalid.RingWidth != 1 {
+	if invalid.Paint == nil || invalid.Paint.Outline == nil || invalid.Paint.Outline.Color != (flowstyle.SolidColor{Color: activeTheme.Palette.Danger}) || invalid.Paint.Outline.Width != 1 {
 		t.Fatalf("invalid style = %#v", invalid)
 	}
-	if focusedInvalid.Ring != activeTheme.Palette.Danger || focusedInvalid.RingWidth != 2 {
+	if focusedInvalid.Paint == nil || focusedInvalid.Paint.Outline == nil || focusedInvalid.Paint.Outline.Color != (flowstyle.SolidColor{Color: activeTheme.Palette.Danger}) || focusedInvalid.Paint.Outline.Width != 2 {
 		t.Fatalf("focused invalid style = %#v", focusedInvalid)
 	}
-	if disabled.Opacity != activeTheme.DisabledOpacityValue() {
-		t.Fatalf("disabled opacity = %v", disabled.Opacity)
+	if disabled.Paint == nil || disabled.Paint.Opacity == nil || *disabled.Paint.Opacity != activeTheme.DisabledOpacityValue() {
+		t.Fatalf("disabled opacity = %#v", disabled.Paint)
 	}
 }
 
@@ -301,41 +325,23 @@ func TestInputParentDisabledClearsHover(t *testing.T) {
 	}
 }
 
-func TestInputRingWidthAnimation(t *testing.T) {
-	start := time.Unix(1, 0)
-	gtx := testLayoutContext()
-	gtx.Now = start
-	state := new(inputState)
-	if got := state.RingWidth(gtx, 0); got != 0 {
-		t.Fatalf("initial ring width = %v", got)
-	}
-	if got := state.RingWidth(gtx, 2); got != 0 {
-		t.Fatalf("transition start width = %v", got)
-	}
-	gtx.Now = start.Add(inputTransitionDuration / 2)
-	if got := state.RingWidth(gtx, 2); got <= 0 || got >= 2 {
-		t.Fatalf("transition midpoint width = %v", got)
-	}
-	gtx.Now = start.Add(inputTransitionDuration)
-	if got := state.RingWidth(gtx, 2); got != 2 {
-		t.Fatalf("transition end width = %v", got)
-	}
-}
-
 func TestInputUsesEnhancedThreeLayerShadow(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Input
-	layers := fieldShadow(&activeTheme, tokens.ShadowColor, tokens.ShadowOpacity, tokens.ShadowStrength).EffectiveLayers()
+	resolved := resolveInputTestStyle(&activeTheme, inputDefaultDeclaration(&activeTheme, InputPrimary, false), flowstyle.StyleState{})
+	layers := resolved.Paint.Shadows
 	if len(layers) != 3 {
 		t.Fatalf("shadow layer count = %d, want 3", len(layers))
 	}
-	if layers[0].OffsetY != 0 || layers[0].Blur != 1 || layers[0].Color != (color.NRGBA{A: 0x38}) {
+	first, _ := styleruntime.Color(layers[0].Color)
+	second, _ := styleruntime.Color(layers[1].Color)
+	third, _ := styleruntime.Color(layers[2].Color)
+	if layers[0].OffsetY != 0 || layers[0].Blur != 1 || first != (color.NRGBA{A: 0x38}) {
 		t.Fatalf("first shadow layer = %#v", layers[0])
 	}
-	if layers[1].OffsetY != 1 || layers[1].Blur != 2 || layers[1].Color != (color.NRGBA{A: 0x38}) {
+	if layers[1].OffsetY != 1 || layers[1].Blur != 2 || second != (color.NRGBA{A: 0x38}) {
 		t.Fatalf("second shadow layer = %#v", layers[1])
 	}
-	if layers[2].OffsetY != 2 || layers[2].Blur != 4 || layers[2].Color != (color.NRGBA{A: 0x26}) {
+	if layers[2].OffsetY != 2 || layers[2].Blur != 4 || third != (color.NRGBA{A: 0x26}) {
 		t.Fatalf("third shadow layer = %#v", layers[2])
 	}
 	if got := render.ThemeShadow(activeTheme.Shadows.Control, color.NRGBA{A: 0xff}, .5).EffectiveLayers()[0].Color.A; got != 18 {
@@ -343,10 +349,36 @@ func TestInputUsesEnhancedThreeLayerShadow(t *testing.T) {
 	}
 }
 
+func TestInputCustomBackgroundIsRenderedByCommonStyle(t *testing.T) {
+	window, err := headless.NewWindow(80, 36)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	want := color.NRGBA{R: 0xd1, G: 0x23, B: 0x45, A: 0xff}
+	var router input.Router
+	var ops op.Ops
+	Input("paint", "").FullWidth().Style(flowstyle.Style{}.Background(flowstyle.SolidColor{Color: want})).Layout(
+		newContext(nil),
+		layout.Context{Constraints: layout.Exact(image.Pt(80, 36)), Source: router.Source(), Ops: &ops},
+	)
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 80, 36))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	if got := color.NRGBAModel.Convert(pixels.At(40, 18)).(color.NRGBA); got != want {
+		t.Fatalf("input center pixel = %#v, want %#v", got, want)
+	}
+}
+
 func TestDarkInputDisablesFieldShadow(t *testing.T) {
 	activeTheme := theme.DarkTheme()
-	tokens := activeTheme.Components.Input
-	layers := fieldShadow(&activeTheme, tokens.ShadowColor, tokens.ShadowOpacity, tokens.ShadowStrength).EffectiveLayers()
+	resolved := resolveInputTestStyle(&activeTheme, inputDefaultDeclaration(&activeTheme, InputPrimary, false), flowstyle.StyleState{})
+	layers := resolved.Paint.Shadows
 	if len(layers) != 0 {
 		t.Fatalf("dark shadow layer count = %d, want 0", len(layers))
 	}

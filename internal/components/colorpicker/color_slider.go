@@ -9,26 +9,27 @@ import (
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 const stateSlotColorSlider = "color-slider"
 
 type ColorSliderWidget struct {
-	theme      func(*theme.Theme)
-	key        string
-	value      color.NRGBA
-	channel    ColorChannel
-	label      string
-	onChange   func(color.NRGBA)
-	disabled   bool
-	showLabel  bool
-	showOutput bool
-	color      *colorValueState
+	key         string
+	value       color.NRGBA
+	channel     ColorChannel
+	label       string
+	onChange    func(color.NRGBA)
+	disabled    bool
+	showLabel   bool
+	showOutput  bool
+	color       *colorValueState
+	customStyle flowstyle.Style
 }
 
 type colorSliderState struct {
@@ -77,15 +78,12 @@ func (slider ColorSliderWidget) withColorState(state *colorValueState) ColorSlid
 	return slider
 }
 
-func (slider ColorSliderWidget) Theme(fn func(*theme.Theme)) ColorSliderWidget {
-	slider.theme = fn
+func (slider ColorSliderWidget) Style(value flowstyle.Style) ColorSliderWidget {
+	slider.customStyle = value
 	return slider
 }
 
 func (slider ColorSliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, slider.theme); restore != nil {
-		defer restore()
-	}
 	key := frame.ClaimKey(ctx, state.KindColorSlider, slider.key)
 	sliderState := frame.UseState[colorSliderState](ctx, key, stateSlotColorSlider)
 	valueState := &sliderState.color
@@ -109,18 +107,27 @@ func (slider ColorSliderWidget) Layout(ctx *frame.Context, gtx layout.Context) l
 	})
 	count++
 
-	opacity := paint.PushOpacity(gtx.Ops, func() float32 {
-		if enabled {
-			return 1
-		}
-		return frame.ActiveTheme(ctx).DisabledOpacityValue()
-	}())
-	dimensions := layout.Flex{
-		Axis: layout.Vertical,
-		Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.ColorSlider.HeaderGap),
-	}.Layout(gtx, children[:count]...)
-	opacity.Pop()
-	return dimensions
+	focused := gtx.Focused(&sliderState.control)
+	return layoutui.LayoutStyled(ctx, gtx, key, flowstyle.StyleState{
+		Pressed:      sliderState.control.dragging,
+		Focused:      focused,
+		FocusVisible: frame.FocusVisible(ctx, &sliderState.control, focused),
+		Disabled:     !enabled,
+		Dragging:     sliderState.control.dragging,
+	}, slider.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+		opacity := paint.PushOpacity(gtx.Ops, func() float32 {
+			if enabled {
+				return 1
+			}
+			return frame.ActiveTheme(ctx).DisabledOpacityValue()
+		}())
+		defer opacity.Pop()
+		dimensions := layout.Flex{
+			Axis: layout.Vertical,
+			Gap:  gtx.Dp(frame.ActiveTheme(ctx).Components.ColorSlider.HeaderGap),
+		}.Layout(gtx, children[:count]...)
+		return dimensions
+	}))
 }
 
 func (slider ColorSliderWidget) layoutHeader(ctx *frame.Context, gtx layout.Context, valueState *colorValueState) layout.Dimensions {

@@ -6,7 +6,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type RadioItem struct {
@@ -18,7 +18,6 @@ type RadioItem struct {
 }
 
 type RadioGroupWidget struct {
-	theme       func(*theme.Theme)
 	key         string
 	selectedKey string
 	items       []RadioItem
@@ -27,6 +26,7 @@ type RadioGroupWidget struct {
 	disabled    bool
 	invalid     bool
 	horizontal  bool
+	customStyle flowstyle.Style
 }
 
 type RadioGroupVariant int
@@ -76,21 +76,19 @@ func (r RadioGroupWidget) Horizontal() RadioGroupWidget {
 	return r
 }
 
-func (r RadioGroupWidget) Theme(fn func(*theme.Theme)) RadioGroupWidget {
-	r.theme = fn
+func (r RadioGroupWidget) Style(value flowstyle.Style) RadioGroupWidget {
+	r.customStyle = value
 	return r
 }
 
 func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, r.theme); restore != nil {
-		defer restore()
-	}
 	state := radioGroupStateFor(ctx, r.key)
 	state.beginFrame()
 	defer state.endFrame()
 	state.checkItems(r.items)
 
-	if r.disabled {
+	disabled := r.disabled || !gtx.Enabled()
+	if disabled {
 		gtx = gtx.Disabled()
 	} else if key, ok := state.updateKeys(gtx, r.items, r.selectedKey); ok {
 		if key != r.selectedKey && r.onChange != nil {
@@ -107,5 +105,25 @@ func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	}
 
 	theme := frame.ActiveTheme(ctx).Components.RadioGroup
-	return layoutui.LayoutItems(ctx, gtx, r.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	hovered, pressed, focused, focusVisible := false, false, false, false
+	for _, item := range r.items {
+		itemState := state.item(item.Key)
+		hovered = hovered || itemState.clickable.Hovered()
+		pressed = pressed || itemState.clickable.Pressed()
+		itemFocused := gtx.Focused(&itemState.clickable)
+		focused = focused || itemFocused
+		focusVisible = focusVisible || frame.FocusVisible(ctx, &itemState.clickable, itemFocused)
+	}
+	return layoutui.LayoutStyled(ctx, gtx, frame.FullKey(ctx, r.key), flowstyle.StyleState{
+		Hovered:      hovered,
+		Pressed:      pressed,
+		Focused:      focused,
+		FocusVisible: focusVisible,
+		Disabled:     disabled,
+		Selected:     r.selectedKey != "",
+		Checked:      r.selectedKey != "",
+		Invalid:      r.invalid,
+	}, r.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return layoutui.LayoutItems(ctx, gtx, r.horizontal, gtx.Dp(theme.HorizontalGap), gtx.Dp(theme.VerticalGap), children)
+	}))
 }

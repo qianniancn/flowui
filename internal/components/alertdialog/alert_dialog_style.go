@@ -14,33 +14,22 @@ type alertDialogStyle struct {
 func alertDialogStyleFor(activeTheme *theme.Theme, status Status) alertDialogStyle {
 	palette := activeTheme.Palette
 	style := alertDialogStyle{
-		iconBackground: theme.ColorOr(palette.SurfaceSecondary, palette.Surface),
-		iconForeground: theme.ColorOr(palette.OverlayForeground, palette.Foreground),
+		iconBackground: palette.SurfaceSecondary,
+		iconForeground: palette.OverlayForeground,
 	}
 	switch status {
 	case StatusAccent:
-		style.iconBackground = softColor(palette.AccentSoft, palette.Accent)
-		style.iconForeground = theme.ColorOr(palette.AccentSoftForeground, palette.Accent)
+		style.iconBackground = palette.AccentSoft
+		style.iconForeground = palette.AccentSoftForeground
 	case StatusSuccess:
-		style.iconBackground = softColor(palette.SuccessSoft, palette.Success)
+		style.iconBackground = palette.SuccessSoft
 		style.iconForeground = palette.SuccessSoftForegroundColor()
 	case StatusWarning:
-		style.iconBackground = softColor(palette.WarningSoft, palette.Warning)
+		style.iconBackground = palette.WarningSoft
 		style.iconForeground = palette.WarningSoftForegroundColor()
 	case StatusDanger:
-		style.iconBackground = softColor(palette.DangerSoft, palette.Danger)
-		style.iconForeground = theme.ColorOr(palette.DangerSoftForeground, palette.Danger)
+		style.iconBackground = palette.DangerSoft
+		style.iconForeground = palette.DangerSoftForeground
 	}
 	return style
-}
-
-func softColor(value, fallback color.NRGBA) color.NRGBA {
-	if value.A != 0 {
-		return value
-	}
-	if fallback.A == 0 {
-		return value
-	}
-	fallback.A = 0x26
-	return fallback
 }

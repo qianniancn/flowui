@@ -7,7 +7,7 @@ import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type TooltipTrigger uint8
@@ -24,7 +24,6 @@ const (
 )
 
 type TooltipWidget struct {
-	theme            func(*theme.Theme)
 	key              string
 	trigger          frame.Widget
 	content          frame.Widget
@@ -42,6 +41,7 @@ type TooltipWidget struct {
 	hasAvoidOverflow bool
 	arrow            bool
 	disabled         bool
+	customStyle      flowstyle.Style
 }
 
 func Tooltip(key string, trigger frame.Widget, content frame.Widget) TooltipWidget {
@@ -103,15 +103,12 @@ func (t TooltipWidget) Disabled(disabled bool) TooltipWidget {
 	return t
 }
 
-func (t TooltipWidget) Theme(fn func(*theme.Theme)) TooltipWidget {
-	t.theme = fn
+func (t TooltipWidget) Style(value flowstyle.Style) TooltipWidget {
+	t.customStyle = value
 	return t
 }
 
 func (t TooltipWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, t.theme); restore != nil {
-		defer restore()
-	}
 	coordinator := tooltipCoordinatorFor(ctx)
 	coordinator.update(gtx)
 	fullKey, state := tooltipStateFor(ctx, t.key)
@@ -151,7 +148,10 @@ func (t TooltipWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 		Disabled:  true,
 		Passive:   true,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, _ bool) layout.Dimensions {
-			return t.popup(progress, state.exiting()).Layout(ctx, gtx, anchor)
+			popup := t.popup(progress, state.exiting())
+			popup.styleKey = fullKey
+			popup.styleState = flowstyle.StyleState{Disabled: disabled, Open: state.open}
+			return popup.Layout(ctx, gtx, anchor)
 		},
 	})
 	return triggerDims

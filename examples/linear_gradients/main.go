@@ -21,25 +21,25 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 				gradientBand(
 					"Left to right",
 					ui.LinearGradient(
-						ui.ColorStop(0, hex(0x2563eb)),
-						ui.ColorStop(1, hex(0x10b981)),
+						ui.ColorStop(0, ui.Color(hex(0x2563eb))),
+						ui.ColorStop(1, ui.Color(hex(0x10b981))),
 					).Angle(90),
 				),
 				gradientBand(
 					"Three color stops",
 					ui.LinearGradient(
-						ui.ColorStop(0, hex(0xdc2626)),
-						ui.ColorStop(.48, hex(0xf59e0b)),
-						ui.ColorStop(1, hex(0x0d9488)),
+						ui.ColorStop(0, ui.Color(hex(0xdc2626))),
+						ui.ColorStop(.48, ui.Color(hex(0xf59e0b))),
+						ui.ColorStop(1, ui.Color(hex(0x0d9488))),
 					).Angle(120),
 				),
 				gradientBand(
 					"Hard transition",
 					ui.LinearGradient(
-						ui.ColorStop(0, hex(0x18181b)),
-						ui.ColorStop(.5, hex(0x18181b)),
-						ui.ColorStop(.5, hex(0x52525b)),
-						ui.ColorStop(1, hex(0x52525b)),
+						ui.ColorStop(0, ui.Color(hex(0x18181b))),
+						ui.ColorStop(.5, ui.Color(hex(0x18181b))),
+						ui.ColorStop(.5, ui.Color(hex(0x52525b))),
+						ui.ColorStop(1, ui.Color(hex(0x52525b))),
 					).Angle(90),
 				),
 			).Gap(16),
@@ -47,10 +47,13 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	)
 }
 
-func gradientBand(label string, brush ui.Brush) ui.Widget {
+func gradientBand(label string, brush ui.PaintSource) ui.Widget {
 	return ui.Surface(
 		ui.Box(ui.Text(label).Size(16)).FillWidth().Padding(20),
-	).Background(brush).Foreground(color.NRGBA{R: 255, G: 255, B: 255, A: 255}).Radius(8)
+	).Style(ui.Background(brush).
+		TextColor(ui.Color(color.NRGBA{R: 255, G: 255, B: 255, A: 255})).
+		Radius(8),
+	)
 }
 
 func hex(value uint32) color.NRGBA {

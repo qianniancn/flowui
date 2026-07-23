@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -95,9 +96,11 @@ func TestTextAreaFrameKeepsInnerGeometry(t *testing.T) {
 		return layout.Dimensions{Size: gtx.Constraints.Min}
 	}
 
-	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), inputStyle{Opacity: 1}, true, child)
-	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 60) {
-		t.Fatalf("inner constraints = %#v, want 276x60", got)
+	activeTheme := theme.DefaultTheme()
+	resolved := resolveInputTestStyle(&activeTheme, textAreaDefaultDeclaration(&activeTheme, TextAreaPrimary, true, 76), flowstyle.StyleState{})
+	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), resolved, true, child)
+	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 184) {
+		t.Fatalf("inner constraints = %#v, want min 276x60 max 276x184", got)
 	}
 }
 
@@ -121,15 +124,17 @@ func TestTextAreaStyleUsesTextAreaThemeTokens(t *testing.T) {
 	activeTheme.Components.TextArea.InvalidOutlineWidth = 3
 	activeTheme.Components.TextArea.ShadowOpacity = 0.25
 
-	primary := textAreaStyleFor(&activeTheme, TextAreaPrimary, false, false, false, false)
-	focused := textAreaStyleFor(&activeTheme, TextAreaPrimary, false, true, false, false)
-	invalid := textAreaStyleFor(&activeTheme, TextAreaPrimary, false, false, false, true)
-	secondary := textAreaStyleFor(&activeTheme, TextAreaSecondary, false, false, false, false)
-	if primary.ShadowOpacity != 0.25 || focused.RingWidth != 4 || invalid.RingWidth != 3 || secondary.ShadowOpacity != 0 {
+	primaryDeclaration := textAreaDefaultDeclaration(&activeTheme, TextAreaPrimary, false, 0)
+	secondaryDeclaration := textAreaDefaultDeclaration(&activeTheme, TextAreaSecondary, false, 0)
+	primary := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{})
+	focused := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Focused: true})
+	invalid := resolveInputTestStyle(&activeTheme, primaryDeclaration, flowstyle.StyleState{Invalid: true})
+	secondary := resolveInputTestStyle(&activeTheme, secondaryDeclaration, flowstyle.StyleState{})
+	if primary.Paint == nil || len(primary.Paint.Shadows) == 0 || focused.Paint.Outline.Width != 4 || invalid.Paint.Outline.Width != 3 || secondary.Paint == nil || len(secondary.Paint.Shadows) != 0 {
 		t.Fatalf("textarea styles = primary %#v focused %#v invalid %#v secondary %#v", primary, focused, invalid, secondary)
 	}
 	darkTheme := theme.DarkTheme()
-	if dark := textAreaStyleFor(&darkTheme, TextAreaPrimary, false, false, false, false); dark.Background != darkTheme.Palette.FieldBackgroundColor() || dark.ShadowOpacity != 0 {
+	if dark := resolveInputTestStyle(&darkTheme, textAreaDefaultDeclaration(&darkTheme, TextAreaPrimary, false, 0), flowstyle.StyleState{}); resolvedBackground(dark) != darkTheme.Palette.FieldBackgroundColor() || len(dark.Paint.Shadows) != 0 {
 		t.Fatalf("dark textarea style = %#v", dark)
 	}
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
-func (d DatePickerWidget) layoutField(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Style, enabled, invalid bool) (layout.Dimensions, image.Rectangle) {
+func (d DatePickerWidget) layoutField(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Resolved, enabled, invalid bool) (layout.Dimensions, image.Rectangle) {
 	var children [3]layout.FlexChild
 	count := 0
 	labelHeight := 0
@@ -77,7 +77,13 @@ func (d DatePickerWidget) layoutField(ctx *frame.Context, gtx layout.Context, pi
 	return dimensions, inputAnchor
 }
 
-func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Style, enabled, invalid bool) layout.Dimensions {
+func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Resolved, enabled, invalid bool) layout.Dimensions {
+	return layoutui.LayoutResolved(ctx, gtx, style.Content, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return d.layoutInputContent(ctx, gtx, pickerState, style.Colors, enabled, invalid)
+	}))
+}
+
+func (d DatePickerWidget) layoutInputContent(ctx *frame.Context, gtx layout.Context, pickerState *datePickerState, style field.Colors, enabled, invalid bool) layout.Dimensions {
 	presses := state.ActivePresses(pickerState.trigger.History())
 	focusVisible := frame.FocusVisible(ctx, &pickerState.trigger, gtx.Focused(&pickerState.trigger))
 	if enabled {
@@ -137,15 +143,12 @@ func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pi
 	}
 
 	size := frameConstraints.Constrain(image.Pt(contentDims.Size.X+horizontalPadding, height))
-	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(theme.Radius), 1), min(size.X, size.Y)/2)
-	field.DrawFrame(gtx, rect, radius, style)
-	clipped := clip.UniformRRect(rect, radius).Push(gtx.Ops)
 	stack := op.Offset(image.Pt(left, max((size.Y-contentDims.Size.Y)/2, 0))).Push(gtx.Ops)
 	contentClip := clip.Rect{Max: image.Pt(max(size.X-horizontalPadding, 0), contentDims.Size.Y)}.Push(gtx.Ops)
-	call.Add(gtx.Ops)
+	if !showHint {
+		call.Add(gtx.Ops)
+	}
 	if showHint {
-		paint.FillShape(gtx.Ops, style.Background, clip.Rect{Max: image.Pt(max(size.X-horizontalPadding, 0), contentDims.Size.Y)}.Op())
 		hintOffset := op.Offset(image.Pt(0, max((contentDims.Size.Y-hintDims.Size.Y)/2, 0))).Push(gtx.Ops)
 		hintCall.Add(gtx.Ops)
 		hintOffset.Pop()
@@ -175,7 +178,6 @@ func (d DatePickerWidget) layoutInput(ctx *frame.Context, gtx layout.Context, pi
 		return layout.Dimensions{Size: triggerSize}
 	})
 	stack.Pop()
-	clipped.Pop()
 	return layout.Dimensions{Size: size}
 }
 
@@ -535,10 +537,7 @@ func (d DatePickerWidget) layoutYears(ctx *frame.Context, gtx layout.Context, st
 	state.yearList.Axis = layout.Vertical
 	state.yearList.Gap = gtx.Dp(theme.YearGridGap)
 	if state.yearScrollReady {
-		target := max(state.yearScrollYear, minYear)
-		if target > maxYear {
-			target = maxYear
-		}
+		target := min(max(state.yearScrollYear, minYear), maxYear)
 		state.yearList.ScrollTo((target - minYear) / 3)
 		state.yearScrollReady = false
 	}

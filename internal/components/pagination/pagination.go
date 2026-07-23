@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 type Size uint8
@@ -16,7 +16,6 @@ const (
 )
 
 type Widget struct {
-	theme         func(*theme.Theme)
 	key           string
 	page          int
 	total         int
@@ -29,6 +28,7 @@ type Widget struct {
 	previousLabel string
 	nextLabel     string
 	onChange      func(int)
+	customStyle   flowstyle.Style
 }
 
 func New(key string, page, total int) Widget {
@@ -83,6 +83,11 @@ func (p Widget) Disabled(disabled bool) Widget {
 
 func (p Widget) OnChange(fn func(int)) Widget {
 	p.onChange = fn
+	return p
+}
+
+func (p Widget) Style(value flowstyle.Style) Widget {
+	p.customStyle = value
 	return p
 }
 

@@ -3,7 +3,9 @@ package surface
 import (
 	"image"
 	"image/color"
+	"reflect"
 	"testing"
+	"time"
 
 	"gioui.org/gpu/headless"
 	"gioui.org/layout"
@@ -14,6 +16,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/render"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -57,7 +60,7 @@ func TestSurfaceUnknownVariantFallsBackToDefault(t *testing.T) {
 	theme := DefaultTheme()
 	got := surfaceStyleFor(&theme, SurfaceVariant(255))
 	want := surfaceStyleFor(&theme, SurfaceDefault)
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unknown variant style = %#v, want default %#v", got, want)
 	}
 }
@@ -70,7 +73,7 @@ func TestSurfaceLayoutPreservesChildSizeAndScopesForeground(t *testing.T) {
 	probe := &surfaceProbeWidget{size: image.Pt(120, 48)}
 	var ops op.Ops
 
-	dims := Surface(probe).Variant(SurfaceSecondary).Radius(16).Shadow(true).Layout(ctx, layout.Context{
+	dims := Surface(probe).Variant(SurfaceSecondary).Style(flowstyle.Style{}.Radius(16).Shadow(flowstyle.ShadowSurface)).Layout(ctx, layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         &ops,
 	})
@@ -92,23 +95,64 @@ func TestSurfaceLayoutPreservesChildSizeAndScopesForeground(t *testing.T) {
 	}
 }
 
-func TestSurfaceInstanceThemeScopesShadow(t *testing.T) {
+func TestSurfaceStyleScopeAndInstancePrecedence(t *testing.T) {
 	activeTheme := DefaultTheme()
 	ctx := newContextWithTheme(nil, &activeTheme)
-	themedProbe := &surfaceProbeWidget{size: image.Pt(40, 20)}
-	defaultProbe := &surfaceProbeWidget{size: image.Pt(40, 20)}
+	probe := &surfaceProbeWidget{size: image.Pt(40, 20)}
 	gtx := layout.Context{Constraints: layout.Constraints{Max: image.Pt(100, 100)}, Ops: new(op.Ops)}
+	scopeBackground := color.NRGBA{R: 1, A: 0xff}
+	scopeForeground := color.NRGBA{G: 2, A: 0xff}
+	instanceBackground := color.NRGBA{B: 3, A: 0xff}
+	restore := frame.PushStyle(ctx, flowstyle.Style{}.
+		Background(flowstyle.SolidColor{Color: scopeBackground}).
+		TextColor(flowstyle.SolidColor{Color: scopeForeground}),
+	)
+	defer restore()
 
-	Surface(themedProbe).Shadow(true).Theme(func(theme *theme.Theme) {
-		theme.Shadows.Surface.Layers[1].Blur = 12
-	}).Layout(ctx, gtx)
-	Surface(defaultProbe).Shadow(true).Layout(ctx, gtx)
+	Surface(probe).
+		Style(flowstyle.Style{}.Background(flowstyle.SolidColor{Color: instanceBackground})).
+		Layout(ctx, gtx)
 
-	if themedProbe.shadowBlur != 12 {
-		t.Fatalf("themed shadow blur = %v, want 12", themedProbe.shadowBlur)
+	if probe.background != instanceBackground {
+		t.Fatalf("surface background = %#v, want instance %#v", probe.background, instanceBackground)
 	}
-	if defaultProbe.shadowBlur != 4 || activeTheme.Shadows.Surface.Layers[1].Blur != 4 {
-		t.Fatal("surface instance shadow leaked into sibling or application theme")
+	if probe.foreground != scopeForeground {
+		t.Fatalf("surface foreground = %#v, want scope %#v", probe.foreground, scopeForeground)
+	}
+}
+
+func TestSurfaceConditionalStyleTransition(t *testing.T) {
+	activeTheme := DefaultTheme()
+	ctx := newContextWithTheme(nil, &activeTheme)
+	start := time.Unix(1, 0)
+	from := color.NRGBA{R: 0x10, A: 0xff}
+	to := color.NRGBA{B: 0xf0, A: 0xff}
+	layoutAt := func(now time.Time, active bool) color.NRGBA {
+		probe := &surfaceProbeWidget{size: image.Pt(20, 20)}
+		var ops op.Ops
+		gtx := layout.Context{Constraints: layout.Exact(image.Pt(20, 20)), Ops: &ops, Now: now}
+		frame.BeginFrame(ctx)
+		Surface(probe).Style(flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: from}).
+			Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
+			When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to})),
+		).Layout(ctx, gtx)
+		frame.EndFrame(ctx)
+		return probe.background
+	}
+
+	if got := layoutAt(start, false); got != from {
+		t.Fatalf("initial background = %#v", got)
+	}
+	if got := layoutAt(start, true); got != from {
+		t.Fatalf("transition start = %#v, want %#v", got, from)
+	}
+	middle := layoutAt(start.Add(50*time.Millisecond), true)
+	if middle == from || middle == to {
+		t.Fatalf("transition midpoint = %#v", middle)
+	}
+	if got := layoutAt(start.Add(100*time.Millisecond), true); got != to {
+		t.Fatalf("transition end = %#v, want %#v", got, to)
 	}
 }
 
@@ -155,24 +199,27 @@ func TestTransparentSurfacePreservesParentBackground(t *testing.T) {
 
 func TestSurfaceOptionsKeepValueSemantics(t *testing.T) {
 	base := Surface(nil)
-	gradient := render.LinearGradient(
-		render.GradientStop{Color: color.NRGBA{R: 255, A: 255}},
-		render.GradientStop{Offset: 1, Color: color.NRGBA{B: 255, A: 255}},
+	gradient := flowstyle.LinearGradient(
+		flowstyle.ColorStop(0, flowstyle.SolidColor{Color: color.NRGBA{R: 255, A: 255}}),
+		flowstyle.ColorStop(1, flowstyle.SolidColor{Color: color.NRGBA{B: 255, A: 255}}),
 	)
 	foreground := color.NRGBA{G: 255, A: 255}
 	border := color.NRGBA{R: 12, G: 34, B: 56, A: 255}
-	styled := base.Variant(SurfaceTertiary).Radius(20).Shadow(true).Background(gradient).Foreground(foreground).BorderWidth(2).BorderColor(border)
-	if base.variant != SurfaceDefault || base.radius != 0 || base.shadow || base.hasBackground || base.hasForeground || base.hasBorderWidth || base.hasBorderColor {
+	declaration := flowstyle.Style{}.
+		Radius(20).
+		Shadow(flowstyle.ShadowSurface).
+		Background(gradient).
+		TextColor(flowstyle.SolidColor{Color: foreground}).
+		BorderWidth(2).
+		BorderColor(flowstyle.SolidColor{Color: border})
+
+	styled := base.Variant(SurfaceTertiary).Style(declaration)
+	if base.variant != SurfaceDefault || base.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil {
 		t.Fatal("surface options mutated the original value")
 	}
-	if styled.variant != SurfaceTertiary || styled.radius != 20 || !styled.shadow || !styled.hasBackground || !styled.hasForeground || styled.foreground != foreground || styled.borderWidth != 2 || styled.borderColor != border {
+	resolved := styled.customStyle.Resolve(flowstyle.StyleState{})
+	if styled.variant != SurfaceTertiary || resolved.Paint == nil || resolved.Text == nil {
 		t.Fatal("surface options did not configure the returned value")
-	}
-	if got := base.Radius(-10).radius; got != 0 {
-		t.Fatalf("negative radius = %v, want 0", got)
-	}
-	if got := base.BorderWidth(-1).borderWidth; got != 0 {
-		t.Fatalf("negative border width = %v, want 0", got)
 	}
 }
 
@@ -200,8 +247,7 @@ func TestSurfaceBorderPaintsAboveChild(t *testing.T) {
 	childColor := color.NRGBA{G: 0xff, A: 0xff}
 	borderColor := color.NRGBA{R: 0xff, A: 0xff}
 	Surface(paintedSurfaceChild{color: childColor}).
-		BorderWidth(3).
-		BorderColor(borderColor).
+		Style(flowstyle.Style{}.BorderWidth(3).BorderColor(flowstyle.SolidColor{Color: borderColor})).
 		Layout(ctx, layout.Context{Constraints: layout.Exact(image.Pt(40, 40)), Ops: &ops})
 	if err := window.Frame(&ops); err != nil {
 		t.Fatal(err)
@@ -223,13 +269,13 @@ func TestGradientSurfaceScopesSampledBackgroundAndForeground(t *testing.T) {
 	ctx := newContextWithTheme(nil, &activeTheme)
 	probe := &surfaceProbeWidget{size: image.Pt(120, 48)}
 	foreground := color.NRGBA{R: 250, G: 250, B: 250, A: 255}
-	gradient := render.LinearGradient(
-		render.GradientStop{Color: color.NRGBA{R: 255, A: 255}},
-		render.GradientStop{Offset: 1, Color: color.NRGBA{B: 255, A: 255}},
+	gradient := flowstyle.LinearGradient(
+		flowstyle.ColorStop(0, flowstyle.SolidColor{Color: color.NRGBA{R: 255, A: 255}}),
+		flowstyle.ColorStop(1, flowstyle.SolidColor{Color: color.NRGBA{B: 255, A: 255}}),
 	)
 	var ops op.Ops
 
-	Surface(probe).Background(gradient).Foreground(foreground).Layout(ctx, layout.Context{
+	Surface(probe).Style(flowstyle.Style{}.Background(gradient).TextColor(flowstyle.SolidColor{Color: foreground})).Layout(ctx, layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
 		Ops:         &ops,
 	})
@@ -252,18 +298,18 @@ func TestSurfaceAndOverlayTokensAreDistinct(t *testing.T) {
 	}
 }
 
-func TestNewPaletteTokensFallBackForExistingCustomThemes(t *testing.T) {
+func TestSurfacePaletteTokensHonorTransparentValues(t *testing.T) {
 	theme := DefaultTheme()
 	theme.Palette.SurfaceForeground = color.NRGBA{}
 	theme.Palette.SurfaceSecondary = color.NRGBA{}
 	theme.Palette.SurfaceSecondaryForeground = color.NRGBA{}
 	theme.Palette.SurfaceTertiary = color.NRGBA{}
 	theme.Palette.SurfaceTertiaryForeground = color.NRGBA{}
-	if got := surfaceStyleFor(&theme, SurfaceSecondary); got.background != theme.Palette.SurfaceRaised || got.foreground != theme.Palette.Foreground {
-		t.Fatalf("secondary fallback style = %#v", got)
+	if got := surfaceStyleFor(&theme, SurfaceSecondary); got.background.A != 0 || got.foreground.A != 0 {
+		t.Fatalf("secondary style = %#v, want transparent colors", got)
 	}
-	if got := surfaceStyleFor(&theme, SurfaceTertiary); got.background != theme.Palette.SurfacePressed || got.foreground != theme.Palette.Foreground {
-		t.Fatalf("tertiary fallback style = %#v", got)
+	if got := surfaceStyleFor(&theme, SurfaceTertiary); got.background.A != 0 || got.foreground.A != 0 {
+		t.Fatalf("tertiary style = %#v, want transparent colors", got)
 	}
 }
 

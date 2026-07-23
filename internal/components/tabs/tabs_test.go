@@ -2,6 +2,7 @@ package tabs
 
 import (
 	"image"
+	"image/color"
 	"testing"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -106,6 +109,40 @@ func TestTabsThemeMatchesHeroUI(t *testing.T) {
 	}
 	if secondaryAccent.indicator != theme.Palette.Accent || secondaryAccent.selectedForeground != theme.Palette.Accent {
 		t.Fatal("secondary accent tabs do not use accent text and indicator")
+	}
+}
+
+func TestTabsItemPartUsesEachItemsLocalState(t *testing.T) {
+	base := color.NRGBA{R: 0x10, A: 0xff}
+	hoveredColor := color.NRGBA{G: 0x80, A: 0xff}
+	selectedColor := color.NRGBA{B: 0xf0, A: 0xff}
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartItem, flowstyle.Style{}.
+			Background(flowstyle.SolidColor{Color: base}).
+			When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: hoveredColor})).
+			When(flowstyle.Selected, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: selectedColor})))
+
+	widget := TabsWidget{key: "tabs", customStyle: custom}
+	ctx := newContext(nil)
+	gtx := testLayoutContext()
+	size := tabsSizeStyleFor(frame.ActiveTheme(ctx), TabsMedium)
+	resolveBackground := func(itemKey string, state flowstyle.StyleState) color.NRGBA {
+		resolved := widget.resolveItemStyle(ctx, gtx, itemKey, state, color.NRGBA{A: 0xff}, size)
+		brush, ok := styleruntime.Brush(resolved.Paint.Background)
+		if !ok {
+			t.Fatalf("item %q background = %#v", itemKey, resolved.Paint)
+		}
+		return brush.ColorAt(.5)
+	}
+
+	if got := resolveBackground("hovered", flowstyle.StyleState{Hovered: true}); got != hoveredColor {
+		t.Fatalf("hovered item background = %#v", got)
+	}
+	if got := resolveBackground("selected", flowstyle.StyleState{Selected: true}); got != selectedColor {
+		t.Fatalf("selected item background = %#v", got)
+	}
+	if got := resolveBackground("idle", flowstyle.StyleState{}); got != base {
+		t.Fatalf("idle item background = %#v", got)
 	}
 }
 

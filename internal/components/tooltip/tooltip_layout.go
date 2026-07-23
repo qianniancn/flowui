@@ -7,9 +7,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func (p Popup) panelConstraints(ctx *frame.Context, gtx layout.Context, overlaySize image.Point) layout.Constraints {
@@ -23,7 +25,14 @@ func (p Popup) panelConstraints(ctx *frame.Context, gtx layout.Context, overlayS
 func (p Popup) recordPanel(ctx *frame.Context, gtx layout.Context) (op.CallOp, layout.Dimensions, frame.OverlayPlacement) {
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return p.layoutPanel(ctx, gtx)
+		if p.styleKey != "" {
+			return layoutui.LayoutStyled(ctx, gtx, p.styleKey, p.styleState, p.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+				return p.layoutPanel(ctx, gtx)
+			}))
+		}
+		return layoutui.Box(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+			return p.layoutPanel(ctx, gtx)
+		})).Style(p.customStyle).Layout(ctx, gtx)
 	})
 	return macro.Stop(), dims, placement
 }
@@ -70,9 +79,10 @@ func (p Popup) layoutContent(ctx *frame.Context, gtx layout.Context, style toolt
 	}
 	content := p.content
 	if value, ok := content.(text.Widget); ok {
-		value = value.DefaultSize(float32(frame.ActiveTheme(ctx).Components.Tooltip.TextSize))
-		value = value.DefaultColor(style.text)
-		content = value
+		content = text.WithDefaults(value, flowstyle.Style{}.
+			FontSize(frame.ActiveTheme(ctx).Components.Tooltip.TextSize).
+			TextColor(flowstyle.SolidColor{Color: style.text}),
+		)
 	}
 	return content.Layout(ctx, gtx)
 }

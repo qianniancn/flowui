@@ -3,7 +3,7 @@ package chip
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 // Color selects the semantic color of a Chip.
@@ -38,13 +38,13 @@ const (
 
 // Widget presents compact, non-interactive metadata or status information.
 type Widget struct {
-	theme        func(*theme.Theme)
 	label        string
 	color        Color
 	variant      Variant
 	size         Size
 	startContent frame.Widget
 	endContent   frame.Widget
+	customStyle  flowstyle.Style
 }
 
 // New creates a Chip with HeroUI's default color and secondary variant.
@@ -82,14 +82,11 @@ func (c Widget) EndContent(content frame.Widget) Widget {
 	return c
 }
 
-func (c Widget) Theme(fn func(*theme.Theme)) Widget {
-	c.theme = fn
+func (c Widget) Style(value flowstyle.Style) Widget {
+	c.customStyle = value
 	return c
 }
 
 func (c Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	if restore := frame.PushInstanceTheme(ctx, c.theme); restore != nil {
-		defer restore()
-	}
 	return c.layout(ctx, gtx)
 }

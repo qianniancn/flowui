@@ -1,12 +1,13 @@
 package radiogroup
 
 import (
-	"gioui.org/font"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
+	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
+	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
 func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, group *radioGroupState, item RadioItem) layout.Dimensions {
@@ -32,8 +33,15 @@ func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, gro
 		semantic.RadioButton.Add(gtx.Ops)
 		semantic.SelectedOp(selected).Add(gtx.Ops)
 		semantic.EnabledOp(gtx.Enabled()).Add(gtx.Ops)
-		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, gtx.Focused(&itemState.clickable))
-		style := radioStyleFor(frame.ActiveTheme(ctx), r.variant, itemState.clickable.Hovered(), itemState.clickable.Pressed(), disabled, invalid)
+		focused := gtx.Focused(&itemState.clickable)
+		focusVisible := frame.FocusVisible(ctx, &itemState.clickable, focused)
+		styleState := flowstyle.StyleState{
+			Hovered: itemState.clickable.Hovered(), Pressed: itemState.clickable.Pressed(),
+			Focused: focused, FocusVisible: focusVisible, Disabled: disabled,
+			Selected: selected, Checked: selected, Invalid: invalid,
+		}
+		key := frame.DerivedKey(ctx, frame.FullKey(ctx, r.key), item.Key)
+		style := r.resolveItemStyle(ctx, animGtx, key, styleState)
 		motion := frame.ActiveTheme(ctx).Motion
 		style.selected = itemState.selection(animGtx, selected, motion)
 		style.focus = itemState.focusOpacity(animGtx, focusVisible && !disabled, motion)
@@ -50,32 +58,21 @@ func (r RadioGroupWidget) layoutItemContent(ctx *frame.Context, gtx layout.Conte
 		Gap:       gtx.Dp(theme.ContentGap),
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return drawRadio(gtx, frame.ActiveTheme(ctx), style, scale)
+			return drawRadio(ctx, gtx, frame.ActiveTheme(ctx), style, scale)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if item.Description == "" {
-				return text.New(item.Label).
-					Size(float32(theme.TextSize)).
-					Weight(font.Medium).
-					Color(style.fg).
-					Layout(ctx, gtx)
+				return layoutui.LayoutResolved(ctx, gtx, style.label, text.New(item.Label))
 			}
 			return layout.Flex{
 				Axis: layout.Vertical,
 				Gap:  gtx.Dp(theme.DescriptionGap),
 			}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return text.New(item.Label).
-						Size(float32(theme.TextSize)).
-						Weight(font.Medium).
-						Color(style.fg).
-						Layout(ctx, gtx)
+					return layoutui.LayoutResolved(ctx, gtx, style.label, text.New(item.Label))
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return text.New(item.Description).
-						Size(float32(theme.DescriptionSize)).
-						Color(style.description).
-						Layout(ctx, gtx)
+					return layoutui.LayoutResolved(ctx, gtx, style.description, text.New(item.Description))
 				}),
 			)
 		}),

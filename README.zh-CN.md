@@ -12,8 +12,20 @@ FlowUI 是一个基于 [Gio](https://gioui.org/) 构建的 Go 桌面 UI 框架�
 import "github.com/qianniancn/FlowUI/ui"
 ```
 
-应用状态放在自己的模型中。组件负责焦点、悬停、选择和动画进度等交互状态，
-以及必要的派生绘制状态。
+可教的三句话：
+
+1. **Model + 消息 + Update** 管业务数据；View 只读 Model，用 `send` 表达意图。
+2. **Style** 管这个盒子的尺寸与外观；**布局容器** 管孩子们怎么排列。
+3. **Key** 管跨帧身份；没有 Key，就不保留交互 / 动画状态槽。
+
+### 文档入口
+
+| 读者 | 从这里开始 |
+|------|------------|
+| **应用开发者** | [使用教程](https://github.com/qianniancn/FlowUI/wiki) — 从快速开始到自定义组件、多窗口、动画、FAQ |
+| **架构说明** | [`docs/architecture.md`](docs/architecture.md) |
+
+使用教程维护在项目 Wiki 中。
 
 ## 环境要求
 
@@ -43,26 +55,43 @@ type Model struct {
 	Count int
 }
 
-type Msg struct {
-	Delta int
+// 推荐封闭消息集，不要写 type Msg any
+type Msg interface{ msg() }
+
+type Inc struct{}
+type Dec struct{}
+
+func (Inc) msg() {}
+func (Dec) msg() {}
+
+func Update(m *Model, msg Msg) {
+	switch msg.(type) {
+	case Inc:
+		m.Count++
+	case Dec:
+		m.Count--
+	}
 }
 
-func Update(model *Model, msg Msg) {
-	model.Count += msg.Delta
-}
-
-func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Text(fmt.Sprintf("Count: %d", model.Count)).Size(20),
-		ui.Row(
-			ui.Button("decrease", ui.Text("-1")).OnClick(func() {
-				send(Msg{Delta: -1})
-			}),
-			ui.Button("increase", ui.Text("+1")).OnClick(func() {
-				send(Msg{Delta: 1})
-			}),
-		).Gap(8),
-	).Gap(12)
+func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
+	return ui.Center(
+		ui.Box(
+			ui.Column(
+				ui.Text("FlowUI Counter").Size(24),
+				ui.Text(fmt.Sprintf("count: %d", m.Count)).Size(18),
+				ui.Row(
+					ui.Button("inc", ui.Text("+1")).OnClick(func() {
+						send(Inc{})
+					}),
+					ui.Button("dec", ui.Text("-1")).
+						Variant(ui.ButtonSecondary).
+						OnClick(func() {
+							send(Dec{})
+						}),
+				).Gap(12),
+			).Gap(12),
+		).Style(ui.Padding(24)),
+	)
 }
 
 func main() {
@@ -79,25 +108,91 @@ func main() {
 go run .
 ```
 
+仓库内同款：`go run ./examples/counter`。
+分步教程：[快速开始](https://github.com/qianniancn/FlowUI/wiki/01-快速开始)。
+
 ## 应用模型
 
-根据应用需求选择入口：
+主要入口：
 
-- `ui.Run`：同步更新。
-- `ui.RunCmd`：`Update` 返回异步 command。
-- `ui.RunWithSubscriptions`：使用 command 和长期订阅。
-- `ui.RunProgram`：需要启动任务或原生窗口状态消息时使用。
+- `ui.Run`：同步 `Update`（多数应用从这里开始）。
+- `ui.RunProgram`：完整 `Program`（`Init`、`UpdateCmd`、订阅、窗口状态消息）。
+- `ui.Application`：多窗口。
+
+需要 command 或订阅时，使用 `RunProgram` 与
+`Program{Update, Subscriptions, View, ...}`。
+
+### 消息
+
+推荐使用**封闭的消息集合**，不要写 `type Msg any`：
+
+```go
+type Msg interface{ msg() }
+
+type Inc struct{}
+type Dec struct{}
+
+func (Inc) msg() {}
+func (Dec) msg() {}
+
+func Update(m *Model, msg Msg) {
+	switch msg.(type) {
+	case Inc:
+		// ...
+	case Dec:
+		// ...
+	}
+}
+```
+
+嵌套模块用 `MapCmd` / `MapSubscription` 把子消息映射到父消息集
+（见 `examples/modules`）。
+
+菜单/工具栏/快捷键复用 **`Action`**（`NewAction`、`ActionScope`、
+`ActionMenuItem`、`ActionButton`）。异步 MVU 副作用仍是 **`Cmd`**。
+
+### Open 状态
+
+开合类控件分两族，契约不同：
+
+**方法族** —— `Select`、`Dropdown`、`ContextMenu`、`Menubar`。默认非受控，
+通过方法选择受控:
+
+```text
+未调用 Open(...)  → 非受控，控件内部维护开关
+Open(bool)        → 受控，必须处理 OnOpenChange 并把 open 存进 Model
+DefaultOpen(...)  → 仅给非受控做初始种子
+```
+
+（`Menubar` 用字符串标识展开的菜单：`OpenKey` / `DefaultOpenKey`。）
+
+**构造族** —— `Popover`、`Modal`、`AlertDialog`、`Collapsible`。始终受控:
+把 open/expanded 值传给构造函数并存进 Model；关闭请求通过 `OnOpenChange`
+（`Collapsible` 为 `OnExpandedChange`）回传。没有非受控模式，也没有
+`Open`/`DefaultOpen` 方法。
+
+```go
+Modal("confirm", m.ConfirmOpen, "Delete?", body).
+    OnOpenChange(func(open bool) { send(SetConfirm{Open: open}) })
+```
 
 Command 在事件循环之外运行。捕获不可变的值，并通过 `ui.Send` 发送结果；
 不要在 command 中保存模型指针或 `ui.Context`。
 
-搜索、预览等只需要最新结果的任务使用 `ui.LatestCmd`，不再需要时使用
-`ui.CancelLatestCmd` 取消对应任务。
+一次 `Update` 需要启动多个独立任务时使用 `ui.Batch`，不要在 command 内自行
+开 goroutine 农场。搜索、预览等只需要最新结果的任务使用 `ui.LatestCmd`，
+不再需要时使用 `ui.CancelLatestCmd` 取消对应任务。key 应是稳定且数量有界的
+工作流标识（不要使用每次请求的值），因为 key 会保留到窗口结束。
 
-多窗口应用可以使用 `ui.NewWindow`、`ui.NewWindowCmd` 或
-`ui.NewProgramWindow` 创建 `ui.WindowSpec`，再交给 `ui.RunWindows` 或
-`ui.Application.Run`。`NewWindow` 系列的初始化函数会为每个窗口实例执行，
-并且必须返回彼此独立的模型状态。
+多窗口应用可使用 `ui.NewProgramWindow` 等创建 `ui.WindowSpec`，再交给
+`ui.Application.Run` 或 `ui.RunWindows`。初始化函数按窗口实例执行，且必须
+返回彼此独立的模型状态。`Application.Open` 仅在新窗口成功启动时返回
+`true`；同 key 窗口已打开时会将其前置并返回 `false`，拒绝打开时也返回
+`false`。
+
+更细的讲解见教程：[MVU 与消息](https://github.com/qianniancn/FlowUI/wiki/03-MVU与消息)、
+[命令与订阅](https://github.com/qianniancn/FlowUI/wiki/08-命令与订阅)、
+[多窗口](https://github.com/qianniancn/FlowUI/wiki/11-多窗口)。
 
 ## 组件
 
@@ -110,7 +205,7 @@ Command 在事件循环之外运行。捕获不可变的值，并通过 `ui.Send
   `Dropdown`、`Popover`、`Tooltip`、`Modal`、`AlertDialog`、`Toast`。
 - **数据与反馈：** `Table`、`Pagination`、`Slider`、`ProgressBar`、
   `ProgressCircle`、`Meter`、`Spinner`，以及折线图、柱状图、饼图和
-  K 线图。
+  K 线图、`Heatmap` 和 `GanttChart`。
 - **布局：** `Surface`、`Card`、`Box`、`Row`、`Column`、`Grid`、`Scroll`、
   `SplitPane`、`Stack`、`Overlay` 和相关布局原语。
 
@@ -144,7 +239,7 @@ func main() {
 ```
 
 应用级主题覆盖作用于应用或窗口。组件实例使用可复用的 `Style` 快照。
-默认样式、变体、尺寸、继承的 `StyleScope` 和实例样式按顺序级联：
+样式层按此顺序解析（默认 → 继承文本 → 变体 → 尺寸 → `StyleScope` → 实例）：
 
 ```go
 primary := ui.Background(ui.TokenAccent).
@@ -194,9 +289,12 @@ ui.ProgressBar("upload", 42).Label("上传").Style(barStyle)
 Select、ComboBox 和日期控件这类复合字段使用 `PartContent` 表示字段表面；
 根属性仍属于整个组件外层。
 
-自定义组件通过 `ResolveStyle`、`ResolveStylePart`、`LayoutResolvedStyle` 和
-`LayoutInteractiveResolvedStyle` 复用同一套级联与渲染器；完整写法见
-`examples/custom_widgets`。
+自定义复合组件走路径 B：`BeginInteract` → `Resolve` / `ResolvePart` →
+`LayoutInteractiveBox`（或 `LayoutBox`）。`Context` 上的焦点辅助
+（`RequestFocus` / `RequestFocusVisible` / `FocusVisible`）使用
+`Interact.Clickable` 作为 tag，与官方控件同一套键盘/指针模态。领域像素走路径 C：
+`ui.Canvas` 作为 Host 子节点（禁止在画布里画外壳）。完整写法见
+`examples/custom_widgets` 与 [自定义组件教程](https://github.com/qianniancn/FlowUI/wiki/10-自定义组件)。
 
 `Surface` 也使用同一套 Style API 设置实例几何和绘制属性：
 
@@ -238,20 +336,20 @@ FlowUI 内置英文和中文组件文案。`ui.LanguageAuto` 会根据系统语�
 可运行示例位于 [`examples/`](examples/)：
 
 ```bash
-go run ./examples/components
 go run ./examples/counter
+go run ./examples/form
 go run ./examples/async
-go run ./examples/tables
+go run ./examples/custom_widgets
 go run ./examples/multi_windows
+go run ./examples/components
 ```
 
-目录中还包含表单、导航、弹出界面、图表、自定义组件、窗口标题栏和布局原语等
-示例。
+目录中还包含表单、导航、弹出界面、图表、动画、窗口标题栏和布局原语等示例。
 
 ## 测试
 
 `uitest` 提供确定性的帧、输入、时间和应用测试工具，用于组件和应用
-测试。它不是应用运行时依赖。
+测试。它不是应用运行时依赖。教程：[测试](https://github.com/qianniancn/FlowUI/wiki/13-测试)。
 
 ```bash
 go test ./...
@@ -260,14 +358,16 @@ go vet ./...
 
 ## 项目结构
 
-- `ui/`：应用使用的公开包。
-- `internal/components/`：组件实现。
-- `internal/frame/`、`internal/state/`、`internal/theme/` 等：共享实现服务。
-- `uitest/`：确定性的测试工具。
-- [`docs/architecture.md`](docs/architecture.md)：依赖方向、状态归属和弹出界面行为说明。
+- `ui/`：应用使用的公开包（只应 import 这里）。
+- `internal/`：运行时、样式、Host、交互、组件、主题等实现。
+- `uitest/`：确定性测试工具。
+- `examples/`：与终态 API 对齐的可运行示例。
+- [项目 Wiki](https://github.com/qianniancn/FlowUI/wiki)：**使用教程**。
+- [`docs/architecture.md`](docs/architecture.md)：依赖方向、状态归属、浮层行为。
 
-应用应使用 `ui`，不要直接导入 `internal` 包。API 仍在演进中，示例和公开
-包文档是当前用法的主要参考。
+应用应使用 `ui`，不要直接导入 `internal` 包。日常用法优先看
+[使用教程](https://github.com/qianniancn/FlowUI/wiki)、`examples/` 与
+`go doc github.com/qianniancn/FlowUI/ui`。
 
 ## 许可证
 

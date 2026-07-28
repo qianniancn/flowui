@@ -13,8 +13,23 @@ The public API is:
 import "github.com/qianniancn/FlowUI/ui"
 ```
 
-Application state belongs in your model. Components own interaction state and
-derived rendering state such as focus, hover, selection, and animation progress.
+Three teaching rules:
+
+1. **Model + messages + Update** own business data; View is read-only and
+   expresses intent with `send`.
+2. **Style** owns a box's size and appearance; **layout containers** own how
+   children are arranged.
+3. **Keys** are explicit identity across frames; without a Key, interaction and
+   animation slots are not retained.
+
+### Documentation
+
+| Audience | Start here |
+|----------|------------|
+| **App developers** | [User tutorial (Chinese)](https://github.com/qianniancn/FlowUI/wiki) — getting started through custom widgets, multi-window, animation, and FAQ |
+| **Architecture notes** | [`docs/architecture.md`](docs/architecture.md) |
+
+The user tutorial is maintained in the project Wiki.
 
 ## Requirements
 
@@ -44,26 +59,43 @@ type Model struct {
 	Count int
 }
 
-type Msg struct {
-	Delta int
+// Prefer a closed message set (not `type Msg any`).
+type Msg interface{ msg() }
+
+type Inc struct{}
+type Dec struct{}
+
+func (Inc) msg() {}
+func (Dec) msg() {}
+
+func Update(m *Model, msg Msg) {
+	switch msg.(type) {
+	case Inc:
+		m.Count++
+	case Dec:
+		m.Count--
+	}
 }
 
-func Update(model *Model, msg Msg) {
-	model.Count += msg.Delta
-}
-
-func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Text(fmt.Sprintf("Count: %d", model.Count)).Size(20),
-		ui.Row(
-			ui.Button("decrease", ui.Text("-1")).OnClick(func() {
-				send(Msg{Delta: -1})
-			}),
-			ui.Button("increase", ui.Text("+1")).OnClick(func() {
-				send(Msg{Delta: 1})
-			}),
-		).Gap(8),
-	).Gap(12)
+func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
+	return ui.Center(
+		ui.Box(
+			ui.Column(
+				ui.Text("FlowUI Counter").Size(24),
+				ui.Text(fmt.Sprintf("count: %d", m.Count)).Size(18),
+				ui.Row(
+					ui.Button("inc", ui.Text("+1")).OnClick(func() {
+						send(Inc{})
+					}),
+					ui.Button("dec", ui.Text("-1")).
+						Variant(ui.ButtonSecondary).
+						OnClick(func() {
+							send(Dec{})
+						}),
+				).Gap(12),
+			).Gap(12),
+		).Style(ui.Padding(24)),
+	)
 }
 
 func main() {
@@ -80,27 +112,94 @@ Run it with:
 go run .
 ```
 
+Same program in the repo: `go run ./examples/counter`.
+Step-by-step guide (Chinese): [Quick Start](https://github.com/qianniancn/FlowUI/wiki/01-快速开始).
+
 ## Application Model
 
-Use the simplest entry point that fits the application:
+Primary entry points:
 
-- `ui.Run` for synchronous updates.
-- `ui.RunCmd` when updates return asynchronous commands.
-- `ui.RunWithSubscriptions` for commands plus long-lived subscriptions.
-- `ui.RunProgram` when startup work or native window-state messages are part of
-  the program.
+- `ui.Run` — synchronous `Update` (most apps start here).
+- `ui.RunProgram` — full `Program` (`Init`, `UpdateCmd`, subscriptions,
+  window-state messages).
+- `ui.Application` — multi-window host.
+
+For commands or subscriptions, use `RunProgram` with `Program{Update, Subscriptions, View, ...}`.
+
+### Messages
+
+Prefer a **closed message set**, not `type Msg any`:
+
+```go
+type Msg interface{ msg() }
+
+type Inc struct{}
+type Dec struct{}
+
+func (Inc) msg() {}
+func (Dec) msg() {}
+
+func Update(m *Model, msg Msg) {
+	switch msg.(type) {
+	case Inc:
+		// ...
+	case Dec:
+		// ...
+	}
+}
+```
+
+Nested modules map child messages into the parent set with `MapCmd` /
+`MapSubscription` (see `examples/modules`).
+
+Reusable menus/toolbars/shortcuts use **`Action`** (`NewAction`, `ActionScope`,
+`ActionMenuItem`, `ActionButton`). Asynchronous MVU side effects remain **`Cmd`**.
+
+### Open state
+
+Two families of open/close controls with different contracts:
+
+**Method family** — `Select`, `Dropdown`, `ContextMenu`, `Menubar`. Uncontrolled
+by default; opt into control with methods:
+
+```text
+no Open(...)     → uncontrolled; widget keeps open state
+Open(bool)       → controlled; handle OnOpenChange and store open in Model
+DefaultOpen(...) → seeds uncontrolled open only
+```
+
+(`Menubar` keys the open menu by string: `OpenKey` / `DefaultOpenKey`.)
+
+**Constructor family** — `Popover`, `Modal`, `AlertDialog`, `Collapsible`. Always
+controlled: pass the open/expanded value to the constructor and store it in the
+Model; dismiss requests arrive through `OnOpenChange` (`OnExpandedChange` for
+`Collapsible`). There is no uncontrolled mode and no `Open`/`DefaultOpen` method.
+
+```go
+Modal("confirm", m.ConfirmOpen, "Delete?", body).
+    OnOpenChange(func(open bool) { send(SetConfirm{Open: open}) })
+```
 
 Commands run outside the event loop. Capture immutable values in a command and
 send results back through `ui.Send`; do not retain a model pointer or a
 `ui.Context`.
 
-Use `ui.LatestCmd` and `ui.CancelLatestCmd` for keyed work such as search or
-preview, where an older result should be canceled and ignored.
+Use `ui.Batch` when one update must start several independent commands; do not
+spawn ad-hoc goroutine farms inside a command. Use `ui.LatestCmd` and
+`ui.CancelLatestCmd` for keyed work such as search or preview, where an older
+result should be canceled and ignored. Use a stable, bounded workflow key (not
+a per-request value), because keys are retained for the window lifetime.
 
-For multiple windows, create `ui.WindowSpec` values with `ui.NewWindow`,
-`ui.NewWindowCmd`, or `ui.NewProgramWindow`, then pass them to
-`ui.RunWindows` or `ui.Application.Run`. The `NewWindow` initializers run for
-each window instance and must return independent model state.
+For multiple windows, build `ui.WindowSpec` values (for example with
+`ui.NewProgramWindow`) and pass them to `ui.Application.Run` or
+`ui.RunWindows`. Initializers run per window instance and must return
+independent model state. `Application.Open` returns `true` only when a new
+window starts. If the same key is already open, FlowUI raises that window and
+returns `false`; rejected opens also return `false`.
+
+Deeper walkthroughs: [MVU & messages](https://github.com/qianniancn/FlowUI/wiki/03-MVU与消息),
+[commands & subscriptions](https://github.com/qianniancn/FlowUI/wiki/08-命令与订阅),
+[multi-window](https://github.com/qianniancn/FlowUI/wiki/11-多窗口) (Chinese tutorial).
 
 ## Components
 
@@ -113,7 +212,7 @@ The public component API covers common desktop application work:
   `Dropdown`, `Popover`, `Tooltip`, `Modal`, `AlertDialog`, and `Toast`.
 - **Data and feedback:** `Table`, `Pagination`, `Slider`, `ProgressBar`,
   `ProgressCircle`, `Meter`, `Spinner`, and line, bar, pie, and candlestick
-  charts.
+  charts, `Heatmap`, and `GanttChart`.
 - **Layout:** `Surface`, `Card`, `Box`, `Row`, `Column`, `Grid`, `Scroll`,
   `SplitPane`, `Stack`, `Overlay`, and related primitives.
 
@@ -149,8 +248,8 @@ func main() {
 ```
 
 Application theme customization applies to the application or window. Component
-instances use reusable `Style` snapshots. Defaults, variants, sizes, inherited
-`StyleScope` values, and the instance style are cascaded in that order:
+instances use reusable `Style` snapshots. Layers resolve in this order
+(defaults, inherited text, variant, size, `StyleScope`, then instance):
 
 ```go
 primary := ui.Background(ui.TokenAccent).
@@ -202,9 +301,12 @@ ui.ProgressBar("upload", 42).Label("Upload").Style(barStyle)
 For compound field controls such as Select, ComboBox, and the date controls,
 `PartContent` is the styled field face; the root remains the outer component.
 
-Custom components resolve the same cascade and reuse the same renderer with
-`ResolveStyle`, `ResolveStylePart`, `LayoutResolvedStyle`, and
-`LayoutInteractiveResolvedStyle`; see `examples/custom_widgets`.
+Custom composites follow path B: `BeginInteract` → `Resolve` / `ResolvePart`
+→ `LayoutInteractiveBox` (or `LayoutBox`). Focus helpers on `Context`
+(`RequestFocus`, `RequestFocusVisible`, `FocusVisible`) use the
+`Interact.Clickable` tag so custom rings match official controls. Domain
+pixels use path C: `ui.Canvas` as the host child (no chrome painting). See
+`examples/custom_widgets` and the [custom widgets tutorial](https://github.com/qianniancn/FlowUI/wiki/10-自定义组件).
 
 `Surface` uses the same style API for per-instance geometry and paint:
 
@@ -249,20 +351,22 @@ window at runtime with `Application.SetTheme` and `Application.SetLanguage`.
 Runnable programs are in [`examples/`](examples/). Start with:
 
 ```bash
-go run ./examples/components
 go run ./examples/counter
+go run ./examples/form
 go run ./examples/async
-go run ./examples/tables
+go run ./examples/custom_widgets
 go run ./examples/multi_windows
+go run ./examples/components
 ```
 
 The directory also contains focused examples for forms, navigation, popups,
-charts, custom widgets, window title bars, and layout primitives.
+charts, animations, window chrome, and layout primitives.
 
 ## Testing
 
 `uitest` provides deterministic helpers for frame, input, time, and application
 tests. It is a test helper and is not required by applications at runtime.
+Tutorial: [Testing](https://github.com/qianniancn/FlowUI/wiki/13-测试).
 
 ```bash
 go test ./...
@@ -271,17 +375,17 @@ go vet ./...
 
 ## Project Structure
 
-- `ui/` is the application-facing package.
-- `internal/components/` contains component implementations.
-- `internal/frame/`, `internal/state/`, `internal/theme/`, and related packages
-  provide shared implementation services.
-- `uitest/` contains deterministic test harnesses.
-- [`docs/architecture.md`](docs/architecture.md) describes dependency direction,
-  state ownership, and overlay behavior.
+- `ui/` — application-facing public package (import this only).
+- `internal/` — runtime, style, host, interact, components, theme, …
+- `uitest/` — deterministic test harnesses.
+- `examples/` — runnable demos aligned with the final API.
+- [Project Wiki](https://github.com/qianniancn/FlowUI/wiki) — **user tutorial** (Chinese).
+- [`docs/architecture.md`](docs/architecture.md) — dependency direction, state
+  ownership, overlay behavior.
 
-Applications should import `ui`, not `internal` packages. The API is still
-evolving; the examples and public package documentation are the current usage
-reference.
+Applications should import `ui`, not `internal` packages. For day-to-day usage,
+prefer the [user tutorial](https://github.com/qianniancn/FlowUI/wiki), `examples/`, and
+`go doc github.com/qianniancn/FlowUI/ui`.
 
 ## License
 

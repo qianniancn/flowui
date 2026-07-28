@@ -6,8 +6,10 @@ public `ui` API, component behavior, rendering, tests, and examples.
 Before changing code, read:
 
 - [`README.md`](README.md) for installation and usage.
-- [`docs/architecture.md`](docs/architecture.md) for package boundaries,
-  state ownership, and overlay behavior.
+- [Project Wiki](https://github.com/qianniancn/FlowUI/wiki) — user-facing tutorial (final API).
+- [`docs/architecture.md`](docs/architecture.md) — dependency direction, state
+  ownership, and overlay behavior for the current tree.
+- `examples/` and `go doc github.com/qianniancn/FlowUI/ui` for current usage.
 
 ## Development Environment
 
@@ -40,6 +42,54 @@ When adding or changing a component:
 2. Expose the public API through a focused file under `ui/`.
 3. Add or update a runnable example under `examples/`.
 4. Preserve the dependency direction described in the architecture document.
+
+### Internal API Design Principles
+
+Internal packages must be robust against misuse. Design interfaces so incorrect
+usage is **caught at compile time** or **fails immediately** rather than causing
+silent corruption or order-dependent behavior.
+
+**Type safety over conventions:**
+- Encode invariants in types and signatures, not documentation
+- If two values must stay synchronized, bundle them in one struct
+- Use the type system to prevent invalid states
+
+**Eliminate calling-order dependencies:**
+- Methods should work regardless of call order unless the dependency is
+  explicit in the signature
+- If method A must be called before method B, consider:
+  - Combining them into one operation
+  - Making B take A's result as a parameter
+  - Using a builder pattern with a terminal operation
+
+**Query methods must not have side effects:**
+- Methods that appear to be queries (return a value, named like `Get*`,
+  `Is*`, `Visible`, `Contains`) should be pure reads
+- Separate observation from state changes into distinct phases when needed
+- Document any unavoidable side effects prominently
+
+**Make cache keys complete:**
+- If a cache depends on multiple inputs, include all of them in the key
+- Missing inputs cause silent cache misses or stale data reuse
+- Test caches with varying inputs, not just the happy path
+
+**Examples of these principles in practice:**
+
+- `KeyFilterCache` now includes the `target` tag in its cache key (#12), not
+  just the filter names. Reusing the cache with a different target would route
+  keys to the wrong widget.
+
+- `ClickArea.Layout` now processes events the same way as `Clicked` (#13),
+  eliminating the hidden dependency on calling `Clicked` before `Layout`.
+
+- `Focus.Observe` records only frame-local focus input; persistent modality
+  changes happen later in `CommitObservations` (#14).
+
+When reviewing internal APIs, ask:
+- Can this be misused by changing call order?
+- Does this method name promise a query but perform writes?
+- Are all cache dependencies reflected in the cache key?
+- Will incorrect usage fail loudly or silently corrupt state?
 
 ## Checks
 

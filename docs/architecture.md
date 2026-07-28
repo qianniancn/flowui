@@ -4,11 +4,16 @@ Implementation notes for the current tree: dependency direction, style cascade,
 interaction host, state ownership, overlay host, and effects. For application
 usage, see the [project Wiki](https://github.com/qianniancn/flowui/wiki) and the public `ui` package docs.
 
-FlowUI exposes one application-facing package:
+FlowUI exposes one primary application-facing package:
 
 ```go
 import "github.com/qianniancn/flowui/ui"
 ```
+
+Optional platform services live in focused public packages: `explorer` for
+window-bound native file dialogs, `notify` for native desktop notifications,
+and `systray` for tray icons and menus. They do not provide a second component
+facade and do not expose `internal` implementation types.
 
 Component tests may additionally import `github.com/qianniancn/flowui/uitest`.
 The package owns a deterministic FlowUI context, Gio input router, viewport,
@@ -20,27 +25,30 @@ Applications do not depend on `uitest` at runtime.
 execution, error delivery, and shutdown cancellation without opening a window.
 It complements the widget Harness rather than maintaining a second MVU runtime.
 
-The `ui` package is the MVU entry point and public facade. Applications should
-not import `internal` packages, and lower-level FlowUI packages must not import
-`ui`.
+The `ui` package is the MVU entry point and component facade. Applications
+should not import `internal` packages, and lower-level FlowUI packages must not
+import `ui`.
 
 ## Dependency Direction
 
 ```text
 application
+    +--> ui (MVU entry point and component facade)
+    |      |
+    |      +--> internal/runtime
+    |      +--> internal/explorer --> gioui.org/x/explorer
+    |      +--> internal/components/*
+    |               |
+    |               +--> internal/frame
+    |               +--> internal/overlay
+    |               +--> internal/state
+    |               +--> internal/theme
+    |               +--> internal/locale
+    |               +--> internal/render
     |
-    v
-ui (MVU entry point and public facade)
-    |
-    +--> internal/runtime
-    +--> internal/components/*
-             |
-             +--> internal/frame
-             +--> internal/overlay
-             +--> internal/state
-             +--> internal/theme
-             +--> internal/locale
-             +--> internal/render
+    +--> explorer --> internal/explorer
+    +--> notify   --> gioui.org/x/notify
+    +--> systray  --> platform-native implementations
 
 component tests
     |
@@ -69,9 +77,10 @@ data types are aliased so their fields stay directly usable through the facade;
 (widgets, context, style builder) remain facade-owned; only field-bearing data
 types are aliased.
 
-All implementation packages live below `internal/`. Theme, locale, layout, and
-drawing types needed by applications are re-exported through `ui`; their
-implementation paths are not additional public entry points.
+Core implementation packages live below `internal/`. Theme, locale, layout,
+and drawing types needed by applications are re-exported through `ui`; their
+implementation paths are not additional public entry points. The focused
+platform packages expose only their own stable adapters.
 
 ## Style Cascade
 
@@ -378,9 +387,9 @@ state and Select reuses ListBox item behavior. Split a domain only after its
 shared primitives can move into a lower package without introducing dependency
 cycles. File count alone is not a package boundary.
 
-The root module intentionally contains no Go package. This prevents two public
-entry points from drifting apart and keeps `github.com/qianniancn/flowui/ui` as
-the stable import contract.
+The root module intentionally contains no Go package. This prevents an
+accidental second component facade and keeps `github.com/qianniancn/flowui/ui`
+as the stable interface and MVU import contract.
 
 ## Internal Interface Design
 

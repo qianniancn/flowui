@@ -1,7 +1,8 @@
 # Contributing to FlowUI
 
 FlowUI is a Go desktop UI framework built on Gio. Keep changes focused on the
-public `ui` API, component behavior, rendering, tests, and examples.
+public `ui` API, optional platform services, component behavior, rendering,
+tests, and examples.
 
 Before changing code, read:
 
@@ -25,8 +26,9 @@ go run ./examples/counter
 
 ## Code Changes
 
-- Applications import `github.com/qianniancn/flowui/ui`; implementation code
-  belongs below `internal/`.
+- Applications import `github.com/qianniancn/flowui/ui` for UI and MVU APIs;
+  `explorer`, `notify`, and `systray` are optional platform services. Shared
+  implementation code belongs below `internal/`.
 - Keep business state in the application's model. Component state is for
   interaction and derived rendering state.
 - Use explicit keys for retained component state. Reuse existing state,

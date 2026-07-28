@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	internalexplorer "github.com/qianniancn/flowui/internal/explorer"
 )
 
 func TestDoAdaptsContextFreeCommand(t *testing.T) {
@@ -27,6 +29,21 @@ func TestDoContextReturnsError(t *testing.T) {
 	})
 	if err := cmd(context.Background(), func(int) {}); !errors.Is(err, want) {
 		t.Fatalf("command error = %v, want %v", err, want)
+	}
+}
+
+func TestRuntimeCmdBindsWindowExplorerService(t *testing.T) {
+	service := internalexplorer.New(nil)
+	var got *internalexplorer.Service
+	cmd := runtimeCmd(func(ctx context.Context, _ Send[struct{}]) error {
+		got = internalexplorer.FromContext(ctx)
+		return nil
+	}, service)
+	if err := cmd(context.Background(), func(struct{}) {}); err != nil {
+		t.Fatal(err)
+	}
+	if got != service {
+		t.Fatalf("explorer service = %p, want %p", got, service)
 	}
 }
 

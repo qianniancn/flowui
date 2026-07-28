@@ -8,9 +8,11 @@ import (
 	"os"
 
 	"gioui.org/app"
+	"gioui.org/io/event"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	internalexplorer "github.com/qianniancn/flowui/internal/explorer"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/runtime"
 )
@@ -74,6 +76,8 @@ func runWindowCmd[M any, Msg any](
 	onExit func(M),
 ) error {
 	ctx := frame.New(w, theme, language)
+	explorerService := internalexplorer.New(w)
+	eventWindow := &platformEventWindow{Window: w, explorer: explorerService}
 	if onError == nil {
 		onError = func(err error) {
 			writeEffectError(os.Stderr, err)
@@ -88,6 +92,7 @@ func runWindowCmd[M any, Msg any](
 				result[index] = runtime.Subscription[Msg]{
 					Key: subscription.key,
 					Run: func(effectCtx context.Context, send func(Msg)) error {
+						effectCtx = internalexplorer.WithService(effectCtx, explorerService)
 						return subscription.run(effectCtx, Send[Msg](send))
 					},
 				}
@@ -95,8 +100,8 @@ func runWindowCmd[M any, Msg any](
 			return result
 		}
 	}
-	return runtime.LoopWithExit(w, initial, runtimeCmd(initialCmd), func(model *M, msg Msg) runtime.Cmd[Msg] {
-		return runtimeCmd(update(model, msg))
+	return runtime.LoopWithExit(eventWindow, initial, runtimeCmd(initialCmd, explorerService), func(model *M, msg Msg) runtime.Cmd[Msg] {
+		return runtimeCmd(update(model, msg), explorerService)
 	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config, send func(Msg)) {
 		state := frame.UpdateWindowConfig(ctx, config)
 		if onWindowState != nil {
@@ -122,11 +127,23 @@ func runWindowCmd[M any, Msg any](
 	}, onExit)
 }
 
-func runtimeCmd[Msg any](cmd Cmd[Msg]) runtime.Cmd[Msg] {
+type platformEventWindow struct {
+	*app.Window
+	explorer *internalexplorer.Service
+}
+
+func (w *platformEventWindow) Event() event.Event {
+	value := w.Window.Event()
+	w.explorer.ListenEvents(value)
+	return value
+}
+
+func runtimeCmd[Msg any](cmd Cmd[Msg], explorerService *internalexplorer.Service) runtime.Cmd[Msg] {
 	if cmd == nil {
 		return nil
 	}
 	return func(effectCtx context.Context, send func(Msg)) error {
+		effectCtx = internalexplorer.WithService(effectCtx, explorerService)
 		return cmd(effectCtx, Send[Msg](send))
 	}
 }

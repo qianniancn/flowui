@@ -218,7 +218,7 @@ func (p Widget) layoutButton(ctx *frame.Context, gtx layout.Context, item *pagin
 }
 
 func paginationLabel(ctx *frame.Context, gtx layout.Context, value string, size unit.Sp, foreground color.NRGBA) layout.Dimensions {
-	label := material.Label(frame.ActiveTheme(ctx).Material, size, value)
+	label := material.Label(frame.ActiveMaterial(ctx), size, value)
 	label.Color = foreground
 	label.Font.Weight = font.Medium
 	return label.Layout(gtx)

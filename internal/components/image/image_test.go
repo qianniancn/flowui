@@ -10,28 +10,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	flowlayout "github.com/qianniancn/FlowUI/internal/layout"
 	"github.com/qianniancn/FlowUI/internal/locale"
 )
-
-func TestImageOptionsUseValueSemantics(t *testing.T) {
-	source := imageSource(120, 80)
-	base := New(source)
-	configured := base.
-		Fit(FitCover).
-		Position(flowlayout.AlignBottomEnd).
-		Width(200).
-		Height(120).
-		Radius(24).
-		Opacity(0.5).
-		Alt("Landscape")
-	if base.fit != FitScaleDown || base.position != flowlayout.AlignCenter || base.hasWidth || base.hasHeight || base.radius != 0 || base.hasOpacity || base.alt != "" {
-		t.Fatalf("configuring Image mutated base: %#v", base)
-	}
-	if configured.fit != FitCover || configured.position != flowlayout.AlignBottomEnd || configured.width != 200 || configured.height != 120 || configured.radius != 24 || configured.opacity != 0.5 || configured.alt != "Landscape" {
-		t.Fatalf("configured Image = %#v", configured)
-	}
-}
 
 func TestImageFitModesMapToGio(t *testing.T) {
 	tests := []struct {

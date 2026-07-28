@@ -37,13 +37,13 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			ui.Column(
 				ui.Text("Menubar").Size(24),
 				ui.Surface(
-					ui.Box(applicationMenubar(model, send)).Padding(4),
+					ui.Box(applicationMenubar(model, send)).Style(ui.Padding(4)),
 				).Variant(ui.SurfaceSecondary),
 				ui.Divider(),
 				ui.Text(status).Size(14),
 				ui.Text("Layout: "+model.Layout).Size(14),
 			).Gap(18),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
 	)
 }
 

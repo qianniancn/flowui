@@ -121,7 +121,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 

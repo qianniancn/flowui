@@ -70,7 +70,7 @@ func appBar() ui.Widget {
 				ui.Text("Run"),
 			).Delay(0),
 		).AlignMiddle().Gap(10),
-	).Padding(10).FillWidth()
+	).Style(ui.Padding(10).FillWidth())
 }
 
 func explorer(model Model, send ui.Send[Msg]) ui.Widget {
@@ -90,7 +90,7 @@ func explorer(model Model, send ui.Send[Msg]) ui.Widget {
 						Variant(ui.TreeDefault),
 				),
 			).Gap(10),
-		).Padding(12).FillWidth().FillHeight(),
+		).Style(ui.Padding(12).FillWidth().FillHeight()),
 	).Variant(ui.SurfaceSecondary)
 }
 
@@ -119,10 +119,10 @@ func editorPane(selected string) ui.Widget {
 							ui.Text("    fmt.Println(\"FlowUI workspace\")").Size(14),
 							ui.Text("}").Size(14),
 						).Gap(7),
-					).Padding(18).FillWidth().FillHeight(),
+					).Style(ui.Padding(18).FillWidth().FillHeight()),
 				),
 			).Gap(10),
-		).Padding(12).FillWidth().FillHeight(),
+		).Style(ui.Padding(12).FillWidth().FillHeight()),
 	).Variant(ui.SurfaceDefault)
 }
 
@@ -140,7 +140,7 @@ func outputPane() ui.Widget {
 				ui.Text("> go run .").Size(13),
 				ui.Text("FlowUI workspace").Size(13),
 			).Gap(9),
-		).Padding(12).FillWidth().FillHeight(),
+		).Style(ui.Padding(12).FillWidth().FillHeight()),
 	).Variant(ui.SurfaceTertiary)
 }
 

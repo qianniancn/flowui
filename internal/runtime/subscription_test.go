@@ -130,14 +130,14 @@ func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T)
 	set.close()
 }
 
-func TestSubscriptionSetStartsReplacementAfterBoundedGracePeriod(t *testing.T) {
+func TestSubscriptionSetStartsUnrelatedKeyWhileAnotherIsStopping(t *testing.T) {
+	// A hung subscription on "old" must not delay starting a different key.
 	root := t.Context()
-	set := subscriptionSet[int]{stopGracePeriod: 10 * time.Millisecond}
+	set := subscriptionSet[int]{stopGracePeriod: time.Hour}
 	var effects effectGroup
 	oldStarted := make(chan struct{})
 	newStarted := make(chan struct{})
 	releaseOld := make(chan struct{})
-	wake := make(chan struct{}, 4)
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "old",
@@ -147,10 +147,10 @@ func TestSubscriptionSetStartsReplacementAfterBoundedGracePeriod(t *testing.T) {
 				return nil
 			},
 		},
-	}, &effects, func(subscriptionToken, int) {}, nil, func() { wake <- struct{}{} })
+	}, &effects, func(subscriptionToken, int) {}, nil, nil)
 	receiveRuntimeTestValue(t, oldStarted)
 
-	desired := []Subscription[int]{
+	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "new",
 			Run: func(ctx context.Context, _ func(int)) error {
@@ -159,8 +159,54 @@ func TestSubscriptionSetStartsReplacementAfterBoundedGracePeriod(t *testing.T) {
 				return ctx.Err()
 			},
 		},
+	}, &effects, func(subscriptionToken, int) {}, nil, nil)
+	receiveRuntimeTestValue(t, newStarted)
+
+	set.close()
+	close(releaseOld)
+	if !effects.waitFor(time.Second) {
+		t.Fatal("subscription effects did not stop")
+	}
+}
+
+func TestSubscriptionSetSameKeyWaitsForStopGrace(t *testing.T) {
+	root := t.Context()
+	set := subscriptionSet[int]{stopGracePeriod: 20 * time.Millisecond}
+	var effects effectGroup
+	oldStarted := make(chan struct{})
+	newStarted := make(chan struct{})
+	releaseOld := make(chan struct{})
+	wake := make(chan struct{}, 4)
+	set.reconcile(root, []Subscription[int]{
+		{
+			Key: "same",
+			Run: func(context.Context, func(int)) error {
+				close(oldStarted)
+				<-releaseOld
+				return nil
+			},
+		},
+	}, &effects, func(subscriptionToken, int) {}, nil, func() { wake <- struct{}{} })
+	receiveRuntimeTestValue(t, oldStarted)
+
+	// Remove then re-add the same key while the old Run is hung.
+	set.reconcile(root, nil, &effects, func(subscriptionToken, int) {}, nil, func() { wake <- struct{}{} })
+	desired := []Subscription[int]{
+		{
+			Key: "same",
+			Run: func(ctx context.Context, _ func(int)) error {
+				close(newStarted)
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		},
 	}
 	set.reconcile(root, desired, &effects, func(subscriptionToken, int) {}, nil, func() { wake <- struct{}{} })
+	select {
+	case <-newStarted:
+		t.Fatal("same-key replacement started before stop grace elapsed")
+	case <-time.After(5 * time.Millisecond):
+	}
 	receiveRuntimeTestValue(t, wake)
 	set.reconcile(root, desired, &effects, func(subscriptionToken, int) {}, nil, func() { wake <- struct{}{} })
 	receiveRuntimeTestValue(t, newStarted)

@@ -9,7 +9,7 @@ import (
 )
 
 func editorLayoutFor(ctx *frame.Context, editor *widget.Editor, hint string, style inputStyle, textSize, lineHeight unit.Sp) layout.Widget {
-	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, hint)
+	editorStyle := material.Editor(frame.ActiveMaterial(ctx), editor, hint)
 	editorStyle.TextSize = textSize
 	editorStyle.LineHeight = lineHeight
 	editorStyle.Color = style.Foreground

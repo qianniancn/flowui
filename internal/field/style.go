@@ -121,13 +121,25 @@ type Resolved struct {
 
 func Resolve(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState, variant Variant, options DeclarationOptions, custom flowstyle.Style) Resolved {
 	options.TargetPart = flowstyle.PartContent
-	defaults := DefaultDeclaration(frame.ActiveTheme(ctx), variant, options)
-	content := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartContent, state, defaults, flowstyle.Style{}, flowstyle.Style{}, custom)
-	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, state, defaults, flowstyle.Style{}, flowstyle.Style{}, custom)
-	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, state, defaults, flowstyle.Style{}, flowstyle.Style{}, custom)
+	activeTheme := frame.ActiveTheme(ctx)
+	defaults, variantStyle, size := fieldStyleDeclarations(activeTheme, variant, options)
+	content := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartContent, state, defaults, variantStyle, size, custom)
+	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, state, defaults, variantStyle, size, custom)
+	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, state, defaults, variantStyle, size, custom)
 	return Resolved{
 		Content: content,
-		Colors:  ResolvedColors(content, placeholder, selection, frame.ActiveTheme(ctx)),
+		Colors:  ResolvedColors(content, placeholder, selection, activeTheme),
+	}
+}
+
+// fieldStyleDeclarations places primary chrome in defaults and secondary chrome
+// in the variant slot (Button four-slot protocol).
+func fieldStyleDeclarations(activeTheme *theme.Theme, variant Variant, options DeclarationOptions) (defaults, variantStyle, size flowstyle.Style) {
+	switch variant {
+	case Secondary:
+		return flowstyle.Style{}, DefaultDeclaration(activeTheme, Secondary, options), flowstyle.Style{}
+	default:
+		return DefaultDeclaration(activeTheme, Primary, options), flowstyle.Style{}, flowstyle.Style{}
 	}
 }
 

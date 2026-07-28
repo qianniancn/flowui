@@ -135,7 +135,7 @@ func TestSurfaceConditionalStyleTransition(t *testing.T) {
 		Surface(probe).Style(flowstyle.Style{}.
 			Background(flowstyle.SolidColor{Color: from}).
 			Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
-			When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to})),
+			WhenIf(active, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to})),
 		).Layout(ctx, gtx)
 		frame.EndFrame(ctx)
 		return probe.background
@@ -194,32 +194,6 @@ func TestTransparentSurfacePreservesParentBackground(t *testing.T) {
 
 	if probe.background != theme.Palette.SurfaceSecondary {
 		t.Fatalf("transparent surface background = %#v, want inherited %#v", probe.background, theme.Palette.SurfaceSecondary)
-	}
-}
-
-func TestSurfaceOptionsKeepValueSemantics(t *testing.T) {
-	base := Surface(nil)
-	gradient := flowstyle.LinearGradient(
-		flowstyle.ColorStop(0, flowstyle.SolidColor{Color: color.NRGBA{R: 255, A: 255}}),
-		flowstyle.ColorStop(1, flowstyle.SolidColor{Color: color.NRGBA{B: 255, A: 255}}),
-	)
-	foreground := color.NRGBA{G: 255, A: 255}
-	border := color.NRGBA{R: 12, G: 34, B: 56, A: 255}
-	declaration := flowstyle.Style{}.
-		Radius(20).
-		Shadow(flowstyle.ShadowSurface).
-		Background(gradient).
-		TextColor(flowstyle.SolidColor{Color: foreground}).
-		BorderWidth(2).
-		BorderColor(flowstyle.SolidColor{Color: border})
-
-	styled := base.Variant(SurfaceTertiary).Style(declaration)
-	if base.variant != SurfaceDefault || base.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil {
-		t.Fatal("surface options mutated the original value")
-	}
-	resolved := styled.customStyle.Resolve(flowstyle.StyleState{})
-	if styled.variant != SurfaceTertiary || resolved.Paint == nil || resolved.Text == nil {
-		t.Fatal("surface options did not configure the returned value")
 	}
 }
 

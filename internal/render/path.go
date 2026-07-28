@@ -19,11 +19,30 @@ func CheckPath(ops *op.Ops, points [3]f32.Point, progress float32) clip.PathSpec
 	var path clip.Path
 	path.Begin(ops)
 	path.MoveTo(first)
+
+	// Guard against degenerate cases where points coincide.
+	if firstLen == 0 {
+		// First and second are the same; skip directly to second segment.
+		if secondLen == 0 {
+			// All three points coincide; draw nothing beyond the start point.
+			return path.End()
+		}
+		path.LineTo(pointOnLine(second, third, progress))
+		return path.End()
+	}
+
 	if drawLen <= firstLen {
 		path.LineTo(pointOnLine(first, second, drawLen/firstLen))
 		return path.End()
 	}
+
 	path.LineTo(second)
+
+	if secondLen == 0 {
+		// Second and third are the same; path ends at second.
+		return path.End()
+	}
+
 	path.LineTo(pointOnLine(second, third, (drawLen-firstLen)/secondLen))
 	return path.End()
 }

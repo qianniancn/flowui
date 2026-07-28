@@ -12,6 +12,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/render"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -33,9 +34,35 @@ type tabsState struct {
 	previous         widget.Clickable
 	next             widget.Clickable
 	indicator        tabsIndicatorState
+	disclosure       disclosure.Binding[string]
 	selectedKey      string
 	selectionSet     bool
 	selectionPending bool
+}
+
+// tabsDisclosureCfg builds a disclosure.Config from the widget's selected-key fields.
+func tabsDisclosureCfg(widget TabsWidget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasSelectedKey,
+		Value:      widget.selectedKey,
+		HasDefault: widget.hasDefaultSelected,
+		Default:    widget.defaultSelectedKey,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *tabsState) currentSelectedKey(widget TabsWidget) string {
+	s.selectedKey = s.disclosure.Current(tabsDisclosureCfg(widget))
+	return s.selectedKey
+}
+
+func (s *tabsState) bind(widget TabsWidget) {
+	s.disclosure.Bind(tabsDisclosureCfg(widget))
+}
+
+func (s *tabsState) requestSelectedKey(widget TabsWidget, key string) string {
+	s.selectedKey, _ = s.disclosure.Request(tabsDisclosureCfg(widget), key)
+	return s.selectedKey
 }
 
 func (s *tabsState) beginFrame() {

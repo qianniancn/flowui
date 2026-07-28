@@ -34,7 +34,8 @@ func TestOverlayCapturesStyleScopeForLayoutTailAndAfterWork(t *testing.T) {
 	restore()
 
 	LayoutOverlays(ctx, gtx)
-	if want := []int{1, 1, 1}; !reflect.DeepEqual(seen, want) {
+	// Layout (paint) + Layout (first-frame policy pass) + Tail + AfterOverlays.
+	if want := []int{1, 1, 1, 1}; !reflect.DeepEqual(seen, want) {
 		t.Fatalf("captured style counts = %v, want %v", seen, want)
 	}
 	if len(ActiveStyles(ctx)) != 0 {
@@ -110,6 +111,72 @@ func TestPassiveOverlayDoesNotOwnOverlayInput(t *testing.T) {
 	}
 	if !OverlayTopmost(ctx, OverlayLayerPopup, "popup") {
 		t.Fatal("passive overlay replaced the active overlay owner")
+	}
+}
+
+func TestFirstFrameGrantsPolicyInputOnlyToVisualTop(t *testing.T) {
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	interactive := map[string][]bool{}
+	record := func(key string, value bool) {
+		interactive[key] = append(interactive[key], value)
+	}
+
+	RegisterOverlay(ctx, OverlayRequest{
+		Key:   "modal",
+		Layer: OverlayLayerModal,
+		Layout: func(_ layout.Context, _ image.Rectangle, ownsEvents bool) layout.Dimensions {
+			record("modal", ownsEvents)
+			RegisterOverlay(ctx, OverlayRequest{
+				Key:   "popup",
+				Layer: OverlayLayerPopup,
+				Layout: func(_ layout.Context, _ image.Rectangle, ownsEvents bool) layout.Dimensions {
+					record("popup", ownsEvents)
+					return layout.Dimensions{}
+				},
+			})
+			return layout.Dimensions{}
+		},
+		Tail: func(layout.Context) {},
+	})
+
+	LayoutOverlays(ctx, gtx)
+
+	// Paint pass: neither owns policy input. Policy pass: only nested popup
+	// (visual top) is re-laid out with interactive=true.
+	if got := interactive["modal"]; len(got) != 1 || got[0] {
+		t.Fatalf("modal interactive calls = %v, want [false]", got)
+	}
+	if got := interactive["popup"]; len(got) != 2 || got[0] || !got[1] {
+		t.Fatalf("popup interactive calls = %v, want [false true]", got)
+	}
+	if !OverlayTopmost(ctx, OverlayLayerPopup, "popup") {
+		t.Fatal("nested popup is not the visual top")
+	}
+}
+
+func TestFirstFrameSiblingOverlaysGrantPolicyInputOnlyToTop(t *testing.T) {
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	interactive := map[string][]bool{}
+	record := func(key string, value bool) {
+		interactive[key] = append(interactive[key], value)
+	}
+	for _, key := range []string{"a", "b"} {
+		RegisterOverlay(ctx, OverlayRequest{
+			Key: key,
+			Layout: func(_ layout.Context, _ image.Rectangle, ownsEvents bool) layout.Dimensions {
+				record(key, ownsEvents)
+				return layout.Dimensions{}
+			},
+		})
+	}
+
+	LayoutOverlays(ctx, gtx)
+
+	if got := interactive["a"]; len(got) != 1 || got[0] {
+		t.Fatalf("lower sibling interactive calls = %v, want [false]", got)
+	}
+	if got := interactive["b"]; len(got) != 2 || got[0] || !got[1] {
+		t.Fatalf("visual top interactive calls = %v, want [false true]", got)
 	}
 }
 
@@ -383,7 +450,8 @@ func TestOverlayHostOrdersPopupBeforeModalAndTracksTopmost(t *testing.T) {
 	registerOrderProbe(ctx, "dialog", OverlayLayerModal, &first)
 	registerOrderProbe(ctx, "menu", OverlayLayerPopup, &first)
 	LayoutOverlays(ctx, gtx)
-	if want := []string{"menu:true", "dialog:true"}; !reflect.DeepEqual(first, want) {
+	// Paint pass both false; policy pass re-lays out only the visual top (dialog).
+	if want := []string{"menu:false", "dialog:false", "dialog:true"}; !reflect.DeepEqual(first, want) {
 		t.Fatalf("first frame order = %v, want %v", first, want)
 	}
 
@@ -466,7 +534,8 @@ func TestOverlayHostOrdersSiblingPopupBelowNestedModal(t *testing.T) {
 	})
 
 	LayoutOverlays(ctx, gtx)
-	if want := []string{"outer", "menu", "inner"}; !reflect.DeepEqual(order, want) {
+	// Visual top (inner) is re-entered once for the first-frame policy pass.
+	if want := []string{"outer", "menu", "inner", "inner"}; !reflect.DeepEqual(order, want) {
 		t.Fatalf("dynamic sibling order = %v, want %v", order, want)
 	}
 	if !OverlayTopmost(ctx, OverlayLayerModal, "inner") {
@@ -508,7 +577,8 @@ func TestOverlayHostKeepsPopupRegisteredByNestedModalAboveIt(t *testing.T) {
 	})
 
 	LayoutOverlays(ctx, gtx)
-	if want := []string{"outer", "inner", "menu"}; !reflect.DeepEqual(order, want) {
+	// Visual top (menu) is re-entered once for the first-frame policy pass.
+	if want := []string{"outer", "inner", "menu", "menu"}; !reflect.DeepEqual(order, want) {
 		t.Fatalf("nested popup order = %v, want %v", order, want)
 	}
 	if !OverlayTopmost(ctx, OverlayLayerPopup, "menu") {
@@ -540,6 +610,36 @@ func registerFocusScopeProbe(ctx *Context, childKey string, childHasTail bool) {
 		},
 		Tail: func(layout.Context) {},
 	})
+}
+
+func TestOverlayPolicyPassWhenFrozenOwnerMissing(t *testing.T) {
+	// A was event owner last frame but is gone; B is visual top and must get a
+	// policy pass this frame (otherwise Escape/dismiss are dead for one frame).
+	ctx, gtx := overlayTestContext(image.Pt(100, 100))
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "a",
+		Layout: func(_ layout.Context, _ image.Rectangle, _ bool) layout.Dimensions {
+			return layout.Dimensions{}
+		},
+	})
+	LayoutOverlays(ctx, gtx)
+
+	BeginFrameWithViewport(ctx, image.Pt(100, 100))
+	gtx.Ops.Reset()
+	var bInteractive bool
+	RegisterOverlay(ctx, OverlayRequest{
+		Key: "b",
+		Layout: func(_ layout.Context, _ image.Rectangle, ownsEvents bool) layout.Dimensions {
+			if ownsEvents {
+				bInteractive = true
+			}
+			return layout.Dimensions{}
+		},
+	})
+	LayoutOverlays(ctx, gtx)
+	if !bInteractive {
+		t.Fatal("visual top b did not receive policy input after frozen owner a disappeared")
+	}
 }
 
 func TestOverlayEventOwnerTransfersOneFrameAfterCurrentTop(t *testing.T) {
@@ -659,7 +759,8 @@ func TestOverlayHostLayoutsDynamicallyRegisteredOverlay(t *testing.T) {
 	})
 
 	LayoutOverlays(ctx, gtx)
-	if want := []string{"parent", "child"}; !reflect.DeepEqual(order, want) {
+	// Visual top (child) is re-entered once for the first-frame policy pass.
+	if want := []string{"parent", "child", "child"}; !reflect.DeepEqual(order, want) {
 		t.Fatalf("layout order = %v, want %v", order, want)
 	}
 }
@@ -699,7 +800,8 @@ func TestAfterOverlaysRunsAfterDynamicLayout(t *testing.T) {
 	AfterOverlays(ctx, func() { order = append(order, "cleanup") })
 
 	LayoutOverlays(ctx, gtx)
-	if want := []string{"layout", "cleanup"}; !reflect.DeepEqual(order, want) {
+	// Paint layout + first-frame policy re-layout, then AfterOverlays.
+	if want := []string{"layout", "layout", "cleanup"}; !reflect.DeepEqual(order, want) {
 		t.Fatalf("callback order = %v, want %v", order, want)
 	}
 }

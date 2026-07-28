@@ -37,7 +37,7 @@ func View(_ *ui.Context, model Model, send ui.Send[ToggleDirection]) ui.Widget {
 				ui.Divider(),
 				ui.AutoGrid(200, easingCurveCards(model.forward)...).ColumnGap(16).RowGap(12),
 			).Gap(16),
-		).FillWidth().MaxWidth(920).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(920)).Style(ui.Padding(24)),
 	).Vertical()
 }
 

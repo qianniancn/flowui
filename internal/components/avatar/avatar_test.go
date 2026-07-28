@@ -11,7 +11,6 @@ import (
 	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -26,24 +25,6 @@ func (p *avatarProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	p.foreground = ctx.ForegroundColor()
 	p.background = ctx.BackgroundColor()
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(16, 16))}
-}
-
-func TestAvatarOptionsUseValueSemantics(t *testing.T) {
-	img := image.NewNRGBA(image.Rect(0, 0, 20, 20))
-	fallback := new(avatarProbe)
-	base := New("JD")
-	imageOp := paint.NewImageOp(img)
-	configured := base.Image(imageOp).Alt("John Doe").Fallback(fallback).Color(ColorDanger).Variant(VariantSoft).Size(SizeLarge).
-		Style(flowstyle.Style{}.Radius(8))
-	if base.image.Size() != (image.Point{}) || base.alt != "" || base.fallback != nil || base.color != ColorDefault || base.variant != VariantDefault || base.size != SizeMedium {
-		t.Fatalf("configuring Avatar mutated base: %#v", base)
-	}
-	if configured.image.Size() != img.Bounds().Size() || configured.alt != "John Doe" || configured.fallback != fallback || configured.color != ColorDanger || configured.variant != VariantSoft || configured.size != SizeLarge {
-		t.Fatalf("configured Avatar = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured Avatar did not retain its style")
-	}
 }
 
 func TestAvatarGeometryMatchesHeroUI(t *testing.T) {

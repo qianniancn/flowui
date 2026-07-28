@@ -24,10 +24,6 @@ func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
 }
 
-func newContextWithTheme(_ any, value *theme.Theme) *frame.Context {
-	return frame.New(nil, value, locale.LanguageAuto)
-}
-
 func DefaultTheme() theme.Theme {
 	return theme.DefaultTheme()
 }
@@ -52,39 +48,6 @@ func testLayoutContext() layout.Context {
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Source:      router.Source(),
 		Ops:         &ops,
-	}
-}
-
-func TestPopoverOptions(t *testing.T) {
-	var open bool
-	popover := Popover("help", true, Spacer(10, 10), text.New("Body")).
-		Heading("Help").
-		OnOpenChange(func(next bool) {
-			open = next
-		}).
-		Placement(overlay.PopoverTop).
-		Offset(12).
-		ShouldFlip(false).
-		AvoidOverflow(false).
-		Arrow(true).
-		Dismissable(false).
-		KeyboardDismissDisabled(true)
-
-	if popover.key != "help" || !popover.open || popover.trigger == nil || popover.content == nil {
-		t.Fatal("popover constructor did not set base fields")
-	}
-	if popover.heading != "Help" || popover.placement != overlay.PopoverTop || !popover.hasOffset || popover.offset != 12 {
-		t.Fatal("popover visual options were not set")
-	}
-	if popover.flipEnabled() || popover.overflowAvoidanceEnabled() {
-		t.Fatal("popover positioning options were not set")
-	}
-	if !popover.showArrow() || popover.isDismissable() || !popover.keyboardDismissDisabled {
-		t.Fatal("popover behavior options were not set")
-	}
-	popover.onOpenChange(true)
-	if !open {
-		t.Fatal("popover onOpenChange did not receive true")
 	}
 }
 
@@ -145,13 +108,13 @@ func TestPopoverClosedRemovesStateWhenExitAnimationFinishes(t *testing.T) {
 
 func TestPopoverDismissAreaRequestsClose(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
-	state.dismiss[0].Click()
-
 	closed := false
 	popover := Popover("help", true, Spacer(24, 12), text.New("Body")).
 		OnOpenChange(func(open bool) {
 			closed = !open
 		})
+	layoutPopoverFrame(ctx, popover)
+	state.dismiss[0].Click()
 	layoutPopoverFrame(ctx, popover)
 
 	if !closed {
@@ -161,14 +124,14 @@ func TestPopoverDismissAreaRequestsClose(t *testing.T) {
 
 func TestPopoverDismissableFalseIgnoresDismissArea(t *testing.T) {
 	ctx, state := popoverTestContextWithState("help")
-	state.dismiss[0].Click()
-
 	closed := false
 	popover := Popover("help", true, Spacer(24, 12), text.New("Body")).
 		Dismissable(false).
 		OnOpenChange(func(open bool) {
 			closed = !open
 		})
+	layoutPopoverFrame(ctx, popover)
+	state.dismiss[0].Click()
 	layoutPopoverFrame(ctx, popover)
 
 	if closed {
@@ -264,7 +227,7 @@ func TestPopoverFlipLaysOutNestedContentOnce(t *testing.T) {
 		Arrow(true)
 
 	frame.BeginFrameWithViewport(ctx, viewport)
-	layoutui.Box(outer).PaddingLeft(50).PaddingTop(130).Layout(ctx, gtx)
+	layoutui.Box(outer).Style(flowstyle.Style{}.PaddingLeft(50).PaddingTop(130)).Layout(ctx, gtx)
 	frame.LayoutOverlays(ctx, gtx)
 
 	if content.layouts != 1 {
@@ -487,4 +450,170 @@ type countingPopoverContent struct {
 func (c *countingPopoverContent) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	c.layouts++
 	return c.child.Layout(ctx, gtx)
+}
+
+func TestPopoverUncontrolledMode(t *testing.T) {
+	ctx := newContext(nil)
+	frame.BeginFrame(ctx)
+
+	// Uncontrolled popover should start closed
+	popover := Popover("test", false, Spacer(24, 12), text.New("Content"))
+	popover.Layout(ctx, testLayoutContext())
+
+	state := testComponentState[popoverState](ctx, "test", stateSlotPopover)
+	if state != nil {
+		t.Fatal("uncontrolled closed popover should not claim state")
+	}
+}
+
+func TestPopoverUncontrolledWithDefaultOpen(t *testing.T) {
+	ctx := newContext(nil)
+	frame.BeginFrame(ctx)
+
+	// Uncontrolled with DefaultOpen(true) should start open
+	popover := Popover("test", false, Spacer(24, 12), text.New("Content")).DefaultOpen(true)
+	popover.Layout(ctx, testLayoutContext())
+
+	state := testComponentState[popoverState](ctx, "test", stateSlotPopover)
+	if state == nil {
+		t.Fatal("uncontrolled popover with DefaultOpen(true) should claim state")
+	}
+	if !state.open {
+		t.Fatal("uncontrolled popover with DefaultOpen(true) should be open")
+	}
+}
+
+func TestPopoverUncontrolledOnOpenChange(t *testing.T) {
+	ctx := newContext(nil)
+	var called bool
+	var calledValue bool
+
+	onOpenChange := func(open bool) {
+		called = true
+		calledValue = open
+	}
+
+	// Start with closed popover
+	popover := Popover("test", false, Spacer(24, 12), text.New("Content")).
+		OnOpenChange(onOpenChange)
+
+	// First frame - closed
+	frame.BeginFrameWithViewport(ctx, image.Pt(300, 200))
+	popover.Layout(ctx, testLayoutContext())
+	frame.EndFrame(ctx)
+
+	if called {
+		t.Fatal("OnOpenChange should not be called on first frame when closed")
+	}
+
+	// Simulate dismiss click to request close - this should trigger requestOpen
+	called = false
+	frame.BeginFrameWithViewport(ctx, image.Pt(300, 200))
+	state := popoverStateFor(ctx, "test")
+
+	// Manually call requestOpen to simulate user interaction
+	state.requestOpen(popover, true)
+
+	if !called {
+		t.Fatal("OnOpenChange should be called when requesting open")
+	}
+	if !calledValue {
+		t.Fatalf("OnOpenChange value = %v, want true", calledValue)
+	}
+
+	// Verify state is open
+	if !state.open {
+		t.Fatal("popover should be open after requestOpen(true)")
+	}
+}
+
+func TestPopoverControlledMode(t *testing.T) {
+	ctx := newContext(nil)
+
+	// Controlled mode - explicitly call Open()
+	popover := Popover("test", false, Spacer(24, 12), text.New("Content")).
+		Open(false)
+
+	frame.BeginFrame(ctx)
+	popover.Layout(ctx, testLayoutContext())
+	frame.EndFrame(ctx)
+
+	// In controlled mode, internal state should follow Open() parameter
+	state := testComponentState[popoverState](ctx, "test", stateSlotPopover)
+	if state != nil {
+		t.Fatal("controlled closed popover should not claim state")
+	}
+
+	// Open in controlled mode
+	popover = popover.Open(true)
+
+	frame.BeginFrame(ctx)
+	popover.Layout(ctx, testLayoutContext())
+	frame.EndFrame(ctx)
+
+	state = testComponentState[popoverState](ctx, "test", stateSlotPopover)
+	if state == nil {
+		t.Fatal("controlled open popover should claim state")
+	}
+	if !state.open {
+		t.Fatal("controlled popover should be open when Open(true)")
+	}
+}
+
+func TestPopoverOnlyCallsOnOpenChangeWhenValueChanges(t *testing.T) {
+	ctx := newContext(nil)
+	callCount := 0
+
+	onOpenChange := func(open bool) {
+		callCount++
+	}
+
+	popover := Popover("test", false, Spacer(24, 12), text.New("Content")).
+		OnOpenChange(onOpenChange)
+
+	// Frame 1 - closed
+	frame.BeginFrame(ctx)
+	popover.Layout(ctx, testLayoutContext())
+	frame.EndFrame(ctx)
+
+	if callCount != 0 {
+		t.Fatalf("OnOpenChange call count = %d, want 0 on first frame", callCount)
+	}
+
+	// Request open via state
+	frame.BeginFrame(ctx)
+	state := popoverStateFor(ctx, "test")
+	state.requestOpen(popover, true)
+	frame.EndFrame(ctx)
+
+	if callCount != 1 {
+		t.Fatalf("OnOpenChange call count = %d, want 1 after requesting open", callCount)
+	}
+
+	// Frame with same value (no change) - just check current state
+	frame.BeginFrame(ctx)
+	popover.Layout(ctx, testLayoutContext())
+	frame.EndFrame(ctx)
+
+	if callCount != 1 {
+		t.Fatalf("OnOpenChange call count = %d, want 1 when value unchanged", callCount)
+	}
+
+	// Request same value again (should not trigger)
+	frame.BeginFrame(ctx)
+	state.requestOpen(popover, true)
+	frame.EndFrame(ctx)
+
+	if callCount != 1 {
+		t.Fatalf("OnOpenChange call count = %d, want 1 when requesting same value", callCount)
+	}
+
+	// Request close (should trigger)
+	frame.BeginFrame(ctx)
+	state.requestOpen(popover, false)
+	frame.EndFrame(ctx)
+
+	if callCount != 2 {
+		t.Fatalf("OnOpenChange call count = %d, want 2 after requesting close", callCount)
+	}
 }

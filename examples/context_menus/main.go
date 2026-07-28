@@ -52,7 +52,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				ui.Text(status).Size(13),
 				membersTable(model, send),
 			).Gap(14),
-		).FillWidth().MaxWidth(920).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(920)).Style(ui.Padding(24)),
 	)
 }
 
@@ -131,7 +131,7 @@ func memberIdentity(value member) ui.Widget {
 		initials.WriteString(part[:1])
 	}
 	return ui.Row(
-		ui.Box(ui.Text(initials.String()).Size(12)).Width(30).Height(30).Align(ui.AlignCenter),
+		ui.Box(ui.Text(initials.String()).Size(12)).Style(ui.Width(30)).Style(ui.Height(30)).Align(ui.AlignCenter),
 		ui.Column(
 			ui.Text(value.name).Size(13),
 			ui.Text(strings.ToUpper(value.key)).Size(11),

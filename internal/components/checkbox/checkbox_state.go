@@ -3,6 +3,7 @@ package checkbox
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -15,8 +16,35 @@ func checkboxStateFor(ctx *frame.Context, key string) *checkboxState {
 }
 
 type checkboxState struct {
+	disclosure disclosure.Binding[bool]
+	checked    bool
 	SelectionAnimation
 	focus state.FocusAnimation
+}
+
+// checkboxDisclosureCfg builds a disclosure.Config from the widget's checked fields.
+func checkboxDisclosureCfg(widget CheckboxWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasChecked,
+		Value:      widget.checked,
+		HasDefault: widget.hasDefault,
+		Default:    widget.defaultChecked,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *checkboxState) currentChecked(widget CheckboxWidget) bool {
+	s.checked = s.disclosure.Current(checkboxDisclosureCfg(widget))
+	return s.checked
+}
+
+func (s *checkboxState) bind(widget CheckboxWidget) {
+	s.disclosure.Bind(checkboxDisclosureCfg(widget))
+}
+
+func (s *checkboxState) requestChecked(widget CheckboxWidget, checked bool) bool {
+	s.checked, _ = s.disclosure.Request(checkboxDisclosureCfg(widget), checked)
+	return s.checked
 }
 
 // SelectionAnimation drives the shared checkbox fill and check-path progress.

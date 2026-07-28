@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -24,8 +25,7 @@ type contextMenuState struct {
 	trigger      contextMenuTrigger
 	dismiss      [16]overlay.ClickArea
 	dialog       overlay.ClickArea
-	open         bool
-	initialized  bool
+	open         bool // cached effective open, updated by isOpen/requestOpen
 	wasOpen      bool
 	anchor       image.Rectangle
 	hasAnchor    bool
@@ -34,7 +34,7 @@ type contextMenuState struct {
 	skipRestore  bool
 	focusVisible bool
 	focusTarget  event.Tag
-	binding      contextMenuBinding
+	disclosure   disclosure.Binding[bool]
 }
 
 type contextMenuTrigger struct {
@@ -42,12 +42,6 @@ type contextMenuTrigger struct {
 	touchID       pointer.ID
 	touchStart    f32.Point
 	touchAt       time.Time
-}
-
-type contextMenuBinding struct {
-	controlled   bool
-	open         bool
-	onOpenChange func(bool)
 }
 
 func contextMenuStateFor(ctx *frame.Context, key string) *contextMenuState {
@@ -71,20 +65,23 @@ func releaseContextMenu(ctx *frame.Context, value *contextMenuState) {
 	}
 }
 
+// contextMenuDisclosureCfg builds a disclosure.Config from the widget's open-state fields.
+func contextMenuDisclosureCfg(widget ContextMenuWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasOpen,
+		Value:      widget.open,
+		HasDefault: widget.hasDefaultOpen,
+		Default:    widget.defaultOpen,
+		OnChange:   widget.onOpenChange,
+	}
+}
+
 func (s *contextMenuState) bind(widget ContextMenuWidget) {
-	s.binding = contextMenuBinding{controlled: widget.hasOpen, open: widget.open, onOpenChange: widget.onOpenChange}
+	s.disclosure.Bind(contextMenuDisclosureCfg(widget))
 }
 
 func (s *contextMenuState) isOpen(widget ContextMenuWidget) bool {
-	if !s.initialized {
-		if widget.hasDefaultOpen {
-			s.open = widget.defaultOpen
-		}
-		s.initialized = true
-	}
-	if widget.hasOpen {
-		return widget.open
-	}
+	s.open = s.disclosure.Current(contextMenuDisclosureCfg(widget))
 	return s.open
 }
 
@@ -96,21 +93,7 @@ func (s *contextMenuState) requestOpen(ctx *frame.Context, widget ContextMenuWid
 		s.skipRestore = false
 		activateContextMenu(ctx, s)
 	}
-	if widget.hasOpen {
-		if widget.open != open && widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
-		if !widget.open {
-			releaseContextMenu(ctx, s)
-		}
-		return widget.open
-	}
-	if s.open != open {
-		s.open = open
-		if widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
-	}
+	s.open, _ = s.disclosure.Request(contextMenuDisclosureCfg(widget), open)
 	if !s.open {
 		releaseContextMenu(ctx, s)
 	}
@@ -119,17 +102,8 @@ func (s *contextMenuState) requestOpen(ctx *frame.Context, widget ContextMenuWid
 
 func (s *contextMenuState) closeForPeer() {
 	s.skipRestore = true
-	if s.binding.controlled {
-		if s.binding.open && s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
-		return
-	}
-	if s.open {
+	if s.disclosure.PeerClose(false) {
 		s.open = false
-		if s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
 	}
 }
 

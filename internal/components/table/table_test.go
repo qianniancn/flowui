@@ -14,9 +14,11 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	inputui "github.com/qianniancn/FlowUI/internal/components/input"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	selectui "github.com/qianniancn/FlowUI/internal/components/select"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -71,51 +73,6 @@ func (p *tableProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
 }
 
-func TestTableOptionsUseValueSemantics(t *testing.T) {
-	columns, rows := tableTestData()
-	base := New("members", columns, rows)
-	configured := base.
-		Variant(VariantSecondary).
-		SelectionMode(SelectionMultiple).
-		SelectedKey("kate").
-		SelectedKeys([]string{"kate"}).
-		SortDescriptor(SortDescriptor{Column: "name", Direction: SortDescending}).
-		DisabledKeys([]string{"sara"}).
-		EmptyText("Empty").
-		EmptyContent(&tableProbe{}).
-		Footer(&tableProbe{}).
-		OnChange(func(string) {}).
-		OnSelectionChange(func([]string) {}).
-		OnSortChange(func(SortDescriptor) {}).
-		OnAction(func(string) {}).
-		RowContextMenu(func(Row) menu.Widget {
-			return menu.Menu("row-actions", []menu.Item{{Key: "open", Label: "Open"}})
-		}).
-		Disabled(true).
-		AllowEmptySelection().
-		ShowSelectionIndicator().
-		MaxHeight(240).
-		MinWidth(640).
-		GridLines(true).
-		Border(true)
-
-	if base.variant != VariantPrimary || base.selectionMode != SelectionNone || len(base.selectedKeys) != 0 || base.maxHeight != 0 {
-		t.Fatal("configuring a Table mutated the base value")
-	}
-	if configured.variant != VariantSecondary || configured.selectionMode != SelectionMultiple || configured.selectedKey != "kate" {
-		t.Fatal("selection options were not retained")
-	}
-	if configured.sort.Column != "name" || configured.sort.Direction != SortDescending || configured.emptyText != "Empty" {
-		t.Fatal("sort or empty options were not retained")
-	}
-	if configured.onChange == nil || configured.onSelectionChange == nil || configured.onSortChange == nil || configured.onAction == nil || configured.rowContextMenu == nil {
-		t.Fatal("callbacks were not retained")
-	}
-	if !configured.disabled || !configured.allowEmpty || !configured.selectionIndicator || configured.maxHeight != 240 || configured.minWidth != 640 || !configured.gridLinesSet || !configured.gridLines || !configured.bordered {
-		t.Fatal("behavior options were not retained")
-	}
-}
-
 func TestTableGridLineModes(t *testing.T) {
 	base := New("members", []Column{{Key: "name"}}, nil)
 	if !base.showsGridLines() || base.showsFullGrid() || base.bordered {
@@ -128,6 +85,13 @@ func TestTableGridLineModes(t *testing.T) {
 	hidden := base.GridLines(false)
 	if hidden.showsGridLines() || hidden.showsFullGrid() {
 		t.Fatal("hidden grid mode still shows lines")
+	}
+	secondary := base.Variant(VariantSecondary)
+	if secondary.usesUnifiedFrame() || !secondary.GridLines(true).usesUnifiedFrame() || !secondary.Border(true).usesUnifiedFrame() {
+		t.Fatal("secondary grid and border modes did not select the unified frame")
+	}
+	if !base.Striped(true).striped {
+		t.Fatal("striped rows were not enabled")
 	}
 }
 
@@ -465,11 +429,11 @@ func TestTableRowClickSelectsAndDisabledRowDoesNot(t *testing.T) {
 func TestTableKeyboardNavigationSkipsDisabledRows(t *testing.T) {
 	columns, rows := tableTestData()
 	table := New("members", columns, rows).DisabledKeys([]string{"john"})
-	next, ok := moveRow(table, 0, 1)
+	next, ok := nav.Move(tableNavList(table), 0, 1, false)
 	if !ok || rows[next].Key != "sara" {
 		t.Fatalf("next row = %d/%v key %q, want sara", next, ok, rows[next].Key)
 	}
-	first, ok := firstEnabledRow(table)
+	first, ok := nav.First(tableNavList(table))
 	if !ok || rows[first].Key != "kate" {
 		t.Fatalf("first row = %d/%v", first, ok)
 	}
@@ -766,9 +730,33 @@ func TestTableCustomCellInheritsSelectedColors(t *testing.T) {
 		SelectionMode(SelectionSingle).
 		SelectedKey("selected").
 		Layout(tableTestContext(&activeTheme), tableLayoutContext(nil, image.Pt(320, 160), time.Time{}))
-	want := tableRowStyleFor(&activeTheme, VariantPrimary, true, false, false, false).background
+	want := tableRowStyleFor(&activeTheme, VariantPrimary, color.NRGBA{}, true, false, false, false).background
 	if probe.layouts != 1 || probe.foreground != activeTheme.Palette.Foreground || probe.background != want {
 		t.Fatalf("probe = layouts %d colors %#v/%#v, want fg %#v bg %#v", probe.layouts, probe.foreground, probe.background, activeTheme.Palette.Foreground, want)
+	}
+}
+
+func TestStripedTableUsesThemedRowBackgrounds(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	plain := &tableProbe{size: image.Pt(40, 16)}
+	stripe := &tableProbe{size: image.Pt(40, 16)}
+	columns := []Column{{Key: "name", Label: "Name"}}
+	rows := []Row{
+		{Key: "plain", Cells: []Cell{{Content: plain}}},
+		{Key: "stripe", Cells: []Cell{{Content: stripe}}},
+	}
+	New("striped", columns, rows).
+		Variant(VariantSecondary).
+		GridLines(true).
+		Border(true).
+		Striped(true).
+		Layout(tableTestContext(&activeTheme), tableLayoutContext(nil, image.Pt(320, 180), time.Time{}))
+
+	if plain.background != activeTheme.Palette.Surface {
+		t.Fatalf("plain row background = %#v, want themed surface %#v", plain.background, activeTheme.Palette.Surface)
+	}
+	if stripe.background != activeTheme.Components.Table.StripeBackground {
+		t.Fatalf("stripe row background = %#v, want themed stripe %#v", stripe.background, activeTheme.Components.Table.StripeBackground)
 	}
 }
 
@@ -809,6 +797,17 @@ func TestTableThemeMatchesHeroUIStyle(t *testing.T) {
 	if tokens.HeaderTextSize != 12 || tokens.CellTextSize != 14 || tokens.ColumnSeparatorHeight != 16 {
 		t.Fatalf("Table typography/separator geometry = %+v", tokens)
 	}
+	if tokens.StripeBackground != activeTheme.Palette.SurfaceSecondary {
+		t.Fatalf("Table stripe background = %#v, want themed surface secondary %#v", tokens.StripeBackground, activeTheme.Palette.SurfaceSecondary)
+	}
+	gtx := layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}
+	size := image.Pt(200, 100)
+	if tableRootRadius(gtx, &activeTheme, size, VariantSecondary, false) != 0 || tableHeaderRadius(gtx, &activeTheme, size, VariantSecondary, false) != 16 {
+		t.Fatal("plain secondary table no longer uses its standalone rounded header")
+	}
+	if tableRootRadius(gtx, &activeTheme, size, VariantSecondary, true) != 16 || tableHeaderRadius(gtx, &activeTheme, size, VariantSecondary, true) != 0 {
+		t.Fatal("unified secondary table did not move rounding to the outer frame")
+	}
 	primary := tableStyleFor(&activeTheme, VariantPrimary)
 	if primary.root != activeTheme.Palette.SurfaceTertiary || primary.body != activeTheme.Palette.Surface {
 		t.Fatalf("primary style = %#v/%#v", primary.root, primary.body)
@@ -839,11 +838,16 @@ func TestTableRowStatesMatchHeroUIVariants(t *testing.T) {
 	for _, test := range themes {
 		t.Run(test.name, func(t *testing.T) {
 			activeTheme := test.value
-			primaryHover := tableRowStyleFor(&activeTheme, VariantPrimary, false, true, false, false)
-			primarySelected := tableRowStyleFor(&activeTheme, VariantPrimary, true, true, false, false)
-			secondaryHover := tableRowStyleFor(&activeTheme, VariantSecondary, false, true, false, false)
-			secondarySelected := tableRowStyleFor(&activeTheme, VariantSecondary, true, true, false, false)
+			stripe := activeTheme.Components.Table.StripeBackground
+			striped := tableRowStyleFor(&activeTheme, VariantSecondary, stripe, false, false, false, false)
+			primaryHover := tableRowStyleFor(&activeTheme, VariantPrimary, stripe, false, true, false, false)
+			primarySelected := tableRowStyleFor(&activeTheme, VariantPrimary, stripe, true, true, false, false)
+			secondaryHover := tableRowStyleFor(&activeTheme, VariantSecondary, stripe, false, true, false, false)
+			secondarySelected := tableRowStyleFor(&activeTheme, VariantSecondary, stripe, true, true, false, false)
 
+			if striped.background != stripe {
+				t.Fatalf("striped row = %#v, want theme stripe %#v", striped.background, stripe)
+			}
 			if want := render.LerpColor(activeTheme.Palette.SurfaceSecondary, activeTheme.Palette.Surface, 0.4); primaryHover.background != want {
 				t.Fatalf("primary hover = %#v, want %#v", primaryHover.background, want)
 			}

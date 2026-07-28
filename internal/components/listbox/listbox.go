@@ -44,32 +44,38 @@ const (
 )
 
 type ListBoxWidget struct {
-	key               string
-	derivedOwner      string
-	derivedRole       string
-	selectedKey       string
-	selectedKeys      []string
-	selectedKeySet    stateutil.StringSet
-	items             []ListBoxItem
-	sections          []ListBoxSection
-	dataVersion       uint64
-	hasDataVersion    bool
-	emptyText         string
-	onChange          func(string)
-	onSelectionChange func([]string)
-	onAction          func(string)
-	selectionMode     ListBoxSelectionMode
-	disabledKeys      []string
-	disabledKeySet    stateutil.StringSet
-	disabled          bool
-	fullWidth         bool
-	allowEmpty        bool
-	hideIndicator     bool
-	maxHeight         int
-	padding           unit.Dp
-	hasPadding        bool
-	customStyle       flowstyle.Style
-	partsStyle        flowstyle.Style
+	key                 string
+	derivedOwner        string
+	derivedRole         string
+	selectedKey         string
+	hasSelectedKey      bool
+	defaultSelectedKey  string
+	hasDefaultKey       bool
+	selectedKeys        []string
+	hasSelectedKeys     bool
+	defaultSelectedKeys []string
+	hasDefaultKeys      bool
+	selectedKeySet      stateutil.StringSet
+	items               []ListBoxItem
+	sections            []ListBoxSection
+	dataVersion         uint64
+	hasDataVersion      bool
+	emptyText           string
+	onChange            func(string)
+	onSelectionChange   func([]string)
+	onAction            func(string)
+	selectionMode       ListBoxSelectionMode
+	disabledKeys        []string
+	disabledKeySet      stateutil.StringSet
+	disabled            bool
+	fullWidth           bool
+	allowEmpty          bool
+	hideIndicator       bool
+	maxHeight           int
+	padding             unit.Dp
+	hasPadding          bool
+	customStyle         flowstyle.Style
+	partsStyle          flowstyle.Style
 }
 
 func (l ListBoxWidget) withPadding(padding unit.Dp) ListBoxWidget {
@@ -107,46 +113,80 @@ const (
 
 func ListBox(key, selectedKey string, items []ListBoxItem) ListBoxWidget {
 	return ListBoxWidget{
-		key:           key,
-		selectedKey:   selectedKey,
-		items:         items,
-		emptyText:     "No items",
-		selectionMode: ListBoxSelectionSingle,
+		key:            key,
+		selectedKey:    selectedKey,
+		hasSelectedKey: true,
+		items:          items,
+		emptyText:      "No items",
+		selectionMode:  ListBoxSelectionSingle,
 	}
 }
 
 func ListBoxMultiple(key string, selectedKeys []string, items []ListBoxItem) ListBoxWidget {
 	return ListBoxWidget{
-		key:           key,
-		selectedKeys:  selectedKeys,
-		items:         items,
-		emptyText:     "No items",
-		selectionMode: ListBoxSelectionMultiple,
+		key:             key,
+		selectedKeys:    selectedKeys,
+		hasSelectedKeys: true,
+		items:           items,
+		emptyText:       "No items",
+		selectionMode:   ListBoxSelectionMultiple,
 	}
 }
 
 func ListBoxSections(key, selectedKey string, sections []ListBoxSection) ListBoxWidget {
 	return ListBoxWidget{
-		key:           key,
-		selectedKey:   selectedKey,
-		sections:      sections,
-		emptyText:     "No items",
-		selectionMode: ListBoxSelectionSingle,
+		key:            key,
+		selectedKey:    selectedKey,
+		hasSelectedKey: true,
+		sections:       sections,
+		emptyText:      "No items",
+		selectionMode:  ListBoxSelectionSingle,
 	}
 }
 
 func ListBoxMultipleSections(key string, selectedKeys []string, sections []ListBoxSection) ListBoxWidget {
 	return ListBoxWidget{
-		key:           key,
-		selectedKeys:  selectedKeys,
-		sections:      sections,
-		emptyText:     "No items",
-		selectionMode: ListBoxSelectionMultiple,
+		key:             key,
+		selectedKeys:    selectedKeys,
+		hasSelectedKeys: true,
+		sections:        sections,
+		emptyText:       "No items",
+		selectionMode:   ListBoxSelectionMultiple,
 	}
 }
 
 func (l ListBoxWidget) EmptyText(text string) ListBoxWidget {
 	l.emptyText = text
+	return l
+}
+
+// SelectedKey sets controlled mode with an external single selection value.
+func (l ListBoxWidget) SelectedKey(key string) ListBoxWidget {
+	l.selectedKey = key
+	l.hasSelectedKey = true
+	return l
+}
+
+// DefaultSelectedKey sets uncontrolled mode with an initial single selection value.
+func (l ListBoxWidget) DefaultSelectedKey(key string) ListBoxWidget {
+	l.defaultSelectedKey = key
+	l.hasDefaultKey = true
+	l.hasSelectedKey = false
+	return l
+}
+
+// SelectedKeys sets controlled mode with external multiple selection values.
+func (l ListBoxWidget) SelectedKeys(keys []string) ListBoxWidget {
+	l.selectedKeys = keys
+	l.hasSelectedKeys = true
+	return l
+}
+
+// DefaultSelectedKeys sets uncontrolled mode with initial multiple selection values.
+func (l ListBoxWidget) DefaultSelectedKeys(keys []string) ListBoxWidget {
+	l.defaultSelectedKeys = keys
+	l.hasDefaultKeys = true
+	l.hasSelectedKeys = false
 	return l
 }
 
@@ -221,6 +261,16 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	state := l.stateFor(ctx)
 	state.beginFrame()
 	defer state.endFrame()
+
+	// Bind disclosure and get current values
+	if l.selectionMode == ListBoxSelectionMultiple {
+		state.bindMultiple(l)
+		l.selectedKeys = state.currentMultipleValue(l)
+	} else if l.selectionMode == ListBoxSelectionSingle {
+		state.bindSingle(l)
+		l.selectedKey = state.currentSingleValue(l)
+	}
+
 	l.selectedKeySet = state.selectedKeys.Resolve(l.selectedKeys)
 	l.disabledKeySet = state.disabledKeys.Resolve(l.disabledKeys)
 	entries, items := state.resolveEntries(l)
@@ -231,7 +281,7 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 			frame.RequestFocus(ctx, &state.item(result.focusKey).Clickable)
 		}
 		if result.actionKey != "" {
-			l.activate(result.actionKey)
+			l.activate(state, result.actionKey)
 		}
 	}
 	if l.disabled {
@@ -256,7 +306,7 @@ func (l ListBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	}))
 }
 
-func (l ListBoxWidget) activate(key string) {
+func (l ListBoxWidget) activate(state *listBoxState, key string) {
 	if l.onAction != nil {
 		l.onAction(key)
 	}
@@ -265,8 +315,8 @@ func (l ListBoxWidget) activate(key string) {
 		return
 	case ListBoxSelectionMultiple:
 		nextKeys := listBoxToggleSelectedKeys(l.selectedKeys, key)
-		if !listBoxSameKeys(nextKeys, l.selectedKeys) && l.onSelectionChange != nil {
-			l.onSelectionChange(nextKeys)
+		if !listBoxSameKeys(nextKeys, l.selectedKeys) {
+			state.requestMultipleValue(l, nextKeys)
 		}
 		return
 	default:
@@ -274,8 +324,8 @@ func (l ListBoxWidget) activate(key string) {
 		if l.allowEmpty && key == l.selectedKey {
 			nextKey = ""
 		}
-		if nextKey != l.selectedKey && l.onChange != nil {
-			l.onChange(nextKey)
+		if nextKey != l.selectedKey {
+			state.requestSingleValue(l, nextKey)
 		}
 	}
 }

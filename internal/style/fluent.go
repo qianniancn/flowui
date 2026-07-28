@@ -479,6 +479,10 @@ func (s Style) Rotate(radians float32) Style {
 }
 
 func (s Style) Transition(property PropertyID, duration time.Duration, options ...TransitionOption) Style {
+	// Soft-ignore properties outside the animation whitelist (spec 07).
+	if !property.Animatable() {
+		return s
+	}
 	s.transitions = append([]Transition(nil), s.transitions...)
 	transition := transition(&s.transitions, property)
 	transition.Duration = max(duration, 0)
@@ -494,7 +498,17 @@ func (s Style) When(predicate Condition, override Style) Style {
 	if predicate == nil {
 		return s
 	}
-	s.conditions = append(append([]condition(nil), s.conditions...), condition{predicate: predicate, override: override})
+	s.conditions = append(append([]condition(nil), s.conditions...), condition{predicate: predicate, override: override, unsafe: false})
+	return s
+}
+
+// WhenIf applies override when value is true. Unlike When, this marks the condition
+// as unsafe for caching because it captures external state not in StyleState.
+// Use this sparingly - prefer When with StyleState-based conditions (Hovered, Pressed, etc.)
+// whenever possible for better performance.
+func (s Style) WhenIf(value bool, override Style) Style {
+	predicate := func(StyleState) bool { return value }
+	s.conditions = append(append([]condition(nil), s.conditions...), condition{predicate: predicate, override: override, unsafe: true})
 	return s
 }
 

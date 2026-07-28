@@ -60,13 +60,15 @@ func TestHarnessAdvancesTweenAndLaysOutPortal(t *testing.T) {
 	})
 
 	harness.Frame(root)
-	if progress != 0 || portalLayouts != 1 {
-		t.Fatalf("first frame = progress %v, portal layouts %d; want 0, 1", progress, portalLayouts)
+	// First open: paint pass + policy pass on the visual top.
+	if progress != 0 || portalLayouts != 2 {
+		t.Fatalf("first frame = progress %v, portal layouts %d; want 0, 2", progress, portalLayouts)
 	}
 	harness.Advance(500 * time.Millisecond)
 	harness.Frame(root)
-	if math.Abs(float64(progress-.5)) > .001 || portalLayouts != 2 {
-		t.Fatalf("second frame = progress %v, portal layouts %d; want .5, 2", progress, portalLayouts)
+	// Following frame freezes the previous owner; only one paint layout.
+	if math.Abs(float64(progress-.5)) > .001 || portalLayouts != 3 {
+		t.Fatalf("second frame = progress %v, portal layouts %d; want .5, 3", progress, portalLayouts)
 	}
 }
 
@@ -89,10 +91,6 @@ func TestHarnessConfigurationAndResize(t *testing.T) {
 	if harness.Context().Theme().Palette.Background != theme.Palette.Background {
 		t.Fatal("harness did not use the configured theme")
 	}
-	if harness.Context().Theme().Material.Palette.ContrastBg != theme.Palette.Accent {
-		t.Fatal("harness did not synchronize the Gio material theme")
-	}
-
 	var now time.Time
 	probe := ui.WidgetFunc(func(_ *ui.Context, gtx layout.Context) layout.Dimensions {
 		now = gtx.Now

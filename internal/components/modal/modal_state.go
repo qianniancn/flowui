@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -40,6 +41,33 @@ type modalState struct {
 	focusEnd     modalFocusTag
 	transition   animation.FloatTransition
 	focusPending bool
+	disclosure   disclosure.Binding[bool]
+	open         bool // cached effective open, updated by isOpen/requestOpen
+}
+
+// modalDisclosureCfg builds a disclosure.Config from the widget's open-state fields.
+func modalDisclosureCfg(widget ModalWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasOpen,
+		Value:      widget.open,
+		HasDefault: widget.hasDefaultOpen,
+		Default:    widget.defaultOpen,
+		OnChange:   widget.onOpenChange,
+	}
+}
+
+func (s *modalState) isOpen(widget ModalWidget) bool {
+	s.open = s.disclosure.Current(modalDisclosureCfg(widget))
+	return s.open
+}
+
+func (s *modalState) bind(widget ModalWidget) {
+	s.disclosure.Bind(modalDisclosureCfg(widget))
+}
+
+func (s *modalState) requestOpen(widget ModalWidget, open bool) bool {
+	s.open, _ = s.disclosure.Request(modalDisclosureCfg(widget), open)
+	return s.open
 }
 
 // Keep the tag non-zero-sized so distinct focus boundaries have distinct

@@ -43,26 +43,59 @@ const (
 )
 
 type TabsWidget struct {
-	key         string
-	selectedKey string
-	items       []TabItem
-	onChange    func(string)
-	variant     TabsVariant
-	orientation TabsOrientation
-	size        TabsSize
-	color       TabsColor
-	disabled    bool
-	separators  bool
-	fit         bool
-	customStyle flowstyle.Style
+	key                string
+	selectedKey        string
+	hasSelectedKey     bool
+	defaultSelectedKey string
+	hasDefaultSelected bool
+	items              []TabItem
+	onChange           func(string)
+	variant            TabsVariant
+	orientation        TabsOrientation
+	size               TabsSize
+	color              TabsColor
+	disabled           bool
+	separators         bool
+	fit                bool
+	customStyle        flowstyle.Style
 }
 
+// Tabs creates a tabs widget. When selectedKey is non-empty, it starts in
+// controlled mode with that tab selected. When selectedKey is empty, it starts
+// in uncontrolled mode (use DefaultSelectedKey to set initial selection).
 func Tabs(key, selectedKey string, items []TabItem) TabsWidget {
-	return TabsWidget{key: key, selectedKey: selectedKey, items: items}
+	if selectedKey != "" {
+		// non-empty selectedKey → controlled mode
+		return TabsWidget{
+			key:            key,
+			selectedKey:    selectedKey,
+			hasSelectedKey: true,
+			items:          items,
+		}
+	}
+	// empty selectedKey → uncontrolled mode
+	return TabsWidget{
+		key:   key,
+		items: items,
+	}
 }
 
 func (t TabsWidget) OnChange(fn func(string)) TabsWidget {
 	t.onChange = fn
+	return t
+}
+
+// SelectedKey sets the tabs to controlled mode with the given selected key.
+func (t TabsWidget) SelectedKey(key string) TabsWidget {
+	t.selectedKey = key
+	t.hasSelectedKey = true
+	return t
+}
+
+// DefaultSelectedKey sets the initial selected key for uncontrolled mode.
+func (t TabsWidget) DefaultSelectedKey(key string) TabsWidget {
+	t.defaultSelectedKey = key
+	t.hasDefaultSelected = true
 	return t
 }
 
@@ -118,14 +151,15 @@ func (t TabsWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	defer state.endFrame()
 	state.checkItems(t.items)
 
-	selectedKey := t.effectiveSelectedKey()
+	// Bind disclosure state
+	state.bind(t)
+	selectedKey := state.currentSelectedKey(t)
+
 	state.syncSelection(t.items, selectedKey)
 	disabled := t.disabled || !gtx.Enabled()
 	if !disabled {
 		if key, ok := state.updateKeys(gtx, t.items, selectedKey, t.orientation); ok {
-			if t.onChange != nil {
-				t.onChange(key)
-			}
+			selectedKey = state.requestSelectedKey(t, key)
 			frame.RequestFocus(ctx, &state.item(key).clickable)
 		}
 	}
@@ -145,20 +179,6 @@ func (t TabsWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	}, t.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return t.layout(ctx, gtx, state, selectedKey, disabled)
 	}))
-}
-
-func (t TabsWidget) effectiveSelectedKey() string {
-	for _, item := range t.items {
-		if item.Key == t.selectedKey {
-			return item.Key
-		}
-	}
-	for _, item := range t.items {
-		if !item.Disabled {
-			return item.Key
-		}
-	}
-	return ""
 }
 
 func (t TabsWidget) selectedItem(key string) (TabItem, bool) {

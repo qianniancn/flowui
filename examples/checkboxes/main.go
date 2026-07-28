@@ -98,7 +98,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 									controlled("reports", fieldReports, model.Reports, "Weekly reports", send),
 									controlled("security", fieldSecurity, model.Security, "Security alerts", send),
 								).Gap(12),
-							).PaddingLeft(28),
+							).Style(ui.PaddingLeft(28)),
 						).Gap(14),
 					),
 					section("Validation and states",
@@ -124,7 +124,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(22),
 			).Vertical(),
-		).FillWidth().MaxWidth(680).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(680)).Style(ui.Padding(24)),
 	)
 }
 

@@ -236,7 +236,7 @@ func resolveScrollbarPart(ctx *frame.Context, gtx layout.Context, key string, pa
 
 func scrollbarStyleFor(activeTheme *theme.Theme, state *widget.Scrollbar, disabled bool) material.ScrollbarStyle {
 	tokens := activeTheme.Components.Scrollbar
-	style := material.Scrollbar(activeTheme.Material, state)
+	style := material.Scrollbar(theme.MaterialOf(activeTheme), state)
 	style.Track.MajorPadding = tokens.MajorPadding
 	style.Track.MinorPadding = max((tokens.TrackWidth-tokens.ThumbWidth)/2, 0)
 	style.Track.Color = color.NRGBA{}

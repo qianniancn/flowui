@@ -38,9 +38,9 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					section("States",
 						ui.Wrap(
-							ui.Box(ui.Description("Muted supporting text for a field.")).Width(300),
-							ui.Box(ui.Description("Disabled supporting text.").Disabled(true)).Width(300),
-							ui.Box(ui.Description("Long descriptions wrap naturally when the available field width becomes constrained.")).Width(300),
+							ui.Box(ui.Description("Muted supporting text for a field.")).Style(ui.Width(300)),
+							ui.Box(ui.Description("Disabled supporting text.").Disabled(true)).Style(ui.Width(300)),
+							ui.Box(ui.Description("Long descriptions wrap naturally when the available field width becomes constrained.")).Style(ui.Width(300)),
 						).Gap(16).LineGap(12),
 					),
 					section("Field association",
@@ -79,17 +79,17 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 									Description("Rendered by the shared Description component.").
 									OnChange(func(key string) { send(SetState(key)) }).
 									FullWidth(),
-							).Width(300),
+							).Style(ui.Width(300)),
 							ui.Box(
 								ui.Switch("marketing", model.Marketing, "Marketing updates").
 									Description("Receive occasional product announcements.").
 									OnChange(func(value bool) { send(SetMarketing(value)) }),
-							).Width(300),
+							).Style(ui.Width(300)),
 						).Gap(16).LineGap(16),
 					),
 				).Gap(20),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -101,7 +101,7 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func field(label, control, description ui.Widget) ui.Widget {
-	return ui.Box(ui.Column(label, control, description).Gap(6)).Width(300)
+	return ui.Box(ui.Column(label, control, description).Gap(6)).Style(ui.Width(300))
 }
 
 func languages() []ui.ComboBoxItem {

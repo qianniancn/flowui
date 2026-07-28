@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"sort"
 	"sync"
@@ -35,6 +36,53 @@ func TestLoopCoreProcessesBatchBeforeView(t *testing.T) {
 	}
 	if want := []int{1, 2, 3}; !slices.Equal(viewed.values, want) {
 		t.Fatalf("view model = %v, want %v", viewed.values, want)
+	}
+}
+
+func TestLoopCoreStopsUpdateBatchAfterPanic(t *testing.T) {
+	type model struct {
+		values []int
+	}
+	var (
+		cmdMu       sync.Mutex
+		startedCmds []int
+	)
+	core := newLoopCore(model{}, func(m *model, msg int) Cmd[int] {
+		if msg == 2 {
+			panic("update broken")
+		}
+		m.values = append(m.values, msg)
+		return func(context.Context, func(int)) error {
+			cmdMu.Lock()
+			startedCmds = append(startedCmds, msg)
+			cmdMu.Unlock()
+			return nil
+		}
+	})
+	var effects effectGroup
+	core.send(1)
+	core.send(2)
+	core.send(3)
+
+	updated, _, err := core.updateMessages(&effects, context.Background(), core.send, nil, nil)
+	if !updated {
+		t.Fatal("expected earlier messages to apply before the panic")
+	}
+	var panicErr *RuntimePanicError
+	if err == nil || !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseUpdate {
+		t.Fatalf("update panic = %#v", err)
+	}
+	if want := []int{1}; !slices.Equal(core.model.values, want) {
+		t.Fatalf("model after panic = %v, want %v", core.model.values, want)
+	}
+	if !effects.waitFor(time.Second) {
+		t.Fatal("timed out waiting for commands started before the panic")
+	}
+	cmdMu.Lock()
+	got := append([]int(nil), startedCmds...)
+	cmdMu.Unlock()
+	if want := []int{1}; !slices.Equal(got, want) {
+		t.Fatalf("commands started = %v, want only the pre-panic command", got)
 	}
 }
 

@@ -144,7 +144,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 							ContextMenu(treeContextMenu("files", model.ContextKey, model.ContextTree == "files" && model.ContextKey == model.Selected, send)).
 							OnContextMenu(func(key string) { send(Msg{ContextTree: "files", ContextKey: key}) }).
 							OnRename(func(key, label string) { send(Msg{RenameKey: key, RenameLabel: label}) })).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 					section("Compact file tree",
 						ui.Column(
@@ -169,35 +169,35 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 									return event.TargetKey != "flowui" || event.Position != ui.TreeDropBefore
 								}).
 								OnDrop(func(event ui.TreeDropEvent) { send(Msg{Drop: event}) })).
-								Width(520),
+								Style(ui.Width(520)),
 						).Gap(8),
 					),
 					section("Async children",
 						ui.Box(controlledTree("async", model.AsyncSelected, model.AsyncExpanded, model.AsyncItems, send).
 							OnLoadChildren(func(key string) { send(Msg{LoadChildren: key}) })).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 					section("Surface",
 						ui.Box(controlledTree("surface", model.SurfaceSelected, model.SurfaceExpanded, workspaceItems(), send).
 							Variant(ui.TreeSurface)).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 					section("Action only",
 						ui.Box(ui.Tree("actions", "", actionItems()).
 							SelectionMode(ui.TreeSelectionNone).
 							ExpandedKeys([]string{"build"}).
 							OnAction(func(key string) { send(Msg{Action: key}) })).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 					section("Scrollable",
 						ui.Box(ui.Tree("packages", "", packageItems()).
 							MaxHeight(180).
 							DisabledKeys([]string{"package-7"})).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 				).Gap(20),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
@@ -246,7 +246,7 @@ func treeContextMenu(treeKey, target string, renameEnabled bool, send ui.Send[Ms
 		{Key: "rename", Label: "Rename", Shortcut: "F2", Leading: ui.Icon(lucide.Pencil).Size(16), Disabled: !renameEnabled},
 		ui.MenuSeparator(),
 		{Key: "delete", Label: "Delete", Variant: ui.MenuItemDanger, Leading: ui.Icon(lucide.Trash2).Size(16)},
-	}).Compact(true).Width(168).OnAction(func(action string) {
+	}).Compact(true).Style(ui.Width(168)).OnAction(func(action string) {
 		if action == "rename" {
 			send(Msg{RenameTree: treeKey, RenameRequest: target})
 			return

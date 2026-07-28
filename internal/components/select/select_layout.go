@@ -162,7 +162,12 @@ func (s SelectWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, stat
 		return layout.Dimensions{Size: size}
 	})
 	return layoutui.LayoutInteractiveResolved(ctx, gtx, resolved.Content, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
-		return state.trigger.Layout(gtx, visual)
+		macro := op.Record(gtx.Ops)
+		dims := visual(gtx)
+		call := macro.Stop()
+		state.trigger.Layout(gtx, func(layout.Context) layout.Dimensions { return dims })
+		call.Add(gtx.Ops)
+		return dims
 	})
 }
 
@@ -190,7 +195,7 @@ func (s SelectWidget) layoutIndicator(ctx *frame.Context, gtx layout.Context, si
 }
 
 func layoutSelectValue(ctx *frame.Context, gtx layout.Context, value string, selected bool, style selectStyle) layout.Dimensions {
-	label := material.Label(frame.ActiveTheme(ctx).Material, frame.ActiveTheme(ctx).Components.Select.TextSize, value)
+	label := material.Label(frame.ActiveMaterial(ctx), frame.ActiveTheme(ctx).Components.Select.TextSize, value)
 	label.Color = style.field.Placeholder
 	if selected {
 		label.Color = style.field.Foreground
@@ -320,7 +325,9 @@ func (s SelectWidget) listBox(ctx *frame.Context, state *selectState, open bool)
 		} else {
 			list = listbox.ListBoxMultiple(s.key, s.selectedKeys, s.items)
 		}
-		list = list.OnSelectionChange(s.onSelectionChange)
+		list = list.OnSelectionChange(func(keys []string) {
+			state.requestSelectedKeys(s, keys)
+		})
 	} else {
 		if len(s.sections) > 0 {
 			list = listbox.ListBoxSections(s.key, s.selectedKey, s.sections)
@@ -328,7 +335,9 @@ func (s SelectWidget) listBox(ctx *frame.Context, state *selectState, open bool)
 			list = listbox.ListBox(s.key, s.selectedKey, s.items)
 		}
 		list = list.
-			OnChange(s.onChange).
+			OnChange(func(key string) {
+				state.requestSelectedKey(s, key)
+			}).
 			OnAction(func(string) {
 				state.focusIntent = selectFocusNone
 				state.requestOpen(ctx, s, false)

@@ -21,6 +21,9 @@ type Focus struct {
 	pending      focusTarget
 	active       focusTarget
 	frame        uint64
+	// Observation state: collected during layout, committed at frame boundaries.
+	observed    map[event.Tag]bool // tag -> focused
+	observedAny bool
 }
 
 type focusCatcher struct{}
@@ -82,6 +85,8 @@ func (f *Focus) BeginFrame() {
 	f.pointerPress = false
 	f.preserve = false
 	f.target = nil
+	f.observed = nil
+	f.observedAny = false
 }
 
 func (f *Focus) Request(tag event.Tag, origin FocusOrigin) {
@@ -95,7 +100,71 @@ func (f *Focus) OnPress(tag event.Tag, history []widget.Press, before int) {
 	}
 }
 
+// Observe records frame-local focus input and returns whether the widget should
+// draw its focus ring. Persistent modality changes are deferred until
+// CommitObservations. It is safe to call multiple times per frame for one tag.
+func (f *Focus) Observe(tag event.Tag, focused bool) bool {
+	if f.observed == nil {
+		f.observed = make(map[event.Tag]bool)
+	}
+	f.observed[tag] = focused
+	f.observedAny = true
+
+	// Return the visibility based on current active state (read-only).
+	if !focused {
+		return false
+	}
+	// If this tag is active, return its origin.
+	if f.active.tag == tag {
+		return f.active.origin != FocusOriginPointer
+	}
+	// If pending matches this tag, it will be keyboard-visible.
+	if f.pending.tag == tag {
+		return f.pending.origin != FocusOriginPointer
+	}
+	// Otherwise default to keyboard-visible (unrequested focus).
+	return true
+}
+
+// CommitObservations applies deferred state changes collected during Observe calls.
+// Must be called once per frame after all layout passes, before ApplyFrameCommands.
+func (f *Focus) CommitObservations() {
+	if !f.observedAny {
+		return
+	}
+	f.observedAny = false
+	for tag, focused := range f.observed {
+		if !focused {
+			if f.active.tag == tag {
+				f.active = focusTarget{}
+			}
+			continue
+		}
+		if f.pending.tag == tag {
+			f.active = f.pending
+			f.pending = focusTarget{}
+		} else if f.active.tag != tag {
+			f.active = focusTarget{tag: tag, origin: FocusOriginKeyboard}
+			if f.pending.applied && f.pending.requestedAt < f.frame {
+				f.pending = focusTarget{}
+			}
+		}
+	}
+}
+
+// Visible is a deprecated alias that provides immediate-mode behavior for backward compatibility.
+// New code should use Observe + CommitObservations instead.
 func (f *Focus) Visible(tag event.Tag, focused bool) bool {
+	// Record observation for potential CommitObservations call.
+	if f.observed == nil {
+		f.observed = make(map[event.Tag]bool)
+	}
+	f.observed[tag] = focused
+	if focused {
+		f.observedAny = true
+	}
+
+	// Apply state changes immediately (old immediate-mode behavior).
 	if !focused {
 		if f.active.tag == tag {
 			f.active = focusTarget{}

@@ -122,7 +122,7 @@ func (w Widget) layoutSection(ctx *frame.Context, gtx layout.Context, title stri
 		})
 	}
 	return layout.W.Layout(sectionGtx, func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(frame.ActiveTheme(ctx).Material, tokens.SectionTextSize, title)
+		label := material.Label(frame.ActiveMaterial(ctx), tokens.SectionTextSize, title)
 		label.Color = frame.ActiveTheme(ctx).Palette.MutedForeground
 		label.Font.Weight = font.Medium
 		label.MaxLines = 1
@@ -333,7 +333,7 @@ func sidebarItemLabel(label string, foreground color.NRGBA, size unit.Sp, initia
 		label = sidebarInitial(label)
 	}
 	return frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-		value := material.Label(frame.ActiveTheme(ctx).Material, size, label)
+		value := material.Label(frame.ActiveMaterial(ctx), size, label)
 		value.Color = foreground
 		value.Font.Weight = font.Medium
 		value.MaxLines = 1

@@ -110,11 +110,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								ValueText(customValue(model.SurfaceChoice)).
 								OnChange(func(key string) { send(SetSurfaceChoice(key)) }).
 								FullWidth(),
-						).Width(300).Padding(20),
+						).Style(ui.Width(300)).Style(ui.Padding(20)),
 					).Variant(ui.SurfaceDefault).Style(ui.Radius(24).Shadow(ui.ShadowSurface)),
 				),
 			).Gap(18),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -126,7 +126,7 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func selectWidth(selectWidget ui.SelectWidget) ui.Widget {
-	return ui.Box(selectWidget.FullWidth()).Width(300)
+	return ui.Box(selectWidget.FullWidth()).Style(ui.Width(300))
 }
 
 func customValue(key string) string {

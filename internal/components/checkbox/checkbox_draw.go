@@ -167,6 +167,9 @@ func drawCheckboxIndeterminate(ctx *frame.Context, gtx layout.Context, activeThe
 }
 
 func layoutCheckboxIndicator(ctx *frame.Context, gtx layout.Context, activeTheme *theme.Theme, rect image.Rectangle, indicator frame.Widget) {
+	if indicator == nil {
+		return
+	}
 	diameter := min(gtx.Dp(activeTheme.Components.Checkbox.IndicatorSize), min(rect.Dx(), rect.Dy()))
 	if diameter <= 0 {
 		return

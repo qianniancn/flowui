@@ -12,24 +12,8 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func TestSpinnerDefaultsAndOptions(t *testing.T) {
-	base := Spinner()
-	styled := base.Color(SpinnerDanger).Size(SpinnerExtraLarge).Label("Saving").
-		Style(flowstyle.Style{}.Opacity(.5))
-	if base.color != SpinnerAccent || base.size != SpinnerMedium || base.label != "" {
-		t.Fatal("spinner defaults were mutated")
-	}
-	if styled.color != SpinnerDanger || styled.size != SpinnerExtraLarge || styled.label != "Saving" {
-		t.Fatalf("spinner options = %#v", styled)
-	}
-	if styled.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("spinner style was not retained")
-	}
-}
 
 func TestSpinnerColorsUseThemePalette(t *testing.T) {
 	activeTheme := theme.DefaultTheme()

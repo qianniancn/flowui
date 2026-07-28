@@ -127,7 +127,7 @@ func mainView(application *ui.Application, counter ui.WindowSpec) ui.View[MainMo
 						ui.Button("close-all", ui.Text("Close all")).Variant(ui.ButtonSecondary).OnClick(application.CloseAll),
 					).Gap(8).AlignMiddle(),
 				).Gap(16),
-			).FillWidth().MaxWidth(720).Padding(24),
+			).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
 		)
 	}
 }

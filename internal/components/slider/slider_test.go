@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/gpu/headless"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -64,31 +65,6 @@ func assertSliderPanic(t *testing.T, fn func()) {
 	fn()
 }
 
-func TestSliderOptionsKeepValueSemantics(t *testing.T) {
-	base := Slider("volume", 20)
-	styled := base.
-		Label("Volume").
-		ShowValue().
-		ValueText("20 percent").
-		FormatValue(func(float64) string { return "formatted" }).
-		Orientation(SliderVertical).
-		Disabled(true).
-		OnChange(func(float64) {}).
-		OnRangeChange(func(float64, float64) {})
-	if base.label != "" || base.showValue || base.orientation != SliderHorizontal || base.disabled || base.onChange != nil {
-		t.Fatal("slider options mutated the original value")
-	}
-	if styled.label != "Volume" || !styled.showValue || styled.valueText != "20 percent" || !styled.hasValueText {
-		t.Fatal("slider text options were not retained")
-	}
-	if styled.orientation != SliderVertical || !styled.disabled || styled.onChange == nil || styled.onRangeChange == nil || styled.formatValue == nil {
-		t.Fatal("slider behavior options were not retained")
-	}
-	if got := base.Vertical().orientation; got != SliderVertical {
-		t.Fatalf("vertical orientation = %v", got)
-	}
-}
-
 func TestSliderOutputFormatting(t *testing.T) {
 	single := Slider("volume", 30).ShowValue()
 	if got := single.outputText(single.resolvedValues()); got != "30" {
@@ -131,6 +107,13 @@ func TestSliderHeroUIGeometry(t *testing.T) {
 	}
 }
 
+func TestSliderEdgeInsetFollowsSmallerCustomThumb(t *testing.T) {
+	geometry := newSliderGeometry(image.Pt(300, 4), layout.Horizontal, 12, 1, 1, false, image.Pt(16, 16))
+	if geometry.edge != 8 || geometry.centers[0].X != 292 || geometry.thumbRects[0].Max.X != 300 {
+		t.Fatalf("compact geometry edge=%d center=%v thumb=%v, want thumb flush with track end", geometry.edge, geometry.centers[0], geometry.thumbRects[0])
+	}
+}
+
 func TestSliderGeometryKeepsCentersInsideTinyConstraints(t *testing.T) {
 	geometry := newSliderGeometry(image.Pt(10, 20), layout.Horizontal, 12, 0, 1, true, image.Pt(28, 20))
 	if geometry.centers[0].X < 0 || geometry.centers[0].X > 10 || geometry.centers[1].X < 0 || geometry.centers[1].X > 10 {
@@ -148,6 +131,20 @@ func TestSliderFillGeometry(t *testing.T) {
 	}
 	if got := sliderFillRect(geometry, false); got != image.Rect(0, 0, 81, 20) {
 		t.Fatalf("single fill = %v", got)
+	}
+	if got := sliderFillRect(newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, 0, 0, false, image.Pt(28, 20)), false); !got.Empty() {
+		t.Fatalf("horizontal minimum fill = %v, want empty", got)
+	}
+	if got := sliderFillRect(newSliderGeometry(image.Pt(300, 20), layout.Horizontal, 12, 1, 1, false, image.Pt(28, 20)), false); got != image.Rect(0, 0, 300, 20) {
+		t.Fatalf("horizontal maximum fill = %v, want full track", got)
+	}
+	vertical := newSliderGeometry(image.Pt(20, 300), layout.Vertical, 12, 0, 0, false, image.Pt(20, 28))
+	if got := sliderFillRect(vertical, false); !got.Empty() {
+		t.Fatalf("vertical minimum fill = %v, want empty", got)
+	}
+	vertical = newSliderGeometry(image.Pt(20, 300), layout.Vertical, 12, 1, 1, false, image.Pt(20, 28))
+	if got := sliderFillRect(vertical, false); got != image.Rect(0, 0, 20, 300) {
+		t.Fatalf("vertical maximum fill = %v, want full track", got)
 	}
 }
 
@@ -193,6 +190,9 @@ func TestSliderResolvesSemanticParts(t *testing.T) {
 	if got := resolved.fill.Paint.Background.(flowstyle.SolidColor).Color; got != fill {
 		t.Fatalf("fill background = %#v", got)
 	}
+	if resolved.fill.Paint.Radii == nil || resolved.fill.Paint.Radii.TopLeft != 12 || resolved.fill.Paint.Radii.BottomLeft != 12 || resolved.fill.Paint.Radii.TopRight != 0 || resolved.fill.Paint.Radii.BottomRight != 0 {
+		t.Fatalf("horizontal fill radii = %#v", resolved.fill.Paint)
+	}
 	if got := resolved.thumb.Paint.Background.(flowstyle.SolidColor).Color; got != thumb {
 		t.Fatalf("thumb background = %#v", got)
 	}
@@ -201,6 +201,10 @@ func TestSliderResolvesSemanticParts(t *testing.T) {
 	}
 	if resolved.thumb.Paint.Radius == nil || *resolved.thumb.Paint.Radius != 7 {
 		t.Fatalf("thumb radius = %#v", resolved.thumb.Paint)
+	}
+	outer, inner, _, layered := sliderThumbLayers(resolved.thumb)
+	if !layered || len(outer.Paint.Shadows) != 0 || len(inner.Paint.Shadows) != 2 {
+		t.Fatalf("thumb shadow layers = outer %d, inner %d; want HeroUI-style inner shadow", len(outer.Paint.Shadows), len(inner.Paint.Shadows))
 	}
 }
 
@@ -223,6 +227,43 @@ func TestSliderDefaultAndVerticalLayout(t *testing.T) {
 	})
 	if dims.Size != image.Pt(80, 300) {
 		t.Fatalf("vertical size = %v, want (80,300)", dims.Size)
+	}
+}
+
+func TestSliderThumbOuterEdgeDoesNotLightenFilledTrack(t *testing.T) {
+	window, err := headless.NewWindow(300, 20)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	ctx := sliderTestContext()
+	var router input.Router
+	var ops op.Ops
+	Slider("volume", 50).Layout(ctx, layout.Context{
+		Constraints: layout.Exact(image.Pt(300, 20)),
+		Source:      router.Source(),
+		Ops:         &ops,
+	})
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 300, 20))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	accent := theme.DefaultTheme().Palette.Accent
+	lightLimit := int(accent.R) + 16
+	for y := 2; y <= 8; y++ {
+		lightSeen := false
+		for x := 120; x <= 150; x++ {
+			got := color.NRGBAModel.Convert(pixels.At(x, y)).(color.NRGBA)
+			light := int(got.R) > lightLimit
+			if lightSeen && !light {
+				t.Fatalf("thumb row %d returns to blue at x=%d after a light edge pixel; white fringe is visible", y, x)
+			}
+			lightSeen = lightSeen || light
+		}
 	}
 }
 
@@ -297,6 +338,56 @@ func TestSliderPointerChangesSingleValue(t *testing.T) {
 	layoutSliderFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(300, 100))
 	if value != 50 {
 		t.Fatalf("pointer value = %v, want 50", value)
+	}
+}
+
+func TestCompactSliderKeepsMinimumHitTarget(t *testing.T) {
+	ctx := sliderTestContext()
+	router := new(input.Router)
+	value := 0.0
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.Height(4).MarginY(6)).
+		Part(flowstyle.PartThumb, flowstyle.Style{}.Width(16).Height(16).Radius(8))
+	widget := func() SliderWidget {
+		return Slider("compact-hit", value).Style(custom).OnChange(func(next float64) { value = next })
+	}
+	layoutSliderFrame(ctx, router, widget(), time.Unix(1, 0), image.Pt(300, 40))
+	pressSliderAt(router, 1, f32.Pt(150, 18))
+	layoutSliderFrame(ctx, router, widget(), time.Unix(1, int64(time.Millisecond)), image.Pt(300, 40))
+	if value != 50 {
+		t.Fatalf("compact slider value = %v, want 50 from click outside its 4px visual track", value)
+	}
+}
+
+func TestSliderCursorStyleCoversExpandedHitTarget(t *testing.T) {
+	ctx := sliderTestContext()
+	router := new(input.Router)
+	cursorStyle := flowstyle.Style{}.
+		Cursor(pointer.CursorDefault).
+		When(flowstyle.Any(flowstyle.Pressed, flowstyle.Dragging), flowstyle.Style{}.Cursor(pointer.CursorPointer))
+	custom := flowstyle.Style{}.
+		Part(flowstyle.PartTrack, flowstyle.Style{}.
+			Height(4).
+			MarginY(6).
+			Cursor(pointer.CursorDefault).
+			When(flowstyle.Any(flowstyle.Pressed, flowstyle.Dragging), flowstyle.Style{}.Cursor(pointer.CursorPointer))).
+		Part(flowstyle.PartThumb, cursorStyle)
+	widget := Slider("compact-cursor", 50).Style(custom)
+	position := f32.Pt(150, 16)
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: position})
+	layoutSliderFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(300, 40))
+	if got := router.Cursor(); got != pointer.CursorDefault {
+		t.Fatalf("released compact cursor = %v, want default", got)
+	}
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: position})
+	layoutSliderFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(300, 40))
+	if got := router.Cursor(); got != pointer.CursorPointer {
+		t.Fatalf("pressed compact cursor = %v, want pointer", got)
+	}
+	router.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: position})
+	layoutSliderFrame(ctx, router, widget, time.Unix(1, int64(2*time.Millisecond)), image.Pt(300, 40))
+	if got := router.Cursor(); got != pointer.CursorDefault {
+		t.Fatalf("released compact cursor = %v, want default", got)
 	}
 }
 

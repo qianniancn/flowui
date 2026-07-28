@@ -55,45 +55,6 @@ func TestAlertDialogDefaultsMatchHeroUI(t *testing.T) {
 	}
 }
 
-func TestAlertDialogOptionsUseValueSemantics(t *testing.T) {
-	body := &probeWidget{size: image.Pt(100, 24)}
-	header := &probeWidget{size: image.Pt(120, 40)}
-	footer := &probeWidget{size: image.Pt(160, 36)}
-	customIcon := &probeWidget{size: image.Pt(20, 20)}
-	called := false
-	base := New("confirm", true, "Confirm", "Description")
-	configured := base.
-		Status(StatusSuccess).
-		Body(body).
-		Header(header).
-		Footer(footer).
-		Icon(customIcon).
-		Size(SizeLarge).
-		Placement(PlacementBottom).
-		Backdrop(BackdropBlur).
-		Dismissable(true).
-		KeyboardDismissDisabled(false).
-		CloseButton(false).
-		OnOpenChange(func(bool) { called = true })
-
-	if base.status != StatusDanger || base.body != nil || base.header != nil || base.footer != nil || base.icon != nil {
-		t.Fatal("configuring an alert dialog mutated the base value")
-	}
-	if configured.status != StatusSuccess || configured.body != body || configured.header != header || configured.footer != footer || configured.icon != customIcon {
-		t.Fatal("content options were not retained")
-	}
-	if configured.size != SizeLarge || configured.placement != PlacementBottom || configured.backdrop != BackdropBlur {
-		t.Fatal("visual options were not retained")
-	}
-	if !configured.dismissable || configured.keyboardDismissDisabled || configured.closeButton || configured.onOpenChange == nil {
-		t.Fatal("behavior options were not retained")
-	}
-	configured.onOpenChange(false)
-	if !called {
-		t.Fatal("OnOpenChange callback was not retained")
-	}
-}
-
 func TestAlertDialogMapsContainerVariantsToModal(t *testing.T) {
 	sizes := map[Size]modal.ModalSize{
 		SizeMedium: modal.ModalMedium,

@@ -68,15 +68,15 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 												Placeholder("Secondary textarea on a surface").
 												Variant(ui.TextAreaSecondary).
 												FullWidth(),
-										).Padding(16),
+										).Style(ui.Padding(16)),
 									).Variant(ui.SurfaceSecondary).Style(ui.Radius(20)),
-								).Width(340),
+								).Style(ui.Width(340)),
 							),
 						).Gap(28),
 					).Gap(28).LineGap(24).AlignStart(),
-				).Gap(20)).Padding(3),
+				).Gap(20)).Style(ui.Padding(3)),
 			).Vertical(),
-		).FillWidth().MaxWidth(800).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(800).Padding(24)),
 	)
 }
 
@@ -87,7 +87,7 @@ func section(title string, child ui.Widget) ui.Widget {
 func labeledTextArea(label, key string, area ui.TextAreaWidget) ui.Widget {
 	return ui.Column(
 		ui.Label(label).For(key),
-		ui.Box(area).Width(340),
+		ui.Box(area).Style(ui.Width(340)),
 	).Gap(6)
 }
 

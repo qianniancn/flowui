@@ -53,6 +53,9 @@ const (
 type Widget struct {
 	key                     string
 	open                    bool
+	hasOpen                 bool
+	defaultOpen             bool
+	hasDefaultOpen          bool
 	title                   string
 	description             string
 	status                  Status
@@ -70,11 +73,26 @@ type Widget struct {
 	customStyle             flowstyle.Style
 }
 
-// New creates a controlled alert dialog with HeroUI's danger status defaults.
+// New creates an alert dialog. When open is true, it starts in controlled
+// mode with the dialog open. When open is false, it starts in uncontrolled mode
+// with the dialog closed (use DefaultOpen(true) for uncontrolled mode starting open).
 func New(key string, open bool, title, description string) Widget {
+	if open {
+		// open=true means controlled mode, immediately open
+		return Widget{
+			key:                     key,
+			open:                    true,
+			hasOpen:                 true,
+			title:                   title,
+			description:             description,
+			status:                  StatusDanger,
+			keyboardDismissDisabled: true,
+			closeButton:             true,
+		}
+	}
+	// open=false means uncontrolled mode, initially closed
 	return Widget{
 		key:                     key,
-		open:                    open,
 		title:                   title,
 		description:             description,
 		status:                  StatusDanger,
@@ -86,6 +104,20 @@ func New(key string, open bool, title, description string) Widget {
 // OnOpenChange registers a callback for close requests.
 func (a Widget) OnOpenChange(fn func(bool)) Widget {
 	a.onOpenChange = fn
+	return a
+}
+
+// Open sets the alert dialog to controlled mode with the given open state.
+func (a Widget) Open(open bool) Widget {
+	a.open = open
+	a.hasOpen = true
+	return a
+}
+
+// DefaultOpen sets the initial open state for uncontrolled mode.
+func (a Widget) DefaultOpen(open bool) Widget {
+	a.defaultOpen = open
+	a.hasDefaultOpen = true
 	return a
 }
 
@@ -175,7 +207,15 @@ func (a Widget) modal() modal.ModalWidget {
 	if header == nil {
 		header = a.defaultHeader()
 	}
-	return modal.Modal(a.key, a.open, "", body).
+	m := modal.Modal(a.key, a.open, "", body)
+	// Apply open-state fields explicitly if set
+	if a.hasOpen {
+		m = m.Open(a.open)
+	}
+	if a.hasDefaultOpen {
+		m = m.DefaultOpen(a.defaultOpen)
+	}
+	return m.
 		Header(header).
 		Footer(a.footer).
 		OnOpenChange(a.onOpenChange).

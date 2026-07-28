@@ -61,7 +61,7 @@ func View(_ *ui.Context, model Model, send ui.Send[SetSelected]) ui.Widget {
 					),
 				),
 			).Gap(20),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 

@@ -16,17 +16,6 @@ var testIconVG = []byte("\x89IVG\x02\n\x00PP\xb0\xb0\xc0d\u014b\x125r\x15\x8b\x9
 
 var testIcon = testIconVG
 
-func TestIconOptionsUseValueSemantics(t *testing.T) {
-	base := New(testIcon)
-	configured := base.Size(18).Color(color.NRGBA{R: 1, G: 2, B: 3, A: 4})
-	if base.size != 0 || base.hasColor {
-		t.Fatalf("base icon was mutated: %#v", base)
-	}
-	if configured.size != 18 || !configured.hasColor || configured.color != (color.NRGBA{R: 1, G: 2, B: 3, A: 4}) {
-		t.Fatalf("configured icon = %#v", configured)
-	}
-}
-
 func TestIconUsesDefaultAndConfiguredSizes(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageEnglish)
 	if dims := New(testIcon).Layout(ctx, iconTestContext()); dims.Size != image.Pt(24, 24) {

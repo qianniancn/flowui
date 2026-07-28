@@ -3,22 +3,20 @@ package menu
 import (
 	"fmt"
 	"image"
-	"strings"
 	"time"
-	"unicode"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
 const stateSlotMenu = "menu"
-const menuTypeaheadTimeout = 500 * time.Millisecond
 
 type menuState struct {
 	key                   string
@@ -34,9 +32,7 @@ type menuState struct {
 	focusedKey            string
 	pressedKey            key.Name
 	pressedActionKey      string
-	typeaheadText         string
-	typeaheadAt           time.Time
-	typeaheadReady        bool
+	typeahead             nav.Typeahead
 	anchors               map[string]image.Rectangle
 	openSubmenu           string
 	submenuActive         bool
@@ -249,14 +245,14 @@ func (s *menuState) updateKeys(gtx layout.Context, widget Widget, entries []entr
 			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
 			}
-			text := menuKeyText(event.Name)
+			text := nav.Printable(event.Name)
 			if text == "" {
 				continue
 			}
-			query := s.appendTypeahead(gtx.Now, text)
+			query := s.typeahead.Append(gtx.Now, text)
 			next := menuTypeaheadIndex(widget, entries, current, query)
 			if next < 0 && query != text {
-				s.typeaheadText = text
+				s.typeahead.Set(text)
 				next = menuTypeaheadIndex(widget, entries, current, text)
 			}
 			if next >= 0 {
@@ -309,73 +305,39 @@ func actionableEntries(entries []entry) []entry {
 	return result
 }
 
-func (s *menuState) appendTypeahead(now time.Time, text string) string {
-	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > menuTypeaheadTimeout {
-		s.typeaheadText = ""
+// menuNavList adapts menu entries into a nav.List; itemDisabled also skips
+// non-actionable entries (separators/section titles), preserving prior behavior.
+func menuNavList(widget Widget, entries []entry) nav.List {
+	return nav.List{
+		Count:    len(entries),
+		Disabled: func(i int) bool { return widget.itemDisabled(entries[i].item) },
+		Label:    func(i int) string { return entries[i].item.Label },
 	}
-	s.typeaheadText += text
-	s.typeaheadAt = now
-	s.typeaheadReady = true
-	return s.typeaheadText
-}
-
-func menuKeyText(name key.Name) string {
-	runes := []rune(string(name))
-	if len(runes) != 1 || unicode.IsControl(runes[0]) {
-		return ""
-	}
-	return strings.ToLower(string(runes[0]))
 }
 
 func menuTypeaheadIndex(widget Widget, entries []entry, current int, query string) int {
-	if len(entries) == 0 || query == "" {
-		return -1
-	}
-	query = strings.ToLower(query)
-	for step := 1; step <= len(entries); step++ {
-		index := (current + step + len(entries)) % len(entries)
-		if widget.itemDisabled(entries[index].item) {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(entries[index].item.Label), query) {
-			return index
-		}
+	if index, ok := nav.Match(menuNavList(widget, entries), current, query); ok {
+		return index
 	}
 	return -1
 }
 
+// menuMoveIndex wraps arrow navigation (menus loop around the ends).
 func menuMoveIndex(widget Widget, entries []entry, current, delta int) int {
-	if len(entries) == 0 {
-		return -1
-	}
-	for step := 1; step <= len(entries); step++ {
-		index := (current + delta*step) % len(entries)
-		if index < 0 {
-			index += len(entries)
-		}
-		if !widget.itemDisabled(entries[index].item) {
-			return index
-		}
+	if next, ok := nav.Move(menuNavList(widget, entries), current, delta, true); ok {
+		return next
 	}
 	return -1
 }
 
 func menuFirstEnabled(widget Widget, entries []entry) int {
-	for index, entry := range entries {
-		if !widget.itemDisabled(entry.item) {
-			return index
-		}
-	}
-	return -1
+	index, _ := nav.First(menuNavList(widget, entries))
+	return index
 }
 
 func menuLastEnabled(widget Widget, entries []entry) int {
-	for index := len(entries) - 1; index >= 0; index-- {
-		if !widget.itemDisabled(entries[index].item) {
-			return index
-		}
-	}
-	return -1
+	index, _ := nav.Last(menuNavList(widget, entries))
+	return index
 }
 
 func entryByKey(entries []entry, key string) (entry, bool) {

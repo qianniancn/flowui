@@ -118,12 +118,12 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 								input("full-width", fieldFull, m.Full, "Full width input", send).
 									Variant(ui.InputSecondary).
 									FullWidth(),
-							).Width(320),
+							).Style(ui.Width(320)),
 						),
 					).Gap(18),
 				).Gap(32).LineGap(24).AlignStart(),
 			).Gap(18),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
 	)
 }
 
@@ -137,7 +137,7 @@ func section(title string, child ui.Widget) ui.Widget {
 func labeledInput(label, key string, field ui.InputWidget) ui.Widget {
 	return ui.Column(
 		ui.Label(label).For(key),
-		ui.Box(field).Width(320),
+		ui.Box(field).Style(ui.Width(320)),
 	).Gap(6)
 }
 

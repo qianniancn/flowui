@@ -12,17 +12,20 @@ import (
 )
 
 type SwitchWidget struct {
-	key         string
-	checked     bool
-	label       string
-	description string
-	onChange    func(bool)
-	disabled    bool
-	invalid     bool
-	size        SwitchSize
-	labelBefore bool
-	thumb       func(bool) frame.Widget
-	customStyle flowstyle.Style
+	key            string
+	checked        bool
+	hasChecked     bool
+	defaultChecked bool
+	hasDefault     bool
+	label          string
+	description    string
+	onChange       func(bool)
+	disabled       bool
+	invalid        bool
+	size           SwitchSize
+	labelBefore    bool
+	thumb          func(bool) frame.Widget
+	customStyle    flowstyle.Style
 }
 
 type SwitchSize int
@@ -40,14 +43,28 @@ const (
 
 func Switch(key string, checked bool, label string) SwitchWidget {
 	return SwitchWidget{
-		key:     key,
-		checked: checked,
-		label:   label,
+		key:        key,
+		checked:    checked,
+		hasChecked: true,
+		label:      label,
 	}
 }
 
 func (s SwitchWidget) OnChange(fn func(bool)) SwitchWidget {
 	s.onChange = fn
+	return s
+}
+
+func (s SwitchWidget) Checked(checked bool) SwitchWidget {
+	s.checked = checked
+	s.hasChecked = true
+	return s
+}
+
+func (s SwitchWidget) DefaultChecked(checked bool) SwitchWidget {
+	s.defaultChecked = checked
+	s.hasDefault = true
+	s.hasChecked = false
 	return s
 }
 
@@ -92,7 +109,12 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	if s.description != "" {
 		frame.PrepareFieldDescription(ctx, key, s.description)
 	}
-	componentState.value.Value = s.checked
+
+	// Bind disclosure state
+	componentState.bind(s)
+	checked := componentState.currentChecked(s)
+
+	componentState.value.Value = checked
 	animGtx := gtx
 	disabled := s.disabled || !gtx.Enabled()
 	presses := state.ActivePresses(componentState.value.History())
@@ -134,8 +156,8 @@ func (s SwitchWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 			return s.layoutContent(ctx, gtx, style, size, componentState.value.Value)
 		}))
 	})
-	if !disabled && componentState.value.Value != s.checked && s.onChange != nil {
-		s.onChange(componentState.value.Value)
+	if !disabled && componentState.value.Value != checked {
+		componentState.requestChecked(s, componentState.value.Value)
 	}
 	return dims
 }

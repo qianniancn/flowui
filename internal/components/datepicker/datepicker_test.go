@@ -280,6 +280,41 @@ func TestDatePickerPointerTriggerFocusIsNotKeyboardVisible(t *testing.T) {
 	}
 }
 
+func TestDatePickerEditableControlsFieldTrigger(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		picker   DatePickerWidget
+		wantOpen bool
+	}{
+		{name: "editable", picker: DatePicker("date", testDate(2026, 7, 1)).FullWidth()},
+		{name: "picker only", picker: DatePicker("date", testDate(2026, 7, 1)).Editable(false).FullWidth(), wantOpen: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			router := new(input.Router)
+			start := time.Unix(1, 0)
+			layoutDatePickerFrameAt(ctx, router, test.picker, start)
+
+			router.Queue(pointer.Event{
+				Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+				Buttons: pointer.ButtonPrimary, Position: f32.Pt(24, 18),
+			})
+			layoutDatePickerFrameAt(ctx, router, test.picker, start.Add(time.Millisecond))
+			router.Queue(pointer.Event{
+				Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1,
+				Position: f32.Pt(24, 18),
+			})
+			layoutDatePickerFrameAt(ctx, router, test.picker, start.Add(2*time.Millisecond))
+			layoutDatePickerFrameAt(ctx, router, test.picker, start.Add(3*time.Millisecond))
+
+			state := testComponentState[datePickerState](ctx, "date", stateSlotDatePicker)
+			if state.open != test.wantOpen {
+				t.Fatalf("open = %v, want %v", state.open, test.wantOpen)
+			}
+		})
+	}
+}
+
 func TestDatePickerHeaderAndYearClickFlow(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)

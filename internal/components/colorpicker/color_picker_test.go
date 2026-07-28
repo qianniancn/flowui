@@ -28,11 +28,23 @@ func TestColorPickerOptionsUseValueSemantics(t *testing.T) {
 		OnChange(func(color.NRGBA) {})
 	presets[0] = color.NRGBA{}
 
-	if base.label != "" || base.disabled || base.alpha || base.showField || len(base.presets) != 0 || base.onChange != nil {
+	// Defaults enable desktop chrome (field/RGB/history); configuration must not mutate base.
+	if base.label != "" || base.disabled || base.alpha || !base.showField || !base.showRGB || !base.showHistory || len(base.presets) != 0 || base.onChange != nil {
 		t.Fatalf("configuring ColorPicker mutated base: %#v", base)
 	}
 	if configured.label != "Brand color" || !configured.disabled || !configured.alpha || !configured.showField || configured.presets[0].R != 2 || configured.onChange == nil {
 		t.Fatalf("configured ColorPicker = %#v", configured)
+	}
+}
+
+func TestColorPickerHistoryExcludesPresets(t *testing.T) {
+	red := color.NRGBA{R: 0xff, A: 0xff}
+	green := color.NRGBA{G: 0xff, A: 0xff}
+	blue := color.NRGBA{B: 0xff, A: 0xff}
+
+	got := historyWithoutPresets([]color.NRGBA{red, blue, green}, []color.NRGBA{green, red})
+	if len(got) != 1 || got[0] != blue {
+		t.Fatalf("filtered history = %#v, want only %#v", got, blue)
 	}
 }
 

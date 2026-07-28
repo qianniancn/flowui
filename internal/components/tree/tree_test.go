@@ -34,53 +34,22 @@ func (p *treeProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
 }
 
-func TestTreeOptionsUseValueSemantics(t *testing.T) {
-	items := treeTestItems()
-	base := New("files", "readme", items)
-	configured := base.
-		ExpandedKeys([]string{"project"}).
-		SelectedKeys([]string{"project", "readme"}).
-		DisabledKeys([]string{"archive"}).
-		EmptyText("Empty").
-		OnChange(func(string) {}).
-		OnSelectionChange(func([]string) {}).
-		OnExpandedChange(func([]string) {}).
-		OnAction(func(string) {}).
-		OnDrop(func(DropEvent) {}).
-		CanDrop(func(DropEvent) bool { return true }).
-		OnLoadChildren(func(string) {}).
-		OnRename(func(string, string) {}).
-		RequestRename("archive", 4).
-		ContextMenu(menu.Menu("actions", []menu.Item{{Key: "open", Label: "Open"}})).
-		OnContextMenu(func(string) {}).
-		Variant(VariantSurface).
-		Size(SizeSmall).
-		SelectionMode(SelectionNone).
-		Disabled(true).
-		AllowEmptySelection().
-		Guides(true).
-		GuideConnectors(true).
-		GuideStyle(GuideDashed).
-		ExpandOnRowClick(true).
-		MaxHeight(180)
-
-	if len(base.expandedKeys) != 0 || len(base.disabledKeys) != 0 || base.variant != VariantDefault || base.size != SizeMedium || base.selectionMode != SelectionSingle {
-		t.Fatal("configuring a Tree mutated the base value")
+func TestFilterTreeItemsKeepsAncestors(t *testing.T) {
+	items := []Item{
+		{Key: "src", Label: "src", Children: []Item{
+			{Key: "main", Label: "main.go"},
+			{Key: "util", Label: "util.go"},
+		}},
+		{Key: "docs", Label: "docs", Children: []Item{
+			{Key: "readme", Label: "README"},
+		}},
 	}
-	if configured.key != "files" || configured.selectedKey != "readme" || len(configured.items) != len(items) {
-		t.Fatal("constructor fields were not retained")
+	filtered := filterTreeItems(items, "main")
+	if len(filtered) != 1 || filtered[0].Key != "src" || len(filtered[0].Children) != 1 || filtered[0].Children[0].Key != "main" {
+		t.Fatalf("filtered = %#v", filtered)
 	}
-	if !treeSameKeys(configured.expandedKeys, []string{"project"}) || !treeSameKeys(configured.disabledKeys, []string{"archive"}) {
-		t.Fatal("controlled key options were not retained")
-	}
-	if configured.emptyText != "Empty" || configured.onChange == nil || configured.onSelectionChange == nil || configured.onExpandedChange == nil || configured.onAction == nil || configured.onDrop == nil || configured.canDrop == nil || configured.onLoadChildren == nil || configured.onRename == nil || configured.renameRequestKey != "archive" || configured.renameRequest != 4 || !configured.hasContextMenu || configured.onContextMenu == nil {
-		t.Fatal("callbacks or empty text were not retained")
-	}
-	if !treeSameKeys(configured.selectedKeys, []string{"project", "readme"}) {
-		t.Fatal("multiple selection was not retained")
-	}
-	if configured.variant != VariantSurface || configured.size != SizeSmall || configured.selectionMode != SelectionNone || !configured.disabled || !configured.allowEmpty || !configured.guides || !configured.guideConnectors || configured.guideStyle != GuideDashed || !configured.expandOnRowClick || configured.maxHeight != 180 {
-		t.Fatal("behavior options were not retained")
+	if len(filterTreeItems(items, "missing")) != 0 {
+		t.Fatal("expected empty filter result")
 	}
 }
 

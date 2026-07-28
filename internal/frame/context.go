@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"gioui.org/widget/material"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/style"
@@ -23,6 +24,7 @@ import (
 type Context struct {
 	window                       *app.Window
 	theme                        *theme.Theme
+	themeGeneration              uint64
 	language                     locale.Language
 	states                       state.Store
 	keys                         state.Keys
@@ -58,7 +60,7 @@ func New(w *app.Window, activeTheme *theme.Theme, language locale.Language) *Con
 		defaultTheme := theme.DefaultTheme()
 		activeTheme = &defaultTheme
 	}
-	if activeTheme.Material == nil {
+	if theme.MaterialOf(activeTheme) == nil {
 		theme.SyncMaterialTheme(activeTheme)
 	}
 	return &Context{
@@ -75,10 +77,7 @@ func (ctx *Context) Theme() theme.Theme {
 		return theme.DefaultTheme()
 	}
 	snapshot := *ctx.theme
-	if snapshot.Material != nil {
-		materialTheme := *snapshot.Material
-		snapshot.Material = &materialTheme
-	}
+	theme.DetachMaterial(&snapshot)
 	return snapshot
 }
 
@@ -97,6 +96,7 @@ func ReplaceTheme(ctx *Context, activeTheme theme.Theme) {
 	}
 	theme.SyncMaterialTheme(&activeTheme)
 	ctx.theme = &activeTheme
+	ctx.themeGeneration++ // Bump generation to invalidate memoized results
 }
 
 // ReplaceLanguage updates the language used by localized components.
@@ -162,8 +162,24 @@ func UpdateWindowConfig(ctx *Context, config app.Config) WindowState {
 
 // ActiveTheme returns the mutable theme used internally while laying out a
 // frame. It is only reachable by packages inside this module's internal tree.
+// ActiveMaterial returns the Gio material bridge for the active theme.
+// Internal text and editor helpers use this; applications theme via tokens.
+func ActiveMaterial(ctx *Context) *material.Theme {
+	return theme.MaterialOf(ActiveTheme(ctx))
+}
+
 func ActiveTheme(ctx *Context) *theme.Theme {
 	return ctx.theme
+}
+
+// ThemeGeneration returns the current theme generation counter. The generation
+// is incremented each time ReplaceTheme is called, allowing memoized
+// computations to invalidate when the theme changes.
+func ThemeGeneration(ctx *Context) uint64 {
+	if ctx == nil {
+		return 0
+	}
+	return ctx.themeGeneration
 }
 
 // ActiveLanguage returns the resolved language used by internal components.
@@ -232,6 +248,7 @@ func OverlayViewport(ctx *Context, fallback image.Point) image.Point {
 }
 
 func ApplyFrameCommands(ctx *Context, gtx layout.Context) {
+	ctx.focus.CommitObservations()
 	ctx.focus.ApplyFrameCommands(gtx)
 }
 
@@ -301,7 +318,7 @@ func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool) {
 }
 
 func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {
-	return ctx.focus.Visible(tag, focused)
+	return ctx.focus.Observe(tag, focused)
 }
 
 // FocusVisible reports whether a focused custom widget should draw its focus ring.
@@ -452,6 +469,16 @@ func ActiveStyles(ctx *Context) []style.Style {
 	return append([]style.Style(nil), ctx.styles...)
 }
 
+// ActiveStylesReadOnly returns the styles inherited by the current layout scope
+// without copying. The caller MUST NOT modify the returned slice or its elements.
+// Use this only for append-only consumers that build a new slice.
+func ActiveStylesReadOnly(ctx *Context) []style.Style {
+	if ctx == nil {
+		return nil
+	}
+	return ctx.styles
+}
+
 // PushInheritedStyle propagates a computed parent style with lower precedence
 // than a child's variant, size, scope, and instance declarations.
 func PushInheritedStyle(ctx *Context, value style.Style) func() {
@@ -470,6 +497,16 @@ func ActiveInheritedStyles(ctx *Context) []style.Style {
 		return nil
 	}
 	return append([]style.Style(nil), ctx.inheritedStyles...)
+}
+
+// ActiveInheritedStylesReadOnly returns the inherited styles without copying.
+// The caller MUST NOT modify the returned slice or its elements.
+// Use this only for append-only consumers that build a new slice.
+func ActiveInheritedStylesReadOnly(ctx *Context) []style.Style {
+	if ctx == nil {
+		return nil
+	}
+	return ctx.inheritedStyles
 }
 
 func (ctx *Context) ForegroundColor() color.NRGBA {
@@ -499,6 +536,7 @@ func EndFrame(ctx *Context) {
 	if fieldAssociationsChanged(ctx) {
 		ctx.Invalidate()
 	}
+	ctx.focus.CommitObservations()
 	ctx.states.EndFrame()
 	ctx.exclusive.EndFrame()
 }
@@ -552,6 +590,15 @@ func UseStateWith[T any](ctx *Context, key, slot string, factory func() *T) *T {
 	return state.Use(&ctx.states, state.Identity{Key: key, Slot: slot}, factory)
 }
 
+// StateStore returns the underlying state store for advanced use cases such as
+// memoization. Most code should use UseState or UseStateWith instead.
+func StateStore(ctx *Context) *state.Store {
+	if ctx == nil {
+		return nil
+	}
+	return &ctx.states
+}
+
 func PeekState[T any](ctx *Context, key, slot string) (*T, bool) {
 	return state.Peek[T](&ctx.states, state.Identity{Key: key, Slot: slot})
 }
@@ -564,6 +611,14 @@ func StateLen(ctx *Context) int {
 	return ctx.states.Len()
 }
 
+// RegisterExclusive registers a widget in an exclusive group. When another widget
+// in the same group activates, this widget's close callback will be invoked.
+//
+// Exclusive groups are used for navigation widgets (dropdown, select, menubar,
+// context-menu) and transient hints (tooltip) where only one should be open at a time.
+// General-purpose overlays (popover, modal, alertdialog) do not participate in
+// exclusive groups, allowing applications to control their lifecycle independently
+// and support nested or stacked scenarios.
 func RegisterExclusive(ctx *Context, group, key string, close func()) {
 	ctx.exclusive.Register(group, key, close)
 }

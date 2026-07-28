@@ -98,7 +98,8 @@ func TestTextAreaFrameKeepsInnerGeometry(t *testing.T) {
 
 	activeTheme := theme.DefaultTheme()
 	resolved := resolveInputTestStyle(&activeTheme, textAreaDefaultDeclaration(&activeTheme, TextAreaPrimary, true, 76), flowstyle.StyleState{})
-	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), resolved, true, child)
+	state := &textAreaState{}
+	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), state, resolved, true, child)
 	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 184) {
 		t.Fatalf("inner constraints = %#v, want min 276x60 max 276x184", got)
 	}
@@ -141,9 +142,9 @@ func TestTextAreaStyleUsesTextAreaThemeTokens(t *testing.T) {
 
 func TestTextAreaParentDisabledClearsHover(t *testing.T) {
 	ctx := newContext(nil)
-	state := &inputState{}
+	state := &textAreaState{}
 	state.Hovered = true
-	frame.UseStateWith(ctx, "notes", stateSlotInput, func() *inputState { return state })
+	frame.UseStateWith(ctx, "notes", "textAreaState", func() *textAreaState { return state })
 	TextArea("notes", "").Layout(ctx, testLayoutContext().Disabled())
 	if state.Hovered {
 		t.Fatal("parent-disabled textarea kept its hover state")

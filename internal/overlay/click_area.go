@@ -55,9 +55,16 @@ func (a *ClickArea) Hovered() bool {
 // Layout registers a pointer-only click region around child.
 func (a *ClickArea) Layout(gtx layout.Context, child layout.Widget) layout.Dimensions {
 	for {
-		_, ok := a.click.Update(gtx.Source)
+		event, ok := a.click.Update(gtx.Source)
 		if !ok {
 			break
+		}
+		// Process events the same way as Clicked to avoid dropping them.
+		if event.Kind == gesture.KindPress {
+			a.pressed = true
+		}
+		if event.Kind == gesture.KindClick {
+			a.requestClicks++
 		}
 	}
 	macro := op.Record(gtx.Ops)

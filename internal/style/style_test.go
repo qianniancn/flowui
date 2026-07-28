@@ -45,6 +45,21 @@ func TestBuilderCoversCommonStyleModel(t *testing.T) {
 	}
 }
 
+func TestTransitionIgnoresUnknownPropertyID(t *testing.T) {
+	const unknown PropertyID = 255
+	if unknown.Animatable() {
+		t.Fatal("unknown property should not be animatable")
+	}
+	built := Style{}.
+		Opacity(1).
+		Transition(unknown, time.Second).
+		Transition(PropOpacity, time.Millisecond).
+		Resolve(StyleState{})
+	if len(built.Transitions) != 1 || built.Transitions[0].Property != PropOpacity {
+		t.Fatalf("transitions = %#v, want only PropOpacity", built.Transitions)
+	}
+}
+
 func TestTransformIgnoresNonFiniteValues(t *testing.T) {
 	base := Style{}.Translate(2, 3).Scale(.5, .6).Rotate(.7)
 	for _, value := range []float32{float32(math.NaN()), float32(math.Inf(1)), float32(math.Inf(-1))} {
@@ -322,6 +337,14 @@ func TestStyleDeepCopiesGradientAndNestedWhen(t *testing.T) {
 	resolved := source.Resolve(StyleState{Pressed: true})
 	if resolved.Trans == nil || resolved.Trans.ScaleX == nil || *resolved.Trans.ScaleX != 0.95 {
 		t.Fatalf("pressed transform = %#v, want 0.95", resolved.Trans)
+	}
+}
+
+func TestJoinPreservesUnsafeConditionCachePolicy(t *testing.T) {
+	conditional := Style{}.WhenIf(true, Style{}.Opacity(.5))
+	joined := Join(Style{}, conditional)
+	if !joined.HasConditions() {
+		t.Fatal("Join lost the cache-unsafe marker from WhenIf")
 	}
 }
 

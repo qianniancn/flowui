@@ -38,7 +38,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				),
 				section("Disabled", ui.Pagination("disabled", 3, 8).Disabled(true)),
 			).Gap(24),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 

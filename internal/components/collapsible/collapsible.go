@@ -23,20 +23,41 @@ type Item struct {
 
 // Widget presents one controlled expandable section.
 type Widget struct {
-	key              string
-	expanded         bool
-	label            string
-	content          frame.Widget
-	leading          frame.Widget
-	trailing         frame.Widget
-	disabled         bool
-	onExpandedChange func(bool)
-	customStyle      flowstyle.Style
+	key                string
+	expanded           bool
+	hasExpanded        bool
+	defaultExpanded    bool
+	hasDefaultExpanded bool
+	label              string
+	content            frame.Widget
+	leading            frame.Widget
+	trailing           frame.Widget
+	disabled           bool
+	onExpandedChange   func(bool)
+	customStyle        flowstyle.Style
 }
 
-// Collapsible creates one controlled expandable section.
+// Collapsible creates one expandable section. When expanded is true, it starts
+// in controlled mode with the section expanded. When expanded is false, it starts
+// in uncontrolled mode with the section collapsed (use DefaultExpanded(true) for
+// uncontrolled mode starting expanded).
 func Collapsible(key string, expanded bool, label string, content frame.Widget) Widget {
-	return Widget{key: key, expanded: expanded, label: label, content: content}
+	if expanded {
+		// expanded=true means controlled mode, immediately expanded
+		return Widget{
+			key:         key,
+			expanded:    true,
+			hasExpanded: true,
+			label:       label,
+			content:     content,
+		}
+	}
+	// expanded=false means uncontrolled mode, initially collapsed
+	return Widget{
+		key:     key,
+		label:   label,
+		content: content,
+	}
 }
 
 func (w Widget) Leading(leading frame.Widget) Widget {
@@ -59,6 +80,20 @@ func (w Widget) OnExpandedChange(fn func(bool)) Widget {
 	return w
 }
 
+// Expanded sets the collapsible to controlled mode with the given expanded state.
+func (w Widget) Expanded(expanded bool) Widget {
+	w.expanded = expanded
+	w.hasExpanded = true
+	return w
+}
+
+// DefaultExpanded sets the initial expanded state for uncontrolled mode.
+func (w Widget) DefaultExpanded(expanded bool) Widget {
+	w.defaultExpanded = expanded
+	w.hasDefaultExpanded = true
+	return w
+}
+
 func (w Widget) Style(value flowstyle.Style) Widget {
 	w.customStyle = value
 	return w
@@ -67,13 +102,14 @@ func (w Widget) Style(value flowstyle.Style) Widget {
 func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	rootKey := frame.FullKey(ctx, w.key)
 	state := collapsibleStateFor(ctx, w.key)
+	state.item.bind(w)
+	expanded := state.item.isExpanded(w)
+
 	disabled := w.disabled || !gtx.Enabled()
 	presses := activePresses(&state.item)
 	if !disabled {
 		for state.item.clickable.Clicked(gtx) {
-			if w.onExpandedChange != nil {
-				w.onExpandedChange(!w.expanded)
-			}
+			state.item.requestExpanded(w, !expanded)
 		}
 		focusOnPress(ctx, &state.item, presses)
 	}
@@ -87,7 +123,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		Focused:      focused,
 		FocusVisible: frame.FocusVisible(ctx, &state.item.clickable, focused),
 		Disabled:     disabled,
-		Expanded:     w.expanded,
+		Expanded:     expanded,
 	}, w.customStyle, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return layoutItem(ctx, gtx, &state.item, Item{
 			Key:      w.key,
@@ -96,7 +132,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 			Trailing: w.trailing,
 			Content:  w.content,
 			Disabled: w.disabled,
-		}, w.expanded, disabled)
+		}, expanded, disabled)
 	}))
 }
 

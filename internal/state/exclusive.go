@@ -78,6 +78,11 @@ func (e *Exclusive) EndFrame() {
 	for group, current := range e.active {
 		if _, ok := e.seen[exclusiveID{group: group, key: current.key}]; !ok {
 			delete(e.active, group)
+			// Unmounted open members must still run close so uncontrolled
+			// overlays (Select/Menu) clear open trackers.
+			if current.close != nil {
+				current.close()
+			}
 		}
 	}
 	for id := range e.callbacks {

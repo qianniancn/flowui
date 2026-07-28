@@ -104,7 +104,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					).Gap(12).AlignMiddle(),
 				),
 			).Gap(18),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -124,7 +124,7 @@ func popoverButton(key, label string, m Model, send ui.Send[Msg], content ui.Wid
 			OnClick(func() {
 				send(Toggle{Key: key})
 			}),
-		ui.Box(content).Width(260),
+		ui.Box(content).Style(ui.Width(260)),
 	).OnOpenChange(func(open bool) {
 		if !open {
 			send(Close{})

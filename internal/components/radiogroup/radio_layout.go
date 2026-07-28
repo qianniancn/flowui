@@ -10,11 +10,11 @@ import (
 	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
-func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, group *radioGroupState, item RadioItem) layout.Dimensions {
+func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, group *radioGroupState, item RadioItem, selectedKey string) layout.Dimensions {
 	itemState := group.item(item.Key)
 	disabled := r.disabled || item.Disabled
 	invalid := r.invalid || item.Invalid
-	selected := item.Key == r.selectedKey
+	selected := item.Key == selectedKey
 	animGtx := gtx
 
 	presses := state.ActivePresses(itemState.clickable.History())
@@ -22,8 +22,8 @@ func (r RadioGroupWidget) layoutItem(ctx *frame.Context, gtx layout.Context, gro
 		gtx = gtx.Disabled()
 	} else {
 		for itemState.clickable.Clicked(gtx) {
-			if !selected && r.onChange != nil {
-				r.onChange(item.Key)
+			if !selected {
+				group.requestSelectedKey(r, item.Key)
 			}
 		}
 		frame.FocusOnPress(ctx, &itemState.clickable, itemState.clickable.History(), presses)

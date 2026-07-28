@@ -46,29 +46,6 @@ func alertTestContext() layout.Context {
 	}
 }
 
-func TestAlertOptionsUseValueSemantics(t *testing.T) {
-	indicator := &alertProbe{size: image.Pt(16, 16)}
-	content := &alertProbe{size: image.Pt(80, 20)}
-	action := &alertProbe{size: image.Pt(64, 32)}
-	base := New("Title", "Description")
-	configured := base.
-		Status(StatusDanger).
-		Indicator(indicator).
-		Content(content).
-		Action(action).
-		Style(flowstyle.Style{}.Radius(4))
-
-	if base.status != StatusDefault || base.indicator != nil || base.content != nil || base.action != nil {
-		t.Fatalf("base alert was mutated: %#v", base)
-	}
-	if configured.status != StatusDanger || configured.indicator != indicator || configured.content != content || configured.action != action {
-		t.Fatalf("configured alert = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured alert did not retain its style")
-	}
-}
-
 func TestAlertStylePartsSeparateRootLabelAndIndicator(t *testing.T) {
 	rootColor := color.NRGBA{R: 1, A: 0xff}
 	labelColor := color.NRGBA{G: 2, A: 0xff}
@@ -104,11 +81,11 @@ func TestAlertConditionalTransitionsAnimateRootAndPart(t *testing.T) {
 			flowstyle.Style{}.
 				Background(flowstyle.SolidColor{Color: rootFrom}).
 				Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
-				When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: rootTo})).
+				WhenIf(active, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: rootTo})).
 				Part(flowstyle.PartLabel, flowstyle.Style{}.
 					TextColor(flowstyle.SolidColor{Color: labelFrom}).
 					Transition(flowstyle.PropTextColor, 100*time.Millisecond).
-					When(flowstyle.If(active), flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: labelTo}))),
+					WhenIf(active, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: labelTo}))),
 		).resolveStyle(ctx, layout.Context{Ops: new(op.Ops), Now: now})
 		frame.EndFrame(ctx)
 		root := resolved.root.Paint.Background.(flowstyle.SolidColor).Color

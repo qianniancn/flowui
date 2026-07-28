@@ -35,10 +35,10 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 						variantCard("Tertiary", "A stronger surface for featured content.", ui.CardTertiary),
 					).Gap(16).LineGap(16),
 					ui.Text("Composition").Size(18),
-					ui.Box(featureCard(send)).FillWidth(),
+					ui.Box(featureCard(send)).Style(ui.FillWidth()),
 				).Gap(16),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -48,7 +48,7 @@ func variantCard(title, description string, variant ui.CardVariant) ui.Widget {
 			cardHeader(title, description),
 			ui.Text("Cards inherit semantic foreground colors from their surface."),
 		).Variant(variant),
-	).Width(320)
+	).Style(ui.Width(320))
 }
 
 func featureCard(send ui.Send[Msg]) ui.Widget {

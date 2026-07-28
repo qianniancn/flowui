@@ -22,7 +22,7 @@ func RecordText(ctx *frame.Context, gtx layout.Context, value string, size unit.
 	textGtx.Constraints.Min = image.Point{}
 	textGtx.Constraints.Max.X = min(maxWidth, textGtx.Constraints.Max.X)
 	macro := op.Record(gtx.Ops)
-	label := material.Label(frame.ActiveTheme(ctx).Material, size, value)
+	label := material.Label(frame.ActiveMaterial(ctx), size, value)
 	label.Color = textColor
 	label.Font.Weight = weight
 	label.MaxLines = 1

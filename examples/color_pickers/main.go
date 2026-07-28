@@ -84,7 +84,7 @@ func View(_ *ui.Context, model Model, send ui.Send[ColorChanged]) ui.Widget {
 								OnChange(func(value color.NRGBA) { send(ColorChanged{Field: fieldSlider, Value: value}) }),
 							ui.ColorSlider("standalone-alpha", model.Slider, ui.ColorChannelAlpha).
 								OnChange(func(value color.NRGBA) { send(ColorChanged{Field: fieldSlider, Value: value}) }),
-						).Gap(10)).MaxWidth(300),
+						).Gap(10)).Style(ui.MaxWidth(300)),
 					),
 					section("ColorField",
 						ui.Box(ui.ColorField("standalone-field", model.FieldColor).
@@ -92,7 +92,7 @@ func View(_ *ui.Context, model Model, send ui.Send[ColorChanged]) ui.Widget {
 							Description("Enter a hexadecimal color").
 							Swatch(true).
 							FullWidth().
-							OnChange(func(value color.NRGBA) { send(ColorChanged{Field: fieldField, Value: value}) })).MaxWidth(280),
+							OnChange(func(value color.NRGBA) { send(ColorChanged{Field: fieldField, Value: value}) })).Style(ui.MaxWidth(280)),
 					),
 					section("ColorSwatch",
 						ui.Row(
@@ -117,7 +117,8 @@ func View(_ *ui.Context, model Model, send ui.Send[ColorChanged]) ui.Widget {
 					ui.Divider(),
 					ui.Text("ColorPicker composition").Size(20),
 					section("Basic",
-						boundPicker("basic", fieldBasic, model.Basic, "Pick a color", send),
+						boundPicker("basic", fieldBasic, model.Basic, "Pick a color", send).
+							ShowHistory(false),
 					),
 					section("Presets and field",
 						boundPicker("brand", fieldBrand, model.Brand, "Brand color", send).
@@ -136,7 +137,7 @@ func View(_ *ui.Context, model Model, send ui.Send[ColorChanged]) ui.Widget {
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
 	)
 }
 

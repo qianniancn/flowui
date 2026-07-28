@@ -99,7 +99,7 @@ func (c triggerContent) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 type collapsibleLabel string
 
 func (value collapsibleLabel) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	label := material.Label(frame.ActiveTheme(ctx).Material, frame.ActiveTheme(ctx).Typography.ControlSize, string(value))
+	label := material.Label(frame.ActiveMaterial(ctx), frame.ActiveTheme(ctx).Typography.ControlSize, string(value))
 	label.Color = ctx.ForegroundColor()
 	label.Font.Weight = font.Medium
 	label.MaxLines = 1

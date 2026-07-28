@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -19,6 +18,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -29,10 +29,9 @@ const stateSlotTree = "tree"
 const treeDragMIMEPrefix = "application/x-flowui-tree-item/"
 
 const (
-	treeTypeaheadTimeout = 500 * time.Millisecond
-	treeExpandDuration   = 200 * time.Millisecond
-	treeDragExpandDelay  = 600 * time.Millisecond
-	treeDragScrollSpeed  = 8
+	treeExpandDuration  = 200 * time.Millisecond
+	treeDragExpandDelay = 600 * time.Millisecond
+	treeDragScrollSpeed = 8
 )
 
 type flatItem struct {
@@ -76,9 +75,7 @@ type treeState struct {
 	pressedModifiers   key.Modifiers
 	pressedActionKey   string
 	selectionAnchor    string
-	typeahead          string
-	typeaheadAt        time.Time
-	typeaheadReady     bool
+	typeahead          nav.Typeahead
 	dragMIME           string
 	dragSource         string
 	dragSources        []string
@@ -102,6 +99,7 @@ type treeState struct {
 type treeDataCache struct {
 	ready        bool
 	version      uint64
+	filter       string
 	expandedKeys []string
 	visible      []flatItem
 }
@@ -126,21 +124,68 @@ func (s *treeState) item(key string) *treeItemState {
 }
 
 func (s *treeState) resolveVisible(tree Widget) []flatItem {
+	items := tree.items
+	expanded := tree.expandedKeys
+	if tree.filter != "" {
+		items = filterTreeItems(tree.items, tree.filter)
+		// Keep filter matches reachable by expanding every retained branch.
+		expanded = append([]string(nil), expanded...)
+		expanded = append(expanded, collectExpandableKeys(items)...)
+	}
 	if !tree.hasDataVersion {
 		s.dataCache = treeDataCache{}
 		s.checkItems(tree.items)
-		return flattenVisibleItems(tree.items, treeKeySet(tree.expandedKeys))
+		return flattenVisibleItems(items, treeKeySet(expanded))
 	}
 	cache := &s.dataCache
-	if cache.ready && cache.version == tree.dataVersion && treeKeysEqual(cache.expandedKeys, tree.expandedKeys) {
+	if cache.ready && cache.version == tree.dataVersion && treeKeysEqual(cache.expandedKeys, expanded) && cache.filter == tree.filter {
 		return cache.visible
 	}
 	s.checkItems(tree.items)
-	cache.visible = flattenVisibleItems(tree.items, treeKeySet(tree.expandedKeys))
-	cache.expandedKeys = append(cache.expandedKeys[:0], tree.expandedKeys...)
+	cache.visible = flattenVisibleItems(items, treeKeySet(expanded))
+	cache.expandedKeys = append(cache.expandedKeys[:0], expanded...)
 	cache.version = tree.dataVersion
+	cache.filter = tree.filter
 	cache.ready = true
 	return cache.visible
+}
+
+func filterTreeItems(items []Item, query string) []Item {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return items
+	}
+	var walk func([]Item) []Item
+	walk = func(children []Item) []Item {
+		out := make([]Item, 0, len(children))
+		for _, item := range children {
+			filteredChildren := walk(item.Children)
+			selfMatch := strings.Contains(strings.ToLower(item.Label), query) ||
+				strings.Contains(strings.ToLower(item.Description), query)
+			if selfMatch || len(filteredChildren) > 0 {
+				copyItem := item
+				copyItem.Children = filteredChildren
+				out = append(out, copyItem)
+			}
+		}
+		return out
+	}
+	return walk(items)
+}
+
+func collectExpandableKeys(items []Item) []string {
+	var keys []string
+	var walk func([]Item)
+	walk = func(children []Item) {
+		for _, item := range children {
+			if len(item.Children) > 0 {
+				keys = append(keys, item.Key)
+				walk(item.Children)
+			}
+		}
+	}
+	walk(items)
+	return keys
 }
 
 func (s *treeState) visibleIndex(visible []flatItem, key string, item *treeItemState) int {
@@ -326,14 +371,14 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
 			}
-			text := treeTypeaheadText(event.Name)
+			text := nav.Printable(event.Name)
 			if text == "" {
 				continue
 			}
-			query := s.appendTypeahead(gtx.Now, text)
+			query := s.typeahead.Append(gtx.Now, text)
 			next, ok := treeTypeaheadIndex(visible, tree, current, query)
 			if !ok && query != text {
-				s.typeahead = text
+				s.typeahead.Set(text)
 				next, ok = treeTypeaheadIndex(visible, tree, current, text)
 			}
 			if ok {
@@ -394,24 +439,6 @@ func (s *treeState) ensureVisible(index int) {
 	} else if index == position.First+position.Count-1 && position.OffsetLast < 0 {
 		position.Offset -= position.OffsetLast
 	}
-}
-
-func (s *treeState) appendTypeahead(now time.Time, value string) string {
-	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > treeTypeaheadTimeout {
-		s.typeahead = ""
-	}
-	s.typeahead += value
-	s.typeaheadAt = now
-	s.typeaheadReady = true
-	return s.typeahead
-}
-
-func treeTypeaheadText(name key.Name) string {
-	runes := []rune(string(name))
-	if len(runes) != 1 || unicode.IsControl(runes[0]) {
-		return ""
-	}
-	return strings.ToLower(string(runes[0]))
 }
 
 type treeItemState struct {
@@ -768,40 +795,26 @@ func treeVisibleIndex(visible []flatItem, key string) int {
 	return -1
 }
 
+// treeNavList adapts the flattened visible items into a nav.List. Depth-aware
+// navigation (children, ancestors) stays below in tree-specific helpers.
+func treeNavList(visible []flatItem, tree Widget) nav.List {
+	return nav.List{
+		Count:    len(visible),
+		Disabled: func(i int) bool { return tree.itemDisabled(visible[i].item) },
+		Label:    func(i int) string { return visible[i].item.Label },
+	}
+}
+
 func treeMoveVisible(visible []flatItem, tree Widget, current, delta int) (int, bool) {
-	if len(visible) == 0 {
-		return -1, false
-	}
-	if current < 0 || current >= len(visible) {
-		if delta < 0 {
-			return treeLastEnabled(visible, tree)
-		}
-		return treeFirstEnabled(visible, tree)
-	}
-	for next := current + delta; next >= 0 && next < len(visible); next += delta {
-		if !tree.itemDisabled(visible[next].item) {
-			return next, true
-		}
-	}
-	return current, false
+	return nav.Move(treeNavList(visible, tree), current, delta, false)
 }
 
 func treeFirstEnabled(visible []flatItem, tree Widget) (int, bool) {
-	for index, entry := range visible {
-		if !tree.itemDisabled(entry.item) {
-			return index, true
-		}
-	}
-	return -1, false
+	return nav.First(treeNavList(visible, tree))
 }
 
 func treeLastEnabled(visible []flatItem, tree Widget) (int, bool) {
-	for index := len(visible) - 1; index >= 0; index-- {
-		if !tree.itemDisabled(visible[index].item) {
-			return index, true
-		}
-	}
-	return -1, false
+	return nav.Last(treeNavList(visible, tree))
 }
 
 func treeFirstEnabledChild(visible []flatItem, tree Widget, current int) int {
@@ -830,20 +843,7 @@ func treeEnabledAncestor(visible []flatItem, tree Widget, current int) int {
 }
 
 func treeTypeaheadIndex(visible []flatItem, tree Widget, current int, query string) (int, bool) {
-	if len(visible) == 0 || query == "" {
-		return -1, false
-	}
-	query = strings.ToLower(query)
-	for step := 1; step <= len(visible); step++ {
-		index := (current + step + len(visible)) % len(visible)
-		if tree.itemDisabled(visible[index].item) {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(visible[index].item.Label), query) {
-			return index, true
-		}
-	}
-	return current, false
+	return nav.Match(treeNavList(visible, tree), current, query)
 }
 
 func treeKeySet(keys []string) map[string]struct{} {

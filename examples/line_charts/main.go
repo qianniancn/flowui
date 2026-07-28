@@ -66,7 +66,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		MarkLines([]ui.ChartMarkLine{ui.MarkLine(ui.ChartAxisY, 220).Text("Capacity")}).
 		MarkAreas([]ui.ChartMarkArea{ui.MarkArea(ui.ChartAxisY, 240, 300).Text("Watch")}).
 		MarkPoints([]ui.ChartMarkPoint{ui.MarkPoint(11, 286).Text("Peak")}).
-		DataWindow(requestWindow.Start, requestWindow.End).
+		DataWindow(float32(requestWindow.Start), float32(requestWindow.End)).
 		OnDataWindowChange(func(window ui.ChartDataWindow) {
 			send(DataWindowChanged{Chart: "request-volume", Window: window})
 		}).
@@ -87,7 +87,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		Label("Request latency percentiles").
 		OnLegendChange(func(key string, hidden bool) { send(LegendChanged{Key: key, Hidden: hidden}) }).
 		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
-		DataWindow(latencyWindow.Start, latencyWindow.End).
+		DataWindow(float32(latencyWindow.Start), float32(latencyWindow.End)).
 		OnDataWindowChange(func(window ui.ChartDataWindow) {
 			send(DataWindowChanged{Chart: "latency", Window: window})
 		}).
@@ -123,11 +123,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 						OnClick(func() { send(ResetView{}) }),
 				).AlignMiddle(),
 				ui.Text(selection).Size(14),
-				ui.Surface(ui.Box(requests).Padding(16)).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(latency).Padding(16)).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(stackedTraffic).Padding(16)).Style(ui.Radius(8)),
+				ui.Surface(ui.Box(requests).Style(ui.Padding(16).Radius(8))),
+				ui.Surface(ui.Box(latency).Style(ui.Padding(16).Radius(8))),
+				ui.Surface(ui.Box(stackedTraffic).Style(ui.Padding(16).Radius(8))),
 			).Gap(16),
-		).FillWidth().MaxWidth(980).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(980).Padding(24)),
 	)
 }
 

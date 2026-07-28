@@ -84,12 +84,18 @@ func UpdatePointer(gtx layout.Context, enabled bool, plot image.Rectangle, windo
 }
 
 func AddPointerInput(gtx layout.Context, plot image.Rectangle, enabled bool, tag event.Tag) {
+	AddPointerInputWithCursor(gtx, plot, enabled, pointer.CursorCrosshair, tag)
+}
+
+// AddPointerInputWithCursor registers chart pointer input with an explicit
+// cursor for visualizations whose interaction is not crosshair-based.
+func AddPointerInputWithCursor(gtx layout.Context, plot image.Rectangle, enabled bool, cursor pointer.Cursor, tag event.Tag) {
 	if !enabled || plot.Empty() {
 		return
 	}
 	area := clip.Rect(plot).Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
-	pointer.CursorCrosshair.Add(gtx.Ops)
+	cursor.Add(gtx.Ops)
 	event.Op(gtx.Ops, tag)
 	pass.Pop()
 	area.Pop()

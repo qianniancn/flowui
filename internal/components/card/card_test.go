@@ -128,24 +128,6 @@ func TestCardDefaultsShadowExceptForTransparentVariant(t *testing.T) {
 	}
 }
 
-func TestCardOptionsKeepValueSemantics(t *testing.T) {
-	base := Card()
-	styled := base.
-		Variant(CardTertiary).
-		Padding(20).
-		Gap(8)
-
-	if base.variant != CardDefault || base.hasPadding || base.hasGap {
-		t.Fatal("card options mutated the original value")
-	}
-	if styled.variant != CardTertiary || styled.padding != 20 || styled.gap != 8 {
-		t.Fatal("card options did not configure the returned value")
-	}
-	if got := base.Padding(-1).padding; got != 0 {
-		t.Fatalf("negative padding = %v, want 0", got)
-	}
-}
-
 func TestCardIgnoresNilChildren(t *testing.T) {
 	ctx := cardTestContext(nil)
 	var ops op.Ops

@@ -31,6 +31,28 @@ func TestProgramWindowSpec(t *testing.T) {
 	}
 }
 
+func TestRetainedWindowModelInitializesOnceAndResumes(t *testing.T) {
+	var retained retainedWindowModel[int, string]
+	initializations := 0
+	initialize := func() (int, Cmd[string]) {
+		initializations++
+		return 3, Do(func(send Send[string]) { send("started") })
+	}
+
+	first, firstCmd := retained.start(initialize)
+	if first != 3 || firstCmd == nil {
+		t.Fatalf("first start = model %d command %v", first, firstCmd != nil)
+	}
+	retained.save(9)
+	second, secondCmd := retained.start(initialize)
+	if second != 9 || secondCmd != nil {
+		t.Fatalf("resumed start = model %d command %v", second, secondCmd != nil)
+	}
+	if initializations != 1 {
+		t.Fatalf("initializations = %d, want 1", initializations)
+	}
+}
+
 func TestWindowSpecRejectsInvalidDefinitions(t *testing.T) {
 	tests := []struct {
 		name string
@@ -144,6 +166,53 @@ func TestWindowSetAllowsReopenWhileClosedWindowFinishes(t *testing.T) {
 	}
 }
 
+func TestWindowSetKeepAliveAllowsReopenAfterLastWindowCloses(t *testing.T) {
+	var windows windowSet
+	windows.setKeepAlive(true)
+	done := windows.begin()
+	first := new(app.Window)
+	_, _ = windows.add("main", first, new(windowAppearance))
+	windows.finishStarting()
+	windows.deactivate("main", first)
+	windows.complete(false)
+
+	select {
+	case code := <-done:
+		t.Fatalf("keep-alive application exited: %d", code)
+	default:
+	}
+
+	second := new(app.Window)
+	if existing, added := windows.add("main", second, new(windowAppearance)); existing != nil || !added {
+		t.Fatalf("reopen after last close = existing %p added %v", existing, added)
+	}
+	windows.deactivate("main", second)
+	windows.complete(false)
+
+	select {
+	case code := <-done:
+		t.Fatalf("keep-alive application exited after reopened window closed: %d", code)
+	default:
+	}
+
+	windows.setKeepAlive(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationQuitStopsKeepAliveWithoutWindows(t *testing.T) {
+	application := NewApplication()
+	application.SetKeepAlive(true)
+	done := application.windows.begin()
+	application.windows.finishStarting()
+
+	application.Quit()
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
 func TestApplicationConfiguresAndControlsActiveWindow(t *testing.T) {
 	application := NewApplication()
 	done := application.windows.begin()
@@ -192,8 +261,9 @@ func TestApplicationChangesRuntimeAppearance(t *testing.T) {
 
 	ctx := frame.New(nil, nil, LanguageEnglish)
 	appearance.apply(ctx)
-	if got := ctx.Theme(); got.Palette.Accent != wantAccent || got.Material.Palette.ContrastBg != wantAccent {
-		t.Fatalf("runtime theme = accent %#v material %#v", got.Palette.Accent, got.Material.Palette.ContrastBg)
+	got := ctx.Theme()
+	if got.Palette.Accent != wantAccent || MaterialOf(&got).Palette.ContrastBg != wantAccent {
+		t.Fatalf("runtime theme = accent %#v material %#v", got.Palette.Accent, MaterialOf(&got).Palette.ContrastBg)
 	}
 	if got := ctx.Language(); got != LanguageChinese {
 		t.Fatalf("runtime language = %q, want %q", got, LanguageChinese)

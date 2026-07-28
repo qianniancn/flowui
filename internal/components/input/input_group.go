@@ -106,13 +106,24 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	var key string
 	var editor *widget.Editor
 	var enabled bool
+	var state *inputGroupState
+
 	if g.multiline {
-		gtx, key, editor, enabled = g.textArea.prepareEditor(ctx, gtx, g.disabled)
+		fullKey := frame.FullKey(ctx, g.textArea.key)
+		textAreaState := textAreaStateFor(ctx, fullKey)
+		textAreaState.bind(g.textArea)
+		currentValue := textAreaState.currentValue(g.textArea)
+		gtx, key, editor, enabled = g.textArea.prepareEditor(ctx, gtx, textAreaState, currentValue, g.disabled)
 	} else {
-		gtx, key, editor, enabled = g.input.prepareEditor(ctx, gtx, g.disabled)
+		// Create temporary input state for disclosure
+		fullKey := frame.FullKey(ctx, g.input.key)
+		inputState := inputStateFor(ctx, fullKey)
+		inputState.bind(g.input)
+		currentValue := inputState.currentValue(g.input)
+		gtx, key, editor, enabled = g.input.prepareEditor(ctx, gtx, inputState, currentValue, g.disabled)
 	}
 	disabled := !enabled
-	state := inputGroupStateFor(ctx, key)
+	state = inputGroupStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
@@ -128,14 +139,14 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 		contentHeight := gtx.Sp(tokens.LineHeight)*g.textArea.resolvedRows() + gtx.Dp(tokens.TextAreaPaddingY)*2
 		minHeight = max(tokens.TextAreaMinHeight, gtx.Metric.PxToDp(contentHeight))
 	}
-	defaults := inputGroupDefaultDeclaration(activeTheme, g.variant, g.fullWidth, minHeight)
+	defaults, variant, size := g.styleDeclarations(activeTheme, minHeight)
 	resolved := inputGroupResolvedStyle{
-		root:        styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
-		prefix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPrefix, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
-		suffix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSuffix, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
-		divider:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
-		placeholder: styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
-		selection:   styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, g.customStyle),
+		root:        styleruntime.Resolve(ctx, gtx, key, styleState, defaults, variant, size, g.customStyle),
+		prefix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPrefix, styleState, defaults, variant, size, g.customStyle),
+		suffix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSuffix, styleState, defaults, variant, size, g.customStyle),
+		divider:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, styleState, defaults, variant, size, g.customStyle),
+		placeholder: styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, variant, size, g.customStyle),
+		selection:   styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, variant, size, g.customStyle),
 	}
 	inputStyle := resolvedInputStyle(resolved.root, resolved.placeholder, resolved.selection, activeTheme)
 	textSize, lineHeight := resolvedTypography(resolved.root, tokens.TextSize, tokens.LineHeight)

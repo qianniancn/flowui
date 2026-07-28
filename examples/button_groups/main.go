@@ -51,7 +51,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Selected]) ui.Widget {
 								iconButton("align-center", "Align center", lucide.TextAlignCenter, send),
 								iconButton("align-right", "Align right", lucide.TextAlignEnd, send),
 							).Variant(ui.ButtonTertiary).FullWidth().Separators(true),
-						).Width(420),
+						).Style(ui.Width(420)),
 					),
 					section("Vertical",
 						ui.ButtonGroup(
@@ -72,7 +72,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Selected]) ui.Widget {
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 

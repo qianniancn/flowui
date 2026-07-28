@@ -27,20 +27,23 @@ type IndicatorState struct {
 }
 
 type CheckboxWidget struct {
-	key           string
-	checked       bool
-	label         string
-	description   string
-	errorMessage  string
-	onChange      func(bool)
-	indicator     func(IndicatorState) frame.Widget
-	variant       CheckboxVariant
-	disabled      bool
-	invalid       bool
-	indeterminate bool
-	readOnly      bool
-	required      bool
-	customStyle   flowstyle.Style
+	key            string
+	checked        bool
+	hasChecked     bool
+	defaultChecked bool
+	hasDefault     bool
+	label          string
+	description    string
+	errorMessage   string
+	onChange       func(bool)
+	indicator      func(IndicatorState) frame.Widget
+	variant        CheckboxVariant
+	disabled       bool
+	invalid        bool
+	indeterminate  bool
+	readOnly       bool
+	required       bool
+	customStyle    flowstyle.Style
 }
 
 const (
@@ -49,15 +52,31 @@ const (
 )
 
 func Checkbox(key string, checked bool, label string) CheckboxWidget {
+	// Always treat constructor's checked parameter as controlled if called with explicit true/false
+	// For uncontrolled mode, users should call Checkbox(key, false, label).DefaultChecked(value)
 	return CheckboxWidget{
-		key:     key,
-		checked: checked,
-		label:   label,
+		key:        key,
+		checked:    checked,
+		hasChecked: true,
+		label:      label,
 	}
 }
 
 func (c CheckboxWidget) OnChange(fn func(bool)) CheckboxWidget {
 	c.onChange = fn
+	return c
+}
+
+func (c CheckboxWidget) Checked(checked bool) CheckboxWidget {
+	c.checked = checked
+	c.hasChecked = true
+	return c
+}
+
+func (c CheckboxWidget) DefaultChecked(checked bool) CheckboxWidget {
+	c.defaultChecked = checked
+	c.hasDefault = true
+	c.hasChecked = false // Switch to uncontrolled mode
 	return c
 }
 
@@ -114,7 +133,12 @@ func (c CheckboxWidget) Style(value flowstyle.Style) CheckboxWidget {
 func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	key, valueState := frame.BoolStateWithKey(ctx, c.key)
 	anim := checkboxStateFor(ctx, key)
-	valueState.Value = c.checked
+
+	// Bind disclosure state
+	anim.bind(c)
+	checked := anim.currentChecked(c)
+
+	valueState.Value = checked
 	animGtx := gtx
 	presses := state.ActivePresses(valueState.History())
 	disabled := c.disabled || !gtx.Enabled()
@@ -126,9 +150,9 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		gtx = gtx.Disabled()
 	} else if valueState.Update(gtx) {
 		next := valueState.Value
-		valueState.Value = c.checked
-		if !c.readOnly && c.onChange != nil {
-			c.onChange(next)
+		valueState.Value = checked
+		if !c.readOnly {
+			checked = anim.requestChecked(c, next)
 		}
 	}
 	dims := valueState.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -139,7 +163,7 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		if description := c.semanticDescription(ctx, key); description != "" {
 			semantic.DescriptionOp(description).Add(gtx.Ops)
 		}
-		semantic.SelectedOp(c.checked).Add(gtx.Ops)
+		semantic.SelectedOp(checked).Add(gtx.Ops)
 		semantic.EnabledOp(!disabled).Add(gtx.Ops)
 		if !disabled {
 			frame.FocusOnPress(ctx, valueState, valueState.History(), presses)
@@ -151,18 +175,18 @@ func (c CheckboxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 			Focused:       gtx.Focused(valueState),
 			FocusVisible:  focusVisible,
 			Disabled:      disabled,
-			Selected:      c.checked || c.indeterminate,
-			Checked:       c.checked,
+			Selected:      checked || c.indeterminate,
+			Checked:       checked,
 			Indeterminate: c.indeterminate,
 			ReadOnly:      c.readOnly,
 			Invalid:       c.invalid,
 		}
 		resolved := c.resolveStyle(ctx, animGtx, key, styleState)
 		motion := frame.ActiveTheme(ctx).Motion
-		selection := anim.selection(animGtx, c.checked || c.indeterminate, motion)
+		selection := anim.selection(animGtx, checked || c.indeterminate, motion)
 		focus := anim.focusOpacity(animGtx, focusVisible && !disabled, motion)
 		indicatorState := IndicatorState{
-			Checked: c.checked, Indeterminate: c.indeterminate,
+			Checked: checked, Indeterminate: c.indeterminate,
 			Disabled: disabled, Invalid: c.invalid,
 		}
 		options := ControlOptions{

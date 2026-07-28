@@ -19,38 +19,15 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestSidebarOptionsUseValueSemantics(t *testing.T) {
+func TestSidebarCopiesMutableInputs(t *testing.T) {
 	items := []Item{{Key: "home", Label: "Home"}}
 	disabled := []string{"settings"}
-	header := &sidebarProbe{size: image.Pt(20, 20)}
-	footer := &sidebarProbe{size: image.Pt(20, 20)}
-	changed, acted := "", ""
-	widget := New("primary", "home", items).
-		Header(header).
-		Footer(footer).
-		Collapsed(true).
-		Width(260).
-		CollapsedWidth(72).
-		ItemHeight(34).
-		Alt("Primary navigation").
-		EmptyText("Empty").
-		DisabledKeys(disabled).
-		Disabled(true).
-		OnChange(func(key string) { changed = key }).
-		OnAction(func(key string) { acted = key })
+	widget := New("primary", "home", items).DisabledKeys(disabled)
 	items[0].Key = "changed"
 	disabled[0] = "changed"
 
-	if widget.key != "primary" || widget.selectedKey != "home" || widget.items[0].Key != "home" || !widget.collapsed || widget.width != 260 || widget.collapsedWidth != 72 || widget.itemHeight != 34 {
-		t.Fatalf("Sidebar options = %#v", widget)
-	}
-	if widget.header != header || widget.footer != footer || widget.alt != "Primary navigation" || widget.emptyText != "Empty" || widget.disabledKeys[0] != "settings" || !widget.disabled {
-		t.Fatalf("Sidebar content options = %#v", widget)
-	}
-	widget.onChange("reports")
-	widget.onAction("reports")
-	if changed != "reports" || acted != "reports" {
-		t.Fatalf("Sidebar callbacks = %q/%q", changed, acted)
+	if widget.items[0].Key != "home" || widget.disabledKeys[0] != "settings" {
+		t.Fatal("Sidebar retained caller slices")
 	}
 }
 

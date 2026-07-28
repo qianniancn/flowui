@@ -9,6 +9,35 @@ import (
 
 type inputStyle = field.Colors
 
+// styleDeclarations follows Button's four-slot protocol:
+// defaults (primary chrome) | variant (secondary chrome) | size (unused) | instance.
+func (i InputWidget) styleDeclarations(activeTheme *theme.Theme) (defaults, variant, size flowstyle.Style) {
+	switch i.variant {
+	case InputSecondary:
+		return flowstyle.Style{}, inputDefaultDeclaration(activeTheme, InputSecondary, i.fullWidth), flowstyle.Style{}
+	default:
+		return inputDefaultDeclaration(activeTheme, InputPrimary, i.fullWidth), flowstyle.Style{}, flowstyle.Style{}
+	}
+}
+
+func (t TextAreaWidget) styleDeclarations(activeTheme *theme.Theme, minHeight unit.Dp) (defaults, variant, size flowstyle.Style) {
+	switch t.variant {
+	case TextAreaSecondary:
+		return flowstyle.Style{}, textAreaDefaultDeclaration(activeTheme, TextAreaSecondary, t.fullWidth, minHeight), flowstyle.Style{}
+	default:
+		return textAreaDefaultDeclaration(activeTheme, TextAreaPrimary, t.fullWidth, minHeight), flowstyle.Style{}, flowstyle.Style{}
+	}
+}
+
+func (g InputGroupWidget) styleDeclarations(activeTheme *theme.Theme, minHeight unit.Dp) (defaults, variant, size flowstyle.Style) {
+	switch g.variant {
+	case InputSecondary:
+		return flowstyle.Style{}, inputGroupDefaultDeclaration(activeTheme, InputSecondary, g.fullWidth, minHeight), flowstyle.Style{}
+	default:
+		return inputGroupDefaultDeclaration(activeTheme, InputPrimary, g.fullWidth, minHeight), flowstyle.Style{}, flowstyle.Style{}
+	}
+}
+
 func inputDefaultDeclaration(activeTheme *theme.Theme, variant InputVariant, fullWidth bool) flowstyle.Style {
 	tokens := activeTheme.Components.Input
 	return field.DefaultDeclaration(activeTheme, variant, field.DeclarationOptions{

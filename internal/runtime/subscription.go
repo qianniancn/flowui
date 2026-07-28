@@ -74,7 +74,8 @@ func (s *subscriptionSet[Msg]) reconcile(
 		s.stop(active, wake)
 	}
 	now := time.Now()
-	stopping := false
+	// Sweep finished or grace-expired stopping entries. Only the same key is
+	// blocked from restarting while still stopping; other keys may start.
 	for key, active := range s.active {
 		if !active.stopping {
 			continue
@@ -84,15 +85,15 @@ func (s *subscriptionSet[Msg]) reconcile(
 				active.timer.Stop()
 			}
 			delete(s.active, key)
-			continue
 		}
-		stopping = true
-	}
-	if stopping {
-		return
 	}
 	for _, subscription := range desired {
-		if _, running := s.active[subscription.Key]; running || root.Err() != nil {
+		if root.Err() != nil {
+			return
+		}
+		if active, ok := s.active[subscription.Key]; ok {
+			// Running or still in stop grace for this key — do not start another.
+			_ = active
 			continue
 		}
 		if s.active == nil {

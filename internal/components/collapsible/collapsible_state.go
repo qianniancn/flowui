@@ -5,6 +5,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
 )
@@ -14,6 +15,8 @@ const stateSlotCollapsible = "collapsible"
 type collapsibleItemState struct {
 	clickable  widget.Clickable
 	keyFilters stateutil.KeyFilterCache
+	disclosure disclosure.Binding[bool]
+	expanded   bool // cached effective expanded, updated by isExpanded/requestExpanded
 }
 
 type collapsibleState struct {
@@ -21,6 +24,31 @@ type collapsibleState struct {
 	items      map[string]*collapsibleItemState
 	frameItems map[string]struct{}
 	keyFilters []event.Filter
+}
+
+// collapsibleDisclosureCfg builds a disclosure.Config from the widget's expanded-state fields.
+func collapsibleDisclosureCfg(widget Widget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasExpanded,
+		Value:      widget.expanded,
+		HasDefault: widget.hasDefaultExpanded,
+		Default:    widget.defaultExpanded,
+		OnChange:   widget.onExpandedChange,
+	}
+}
+
+func (s *collapsibleItemState) isExpanded(widget Widget) bool {
+	s.expanded = s.disclosure.Current(collapsibleDisclosureCfg(widget))
+	return s.expanded
+}
+
+func (s *collapsibleItemState) bind(widget Widget) {
+	s.disclosure.Bind(collapsibleDisclosureCfg(widget))
+}
+
+func (s *collapsibleItemState) requestExpanded(widget Widget, expanded bool) bool {
+	s.expanded, _ = s.disclosure.Request(collapsibleDisclosureCfg(widget), expanded)
+	return s.expanded
 }
 
 func collapsibleStateFor(ctx *frame.Context, key string) *collapsibleState {

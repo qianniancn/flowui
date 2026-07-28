@@ -2,6 +2,8 @@ package colorpicker
 
 import (
 	"image"
+	"image/color"
+	"slices"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -90,10 +92,13 @@ func (picker ColorPickerWidget) layoutPopover(ctx *frame.Context, gtx layout.Con
 		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
 			contentInteractive := interactive && pickerState.open && gtx.Enabled()
 			if contentInteractive {
-				pickerState.handleOverlayEvents(ctx, gtx)
+				pickerState.handleOverlayEvents(ctx, gtx, picker.historySize, picker.showHistory)
 				contentInteractive = pickerState.open
 			}
 			if contentInteractive && pickerState.escapePressed(gtx) {
+				if picker.showHistory {
+					pickerState.pushHistory(pickerState.color.syncedColor, picker.historySize)
+				}
 				pickerState.open = false
 				frame.RequestFocus(ctx, &pickerState.trigger)
 				contentInteractive = false
@@ -207,12 +212,16 @@ func (picker ColorPickerWidget) layoutPanelContent(ctx *frame.Context, gtx layou
 	tokens := frame.ActiveTheme(ctx).Components.ColorPicker
 	restore := frame.PushKey(ctx, picker.key)
 	defer restore()
-	var children [5]layout.FlexChild
+	// Continuous drag (area/slider) must not flood recent-history; discrete
+	// commits (hex, RGB, presets, history swatches) record history.
+	dragChange := picker.changeHandler(pickerState, false)
+	commitChange := picker.changeHandler(pickerState, true)
+	var children [8]layout.FlexChild
 	count := 0
 	children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return ColorArea("area", picker.value).
 			withColorState(&pickerState.color).
-			OnChange(picker.onChange).
+			OnChange(dragChange).
 			Disabled(picker.disabled).
 			Layout(ctx, gtx)
 	})
@@ -220,7 +229,7 @@ func (picker ColorPickerWidget) layoutPanelContent(ctx *frame.Context, gtx layou
 	children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return ColorSlider("hue", picker.value, ColorChannelHue).
 			withColorState(&pickerState.color).
-			OnChange(picker.onChange).
+			OnChange(dragChange).
 			Disabled(picker.disabled).
 			Layout(ctx, gtx)
 	})
@@ -229,19 +238,15 @@ func (picker ColorPickerWidget) layoutPanelContent(ctx *frame.Context, gtx layou
 		children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return ColorSlider("alpha", picker.value, ColorChannelAlpha).
 				withColorState(&pickerState.color).
-				OnChange(picker.onChange).
+				OnChange(dragChange).
 				Disabled(picker.disabled).
 				Layout(ctx, gtx)
 		})
 		count++
 	}
-	if len(picker.presets) > 0 {
+	if picker.showRGB {
 		children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return ColorSwatchPicker("presets", picker.value, picker.presets).
-				Size(ColorSwatchExtraSmall).
-				OnChange(picker.onChange).
-				Disabled(picker.disabled).
-				Layout(ctx, gtx)
+			return picker.layoutRGBChannels(ctx, gtx, pickerState, commitChange)
 		})
 		count++
 	}
@@ -251,17 +256,147 @@ func (picker ColorPickerWidget) layoutPanelContent(ctx *frame.Context, gtx layou
 				Alpha(picker.alpha).
 				Swatch(true).
 				Variant(input.InputSecondary).
-				OnChange(picker.onChange).
+				OnChange(commitChange).
+				Disabled(picker.disabled).
+				Layout(ctx, gtx)
+		})
+		count++
+	}
+	if len(picker.presets) > 0 {
+		children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return ColorSwatchPicker("presets", picker.value, picker.presets).
+				Size(ColorSwatchExtraSmall).
+				OnChange(commitChange).
 				Disabled(picker.disabled).
 				Layout(ctx, gtx)
 		})
 		count++
 	}
 	gap := tokens.ContentGap
-	if picker.alpha || picker.showField || len(picker.presets) > 0 {
+	if picker.alpha || picker.showField || picker.showRGB || len(picker.presets) > 0 || picker.showHistory {
 		gap = tokens.CompactContentGap
 	}
+	history := historyWithoutPresets(pickerState.history, picker.presets)
+	if picker.showHistory && len(history) > 0 {
+		children[count] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return ColorSwatchPicker("history", picker.value, history).
+				Size(ColorSwatchExtraSmall).
+				OnChange(commitChange).
+				Disabled(picker.disabled).
+				Layout(ctx, gtx)
+		})
+		count++
+	}
 	return layout.Flex{Axis: layout.Vertical, Gap: gtx.Dp(gap)}.Layout(gtx, children[:count]...)
+}
+
+func historyWithoutPresets(history, presets []color.NRGBA) []color.NRGBA {
+	if len(history) == 0 || len(presets) == 0 {
+		return history
+	}
+	filtered := make([]color.NRGBA, 0, len(history))
+	for _, recent := range history {
+		preset := slices.Contains(presets, recent)
+		if !preset {
+			filtered = append(filtered, recent)
+		}
+	}
+	return filtered
+}
+
+func (picker ColorPickerWidget) layoutRGBChannels(ctx *frame.Context, gtx layout.Context, pickerState *colorPickerState, onChange func(color.NRGBA)) layout.Dimensions {
+	value := pickerState.color.syncedColor
+	if !pickerState.color.ready {
+		value = picker.value
+	}
+	type channelSpec struct {
+		key   string
+		label string
+		get   func(color.NRGBA) byte
+		set   func(color.NRGBA, byte) color.NRGBA
+	}
+	channels := []channelSpec{
+		{"r", "R", func(c color.NRGBA) byte { return c.R }, func(c color.NRGBA, v byte) color.NRGBA { c.R = v; return c }},
+		{"g", "G", func(c color.NRGBA) byte { return c.G }, func(c color.NRGBA, v byte) color.NRGBA { c.G = v; return c }},
+		{"b", "B", func(c color.NRGBA) byte { return c.B }, func(c color.NRGBA, v byte) color.NRGBA { c.B = v; return c }},
+	}
+	if picker.alpha {
+		channels = append(channels, channelSpec{
+			"a", "A",
+			func(c color.NRGBA) byte { return c.A },
+			func(c color.NRGBA, v byte) color.NRGBA { c.A = v; return c },
+		})
+	}
+	children := make([]layout.FlexChild, 0, len(channels))
+	for _, channel := range channels {
+		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return picker.layoutChannelField(ctx, gtx, channel.key, channel.label, channel.get(value), func(next byte) {
+				onChange(channel.set(value, next))
+			})
+		}))
+	}
+	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Gap: gtx.Dp(8)}.Layout(gtx, children...)
+}
+
+func (picker ColorPickerWidget) layoutChannelField(ctx *frame.Context, gtx layout.Context, key, label string, value byte, onChange func(byte)) layout.Dimensions {
+	restore := frame.PushKey(ctx, key)
+	defer restore()
+	control := input.Input("value", itoaChannel(value)).
+		Placeholder("0").
+		Label(label).
+		Variant(input.InputSecondary).
+		Disabled(picker.disabled).
+		OnChange(func(text string) {
+			if parsed, ok := parseChannel(text); ok {
+				onChange(parsed)
+			}
+		})
+	return control.Layout(ctx, gtx)
+}
+
+func itoaChannel(value byte) string {
+	if value == 0 {
+		return "0"
+	}
+	var buf [3]byte
+	i := len(buf)
+	for value > 0 {
+		i--
+		buf[i] = byte('0' + value%10)
+		value /= 10
+	}
+	return string(buf[i:])
+}
+
+func parseChannel(text string) (byte, bool) {
+	text = trimSpaceASCII(text)
+	// Incomplete input (empty or still typing) must not commit a value, or
+	// clearing the field while typing "128" would snap to 0 mid-edit.
+	if text == "" {
+		return 0, false
+	}
+	var n int
+	for _, ch := range text {
+		if ch < '0' || ch > '9' {
+			return 0, false
+		}
+		n = n*10 + int(ch-'0')
+		if n > 255 {
+			return 0, false
+		}
+	}
+	return byte(n), true
+}
+
+func trimSpaceASCII(value string) string {
+	start, end := 0, len(value)
+	for start < end && (value[start] == ' ' || value[start] == '\t') {
+		start++
+	}
+	for end > start && (value[end-1] == ' ' || value[end-1] == '\t') {
+		end--
+	}
+	return value[start:end]
 }
 
 func addColorControlInput(gtx layout.Context, tag event.Tag, size image.Point, enabled, area bool, label, description string) {

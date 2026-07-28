@@ -20,13 +20,13 @@ func View(_ *ui.Context, _ struct{}, _ ui.Send[struct{}]) ui.Widget {
 					ui.Text("MONOSPACED STATUS OUTPUT").Typeface("monospace").Size(13),
 				).Gap(8)),
 				section("Truncation", ui.Column(
-					ui.Box(ui.Text(longTitle).MaxLines(1)).Width(360),
-					ui.Box(ui.Text(paragraph).MaxLines(2).Wrap(ui.TextWrapWords).LineHeight(21)).Width(360),
+					ui.Box(ui.Text(longTitle).MaxLines(1)).Style(ui.Width(360)),
+					ui.Box(ui.Text(paragraph).MaxLines(2).Wrap(ui.TextWrapWords).LineHeight(21)).Style(ui.Width(360)),
 				).Gap(10)),
 				section("Alignment", ui.Column(
-					ui.Box(ui.Text("Start").Align(ui.TextAlignStart)).Width(360),
-					ui.Box(ui.Text("Center").Align(ui.TextAlignCenter)).Width(360),
-					ui.Box(ui.Text("End").Align(ui.TextAlignEnd)).Width(360),
+					ui.Box(ui.Text("Start").Align(ui.TextAlignStart)).Style(ui.Width(360)),
+					ui.Box(ui.Text("Center").Align(ui.TextAlignCenter)).Style(ui.Width(360)),
+					ui.Box(ui.Text("End").Align(ui.TextAlignEnd)).Style(ui.Width(360)),
 				).Gap(6)),
 				section("Selectable", ui.Surface(
 					ui.Box(
@@ -35,10 +35,10 @@ func View(_ *ui.Context, _ struct{}, _ ui.Send[struct{}]) ui.Widget {
 							Size(14).
 							LineHeight(22).
 							MaxLines(5),
-					).FillWidth().Padding(16),
+					).Style(ui.FillWidth().Padding(16)),
 				).Variant(ui.SurfaceSecondary).Style(ui.Radius(8))),
 			).Gap(18),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 

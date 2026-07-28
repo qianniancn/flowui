@@ -46,7 +46,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 					).Gap(12).AlignMiddle(),
 				),
 			).Gap(20),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 

@@ -76,7 +76,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 
 	content := ui.Column(
 		ui.Surface(
-			ui.Box(applicationMenubar(commands)).Padding(4),
+			ui.Box(applicationMenubar(commands)).Style(ui.Padding(4)),
 		).Variant(ui.SurfaceSecondary),
 		ui.Row(
 			ui.Toolbar(
@@ -102,14 +102,14 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Text("Untitled document").Size(14),
 					preview,
 				).Gap(12),
-			).FillWidth().Padding(24),
+			).Style(ui.FillWidth()).Style(ui.Padding(24)),
 		).Variant(ui.SurfaceSecondary).Style(ui.Radius(8)),
 		ui.Text(status).Size(13),
 	).Gap(16)
 
 	return ui.CommandScope(
 		commands.all,
-		ui.Center(ui.Box(content).FillWidth().MaxWidth(720).Padding(24)),
+		ui.Center(ui.Box(content).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24))),
 	)
 }
 

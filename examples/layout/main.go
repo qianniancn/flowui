@@ -24,11 +24,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	for i := 1; i <= 8; i++ {
 		tags = append(tags,
 			ui.Box(ui.Text(fmt.Sprintf("Tag %d", i))).
-				PaddingTop(6).
-				PaddingRight(10).
-				PaddingBottom(6).
-				PaddingLeft(10).
-				Margin(2),
+				Style(ui.PaddingTop(6).PaddingRight(10).PaddingBottom(6).PaddingLeft(10).Margin(2)),
 		)
 	}
 
@@ -40,7 +36,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					ui.Row(
 						ui.Text("Overview").Size(18),
-						ui.Box(ui.Separator()).Height(24),
+						ui.Box(ui.Separator()).Style(ui.Height(24)),
 						ui.Text("Responsive cards").Size(18),
 					).Gap(12).AlignMiddle(),
 					ui.AutoGrid(160, cards...).Gap(12),
@@ -49,24 +45,24 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 							ui.Stack(
 								ui.Stacked(
 									ui.Box(ui.Text("Aspect preview")).
-										FillWidth().
-										FillHeight().
+										Style(ui.FillWidth().
+											FillHeight()).
 										Align(ui.AlignCenter),
 								),
 								ui.Overlay(
 									ui.Box(ui.Text("Overlay")).
-										PaddingTop(6).
-										PaddingRight(10).
-										PaddingBottom(6).
-										PaddingLeft(10),
+										Style(ui.PaddingTop(6).
+											PaddingRight(10).
+											PaddingBottom(6).
+											PaddingLeft(10)),
 								).Align(ui.AlignTopEnd),
 							),
 						),
-					).Clip(),
+					),
 					ui.Wrap(tags...).Gap(8).AlignMiddle(),
 				).Gap(16),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
@@ -76,7 +72,7 @@ func statCard(label, value string) ui.Widget {
 			ui.Text(label).Size(14),
 			ui.Text(value).Size(28),
 		).Gap(6),
-	).FillWidth().Padding(16)
+	).Style(ui.FillWidth().Padding(16))
 }
 
 func main() {

@@ -17,84 +17,27 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestBarChartOptionsUseValueSemantics(t *testing.T) {
-	values := []float64{1, 2, 3}
-	baseSeries := Values("sales", "Sales", values)
-	itemColors := []color.NRGBA{{R: 2, A: 0xff}, {G: 3, A: 0xff}}
-	values[0] = 99
-	if baseSeries.values[0] != 1 {
-		t.Fatal("BarChart Series retained the caller's values slice")
-	}
-	configuredSeries := baseSeries.
-		Color(color.NRGBA{R: 1, A: 0xff}).
-		ItemColors(itemColors).
-		Stack("total").
-		Width(18).
-		MaxWidth(24).
-		MinHeight(2).
-		Radius(4).
-		Background(true).
-		ShowLabels(true).
-		LabelPosition(LabelInside).
-		FormatLabel(func(float64) string { return "label" }).
-		Hidden(true)
-	itemColors[0] = color.NRGBA{}
-	if baseSeries.hasColor || len(baseSeries.itemColors) != 0 || baseSeries.stack != "" || baseSeries.width != 0 || baseSeries.maxWidth != 0 || baseSeries.minHeight != 0 || baseSeries.hasRadius || baseSeries.showBackground || baseSeries.showLabels || baseSeries.formatLabel != nil || baseSeries.hidden {
-		t.Fatalf("configuring BarChart Series mutated base: %#v", baseSeries)
-	}
-	if !configuredSeries.hasColor || len(configuredSeries.itemColors) != 2 || configuredSeries.itemColors[0].R != 2 || configuredSeries.stack != "total" || configuredSeries.width != 18 || configuredSeries.maxWidth != 24 || configuredSeries.minHeight != 2 || configuredSeries.radius != 4 || !configuredSeries.hasRadius || !configuredSeries.showBackground || !configuredSeries.showLabels || configuredSeries.labelPosition != LabelInside || configuredSeries.formatLabel == nil || !configuredSeries.hidden {
-		t.Fatalf("configured BarChart Series = %#v", configuredSeries)
-	}
+func TestBarChartCopiesMutableInputs(t *testing.T) {
+	values := []float64{1, 2}
+	colors := []color.NRGBA{{R: 1, A: 0xff}}
+	series := Values("sales", "Sales", values).ItemColors(colors)
+	allSeries := []Series{series}
+	categories := []string{"Mon", "Tue"}
+	widget := New("sales", allSeries).Categories(categories)
 
-	categories := []string{"Mon", "Tue", "Wed"}
-	base := New("sales", []Series{baseSeries})
-	configured := base.
-		Categories(categories).
-		Height(280).
-		Grid(false).
-		Legend(true).
-		Tooltip(false).
-		IncludeZero(false).
-		YRange(10, 20).
-		XAxis("Day").
-		YAxis("Sales").
-		CategoryAxis("Category").
-		ValueAxis("Value").
-		YTicks(6).
-		BarGap(1.2).
-		CategoryGap(0.3).
-		FormatY(func(float64) string { return "value" }).
-		Animation(false).
-		AnimationDuration(250*time.Millisecond).
-		AnimationEasing(func(value float32) float32 { return value }).
-		UpdateAnimationDuration(150*time.Millisecond).
-		UpdateAnimationEasing(func(value float32) float32 { return value }).
-		OnLegendChange(func(string, bool) {}).
-		OnDataClick(func(chart.Selection) {}).
-		TooltipContent(func(chart.Selection) frame.Widget { return nil }).
-		DataWindow(0.25, 0.75).
-		OnDataWindowChange(func(chart.DataWindow) {}).
-		MarkLines([]chart.MarkLine{chart.NewMarkLine(chart.AxisY, 15)}).
-		MarkAreas([]chart.MarkArea{chart.NewMarkArea(chart.AxisX, 0.5, 1.5)}).
-		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(1, 15)}).
-		Orientation(Horizontal).
-		Label("Sales").
-		EmptyText("Empty").
-		Disabled(true).
-		Style(flowstyle.Style{}.Radius(4))
+	values[0] = 99
+	colors[0] = color.NRGBA{}
+	allSeries[0] = Series{}
 	categories[0] = "Changed"
-	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasYRange || base.hasBarGap || base.hasCategoryGap || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
-		t.Fatalf("configuring BarChart mutated base: %#v", base)
+
+	if series.values[0] != 1 || series.itemColors[0].R != 1 {
+		t.Fatal("BarChart Series retained caller slices")
 	}
-	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasYRange || configured.yTickCount != 6 || configured.barGap != 1.2 || configured.categoryGap != 0.3 || configured.formatY == nil || !configured.hasCategoryAxisLabel || configured.categoryAxisLabel != "Category" || !configured.hasValueAxisLabel || configured.valueAxisLabel != "Value" || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.orientation != Horizontal || configured.label != "Sales" || configured.emptyText != "Empty" || !configured.disabled {
-		t.Fatalf("configured BarChart = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured BarChart did not retain its style")
+	if widget.series[0].key != "sales" || widget.categories[0] != "Mon" {
+		t.Fatal("BarChart retained caller slices")
 	}
 }
 

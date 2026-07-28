@@ -17,7 +17,7 @@ func (m Widget) Runtime(ctx *frame.Context, owner, role string, onRequestClose f
 }
 
 func (r Runtime) Layout(ctx *frame.Context, gtx layout.Context, interactive bool) layout.Dimensions {
-	return r.widget.layout(ctx, gtx, r.state, interactive)
+	return r.widget.layoutRoot(ctx, gtx, r.state, interactive)
 }
 
 // RootNavigation hands horizontal navigation at the root menu boundary to its

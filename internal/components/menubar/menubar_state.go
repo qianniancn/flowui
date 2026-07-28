@@ -11,6 +11,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	stateutil "github.com/qianniancn/FlowUI/internal/state"
@@ -18,46 +20,36 @@ import (
 )
 
 const (
-	stateSlotMenubar   = "menubar"
-	menubarExclusive   = "menubar"
-	menubarTypeTimeout = 500 * time.Millisecond
-	menubarEnter       = 150 * time.Millisecond
-	menubarExit        = 100 * time.Millisecond
+	stateSlotMenubar = "menubar"
+	menubarExclusive = "menubar"
+	menubarEnter     = 150 * time.Millisecond
+	menubarExit      = 100 * time.Millisecond
 )
 
 type menubarState struct {
-	key            string
-	triggers       map[string]*menubarTriggerState
-	frameTriggers  map[string]struct{}
-	itemKeys       map[string]struct{}
-	keyFilters     []event.Filter
-	openKey        string
-	initialized    bool
-	wasOpen        bool
-	panelKey       string
-	focusPanelKey  string
-	focusLast      bool
-	focusVisible   bool
-	hoveredKey     string
-	typeaheadText  string
-	typeaheadAt    time.Time
-	typeaheadReady bool
-	dismiss        [16]overlay.ClickArea
-	dialog         overlay.ClickArea
-	transition     animation.FloatTransition
-	binding        menubarBinding
+	key           string
+	triggers      map[string]*menubarTriggerState
+	frameTriggers map[string]struct{}
+	itemKeys      map[string]struct{}
+	keyFilters    []event.Filter
+	openKey       string // cached effective open key, updated by current/requestOpen
+	wasOpen       bool
+	panelKey      string
+	focusPanelKey string
+	focusLast     bool
+	focusVisible  bool
+	hoveredKey    string
+	typeahead     nav.Typeahead
+	dismiss       [16]overlay.ClickArea
+	dialog        overlay.ClickArea
+	transition    animation.FloatTransition
+	disclosure    disclosure.Binding[string]
 }
 
 type menubarTriggerState struct {
 	clickable  widget.Clickable
 	focus      stateutil.FocusAnimation
 	keyFilters stateutil.KeyFilterCache
-}
-
-type menubarBinding struct {
-	controlled   bool
-	openKey      string
-	onOpenChange func(string)
 }
 
 func menubarStateFor(ctx *frame.Context, key string) *menubarState {
@@ -69,12 +61,19 @@ func menubarStateFor(ctx *frame.Context, key string) *menubarState {
 	return value
 }
 
-func (s *menubarState) bind(widget Widget) {
-	s.binding = menubarBinding{
-		controlled:   widget.hasOpenKey,
-		openKey:      widget.openKey,
-		onOpenChange: widget.onOpenChange,
+// menubarDisclosureCfg builds a disclosure.Config from the widget's open-state fields.
+func menubarDisclosureCfg(widget Widget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasOpenKey,
+		Value:      widget.openKey,
+		HasDefault: widget.hasDefaultOpenKey,
+		Default:    widget.defaultOpenKey,
+		OnChange:   widget.onOpenChange,
 	}
+}
+
+func (s *menubarState) bind(widget Widget) {
+	s.disclosure.Bind(menubarDisclosureCfg(widget))
 }
 
 func (s *menubarState) beginFrame(items []Item) {
@@ -108,19 +107,16 @@ func (s *menubarState) trigger(key string) *menubarTriggerState {
 }
 
 func (s *menubarState) current(widget Widget) string {
-	if !s.initialized {
-		if widget.hasDefaultOpenKey {
-			s.openKey = widget.defaultOpenKey
-		}
-		s.initialized = true
-	}
-	key := s.openKey
-	if widget.hasOpenKey {
-		key = widget.openKey
-	}
+	key := s.disclosure.Current(menubarDisclosureCfg(widget))
 	if widget.disabled || !widget.itemEnabled(key) {
-		return ""
+		// If the current open key is now disabled, request close to clear it.
+		if key != "" {
+			s.openKey, _ = s.disclosure.Request(menubarDisclosureCfg(widget), "")
+			return s.openKey
+		}
+		key = ""
 	}
+	s.openKey = key
 	return key
 }
 
@@ -131,22 +127,7 @@ func (s *menubarState) requestOpen(ctx *frame.Context, widget Widget, key string
 	if key != "" {
 		frame.ActivateExclusive(ctx, menubarExclusive, s.key)
 	}
-	current := s.current(widget)
-	if widget.hasOpenKey {
-		if widget.openKey != key && widget.onOpenChange != nil {
-			widget.onOpenChange(key)
-		}
-		if current == "" {
-			frame.ReleaseExclusive(ctx, menubarExclusive, s.key)
-		}
-		return current
-	}
-	if s.openKey != key {
-		s.openKey = key
-		if widget.onOpenChange != nil {
-			widget.onOpenChange(key)
-		}
-	}
+	s.openKey, _ = s.disclosure.Request(menubarDisclosureCfg(widget), key)
 	if s.openKey == "" {
 		frame.ReleaseExclusive(ctx, menubarExclusive, s.key)
 	}
@@ -154,17 +135,8 @@ func (s *menubarState) requestOpen(ctx *frame.Context, widget Widget, key string
 }
 
 func (s *menubarState) closeForPeer() {
-	if s.binding.controlled {
-		if s.binding.openKey != "" && s.binding.onOpenChange != nil {
-			s.binding.onOpenChange("")
-		}
-		return
-	}
-	if s.openKey != "" {
+	if s.disclosure.PeerClose("") {
 		s.openKey = ""
-		if s.binding.onOpenChange != nil {
-			s.binding.onOpenChange("")
-		}
 	}
 }
 
@@ -243,7 +215,70 @@ func (s *menubarState) updateInteractions(ctx *frame.Context, gtx layout.Context
 	}
 	s.hoveredKey = hoveredKey
 
+	s.updateGlobalKeys(ctx, gtx, widget, openKey)
 	s.updateTriggerKeys(ctx, gtx, widget, openKey)
+}
+
+// updateGlobalKeys handles desktop menubar accelerators that are not
+// scoped to a focused trigger: F10 focuses the bar; Alt+letter opens AccessKey menus.
+func (s *menubarState) updateGlobalKeys(ctx *frame.Context, gtx layout.Context, widget Widget, openKey string) {
+	if widget.disabled || !gtx.Enabled() {
+		return
+	}
+	filters := []event.Filter{
+		key.Filter{Name: key.NameF10, Optional: key.ModAlt},
+	}
+	for _, item := range widget.items {
+		if widget.itemDisabled(item) || item.accessKey == 0 {
+			continue
+		}
+		name := key.Name(strings.ToUpper(string(item.accessKey)))
+		filters = append(filters, key.Filter{
+			Name:     name,
+			Required: key.ModAlt,
+		})
+	}
+	for {
+		e, ok := gtx.Event(filters...)
+		if !ok {
+			return
+		}
+		event, ok := e.(key.Event)
+		if !ok || event.State != key.Press {
+			continue
+		}
+		if event.Name == key.NameF10 {
+			first := widget.firstEnabled()
+			if first < 0 {
+				continue
+			}
+			if openKey != "" {
+				s.requestOpen(ctx, widget, "")
+				s.focusPanelKey = ""
+			}
+			s.focusMovedTrigger(ctx, widget, first, "")
+			continue
+		}
+		if event.Modifiers&key.ModAlt == 0 || event.Modifiers&^key.ModAlt != 0 {
+			continue
+		}
+		text := nav.Printable(event.Name)
+		if text == "" {
+			continue
+		}
+		letter := unicode.ToLower(rune(text[0]))
+		for index, item := range widget.items {
+			if widget.itemDisabled(item) || item.accessKey == 0 {
+				continue
+			}
+			if item.accessKey == letter {
+				// Focus without reusing the previous openKey, then open this item.
+				s.focusMovedTrigger(ctx, widget, index, "")
+				s.openFromTrigger(ctx, widget, index, false)
+				break
+			}
+		}
+	}
 }
 
 func (s *menubarState) updateTriggerKeys(ctx *frame.Context, gtx layout.Context, widget Widget, openKey string) {
@@ -330,14 +365,14 @@ func (s *menubarState) updateTriggerKeys(ctx *frame.Context, gtx layout.Context,
 			if event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
 			}
-			text := menubarKeyText(event.Name)
+			text := nav.Printable(event.Name)
 			if text == "" {
 				continue
 			}
-			query := s.appendTypeahead(gtx.Now, text)
+			query := s.typeahead.Append(gtx.Now, text)
 			next := widget.typeaheadIndex(current, query)
 			if next < 0 && query != text {
-				s.typeaheadText = text
+				s.typeahead.Set(text)
 				next = widget.typeaheadIndex(current, text)
 			}
 			if next >= 0 {
@@ -388,22 +423,4 @@ func (s *menubarState) focusTrigger(ctx *frame.Context, key string, visible bool
 		return
 	}
 	frame.RequestFocusVisible(ctx, &trigger.clickable, visible)
-}
-
-func (s *menubarState) appendTypeahead(now time.Time, text string) string {
-	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > menubarTypeTimeout {
-		s.typeaheadText = ""
-	}
-	s.typeaheadText += text
-	s.typeaheadAt = now
-	s.typeaheadReady = true
-	return s.typeaheadText
-}
-
-func menubarKeyText(name key.Name) string {
-	runes := []rune(string(name))
-	if len(runes) != 1 || unicode.IsControl(runes[0]) {
-		return ""
-	}
-	return strings.ToLower(string(runes[0]))
 }

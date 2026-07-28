@@ -235,13 +235,17 @@ func (m Widget) Style(value flowstyle.Style) Widget {
 
 func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := m.stateFor(ctx)
+	return m.layoutRoot(ctx, gtx, state, !m.disabled)
+}
+
+func (m Widget) layoutRoot(ctx *frame.Context, gtx layout.Context, state *menuState, interactive bool) layout.Dimensions {
 	hovered, pressed, focused := false, false, false
 	for _, item := range state.items {
 		hovered = hovered || item.clickable.Hovered()
 		pressed = pressed || item.clickable.Pressed()
 		focused = focused || gtx.Focused(&item.clickable)
 	}
-	root := flowstyle.Join(menuRootDeclaration(frame.ActiveTheme(ctx)), m.customStyle)
+	root := flowstyle.Join(menuRootDeclaration(frame.ActiveTheme(ctx), m.themeTokens(ctx)), m.customStyle)
 	return layoutui.LayoutStyled(ctx, gtx, state.key, flowstyle.StyleState{
 		Hovered:  hovered,
 		Pressed:  pressed,
@@ -250,7 +254,7 @@ func (m Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 		Selected: m.selectedKey != "" || len(m.selectedKeys) > 0,
 		Open:     state.openSubmenu != "",
 	}, root, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-		return m.layout(ctx, gtx, state, !m.disabled)
+		return m.layout(ctx, gtx, state, interactive)
 	}))
 }
 

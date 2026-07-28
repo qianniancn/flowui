@@ -41,7 +41,7 @@ func View(_ *ui.Context, model Model, _ ui.Send[Msg]) ui.Widget {
 					ui.Image(model.Landscape).Fit(ui.ImageCover).Width(240).Height(96).Radius(16).Opacity(0.55).Alt("Translucent landscape"),
 				),
 			).Gap(20),
-		).FillWidth().MaxWidth(620).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(620).Padding(24)),
 	)
 }
 

@@ -12,7 +12,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-type closeButtonStyle struct {
+type closeButtonWidget struct {
 	background   color.NRGBA
 	foreground   color.NRGBA
 	radius       unit.Dp
@@ -33,6 +33,8 @@ func closeButtonPressedScale(pressedScale float32) float32 {
 	return pressedScale
 }
 
+// resolveStyle uses the four-slot protocol. CloseButton has no variant/size
+// layers, so those slots stay empty (defaults + instance only).
 func (b CloseButtonWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState) closeButtonResolvedStyle {
 	activeTheme := frame.ActiveTheme(ctx)
 	defaults := closeButtonDefaultDeclaration(activeTheme)
@@ -42,9 +44,9 @@ func (b CloseButtonWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, 
 }
 
 func closeButtonDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
-	base := closeButtonStyleFor(activeTheme, false, false)
-	hovered := closeButtonStyleFor(activeTheme, true, false)
-	disabled := closeButtonStyleFor(activeTheme, false, true)
+	base := closeButtonWidgetFor(activeTheme, false, false)
+	hovered := closeButtonWidgetFor(activeTheme, true, false)
+	disabled := closeButtonWidgetFor(activeTheme, false, true)
 	component := activeTheme.Components.CloseButton
 	return flowstyle.Style{}.
 		Width(component.Size).
@@ -79,7 +81,7 @@ func closeButtonDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
 
 }
 
-func closeButtonStyleFor(activeTheme *theme.Theme, hovered, disabled bool) closeButtonStyle {
+func closeButtonWidgetFor(activeTheme *theme.Theme, hovered, disabled bool) closeButtonWidget {
 	component := activeTheme.Components.CloseButton
 	background := activeTheme.Palette.SurfaceRaised
 	if hovered && !disabled {
@@ -90,7 +92,7 @@ func closeButtonStyleFor(activeTheme *theme.Theme, hovered, disabled bool) close
 		background = activeTheme.DisabledColor(background)
 		foreground = activeTheme.DisabledColor(foreground)
 	}
-	return closeButtonStyle{
+	return closeButtonWidget{
 		background:   background,
 		foreground:   foreground,
 		radius:       component.Radius,

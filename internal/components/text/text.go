@@ -279,7 +279,7 @@ func (t Widget) labelStyle(ctx *frame.Context, resolved flowstyle.ResolvedStyle)
 	if resolved.Text != nil && resolved.Text.FontSize != nil {
 		size = *resolved.Text.FontSize
 	}
-	label := material.Label(frame.ActiveTheme(ctx).Material, size, t.text)
+	label := material.Label(frame.ActiveMaterial(ctx), size, t.text)
 	label.SelectionColor = frame.ActiveTheme(ctx).Palette.Selection
 	if resolved.Text != nil {
 		if color, ok := styleColor(resolved.Text.Color); ok {

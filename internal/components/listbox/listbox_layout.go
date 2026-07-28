@@ -119,7 +119,7 @@ func (l ListBoxWidget) layoutItem(ctx *frame.Context, gtx layout.Context, styleK
 		gtx = gtx.Disabled()
 	} else {
 		for itemState.Clickable.Clicked(gtx) {
-			l.activate(item.Key)
+			l.activate(listState, item.Key)
 			frame.RequestFocusVisible(ctx, &itemState.Clickable, presses.ClickFocusVisible(itemState.Clickable.History()))
 		}
 		frame.FocusOnPress(ctx, &itemState.Clickable, itemState.Clickable.History(), presses.Active())

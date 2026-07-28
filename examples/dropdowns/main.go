@@ -56,7 +56,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					).Gap(12).LineGap(12),
 				),
 			).Gap(18),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
@@ -76,9 +76,7 @@ func keyboardShortcut(key string, shift bool) ui.Widget {
 	}
 	children = append(children, ui.Text(key).Size(14).Weight(font.Medium))
 	return ui.Box(ui.Row(children...).Gap(2).AlignMiddle()).
-		Height(24).
-		PaddingLeft(8).
-		PaddingRight(8).
+		Style(ui.Height(24).PaddingLeft(8).PaddingRight(8)).
 		Align(ui.AlignCenter)
 }
 
@@ -99,7 +97,7 @@ func richDropdown(send ui.Send[Msg]) ui.DropdownWidget {
 				ui.Text("Alex Morgan").Size(13),
 				ui.Text("alex@example.com").Size(12),
 			).Gap(2),
-		).Padding(12),
+		).Style(ui.Padding(12)),
 	).OnAction(func(key string) { send(SetAction(key)) })
 }
 

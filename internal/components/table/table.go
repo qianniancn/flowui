@@ -114,6 +114,7 @@ type Widget struct {
 	onSelectionChange  func([]string)
 	onSortChange       func(SortDescriptor)
 	onAction           func(string)
+	onRowActivate      func(string)
 	onColumnResize     func(string, int)
 	onLoadMore         func()
 	rowContextMenu     RowContextMenu
@@ -129,6 +130,7 @@ type Widget struct {
 	gridLines          bool
 	gridLinesSet       bool
 	bordered           bool
+	striped            bool
 	customStyle        flowstyle.Style
 }
 
@@ -239,6 +241,12 @@ func (t Widget) OnSortChange(fn func(SortDescriptor)) Widget {
 	return t
 }
 
+// OnRowActivate reports double-click activation of a row (in addition to selection).
+func (t Widget) OnRowActivate(fn func(string)) Widget {
+	t.onRowActivate = fn
+	return t
+}
+
 func (t Widget) OnAction(fn func(string)) Widget {
 	t.onAction = fn
 	return t
@@ -310,12 +318,22 @@ func (t Widget) Border(visible bool) Widget {
 	return t
 }
 
+// Striped colors even-numbered rows with the active table theme.
+func (t Widget) Striped(visible bool) Widget {
+	t.striped = visible
+	return t
+}
+
 func (t Widget) showsGridLines() bool {
 	return !t.gridLinesSet || t.gridLines
 }
 
 func (t Widget) showsFullGrid() bool {
 	return t.gridLinesSet && t.gridLines
+}
+
+func (t Widget) usesUnifiedFrame() bool {
+	return t.variant == VariantSecondary && (t.bordered || t.showsFullGrid())
 }
 
 func (t Widget) Style(value flowstyle.Style) Widget {
@@ -615,8 +633,12 @@ func (t Widget) consumeRowClicks(gtx layout.Context, stateValue *tableState, row
 		if rowState.clickInInteractiveCell() {
 			continue
 		}
-		if !t.rowDisabled(row) {
-			t.activateWithModifiers(stateValue, row.Key, click.Modifiers)
+		if t.rowDisabled(row) {
+			continue
+		}
+		t.activateWithModifiers(stateValue, row.Key, click.Modifiers)
+		if click.NumClicks >= 2 && t.onRowActivate != nil {
+			t.onRowActivate(row.Key)
 		}
 	}
 }

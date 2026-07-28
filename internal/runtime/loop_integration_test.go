@@ -10,6 +10,7 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 )
@@ -35,6 +36,36 @@ func (w *runtimeTestWindow) Invalidate() {
 	case w.invalidated <- struct{}{}:
 	default:
 	}
+}
+
+// closableRuntimeTestWindow requests DestroyEvent on ActionClose so fatal
+// runtime panics can drain a native-style shutdown path.
+type closableRuntimeTestWindow struct {
+	runtimeTestWindow
+	closes chan struct{}
+}
+
+func newClosableRuntimeTestWindow() *closableRuntimeTestWindow {
+	return &closableRuntimeTestWindow{
+		runtimeTestWindow: runtimeTestWindow{
+			events:      make(chan event.Event),
+			invalidated: make(chan struct{}, 8),
+		},
+		closes: make(chan struct{}, 1),
+	}
+}
+
+func (w *closableRuntimeTestWindow) Perform(actions system.Action) {
+	if actions&system.ActionClose == 0 {
+		return
+	}
+	select {
+	case w.closes <- struct{}{}:
+	default:
+	}
+	go func() {
+		w.events <- app.DestroyEvent{}
+	}()
 }
 
 func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
@@ -72,6 +103,40 @@ func TestLoopCancelsAndWaitsForSubscriptionOnDestroy(t *testing.T) {
 	case <-canceled:
 	default:
 		t.Fatal("loop returned before subscription cleanup completed")
+	}
+}
+
+func TestLoopWithExitReportsFinalModelBeforeDestroy(t *testing.T) {
+	window := newRuntimeTestWindow()
+	result := make(chan error, 1)
+	finalModel := 0
+	exitBeforeDestroy := false
+	go func() {
+		result <- LoopWithExit(
+			window,
+			1,
+			nil,
+			func(model *int, msg int) Cmd[int] {
+				*model += msg
+				return nil
+			},
+			nil,
+			nil,
+			func() { exitBeforeDestroy = finalModel == 5 },
+			func(_ app.Config, send func(int)) { send(4) },
+			func(layout.Context, int, func(int)) {},
+			func(model int) { finalModel = model },
+		)
+	}()
+
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	window.events <- app.DestroyEvent{}
+	if err := receiveRuntimeTestValue(t, result); err != nil {
+		t.Fatalf("loop returned error: %v", err)
+	}
+	if finalModel != 5 || !exitBeforeDestroy {
+		t.Fatalf("exit model = %d, reported before destroy = %v", finalModel, exitBeforeDestroy)
 	}
 }
 
@@ -228,6 +293,49 @@ func TestLoopReturnsViewPanic(t *testing.T) {
 	var panicErr *RuntimePanicError
 	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseView || len(panicErr.Stack) == 0 {
 		t.Fatalf("view panic = %#v", err)
+	}
+}
+
+func TestLoopRequestsCloseAndDrainsDestroyAfterViewPanic(t *testing.T) {
+	window := newClosableRuntimeTestWindow()
+	destroyed := make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(*int, struct{}) Cmd[struct{}] { return nil }, nil, nil, func() {
+			close(destroyed)
+		}, nil, func(layout.Context, int, func(struct{})) {
+			panic("view broken")
+		})
+	}()
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, window.closes)
+	receiveRuntimeTestValue(t, destroyed)
+	err := receiveRuntimeTestValue(t, result)
+	var panicErr *RuntimePanicError
+	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseView {
+		t.Fatalf("view panic after close = %#v", err)
+	}
+}
+
+func TestLoopRequestsCloseAndDrainsDestroyAfterUpdatePanic(t *testing.T) {
+	window := newClosableRuntimeTestWindow()
+	destroyed := make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		result <- Loop(window, 0, nil, func(*int, struct{}) Cmd[struct{}] {
+			panic("update broken")
+		}, nil, nil, func() {
+			close(destroyed)
+		}, func(_ app.Config, send func(struct{})) { send(struct{}{}) }, func(layout.Context, int, func(struct{})) {})
+	}()
+	window.events <- app.ConfigEvent{}
+	window.events <- runtimeFrameEvent()
+	receiveRuntimeTestValue(t, window.closes)
+	receiveRuntimeTestValue(t, destroyed)
+	err := receiveRuntimeTestValue(t, result)
+	var panicErr *RuntimePanicError
+	if !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseUpdate {
+		t.Fatalf("update panic after close = %#v", err)
 	}
 }
 

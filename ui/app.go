@@ -40,7 +40,8 @@ func RunWithSubscriptions[M any, Msg any](
 }
 
 // Program describes a complete MVU application. Init runs once for each
-// window instance and may return a startup command.
+// native window instance and may return a startup command. RetainModelOnClose
+// keeps the model and skips Init when the same WindowSpec is reopened.
 type Program[M any, Msg any] struct {
 	Init          func() (M, Cmd[Msg])
 	Update        UpdateCmd[M, Msg]
@@ -70,6 +71,7 @@ func runWindowCmd[M any, Msg any](
 	onError func(error),
 	onDestroy func(),
 	onWindowState func(WindowState),
+	onExit func(M),
 ) error {
 	ctx := frame.New(w, theme, language)
 	if onError == nil {
@@ -93,7 +95,7 @@ func runWindowCmd[M any, Msg any](
 			return result
 		}
 	}
-	return runtime.Loop(w, initial, runtimeCmd(initialCmd), func(model *M, msg Msg) runtime.Cmd[Msg] {
+	return runtime.LoopWithExit(w, initial, runtimeCmd(initialCmd), func(model *M, msg Msg) runtime.Cmd[Msg] {
 		return runtimeCmd(update(model, msg))
 	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config, send func(Msg)) {
 		state := frame.UpdateWindowConfig(ctx, config)
@@ -117,7 +119,7 @@ func runWindowCmd[M any, Msg any](
 		frame.LayoutOverlays(ctx, gtx)
 		frame.ApplyFrameCommands(ctx, gtx)
 		frame.EndFrame(ctx)
-	})
+	}, onExit)
 }
 
 func runtimeCmd[Msg any](cmd Cmd[Msg]) runtime.Cmd[Msg] {

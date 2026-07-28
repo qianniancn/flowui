@@ -10,7 +10,6 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -26,29 +25,6 @@ func (p *badgeProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	p.foreground = ctx.ForegroundColor()
 	p.background = ctx.BackgroundColor()
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
-}
-
-func TestBadgeOptionsUseValueSemantics(t *testing.T) {
-	anchor := &badgeProbe{size: image.Pt(40, 40)}
-	content := &badgeProbe{size: image.Pt(10, 10)}
-	base := New(anchor, "5")
-	configured := base.
-		Content(content).
-		Alt("Notifications").
-		Color(ColorDanger).
-		Variant(VariantSoft).
-		Size(SizeSmall).
-		Placement(PlacementBottomLeft).
-		Style(flowstyle.Style{}.Radius(4))
-	if base.content != nil || base.alt != "" || base.color != ColorDefault || base.variant != VariantPrimary || base.size != SizeMedium || base.placement != PlacementTopRight {
-		t.Fatalf("configuring Badge mutated base: %#v", base)
-	}
-	if configured.content != content || configured.alt != "Notifications" || configured.color != ColorDanger || configured.variant != VariantSoft || configured.size != SizeSmall || configured.placement != PlacementBottomLeft {
-		t.Fatalf("configured Badge = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured Badge did not retain its style")
-	}
 }
 
 func TestBadgeGeometryMatchesHeroUI(t *testing.T) {

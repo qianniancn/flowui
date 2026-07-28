@@ -42,6 +42,34 @@ func (s SliderWidget) resolvedValues() sliderValues {
 	return values
 }
 
+func (s SliderWidget) resolvedValuesWithCurrent(lowerValue, upperValue float64) sliderValues {
+	values := sliderValues{
+		minValue:  s.minValue,
+		maxValue:  s.maxValue,
+		step:      s.step,
+		lower:     lowerValue,
+		upper:     upperValue,
+		rangeMode: s.rangeMode,
+	}
+	if !sliderFinite(values.minValue) || !sliderFinite(values.maxValue) || values.maxValue <= values.minValue {
+		values.minValue = 0
+		values.maxValue = 100
+	}
+	if !sliderFinite(values.step) || values.step <= 0 {
+		values.step = 1
+	}
+	values.lower = values.snap(values.lower)
+	if values.rangeMode {
+		values.upper = values.snap(values.upper)
+		if values.lower > values.upper {
+			values.lower, values.upper = values.upper, values.lower
+		}
+	} else {
+		values.upper = values.lower
+	}
+	return values
+}
+
 func (v sliderValues) snap(value float64) float64 {
 	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return v.minValue

@@ -65,26 +65,26 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					section("Variants",
 						ui.Column(
 							ui.Box(combo("language", fieldLanguage, m.Language, "Search language", languages, send)).
-								Width(320),
+								Style(ui.Width(320)),
 							ui.Box(combo("editor", fieldEditor, m.Editor, "Search editor", editors, send).
 								Variant(ui.InputSecondary)).
-								Width(320),
+								Style(ui.Width(320)),
 						).Gap(12),
 					),
 					section("States",
 						ui.Column(
 							ui.Box(combo("runtime", fieldRuntime, m.Runtime, "Required runtime", runtimes, send).
 								Invalid(m.Runtime == "")).
-								Width(320),
+								Style(ui.Width(320)),
 							ui.Box(ui.ComboBox("disabled", "", languages).
 								Hint("Disabled").
 								Disabled(true)).
-								Width(320),
+								Style(ui.Width(320)),
 						).Gap(12),
 					),
 					section("Default selection",
 						ui.Box(combo("animal", fieldAnimal, m.Animal, "Search animal", animals, send)).
-							Width(320),
+							Style(ui.Width(320)),
 					),
 					section("Full width",
 						combo("full-width", fieldLanguage, m.Language, "Full width", languages, send).
@@ -93,7 +93,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 

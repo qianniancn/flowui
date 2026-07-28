@@ -60,7 +60,7 @@ func appBar() ui.Widget {
 			ui.Text("FlowUI Editor").Size(14),
 			ui.Expanded(ui.Spacer(0, 0)),
 		).AlignMiddle().Gap(10),
-	).Padding(8).FillWidth()
+	).Style(ui.Padding(8).FillWidth())
 }
 
 func workspace() ui.Widget {
@@ -80,7 +80,7 @@ func fileExplorer() ui.Widget {
 				ui.Row(ui.Icon(lucide.Braces).Size(14), ui.Text("main.go").Size(13)).AlignMiddle().Gap(7),
 				ui.Row(ui.Icon(lucide.Braces).Size(14), ui.Text("go.mod").Size(13)).AlignMiddle().Gap(7),
 			).Gap(10),
-		).Padding(12).FillWidth().FillHeight(),
+		).Style(ui.Padding(12).FillWidth().FillHeight()),
 	).Variant(ui.SurfaceSecondary)
 }
 
@@ -96,7 +96,7 @@ func editor() ui.Widget {
 				ui.Text("    runApplication()").Size(14),
 				ui.Text("}").Size(14),
 			).Gap(7),
-		).Padding(14).FillWidth().FillHeight(),
+		).Style(ui.Padding(14).FillWidth().FillHeight()),
 	).Variant(ui.SurfaceDefault)
 }
 

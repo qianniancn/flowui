@@ -82,7 +82,7 @@ func (t Widget) layoutEmpty(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	height := min(gtx.Dp(tokens.RowHeight), gtx.Constraints.Max.Y)
 	gtx.Constraints.Min.Y = min(max(gtx.Constraints.Min.Y, height), gtx.Constraints.Max.Y)
 	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(frame.ActiveTheme(ctx).Material, tokens.ItemTextSize, t.emptyText)
+		label := material.Label(frame.ActiveMaterial(ctx), tokens.ItemTextSize, t.emptyText)
 		label.Color = frame.ActiveTheme(ctx).Palette.MutedForeground
 		label.MaxLines = 1
 		return label.Layout(gtx)
@@ -206,7 +206,7 @@ func (t Widget) layoutDragPreview(ctx *frame.Context, gtx layout.Context, label 
 		Top: tokens.DragPreviewPaddingY, Right: tokens.DragPreviewPaddingX,
 		Bottom: tokens.DragPreviewPaddingY, Left: tokens.DragPreviewPaddingX,
 	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		text := material.Label(activeTheme.Material, tokens.ItemTextSize, label)
+		text := material.Label(theme.MaterialOf(activeTheme), tokens.ItemTextSize, label)
 		text.Color = activeTheme.Palette.OverlayForegroundColor()
 		text.Font.Weight = font.Medium
 		text.MaxLines = 1
@@ -359,7 +359,7 @@ func (t Widget) layoutMainContent(ctx *frame.Context, gtx layout.Context, treeSt
 func (t Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, treeStateValue *treeState, item Item, style treeItemStyle) layout.Dimensions {
 	tokens := treeTokensFor(frame.ActiveTheme(ctx), t.size)
 	if treeStateValue.renameKey == item.Key {
-		editor := material.Editor(frame.ActiveTheme(ctx).Material, &treeStateValue.renameEditor, "")
+		editor := material.Editor(frame.ActiveMaterial(ctx), &treeStateValue.renameEditor, "")
 		editor.TextSize = tokens.ItemTextSize
 		editor.Color = style.foreground
 		editor.SelectionColor = frame.ActiveTheme(ctx).Palette.Selection
@@ -368,7 +368,7 @@ func (t Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, treeState
 	}
 	descriptionText := treeItemDescription(item)
 	labelWidget := func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(frame.ActiveTheme(ctx).Material, tokens.ItemTextSize, item.Label)
+		label := material.Label(frame.ActiveMaterial(ctx), tokens.ItemTextSize, item.Label)
 		label.Color = style.foreground
 		label.Font.Weight = font.Medium
 		label.MaxLines = 1
@@ -381,7 +381,7 @@ func (t Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, treeState
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(labelWidget),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			description := material.Label(frame.ActiveTheme(ctx).Material, tokens.ItemDescriptionSize, descriptionText)
+			description := material.Label(frame.ActiveMaterial(ctx), tokens.ItemDescriptionSize, descriptionText)
 			description.Color = style.description
 			if item.ChildrenState == ChildrenError {
 				description.Color = frame.ActiveTheme(ctx).Palette.Danger

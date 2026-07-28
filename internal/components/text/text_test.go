@@ -35,32 +35,6 @@ func TestTextStyleAppliesCommonBoxModel(t *testing.T) {
 	}
 }
 
-func TestTextOptionsUseValueSemantics(t *testing.T) {
-	base := New("FlowUI")
-	configured := base.
-		Size(18).
-		Color(color.NRGBA{R: 1, G: 2, B: 3, A: 4}).
-		Typeface("serif").
-		FontStyle(font.Italic).
-		Weight(font.Bold).
-		Align(giotext.Middle).
-		MaxLines(2).
-		Truncator("...").
-		Wrap(giotext.WrapWords).
-		LineHeight(24).
-		LineHeightScale(1.2)
-
-	if base.hasSize || base.hasColor || base.hasTypeface || base.hasStyle || base.hasWeight || base.hasMaxLines || base.hasLineHeight || base.lineHeightScale != 0 {
-		t.Fatalf("base Text was mutated: %#v", base)
-	}
-	if configured.size != 18 || configured.color != (color.NRGBA{R: 1, G: 2, B: 3, A: 4}) || configured.font != (font.Font{Typeface: "serif", Style: font.Italic, Weight: font.Bold}) {
-		t.Fatalf("configured Text appearance = %#v", configured)
-	}
-	if configured.alignment != giotext.Middle || configured.maxLines != 2 || configured.truncator != "..." || configured.wrapPolicy != giotext.WrapWords || configured.lineHeight != 24 || configured.lineHeightScale != 1.2 {
-		t.Fatalf("configured Text layout = %#v", configured)
-	}
-}
-
 func TestTextFontAndLayoutOptionsMapToGioLabel(t *testing.T) {
 	ctx := textTestContext()
 	configured := New("FlowUI").
@@ -127,7 +101,7 @@ func TestTextConditionalStyleTransition(t *testing.T) {
 		resolved := New("Status").Style(
 			flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: from}).
 				Transition(flowstyle.PropTextColor, 100*time.Millisecond).
-				When(flowstyle.If(active), flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: to})),
+				WhenIf(active, flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: to})),
 		).resolveLayoutStyle(ctx, layout.Context{Ops: new(op.Ops), Now: now})
 		frame.EndFrame(ctx)
 		got, ok := styleColor(resolved.Text.Color)

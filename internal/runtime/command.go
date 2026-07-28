@@ -98,6 +98,12 @@ func (m *latestCommandManager) finish(token latestCommandToken) {
 	defer m.mu.Unlock()
 	current, ok := m.states[token.key]
 	if ok && current.generation == token.generation {
+		// Keep a generation tombstone so older LatestCmd closures cannot start
+		// after a newer generation has finished. Cancel the child before
+		// releasing its cancel function from the state.
+		if current.cancel != nil {
+			current.cancel()
+		}
 		current.cancel = nil
 		m.states[token.key] = current
 	}
@@ -113,6 +119,8 @@ func (m *latestCommandManager) cancel(key string, generation uint64) {
 	if current.cancel != nil {
 		current.cancel()
 	}
+	// Keep a tombstone generation so in-flight sends from older tokens are
+	// rejected, but do not retain a cancel func.
 	if current.generation < generation {
 		current.generation = generation
 	}
@@ -122,6 +130,19 @@ func (m *latestCommandManager) cancel(key string, generation uint64) {
 
 // LatestCmd cancels an older command with the same key and drops messages sent
 // by an older generation. Outside a FlowUI runtime it behaves like cmd.
+//
+// IMPORTANT: The generation is captured at construction time. Reusing the same
+// Cmd value across multiple Update calls will cause it to be silently rejected.
+// Always construct a new LatestCmd inside each Update call:
+//
+//	// Correct:
+//	case SomeEvent:
+//	    return m, LatestCmd("fetch", fetchCmd())
+//
+//	// Wrong (reused cmd will be rejected):
+//	var cmd = LatestCmd("fetch", fetchCmd())
+//	case SomeEvent:
+//	    return m, cmd
 func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
 	if key == "" {
 		panic("flowui: empty latest command key")
@@ -160,6 +181,10 @@ func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
 
 // CancelLatestCmd cancels the active command with key and invalidates its
 // queued messages.
+//
+// IMPORTANT: The generation is captured at construction time. Always construct
+// a new CancelLatestCmd inside each Update call, not as a package-level variable.
+// See LatestCmd for details.
 func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
 	if key == "" {
 		panic("flowui: empty latest command key")
@@ -171,6 +196,61 @@ func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
 			manager.cancel(key, generation)
 		}
 		return nil
+	}
+}
+
+// Batch combines commands so Update can start several independent effects at
+// once. Nil commands are ignored. Remaining commands run concurrently after
+// Update returns, share the effect context, and may each call send. The first
+// non-nil error is returned after every command finishes; a panic in any
+// command is re-raised so the runtime reports it like a single command panic.
+func Batch[Msg any](cmds ...Cmd[Msg]) Cmd[Msg] {
+	active := make([]Cmd[Msg], 0, len(cmds))
+	for _, cmd := range cmds {
+		if cmd != nil {
+			active = append(active, cmd)
+		}
+	}
+	switch len(active) {
+	case 0:
+		return nil
+	case 1:
+		return active[0]
+	}
+	return func(ctx context.Context, send func(Msg)) error {
+		var (
+			wg       sync.WaitGroup
+			mu       sync.Mutex
+			firstErr error
+			panicked any
+		)
+		for _, cmd := range active {
+			wg.Go(func() {
+				defer func() {
+					if recovered := recover(); recovered != nil {
+						mu.Lock()
+						if panicked == nil {
+							panicked = recovered
+						}
+						mu.Unlock()
+					}
+				}()
+				err := cmd(ctx, send)
+				if err == nil || ctx.Err() != nil {
+					return
+				}
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+			})
+		}
+		wg.Wait()
+		if panicked != nil {
+			panic(panicked)
+		}
+		return firstErr
 	}
 }
 

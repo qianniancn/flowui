@@ -35,11 +35,11 @@ func (c ContextMenuWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context,
 	call := macro.Stop()
 	state.triggerSize = dims.Size
 
+	call.Add(gtx.Ops)
 	area := clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &state.trigger)
 	pass.Pop()
-	call.Add(gtx.Ops)
 	area.Pop()
 	return dims
 }
@@ -191,7 +191,7 @@ func (c ContextMenuWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context,
 	}
 	macro := op.Record(gtx.Ops)
 	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return rootMenu.layout(ctx, panelGtx, menuState, open && (interactive || menuState.openSubmenu != "" || menuState.submenuActive))
+		return rootMenu.layoutRoot(ctx, panelGtx, menuState, open && (interactive || menuState.openSubmenu != "" || menuState.submenuActive))
 	})
 	panelCall := macro.Stop()
 

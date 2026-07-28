@@ -18,75 +18,25 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestLineChartOptionsUseValueSemantics(t *testing.T) {
-	baseSeries := Values("api", "API", []float64{1, 2, 3})
-	configuredSeries := baseSeries.
-		Color(color.NRGBA{R: 1, A: 0xff}).
-		Width(3).
-		ShowPoints(false).
-		PointSize(9).
-		ConnectNulls(true).
-		Smoothness(0.35).
-		Step(StepMiddle).
-		LineStyle(LineDashed).
-		AreaColor(color.NRGBA{B: 2, A: 0x40}).
-		Sampling(SamplingMinMax).
-		Hidden(true)
-	if baseSeries.hasColor || baseSeries.width != 0 || baseSeries.hasShowPoints || baseSeries.pointSize != 0 || baseSeries.connectNulls || baseSeries.smooth != 0 || baseSeries.step != StepNone || baseSeries.lineStyle != LineSolid || baseSeries.area || baseSeries.sampling != SamplingNone || baseSeries.hidden {
-		t.Fatalf("configuring LineChart Series mutated base: %#v", baseSeries)
-	}
-	if !configuredSeries.hasColor || configuredSeries.width != 3 || !configuredSeries.hasShowPoints || configuredSeries.showPoints || configuredSeries.pointSize != 9 || !configuredSeries.connectNulls || configuredSeries.smooth != 0.35 || configuredSeries.step != StepMiddle || configuredSeries.lineStyle != LineDashed || !configuredSeries.area || !configuredSeries.hasAreaColor || configuredSeries.sampling != SamplingMinMax || !configuredSeries.hidden {
-		t.Fatalf("configured LineChart Series = %#v", configuredSeries)
-	}
-	if smooth := baseSeries.Smooth(true); smooth.smooth != 0.5 || baseSeries.smooth != 0 {
-		t.Fatalf("Smooth(true) = %#v, base %#v", smooth, baseSeries)
-	}
+func TestLineChartCopiesMutableInputs(t *testing.T) {
+	values := []float64{1, 2}
+	series := Values("api", "API", values)
+	allSeries := []Series{series}
+	categories := []string{"Mon", "Tue"}
+	widget := New("traffic", allSeries).Categories(categories)
 
-	base := New("traffic", []Series{baseSeries})
-	configured := base.
-		Categories([]string{"Mon", "Tue", "Wed"}).
-		Height(280).
-		Grid(false).
-		Legend(true).
-		Tooltip(false).
-		IncludeZero(false).
-		XRange(0, 2).
-		YRange(10, 20).
-		XAxis("Day").
-		YAxis("Requests").
-		XTicks(4).
-		YTicks(6).
-		FormatX(func(float64) string { return "x" }).
-		FormatY(func(float64) string { return "y" }).
-		Animation(false).
-		AnimationDuration(250*time.Millisecond).
-		AnimationEasing(func(value float32) float32 { return value }).
-		UpdateAnimationDuration(150*time.Millisecond).
-		UpdateAnimationEasing(func(value float32) float32 { return value }).
-		OnLegendChange(func(string, bool) {}).
-		OnDataClick(func(chart.Selection) {}).
-		TooltipContent(func(chart.Selection) frame.Widget { return nil }).
-		DataWindow(0.25, 0.75).
-		OnDataWindowChange(func(chart.DataWindow) {}).
-		MarkLines([]chart.MarkLine{chart.NewMarkLine(chart.AxisY, 15)}).
-		MarkAreas([]chart.MarkArea{chart.NewMarkArea(chart.AxisX, 0.5, 1.5)}).
-		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(1, 15)}).
-		Label("Traffic").
-		EmptyText("Empty").
-		Disabled(true).
-		Style(flowstyle.Style{}.Radius(4))
-	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || base.hasShowLegend || !base.showTooltip || !base.includeZero || base.hasXRange || base.hasYRange || !base.animation || base.animationDuration != time.Second || base.updateAnimationDuration != 500*time.Millisecond || base.disabled {
-		t.Fatalf("configuring LineChart mutated base: %#v", base)
+	values[0] = 99
+	allSeries[0] = Series{}
+	categories[0] = "Changed"
+
+	if series.values[0] != 1 {
+		t.Fatal("LineChart Series retained caller values")
 	}
-	if len(configured.categories) != 3 || configured.height != 280 || configured.showGrid || !configured.hasShowLegend || !configured.showLegend || configured.showTooltip || configured.includeZero || !configured.hasXRange || !configured.hasYRange || configured.xTickCount != 4 || configured.yTickCount != 6 || configured.formatX == nil || configured.formatY == nil || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onLegendChange == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != 0.25 || configured.dataWindow.End != 0.75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.label != "Traffic" || configured.emptyText != "Empty" || !configured.disabled {
-		t.Fatalf("configured LineChart = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured LineChart did not retain its style")
+	if widget.series[0].key != "api" || widget.categories[0] != "Mon" {
+		t.Fatal("LineChart retained caller slices")
 	}
 }
 

@@ -47,7 +47,7 @@ func tabsListStyleFor(theme *theme.Theme, variant TabsVariant) tabsListStyle {
 	if variant == TabsSecondary {
 		return tabsListStyle{border: theme.Palette.Border}
 	}
-	return tabsListStyle{background: theme.Palette.SurfaceRaised}
+	return tabsListStyle{background: theme.Palette.Default}
 }
 
 func tabsItemStyleFor(activeTheme *theme.Theme, variant TabsVariant, tabsColor TabsColor, hovered, disabled bool) tabsItemStyle {
@@ -74,12 +74,9 @@ func tabsItemStyleFor(activeTheme *theme.Theme, variant TabsVariant, tabsColor T
 	}
 	style.separator.A = byte(float32(style.separator.A)*0.25 + 0.5)
 	if hovered {
-		style.foreground.A = byte(float32(style.foreground.A)*0.7 + 0.5)
 		style.separator.A = byte(float32(style.separator.A)*0.7 + 0.5)
 	}
 	if disabled {
-		style.foreground = activeTheme.DisabledColor(style.foreground)
-		style.selectedForeground = activeTheme.DisabledColor(style.selectedForeground)
 		style.indicator = activeTheme.DisabledColor(style.indicator)
 		style.separator = activeTheme.DisabledColor(style.separator)
 		style.focus = color.NRGBA{}

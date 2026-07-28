@@ -25,11 +25,21 @@ func TestDataWindowGestureZoomsAroundPointerAndPans(t *testing.T) {
 	gesture.Update(pointer.Event{
 		Kind: pointer.Press, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(50, 50),
 	}, plot, window, false)
+	if gesture.Dragging() {
+		t.Fatal("data window gesture reported dragging before pointer movement")
+	}
 	panned, changed := gesture.Update(pointer.Event{
 		Kind: pointer.Drag, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(70, 50),
 	}, plot, window, false)
 	if !changed || !closeWindow(panned, DataWindow{Start: 0.08, End: 0.68}) {
 		t.Fatalf("panned data window = %#v, changed %v", panned, changed)
+	}
+	if !gesture.Dragging() {
+		t.Fatal("data window gesture did not report dragging after pointer movement")
+	}
+	gesture.Update(pointer.Event{Kind: pointer.Release, PointerID: 1}, plot, panned, false)
+	if gesture.Dragging() {
+		t.Fatal("data window gesture remained active after release")
 	}
 }
 
@@ -77,6 +87,13 @@ func TestDataWindowValidationAndBounds(t *testing.T) {
 	}
 	if got := FullDataWindow(); !got.IsFull() {
 		t.Fatalf("full data window = %#v", got)
+	}
+}
+
+func TestDataWindowRetainsDoublePrecision(t *testing.T) {
+	window := NewDataWindow(0.123456789012345, 0.987654321098765)
+	if window.Start != 0.123456789012345 || window.End != 0.987654321098765 {
+		t.Fatalf("data window precision lost: %#v", window)
 	}
 }
 

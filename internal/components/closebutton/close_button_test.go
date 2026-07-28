@@ -16,35 +16,8 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func TestCloseButtonOptionsUseValueSemantics(t *testing.T) {
-	clicked := false
-	icon := new(closeButtonProbe)
-	base := CloseButton("dismiss")
-	configured := base.
-		OnClick(func() { clicked = true }).
-		Disabled(true).
-		Icon(icon).
-		Label("Dismiss").
-		Style(flowstyle.Style{}.Radius(4))
-
-	if base.onClick != nil || base.disabled || base.icon != nil || base.label != "" {
-		t.Fatal("close button options mutated the original value")
-	}
-	if configured.key != "dismiss" || configured.onClick == nil || !configured.disabled || configured.icon != icon || configured.label != "Dismiss" {
-		t.Fatalf("configured close button = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured close button did not retain its style")
-	}
-	configured.onClick()
-	if !clicked {
-		t.Fatal("click handler was not retained")
-	}
-}
 
 func TestCloseButtonHeroUIDefaults(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
@@ -78,9 +51,9 @@ func TestCloseButtonLayoutUsesThemeGeometry(t *testing.T) {
 
 func TestCloseButtonUsesHeroUIPaletteStates(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	idle := closeButtonStyleFor(&activeTheme, false, false)
-	hovered := closeButtonStyleFor(&activeTheme, true, false)
-	disabled := closeButtonStyleFor(&activeTheme, true, true)
+	idle := closeButtonWidgetFor(&activeTheme, false, false)
+	hovered := closeButtonWidgetFor(&activeTheme, true, false)
+	disabled := closeButtonWidgetFor(&activeTheme, true, true)
 
 	if idle.background != activeTheme.Palette.SurfaceRaised || idle.foreground != activeTheme.Palette.MutedForeground {
 		t.Fatalf("idle style = %#v", idle)

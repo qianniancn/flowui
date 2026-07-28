@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -44,15 +45,17 @@ type selectState struct {
 	dismiss            [16]overlay.ClickArea
 	dialog             overlay.ClickArea
 	focus              state.FocusAnimation
-	open               bool
-	initialized        bool
+	open               bool // cached effective open, updated by isOpen/requestOpen
+	disclosure         disclosure.Binding[bool]
+	selectedDisclosure disclosure.Binding[string]
+	selectedKey        string
+	selectedKeys       []string
 	wasOpen            bool
 	focusIntent        selectFocusIntent
 	focusVisibleIntent bool
 	triggerRect        image.Rectangle
 	transition         animation.FloatTransition
 	iconTransition     animation.FloatTransition
-	binding            selectOpenBinding
 	skipRestore        bool
 	peerClosePending   bool
 	dataVersion        uint64
@@ -77,10 +80,76 @@ func (s *selectState) itemsFor(widget SelectWidget) []SelectItem {
 	return s.cachedItems
 }
 
-type selectOpenBinding struct {
-	controlled   bool
-	open         bool
-	onOpenChange func(bool)
+// selectDisclosureCfg builds a disclosure.Config from the widget's open-state fields.
+func selectDisclosureCfg(widget SelectWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasOpen,
+		Value:      widget.open,
+		HasDefault: widget.hasDefaultOpen,
+		Default:    widget.defaultOpen,
+		OnChange:   widget.onOpenChange,
+	}
+}
+
+// selectSelectedDisclosureCfg builds a disclosure.Config for selectedKey (single selection mode).
+func selectSelectedDisclosureCfg(widget SelectWidget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasSelectedKey,
+		Value:      widget.selectedKey,
+		HasDefault: widget.hasDefaultSelected,
+		Default:    widget.defaultSelectedKey,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *selectState) currentSelectedKey(widget SelectWidget) string {
+	if widget.selectionMode != SelectSelectionSingle {
+		return widget.selectedKey
+	}
+	s.selectedKey = s.selectedDisclosure.Current(selectSelectedDisclosureCfg(widget))
+	return s.selectedKey
+}
+
+func (s *selectState) bindSelected(widget SelectWidget) {
+	if widget.selectionMode == SelectSelectionSingle {
+		s.selectedDisclosure.Bind(selectSelectedDisclosureCfg(widget))
+	}
+}
+
+func (s *selectState) requestSelectedKey(widget SelectWidget, key string) string {
+	if widget.selectionMode != SelectSelectionSingle {
+		return key
+	}
+	s.selectedKey, _ = s.selectedDisclosure.Request(selectSelectedDisclosureCfg(widget), key)
+	return s.selectedKey
+}
+
+// Multi-selection uses manual state management since []string is not comparable
+func (s *selectState) currentSelectedKeys(widget SelectWidget) []string {
+	if widget.selectionMode != SelectSelectionMultiple {
+		return widget.selectedKeys
+	}
+	if widget.hasSelectedKeys {
+		s.selectedKeys = widget.selectedKeys
+		return s.selectedKeys
+	}
+	if len(s.selectedKeys) == 0 && widget.hasDefaultSelecteds {
+		s.selectedKeys = widget.defaultSelectedKeys
+	}
+	return s.selectedKeys
+}
+
+func (s *selectState) requestSelectedKeys(widget SelectWidget, keys []string) []string {
+	if widget.selectionMode != SelectSelectionMultiple {
+		return keys
+	}
+	if !widget.hasSelectedKeys {
+		s.selectedKeys = keys
+	}
+	if widget.onSelectionChange != nil {
+		widget.onSelectionChange(keys)
+	}
+	return s.selectedKeys
 }
 
 type selectFocusIntent uint8
@@ -93,24 +162,12 @@ const (
 )
 
 func (s *selectState) isOpen(widget SelectWidget) bool {
-	if !s.initialized {
-		if widget.hasDefaultOpen {
-			s.open = widget.defaultOpen
-		}
-		s.initialized = true
-	}
-	if widget.hasOpen {
-		return widget.open
-	}
+	s.open = s.disclosure.Current(selectDisclosureCfg(widget))
 	return s.open
 }
 
 func (s *selectState) bind(widget SelectWidget) {
-	s.binding = selectOpenBinding{
-		controlled:   widget.hasOpen,
-		open:         widget.open,
-		onOpenChange: widget.onOpenChange,
-	}
+	s.disclosure.Bind(selectDisclosureCfg(widget))
 }
 
 func (s *selectState) requestOpen(ctx *frame.Context, widget SelectWidget, open bool) bool {
@@ -121,21 +178,7 @@ func (s *selectState) requestOpen(ctx *frame.Context, widget SelectWidget, open 
 		s.skipRestore = false
 		activateSelect(ctx, s)
 	}
-	if widget.hasOpen {
-		if widget.open != open && widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
-		if !widget.open {
-			releaseSelect(ctx, s)
-		}
-		return widget.open
-	}
-	if s.open != open {
-		s.open = open
-		if widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
-	}
+	s.open, _ = s.disclosure.Request(selectDisclosureCfg(widget), open)
 	if !s.open {
 		releaseSelect(ctx, s)
 	}
@@ -147,17 +190,8 @@ func (s *selectState) closeForPeer() {
 	s.focusVisibleIntent = false
 	s.skipRestore = true
 	s.peerClosePending = true
-	if s.binding.controlled {
-		if s.binding.open && s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
-		return
-	}
-	if s.open {
+	if s.disclosure.PeerClose(false) {
 		s.open = false
-		if s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
 	}
 }
 

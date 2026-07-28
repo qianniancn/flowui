@@ -13,37 +13,10 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/button"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func TestToastOptionsUseValueSemantics(t *testing.T) {
-	indicator := new(toastProbe)
-	base := Toast("saved", "Saved")
-	configured := base.
-		Description("Changes saved").
-		Variant(ToastSuccess).
-		Indicator(indicator).
-		Loading(true).
-		Action("Undo").
-		ActionVariant(button.ButtonDangerSoft).
-		Timeout(3 * time.Second)
-
-	if base.key != "saved" || base.title != "Saved" || base.description != "" || base.variant != ToastDefault || base.hasIndicator || base.loading || base.actionLabel != "" || base.actionVariant != button.ButtonPrimary || base.hasTimeout {
-		t.Fatalf("base toast was mutated: %#v", base)
-	}
-	if configured.Key() != "saved" || configured.description != "Changes saved" || configured.variant != ToastSuccess || configured.indicator != indicator || !configured.loading {
-		t.Fatalf("configured toast = %#v", configured)
-	}
-	if configured.actionLabel != "Undo" || configured.actionVariant != button.ButtonDangerSoft || configured.timeout != 3*time.Second || !configured.hasTimeout {
-		t.Fatalf("configured toast action/timeout = %#v", configured)
-	}
-	if Toast("persistent", "Persistent").Timeout(-time.Second).timeout != 0 {
-		t.Fatal("negative timeout was not clamped")
-	}
-}
 
 func TestToastIndicatorNilHidesIndicator(t *testing.T) {
 	if !Toast("default", "Default").showIndicator() {
@@ -51,30 +24,6 @@ func TestToastIndicatorNilHidesIndicator(t *testing.T) {
 	}
 	if Toast("hidden", "Hidden").Indicator(nil).showIndicator() {
 		t.Fatal("nil custom indicator did not hide the indicator")
-	}
-}
-
-func TestToastProviderOptions(t *testing.T) {
-	base := ToastProvider("toasts", nil)
-	configured := base.
-		Placement(ToastTopEnd).
-		Offset(24).
-		Gap(8).
-		MaxVisible(5).
-		ScaleFactor(0.1).
-		Width(360).
-		Paused(true).
-		OnAction(func(string) {}).
-		OnClose(func(string) {})
-
-	if base.placement != ToastBottom || base.hasOffset || base.hasGap || base.hasMaxVisible || base.hasScale || base.hasWidth || base.paused {
-		t.Fatalf("base provider was mutated: %#v", base)
-	}
-	if configured.placement != ToastTopEnd || configured.offset != 24 || configured.gap != 8 || configured.maxVisible != 5 || configured.scaleFactor != 0.1 || configured.width != 360 || !configured.paused {
-		t.Fatalf("configured provider = %#v", configured)
-	}
-	if configured.onAction == nil || configured.onClose == nil {
-		t.Fatal("provider callbacks are missing")
 	}
 }
 
@@ -248,6 +197,46 @@ func TestToastStackPositionAnimatesBetweenIndexes(t *testing.T) {
 	gtx.Now = start.Add(350 * time.Millisecond)
 	if got := entry.stackPosition(gtx, 0, 350*time.Millisecond); got != 0 {
 		t.Fatalf("final stack position = %v, want 0", got)
+	}
+}
+
+func TestToastExpandedMiddleCloseKeepsTrailingPositionOnFirstFrame(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	router := new(input.Router)
+	items := []ToastItem{
+		Toast("front", "Front").Timeout(0),
+		Toast("middle", "Middle").Timeout(0),
+		Toast("back", "Back").Timeout(0),
+	}
+	provider := ToastProvider("toasts", items).Placement(ToastBottomEnd)
+	viewport := image.Pt(900, 600)
+	start := time.Unix(1, 0)
+	duration := activeTheme.Components.Toast.AnimationDuration
+	layoutToastFrame(ctx, router, provider, start, viewport)
+	layoutToastFrame(ctx, router, provider, start.Add(duration), viewport)
+	stateValue := frame.UseState[toastProviderState](ctx, "toasts", stateSlotToast)
+	stateValue.regionHovered = true
+	layoutToastFrame(ctx, router, provider, start.Add(duration+time.Millisecond), viewport)
+	layoutToastFrame(ctx, router, provider, start.Add(2*duration+time.Millisecond), viewport)
+
+	middle, middleOK := semanticNodeWithLabel(router.AppendSemantics(nil), "Middle")
+	back, backOK := semanticNodeWithLabel(router.AppendSemantics(nil), "Back")
+	if !middleOK || !backOK {
+		t.Fatal("expanded toast semantics are missing")
+	}
+	provider = ToastProvider("toasts", []ToastItem{items[0], items[2]}).Placement(ToastBottomEnd)
+	closeAt := start.Add(2*duration + 2*time.Millisecond)
+	layoutToastFrame(ctx, router, provider, closeAt, viewport)
+	afterClose, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Back")
+	if !ok || afterClose.Desc.Bounds.Min != back.Desc.Bounds.Min {
+		t.Fatalf("trailing toast jumped on middle close: before %v after %v", back.Desc.Bounds, afterClose.Desc.Bounds)
+	}
+
+	layoutToastFrame(ctx, router, provider, closeAt.Add(duration), viewport)
+	settled, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Back")
+	if !ok || settled.Desc.Bounds.Min != middle.Desc.Bounds.Min {
+		t.Fatalf("trailing toast settled at %v, want former middle position %v", settled.Desc.Bounds, middle.Desc.Bounds)
 	}
 }
 

@@ -56,22 +56,26 @@ func DismissRectsExcluding(bounds image.Rectangle, excluded ...image.Rectangle) 
 	if bounds.Empty() {
 		return nil
 	}
-	areas := []image.Rectangle{bounds}
+	// Use double buffering to avoid allocating a new slice on each exclusion.
+	current := []image.Rectangle{bounds}
+	next := make([]image.Rectangle, 0, 8) // Pre-allocate for common cases
+
 	for _, exclusion := range excluded {
-		remaining := make([]image.Rectangle, 0, len(areas)+3)
-		for _, area := range areas {
+		next = next[:0] // Reuse backing array
+		for _, area := range current {
 			intersection := exclusion.Intersect(area)
 			if intersection.Empty() {
-				remaining = append(remaining, area)
+				next = append(next, area)
 				continue
 			}
 			for _, part := range DismissRects(area, intersection) {
 				if !part.Empty() {
-					remaining = append(remaining, part)
+					next = append(next, part)
 				}
 			}
 		}
-		areas = remaining
+		// Swap buffers
+		current, next = next, current
 	}
-	return areas
+	return current
 }

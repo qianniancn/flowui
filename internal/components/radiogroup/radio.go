@@ -18,15 +18,18 @@ type RadioItem struct {
 }
 
 type RadioGroupWidget struct {
-	key         string
-	selectedKey string
-	items       []RadioItem
-	onChange    func(string)
-	variant     RadioGroupVariant
-	disabled    bool
-	invalid     bool
-	horizontal  bool
-	customStyle flowstyle.Style
+	key                string
+	selectedKey        string
+	hasSelectedKey     bool
+	defaultSelectedKey string
+	hasDefaultSelected bool
+	items              []RadioItem
+	onChange           func(string)
+	variant            RadioGroupVariant
+	disabled           bool
+	invalid            bool
+	horizontal         bool
+	customStyle        flowstyle.Style
 }
 
 type RadioGroupVariant int
@@ -44,15 +47,36 @@ const (
 )
 
 func RadioGroup(key, selectedKey string, items []RadioItem) RadioGroupWidget {
+	if selectedKey != "" {
+		// non-empty selectedKey → controlled mode
+		return RadioGroupWidget{
+			key:            key,
+			selectedKey:    selectedKey,
+			hasSelectedKey: true,
+			items:          items,
+		}
+	}
+	// empty selectedKey → uncontrolled mode
 	return RadioGroupWidget{
-		key:         key,
-		selectedKey: selectedKey,
-		items:       items,
+		key:   key,
+		items: items,
 	}
 }
 
 func (r RadioGroupWidget) OnChange(fn func(string)) RadioGroupWidget {
 	r.onChange = fn
+	return r
+}
+
+func (r RadioGroupWidget) SelectedKey(key string) RadioGroupWidget {
+	r.selectedKey = key
+	r.hasSelectedKey = true
+	return r
+}
+
+func (r RadioGroupWidget) DefaultSelectedKey(key string) RadioGroupWidget {
+	r.defaultSelectedKey = key
+	r.hasDefaultSelected = true
 	return r
 }
 
@@ -87,12 +111,16 @@ func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	defer state.endFrame()
 	state.checkItems(r.items)
 
+	// Bind disclosure state
+	state.bind(r)
+	selectedKey := state.currentSelectedKey(r)
+
 	disabled := r.disabled || !gtx.Enabled()
 	if disabled {
 		gtx = gtx.Disabled()
-	} else if key, ok := state.updateKeys(gtx, r.items, r.selectedKey); ok {
-		if key != r.selectedKey && r.onChange != nil {
-			r.onChange(key)
+	} else if key, ok := state.updateKeys(gtx, r.items, selectedKey); ok {
+		if key != selectedKey {
+			selectedKey = state.requestSelectedKey(r, key)
 		}
 		frame.RequestFocus(ctx, &state.item(key).clickable)
 	}
@@ -100,7 +128,7 @@ func (r RadioGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	children := make([]layout.Widget, 0, len(r.items))
 	for _, item := range r.items {
 		children = append(children, func(gtx layout.Context) layout.Dimensions {
-			return r.layoutItem(ctx, gtx, state, item)
+			return r.layoutItem(ctx, gtx, state, item, selectedKey)
 		})
 	}
 

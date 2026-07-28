@@ -40,6 +40,7 @@ type runOptions struct {
 	themeOps     []func(*Theme)
 	language     Language
 	errorHandler func(error)
+	retainModel  bool
 }
 
 func newRunOptions(opts []Option) runOptions {
@@ -57,8 +58,8 @@ func (cfg runOptions) newTheme() *Theme {
 	for _, fn := range cfg.themeOps {
 		fn(&theme)
 	}
-	if theme.Material == nil {
-		theme.Material = material.NewTheme()
+	if MaterialOf(&theme) == nil {
+		SyncMaterialTheme(&theme)
 	}
 	return &theme
 }
@@ -99,9 +100,8 @@ func WithTheme(theme Theme) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.themeOps = append(cfg.themeOps, func(current *Theme) {
 			*current = theme
-			if current.Material != nil {
-				materialTheme := *current.Material
-				current.Material = &materialTheme
+			if MaterialOf(current) != nil {
+				DetachMaterial(current)
 			}
 			syncMaterialTheme(current)
 		})
@@ -125,10 +125,10 @@ func MaterialTheme(fn func(*material.Theme)) Option {
 	return optionFunc(func(cfg *runOptions) {
 		if fn != nil {
 			cfg.themeOps = append(cfg.themeOps, func(theme *Theme) {
-				if theme.Material == nil {
-					theme.Material = material.NewTheme()
+				if MaterialOf(theme) == nil {
+					SyncMaterialTheme(theme)
 				}
-				fn(theme.Material)
+				fn(MaterialOf(theme))
 			})
 		}
 	})
@@ -147,5 +147,17 @@ func Locale(language Language) Option {
 func OnError(handler func(error)) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.errorHandler = handler
+	})
+}
+
+// RetainModelOnClose keeps the latest MVU model in the WindowSpec after its
+// native window is destroyed. Reopening the same WindowSpec resumes from that
+// model without rerunning its initializer or initial command. Subscriptions
+// are recreated for each native window instance.
+//
+// The model is retained by assignment; FlowUI does not deep-copy it.
+func RetainModelOnClose() Option {
+	return optionFunc(func(cfg *runOptions) {
+		cfg.retainModel = true
 	})
 }

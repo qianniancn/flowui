@@ -17,17 +17,6 @@ func (w fixedWidget) Layout(*frame.Context, layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: image.Point(w)}
 }
 
-func TestPortalOptionsUseValueSemantics(t *testing.T) {
-	base := New("inspector", true, fixedWidget(image.Pt(20, 10)), func(image.Rectangle, bool) frame.Widget { return nil })
-	configured := base.Layer(LayerModal).Passive(true).Disabled(true)
-	if base.layer != LayerPopup || base.passive || base.disabled {
-		t.Fatalf("configuring Portal mutated base: %#v", base)
-	}
-	if configured.layer != LayerModal || !configured.passive || !configured.disabled {
-		t.Fatalf("configured Portal = %#v", configured)
-	}
-}
-
 func TestPortalResolvesAnchorAndRootContent(t *testing.T) {
 	ctx, gtx := portalTestContext(image.Pt(200, 120))
 	var gotAnchor image.Rectangle

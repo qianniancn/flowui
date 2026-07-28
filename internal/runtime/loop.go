@@ -8,6 +8,7 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 )
@@ -99,17 +100,27 @@ func (c *loopCore[M, Msg]) updateMessages(
 	report func(error),
 	acceptSubscription func(subscriptionToken) bool,
 ) (updated bool, dropped int, err error) {
-	err = recoverRuntimePanic(RuntimePhaseUpdate, func() {
-		dropped = c.messages.Drain(func(msg queuedMessage[Msg]) {
-			if msg.fromSub && (acceptSubscription == nil || !acceptSubscription(msg.subscription)) {
-				return
-			}
-			if msg.fromLatest && !c.latest.accepts(msg.latest) {
-				return
-			}
+	// Recover per message so earlier updates in the batch stand, later messages
+	// are discarded, and no new commands start after a panic.
+	dropped = c.messages.Drain(func(msg queuedMessage[Msg]) {
+		if err != nil {
+			return
+		}
+		if msg.fromSub && (acceptSubscription == nil || !acceptSubscription(msg.subscription)) {
+			return
+		}
+		if msg.fromLatest && !c.latest.accepts(msg.latest) {
+			return
+		}
+		var cmd Cmd[Msg]
+		if panicErr := recoverRuntimePanic(RuntimePhaseUpdate, func() {
 			updated = true
-			StartCmd(group, ctx, c.update(&c.model, msg.value), send, report)
-		})
+			cmd = c.update(&c.model, msg.value)
+		}); panicErr != nil {
+			err = panicErr
+			return
+		}
+		StartCmd(group, ctx, cmd, send, report)
 	})
 	return updated, dropped, err
 }
@@ -147,6 +158,12 @@ type EventWindow interface {
 	Invalidate()
 }
 
+// windowCloser is implemented by windows that can request a native close.
+// *app.Window implements this; test harnesses may inject DestroyEvent.
+type windowCloser interface {
+	Perform(system.Action)
+}
+
 const effectShutdownTimeout = 2 * time.Second
 
 func Loop[M any, Msg any](
@@ -160,6 +177,23 @@ func Loop[M any, Msg any](
 	onConfig func(app.Config, func(Msg)),
 	frame Frame[M, Msg],
 ) error {
+	return LoopWithExit(w, initial, initialCmd, update, subscriptions, onError, onDestroy, onConfig, frame, nil)
+}
+
+// LoopWithExit runs an event loop and reports the final model before
+// onDestroy makes the window available for reopening.
+func LoopWithExit[M any, Msg any](
+	w EventWindow,
+	initial M,
+	initialCmd Cmd[Msg],
+	update Update[M, Msg],
+	subscriptions Subscriptions[M, Msg],
+	onError func(error),
+	onDestroy func(),
+	onConfig func(app.Config, func(Msg)),
+	frame Frame[M, Msg],
+	onExit func(M),
+) error {
 	core := newLoopCore(initial, update)
 	root, cancel := context.WithCancel(context.Background())
 	ctx := withLatestCommandManager(root, core.latest)
@@ -169,7 +203,19 @@ func Loop[M any, Msg any](
 	var desiredSubscriptions []Subscription[Msg]
 	subscriptionsReady := subscriptions == nil
 	var ops op.Ops
+	var fatal error
+	exitReported := false
+	reportExit := func() {
+		if exitReported {
+			return
+		}
+		exitReported = true
+		if onExit != nil {
+			onExit(core.model)
+		}
+	}
 	defer func() {
+		reportExit()
 		cancel()
 		activeSubscriptions.close()
 		if !effects.waitFor(effectShutdownTimeout) {
@@ -214,9 +260,42 @@ func Loop[M any, Msg any](
 	})
 	StartCmd(&effects, ctx, initialCmd, send, report)
 
+	beginFatalShutdown := func(err error) {
+		if fatal != nil || err == nil {
+			return
+		}
+		fatal = err
+		cancel()
+		if !requestWindowClose(w) {
+			// Harnesses without a native close path return immediately so tests
+			// and headless drivers are not stuck waiting for DestroyEvent.
+			return
+		}
+	}
+
 	for {
-		switch e := w.Event().(type) {
+		e := w.Event()
+		if fatal != nil {
+			switch e := e.(type) {
+			case app.DestroyEvent:
+				reportExit()
+				if onDestroy != nil {
+					onDestroy()
+				}
+				return fatal
+			case app.FrameEvent:
+				// Acknowledge frames while waiting for destroy so the platform
+				// event path keeps moving.
+				var empty op.Ops
+				gtx := app.NewContext(&empty, e)
+				e.Frame(gtx.Ops)
+			}
+			continue
+		}
+
+		switch e := e.(type) {
 		case app.DestroyEvent:
+			reportExit()
 			if onDestroy != nil {
 				onDestroy()
 			}
@@ -224,7 +303,15 @@ func Loop[M any, Msg any](
 			return e.Err
 		case app.ConfigEvent:
 			if onConfig != nil {
-				onConfig(e.Config, send)
+				if err := recoverRuntimePanic(RuntimePhaseUpdate, func() {
+					onConfig(e.Config, send)
+				}); err != nil {
+					beginFatalShutdown(err)
+					if !windowSupportsClose(w) {
+						return fatal
+					}
+					continue
+				}
 			}
 			w.Invalidate()
 		case app.FrameEvent:
@@ -234,7 +321,11 @@ func Loop[M any, Msg any](
 			}
 			updated, droppedMessages, err := core.updateMessages(&effects, ctx, send, report, activeSubscriptions.accepts)
 			if err != nil {
-				return err
+				beginFatalShutdown(err)
+				if !windowSupportsClose(w) {
+					return fatal
+				}
+				continue
 			}
 			if droppedMessages > 0 {
 				onError(&QueueOverflowError{Queue: "message", Dropped: droppedMessages, Limit: messageQueueLimit})
@@ -244,7 +335,11 @@ func Loop[M any, Msg any](
 				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
 					desired = subscriptions(core.model)
 				}); err != nil {
-					return err
+					beginFatalShutdown(err)
+					if !windowSupportsClose(w) {
+						return fatal
+					}
+					continue
 				}
 				desiredSubscriptions = desired
 				subscriptionsReady = true
@@ -253,18 +348,38 @@ func Loop[M any, Msg any](
 				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
 					activeSubscriptions.reconcile(ctx, desiredSubscriptions, &effects, sendSubscription, report, wake)
 				}); err != nil {
-					return err
+					beginFatalShutdown(err)
+					if !windowSupportsClose(w) {
+						return fatal
+					}
+					continue
 				}
 			}
-			var viewErr error
-			viewErr = recoverRuntimePanic(RuntimePhaseView, func() {
+			viewErr := recoverRuntimePanic(RuntimePhaseView, func() {
 				gtx := app.NewContext(&ops, e)
 				frame(gtx, core.model, send)
 				e.Frame(gtx.Ops)
 			})
 			if viewErr != nil {
-				return viewErr
+				beginFatalShutdown(viewErr)
+				if !windowSupportsClose(w) {
+					return fatal
+				}
 			}
 		}
 	}
+}
+
+func windowSupportsClose(w EventWindow) bool {
+	_, ok := w.(windowCloser)
+	return ok
+}
+
+func requestWindowClose(w EventWindow) bool {
+	closer, ok := w.(windowCloser)
+	if !ok {
+		return false
+	}
+	closer.Perform(system.ActionClose)
+	return true
 }

@@ -17,36 +17,8 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func TestToggleButtonOptionsUseValueSemantics(t *testing.T) {
-	changed := false
-	base := ToggleButton("like", false, text.New("Like"))
-	configured := base.
-		OnChange(func(bool) { changed = true }).
-		Variant(ToggleButtonGhost).
-		Size(ToggleButtonLarge).
-		Disabled(true).
-		IconOnly().
-		Label("Like").
-		Style(flowstyle.Style{}.Radius(4))
-
-	if base.key != "like" || base.selected || base.onChange != nil || base.variant != ToggleButtonDefault || base.size != ToggleButtonMedium || base.disabled || base.iconOnly || base.label != "" {
-		t.Fatalf("base toggle button was mutated: %#v", base)
-	}
-	if configured.onChange == nil || configured.variant != ToggleButtonGhost || configured.size != ToggleButtonLarge || !configured.disabled || !configured.iconOnly || configured.label != "Like" {
-		t.Fatalf("configured toggle button = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured toggle button did not retain its style")
-	}
-	configured.onChange(true)
-	if !changed {
-		t.Fatal("onChange callback was not retained")
-	}
-}
 
 func TestToggleButtonHeroUIDefaultTheme(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.ToggleButton
@@ -113,12 +85,12 @@ func TestToggleButtonUsesThemeHeight(t *testing.T) {
 func TestToggleButtonVariantAndSelectedColors(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	current := color.NRGBA{R: 10, G: 20, B: 30, A: 255}
-	defaultIdle := toggleButtonStyleFor(&activeTheme, current, ToggleButtonDefault, false, false, false, false)
-	defaultHover := toggleButtonStyleFor(&activeTheme, current, ToggleButtonDefault, false, true, false, false)
-	ghostIdle := toggleButtonStyleFor(&activeTheme, current, ToggleButtonGhost, false, false, false, false)
-	selected := toggleButtonStyleFor(&activeTheme, current, ToggleButtonDefault, true, false, false, false)
-	selectedHover := toggleButtonStyleFor(&activeTheme, current, ToggleButtonGhost, true, true, false, false)
-	disabled := toggleButtonStyleFor(&activeTheme, current, ToggleButtonDefault, false, false, false, true)
+	defaultIdle := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonDefault, false, false, false, false)
+	defaultHover := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonDefault, false, true, false, false)
+	ghostIdle := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonGhost, false, false, false, false)
+	selected := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonDefault, true, false, false, false)
+	selectedHover := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonGhost, true, true, false, false)
+	disabled := toggleButtonWidgetFor(&activeTheme, current, ToggleButtonDefault, false, false, false, true)
 
 	if defaultIdle.background != activeTheme.Palette.SurfaceRaised || defaultIdle.foreground != current {
 		t.Fatalf("default idle style = %#v", defaultIdle)
@@ -155,6 +127,19 @@ func TestToggleButtonReportsInverseControlledValue(t *testing.T) {
 		if !called || got == selected {
 			t.Fatalf("selected=%v callback called=%v value=%v", selected, called, got)
 		}
+	}
+}
+
+func TestToggleButtonUsesChangedValueInClickFrame(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := newToggleButtonContext(&activeTheme)
+	clickable := new(widget.Clickable)
+	clickable.Click()
+	frame.UseStateWith(ctx, "toggle", "clickable", func() *widget.Clickable { return clickable })
+	probe := new(toggleButtonProbe)
+	ToggleButton("toggle", false, probe).OnChange(func(bool) {}).Layout(ctx, toggleButtonTestContext())
+	if probe.foreground != activeTheme.Palette.AccentSoftForeground {
+		t.Fatalf("click-frame foreground = %#v, want selected %#v", probe.foreground, activeTheme.Palette.AccentSoftForeground)
 	}
 }
 

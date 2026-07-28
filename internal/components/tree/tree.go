@@ -3,6 +3,7 @@ package tree
 import (
 	"fmt"
 	"image"
+	"strings"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -128,6 +129,7 @@ type Widget struct {
 	guideStyle        GuideStyle
 	expandOnRowClick  bool
 	maxHeight         int
+	filter            string
 	customStyle       flowstyle.Style
 }
 
@@ -293,6 +295,14 @@ func (t Widget) ExpandOnRowClick(enabled bool) Widget {
 // EmptyText sets the message displayed when the Tree has no nodes.
 func (t Widget) EmptyText(value string) Widget {
 	t.emptyText = value
+	return t
+}
+
+// Filter keeps nodes whose label/description match query (case-insensitive),
+// plus ancestors of matches. Empty query shows the full tree. Matching branches
+// are expanded for the duration of the filter.
+func (t Widget) Filter(query string) Widget {
+	t.filter = strings.TrimSpace(query)
 	return t
 }
 

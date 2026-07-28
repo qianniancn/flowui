@@ -41,6 +41,9 @@ type buttonPalette struct {
 	hasBorder bool
 }
 
+// resolveStyle is the reference composite-widget style assembly:
+// defaults + variant + size + StyleScope(runtime) + instance, with StyleState
+// from interact. Other controls should follow this four-slot pattern.
 func (b ButtonWidget) resolveStyle(ctx *frame.Context, gtx layout.Context, key string, state flowstyle.StyleState) buttonStyle {
 	activeTheme := frame.ActiveTheme(ctx)
 	defaults, variant, size := b.styleDeclarations(activeTheme)
@@ -83,7 +86,10 @@ func (b ButtonWidget) staticStyle(ctx *frame.Context, state flowstyle.StyleState
 	return buttonStyleFrom(resolved, content, indicator, activeTheme)
 }
 
-func (b ButtonWidget) styleDeclarations(activeTheme *theme.Theme) (flowstyle.Style, flowstyle.Style, flowstyle.Style) {
+// styleDeclarations returns the three component-owned cascade layers
+// (defaults, variant, size). Instance style is b.customStyle; StyleScope is
+// injected by the style runtime.
+func (b ButtonWidget) styleDeclarations(activeTheme *theme.Theme) (defaults, variant, size flowstyle.Style) {
 	return buttonDefaultDeclaration(activeTheme),
 		buttonVariantDeclaration(activeTheme, b.variant),
 		flowstyle.Join(

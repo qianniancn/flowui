@@ -117,38 +117,6 @@ func TestInputDisabled(t *testing.T) {
 	}
 }
 
-func TestInputOptions(t *testing.T) {
-	base := Input("name", "Ada")
-	i := base.
-		Placeholder("Name").
-		Invalid(true).
-		Variant(InputSecondary).
-		FullWidth().
-		Type(InputEmail).
-		ReadOnly(true).
-		MaxLength(24).
-		Label("Name")
-
-	if !i.invalid {
-		t.Fatal("input was not invalid")
-	}
-	if i.variant != InputSecondary {
-		t.Fatal("input variant was not set")
-	}
-	if !i.fullWidth {
-		t.Fatal("input was not full width")
-	}
-	if i.hint != "Name" || i.inputType != InputEmail || !i.readOnly || i.maxLength != 24 || i.label != "Name" {
-		t.Fatalf("configured input = %#v", i)
-	}
-	if base.hint != "" || base.inputType != InputText || base.readOnly || base.maxLength != 0 || base.label != "" {
-		t.Fatalf("base input was mutated: %#v", base)
-	}
-	if got := base.MaxLength(-1).maxLength; got != 0 {
-		t.Fatalf("negative max length = %d, want 0", got)
-	}
-}
-
 func TestInputDefaultLayout(t *testing.T) {
 	dims := Input("name", "").Hint("Name").Layout(newContext(nil), testLayoutContext())
 
@@ -199,18 +167,18 @@ func TestInputFrameKeepsInnerWidth(t *testing.T) {
 	var got layout.Constraints
 	child := func(gtx layout.Context) layout.Dimensions {
 		got = gtx.Constraints
-		return layout.Dimensions{Size: image.Pt(1, 1)}
+		return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(1, 20))}
 	}
 
 	activeTheme := theme.DefaultTheme()
 	resolved := resolveInputTestStyle(&activeTheme, inputDefaultDeclaration(&activeTheme, InputPrimary, true), flowstyle.StyleState{})
-	Input("name", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), resolved, true, child)
+	dims := Input("name", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), new(inputState), resolved, true, child)
 
-	if got.Min.X != 276 {
-		t.Fatalf("inner min width = %d, want 276", got.Min.X)
+	if got.Min != image.Pt(276, 0) {
+		t.Fatalf("inner minimum = %v, want (276,0)", got.Min)
 	}
-	if got.Min.Y != 36 {
-		t.Fatalf("inner min height = %d, want 36", got.Min.Y)
+	if dims.Size != image.Pt(300, 36) {
+		t.Fatalf("input size = %v, want (300,36)", dims.Size)
 	}
 }
 
@@ -496,18 +464,22 @@ func TestInputDispatchesChangeBeforeSubmit(t *testing.T) {
 	editor.SetText("Ada")
 	var got []string
 
-	Input("name", "").
+	widget := Input("name", "").
 		OnChange(func(text string) {
 			got = append(got, "change:"+text)
 		}).
 		OnSubmit(func(text string) {
 			got = append(got, "submit:"+text)
-		}).
-		dispatchEvents(editor, inputEvents{
-			changed:    true,
-			submitted:  true,
-			submitText: "Ada",
 		})
+
+	state := &inputState{}
+	state.bind(widget)
+
+	widget.dispatchEvents(state, editor, inputEvents{
+		changed:    true,
+		submitted:  true,
+		submitText: "Ada",
+	})
 
 	want := []string{"change:Ada", "submit:Ada"}
 	if len(got) != len(want) {

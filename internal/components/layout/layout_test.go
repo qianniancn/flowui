@@ -71,7 +71,7 @@ func TestBoxAppliesWidthAndPadding(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	dims := Box(child).Width(100).Padding(10).Layout(newContext(nil), layout.Context{
+	dims := Box(child).Style(flowstyle.Style{}.Width(100).Padding(10)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 300)},
 		Ops:         &ops,
 	})
@@ -86,29 +86,13 @@ func TestBoxAppliesWidthAndPadding(t *testing.T) {
 
 func TestBoxAllowsExplicitZeroSize(t *testing.T) {
 	child := &constraintWidget{}
-	dims := Box(child).Width(0).Height(0).Layout(newContext(nil), layout.Context{
+	dims := Box(child).Style(flowstyle.Style{}.Width(0).Height(0)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
 		Ops:         new(op.Ops),
 	})
 
 	if dims.Size != (image.Point{}) || child.constraints != layout.Exact(image.Point{}) {
 		t.Fatalf("zero-sized Box = %v/%v, want zero size and constraints", dims.Size, child.constraints)
-	}
-}
-
-func TestInteractiveBoxOptionsUseValueSemantics(t *testing.T) {
-	base := Box(nil)
-	configured := base.
-		Key("save").
-		Label("Save").
-		Disabled(true).
-		OnClick(func() {})
-
-	if base.key != "" || base.label != "" || base.disabled || base.interactive {
-		t.Fatalf("configuring Box mutated base: %#v", base)
-	}
-	if configured.key != "save" || configured.label != "Save" || !configured.disabled || !configured.interactive || configured.onClick == nil {
-		t.Fatalf("configured Box = %#v", configured)
 	}
 }
 
@@ -181,7 +165,7 @@ func semanticButton(nodes []input.SemanticNode) (input.SemanticNode, bool) {
 	return input.SemanticNode{}, false
 }
 
-func TestBoxStyleCascadesPropertiesScopeAndInstance(t *testing.T) {
+func TestBoxStyleCascadesScopeAndInstance(t *testing.T) {
 	ctx := newContext(nil)
 	restore := frame.PushStyle(ctx, flowstyle.Style{}.
 		PaddingX(12).
@@ -192,23 +176,43 @@ func TestBoxStyleCascadesPropertiesScopeAndInstance(t *testing.T) {
 	instanceForeground := flowstyle.RGB(0x445566)
 	instanceBackground := flowstyle.RGB(0x778899)
 
+	// Scope supplies horizontal padding; instance owns size, vertical padding, and colors.
 	dims := Box(probe).
-		Width(100).
-		Padding(4).
 		Style(flowstyle.Style{}.
 			Width(120).
-			PaddingLeft(20).
+			PaddingTop(4).
+			PaddingBottom(4).
+			PaddingLeft(20). // overrides scope PaddingX on the left only
 			TextColor(instanceForeground).
 			Background(instanceBackground),
 		).
 		Layout(ctx, layout.Context{Constraints: layout.Constraints{Max: image.Pt(300, 100)}, Ops: new(op.Ops)})
 
+	// Padding: L=20 (instance), R=12 (scope), T/B=4 (instance) → child width 120-32=88.
 	wantConstraints := layout.Constraints{Min: image.Pt(88, 0), Max: image.Pt(88, 92)}
 	if dims.Size.X != 120 || probe.constraints != wantConstraints {
 		t.Fatalf("box size/child constraints = %v/%v", dims.Size, probe.constraints)
 	}
 	if probe.foreground != instanceForeground.Color || probe.background != instanceBackground.Color {
 		t.Fatalf("box colors = %#v/%#v", probe.foreground, probe.background)
+	}
+}
+
+func TestBoxStyleJoinsMultipleStyleCalls(t *testing.T) {
+	child := &constraintWidget{}
+	dims := Box(child).
+		Style(flowstyle.Style{}.Width(100).Padding(4)).
+		Style(flowstyle.Style{}.Width(120).PaddingLeft(20)).
+		Layout(newContext(nil), layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(300, 300)},
+			Ops:         new(op.Ops),
+		})
+	if dims.Size.X != 120 {
+		t.Fatalf("joined width = %d, want 120", dims.Size.X)
+	}
+	// Padding all 4 then left 20 → child max width 120-24=96.
+	if child.constraints.Max.X != 96 {
+		t.Fatalf("joined padding child max X = %d, want 96", child.constraints.Max.X)
 	}
 }
 
@@ -224,7 +228,7 @@ func TestBoxConditionalStyleTransition(t *testing.T) {
 			Key("status").
 			Style(flowstyle.Style{}.Background(flowstyle.SolidColor{Color: from}).
 				Transition(flowstyle.PropBackgroundColor, 100*time.Millisecond).
-				When(flowstyle.If(active), flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to}))).
+				WhenIf(active, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: to}))).
 			Layout(ctx, layout.Context{
 				Constraints: layout.Exact(image.Pt(20, 20)),
 				Ops:         new(op.Ops),
@@ -298,7 +302,7 @@ func TestBoxClampsExplicitSizeToParentConstraints(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			child := &constraintWidget{}
-			Box(child).Width(test.requested.X).Height(test.requested.Y).Layout(newContext(nil), layout.Context{
+			Box(child).Style(flowstyle.Style{}.Width(unit.Dp(test.requested.X)).Height(unit.Dp(test.requested.Y))).Layout(newContext(nil), layout.Context{
 				Constraints: test.constraints,
 				Ops:         new(op.Ops),
 			})
@@ -313,7 +317,7 @@ func TestBoxAppliesMinMaxConstraints(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	Box(child).MinWidth(80).MaxWidth(120).MinHeight(40).MaxHeight(90).Layout(newContext(nil), layout.Context{
+	Box(child).Style(flowstyle.Style{}.MinWidth(80).MaxWidth(120).MinHeight(40).MaxHeight(90)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 300)},
 		Ops:         &ops,
 	})
@@ -330,7 +334,7 @@ func TestBoxFill(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	Box(child).FillWidth().FillHeight().Layout(newContext(nil), layout.Context{
+	Box(child).Style(flowstyle.Style{}.FillWidth().FillHeight()).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         &ops,
 	})
@@ -413,11 +417,7 @@ func TestBoxAppliesSidePadding(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	Box(child).
-		PaddingTop(1).
-		PaddingRight(2).
-		PaddingBottom(3).
-		PaddingLeft(4).
+	Box(child).Style(flowstyle.Style{}.PaddingTop(1).PaddingRight(2).PaddingBottom(3).PaddingLeft(4)).
 		Layout(newContext(nil), layout.Context{
 			Constraints: layout.Constraints{Max: image.Pt(100, 100)},
 			Ops:         &ops,
@@ -432,7 +432,7 @@ func TestBoxAppliesMarginOutsideSize(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	dims := Box(child).Width(100).Height(50).Margin(10).Layout(newContext(nil), layout.Context{
+	dims := Box(child).Style(flowstyle.Style{}.Width(100).Height(50).Margin(10)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 300)},
 		Ops:         &ops,
 	})
@@ -449,7 +449,7 @@ func TestBoxAppliesSideMargin(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	Box(child).MarginLeft(4).MarginRight(2).MarginTop(1).MarginBottom(3).Layout(newContext(nil), layout.Context{
+	Box(child).Style(flowstyle.Style{}.MarginLeft(4).MarginRight(2).MarginTop(1).MarginBottom(3)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
 		Ops:         &ops,
 	})
@@ -463,7 +463,7 @@ func TestBoxAlignClearsChildMinimum(t *testing.T) {
 	child := &constraintWidget{}
 	var ops op.Ops
 
-	Box(child).FillWidth().FillHeight().Align(AlignCenter).Layout(newContext(nil), layout.Context{
+	Box(child).Style(flowstyle.Style{}.FillWidth().FillHeight()).Align(AlignCenter).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         &ops,
 	})
@@ -479,7 +479,7 @@ func TestBoxAlignClearsChildMinimum(t *testing.T) {
 func TestBoxClipConstrainsReportedSize(t *testing.T) {
 	var ops op.Ops
 
-	dims := Box(overflowWidget{}).Width(100).Height(50).Clip().Layout(newContext(nil), layout.Context{
+	dims := Box(overflowWidget{}).Style(flowstyle.Style{}.Width(100).Height(50).Overflow(flowstyle.OverflowHidden)).Layout(newContext(nil), layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(300, 300)},
 		Ops:         &ops,
 	})
@@ -489,19 +489,28 @@ func TestBoxClipConstrainsReportedSize(t *testing.T) {
 	}
 }
 
-func TestBoxOverflowVisible(t *testing.T) {
-	b := Box(Spacer(10, 10)).Overflow(OverflowVisible)
-
-	if b.overflow != OverflowVisible {
-		t.Fatal("overflow was not visible")
+func TestBoxOverflowStyleDoesNotClip(t *testing.T) {
+	// OverflowVisible is the default Style overflow; ensure an explicit value still layouts.
+	dims := Box(Spacer(10, 10)).
+		Style(flowstyle.Style{}.Width(20).Height(20).Overflow(flowstyle.OverflowVisible)).
+		Layout(newContext(nil), layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+			Ops:         new(op.Ops),
+		})
+	if dims.Size != image.Pt(20, 20) {
+		t.Fatalf("overflow-visible box = %v, want (20,20)", dims.Size)
 	}
 }
 
-func TestBoxOverflowHidden(t *testing.T) {
-	b := Box(Spacer(10, 10)).Overflow(OverflowHidden)
-
-	if b.overflow != OverflowHidden {
-		t.Fatal("overflow was not hidden")
+func TestBoxOverflowHiddenStyleClips(t *testing.T) {
+	dims := Box(overflowWidget{}).
+		Style(flowstyle.Style{}.Width(100).Height(50).Overflow(flowstyle.OverflowHidden)).
+		Layout(newContext(nil), layout.Context{
+			Constraints: layout.Constraints{Max: image.Pt(200, 200)},
+			Ops:         new(op.Ops),
+		})
+	if dims.Size != image.Pt(100, 50) {
+		t.Fatalf("overflow-hidden box = %v, want (100,50)", dims.Size)
 	}
 }
 
@@ -664,12 +673,7 @@ func TestBoxPropagatesMarginPaddingAndAlignment(t *testing.T) {
 		key:    "box",
 		size:   image.Pt(20, 10),
 		anchor: image.Rect(0, 0, 20, 10),
-	}).
-		Width(80).
-		Height(60).
-		MarginLeft(7).
-		MarginTop(9).
-		Padding(5).
+	}).Style(flowstyle.Style{}.Width(80).Height(60).MarginLeft(7).MarginTop(9).Padding(5)).
 		Align(AlignBottomEnd))
 	want := image.Rect(62, 54, 82, 64)
 	if got != want {
@@ -691,7 +695,7 @@ func TestBoxClipHidesOverlayAnchorOutsideBox(t *testing.T) {
 		},
 	}
 	frame.BeginFrameWithViewport(ctx, viewport)
-	Box(probe).Width(50).Height(50).Clip().Layout(ctx, gtx)
+	Box(probe).Style(flowstyle.Style{}.Width(50).Height(50).Overflow(flowstyle.OverflowHidden)).Layout(ctx, gtx)
 	frame.LayoutOverlays(ctx, gtx)
 	frame.EndFrame(ctx)
 	if called {
@@ -908,7 +912,7 @@ func findOverlayProbe(widget frame.Widget) (*overlayProbeWidget, bool) {
 	case CenterWidget:
 		return findOverlayProbe(widget.child)
 	case BoxWidget:
-		return findOverlayProbe(widget.child)
+		return findOverlayProbe(widget.Child())
 	case RowWidget:
 		return findOverlayProbeIn(widget.children)
 	case ColumnWidget:

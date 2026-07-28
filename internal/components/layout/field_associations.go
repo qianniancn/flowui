@@ -39,10 +39,10 @@ func prepareFieldAssociation(ctx *frame.Context, widget frame.Widget) {
 			prepareFieldAssociation(ctx, widget.child)
 		}
 	case BoxWidget:
-		prepareFieldAssociation(ctx, widget.child)
+		prepareFieldAssociation(ctx, widget.Child())
 	case *BoxWidget:
 		if widget != nil {
-			prepareFieldAssociation(ctx, widget.child)
+			prepareFieldAssociation(ctx, widget.Child())
 		}
 	case CenterWidget:
 		prepareFieldAssociation(ctx, widget.child)

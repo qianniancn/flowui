@@ -7,13 +7,14 @@ import (
 	"gioui.org/io/pointer"
 )
 
-const minimumDataWindowSpan = float32(0.02)
+const minimumDataWindowSpan = 0.02
 
 // DataWindow is a normalized visible range where 0 is the data start and 1 is
-// the data end.
+// the data end. Float64 is intentional: time-based charts map this range back
+// to wall-clock values and should not accumulate float32 rounding drift.
 type DataWindow struct {
-	Start float32
-	End   float32
+	Start float64
+	End   float64
 }
 
 // VisibleCategoryRange converts a normalized data window to a non-empty
@@ -35,18 +36,19 @@ func FullDataWindow() DataWindow {
 }
 
 // NewDataWindow validates and returns a normalized data range.
-func NewDataWindow(start, end float32) DataWindow {
-	if !finite32(start) || !finite32(end) || start < 0 || end > 1 || end <= start {
+func NewDataWindow[T ~float32 | ~float64](start, end T) DataWindow {
+	startValue, endValue := float64(start), float64(end)
+	if !finite64(startValue) || !finite64(endValue) || startValue < 0 || endValue > 1 || endValue <= startValue {
 		panic("flowui: chart data window must satisfy 0 <= start < end <= 1")
 	}
-	return DataWindow{Start: start, End: end}
+	return DataWindow{Start: startValue, End: endValue}
 }
 
 func (w DataWindow) IsFull() bool {
 	return w.Start == 0 && w.End == 1
 }
 
-func (w DataWindow) zoom(anchor, factor float32) DataWindow {
+func (w DataWindow) zoom(anchor, factor float64) DataWindow {
 	anchor = min(max(anchor, 0), 1)
 	span := w.End - w.Start
 	nextSpan := min(max(span*factor, minimumDataWindowSpan), 1)
@@ -56,23 +58,29 @@ func (w DataWindow) zoom(anchor, factor float32) DataWindow {
 	return DataWindow{Start: start, End: start + nextSpan}
 }
 
-func (w DataWindow) pan(delta float32) DataWindow {
+func (w DataWindow) pan(delta float64) DataWindow {
 	span := w.End - w.Start
 	start := w.Start + delta
 	start = min(max(start, 0), 1-span)
 	return DataWindow{Start: start, End: start + span}
 }
 
-func finite32(value float32) bool {
-	return !math.IsNaN(float64(value)) && !math.IsInf(float64(value), 0)
+func finite64(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
 }
 
 // DataWindowGesture tracks pointer-driven zooming and panning.
 type DataWindowGesture struct {
+	active        bool
 	dragging      bool
 	pointerID     pointer.ID
 	startPosition float32
 	startWindow   DataWindow
+}
+
+// Dragging reports whether the gesture is actively panning the data window.
+func (g *DataWindowGesture) Dragging() bool {
+	return g.dragging
 }
 
 // Update applies one pointer event to the controlled data window.
@@ -84,24 +92,24 @@ func (g *DataWindowGesture) Update(event pointer.Event, plot image.Rectangle, cu
 	switch event.Kind {
 	case pointer.Scroll:
 		if event.Scroll.Y != 0 {
-			factor := float32(0.8)
+			factor := 0.8
 			if event.Scroll.Y > 0 {
 				factor = 1.25
 			}
 			position := event.Position.X
-			minimum := float32(plot.Min.X)
-			length := float32(plot.Dx())
+			minimum := float64(plot.Min.X)
+			length := float64(plot.Dx())
 			if vertical {
 				position = event.Position.Y
-				minimum = float32(plot.Min.Y)
-				length = float32(plot.Dy())
+				minimum = float64(plot.Min.Y)
+				length = float64(plot.Dy())
 			}
-			anchor := (position - minimum) / length
+			anchor := (float64(position) - minimum) / length
 			next := current.zoom(anchor, factor)
 			return next, next != current
 		}
 		if event.Scroll.X != 0 {
-			direction := float32(0.1)
+			direction := 0.1
 			if event.Scroll.X < 0 {
 				direction = -direction
 			}
@@ -110,7 +118,8 @@ func (g *DataWindowGesture) Update(event pointer.Event, plot image.Rectangle, cu
 		}
 	case pointer.Press:
 		if event.Buttons.Contain(pointer.ButtonPrimary) {
-			g.dragging = true
+			g.active = true
+			g.dragging = false
 			g.pointerID = event.PointerID
 			g.startPosition = event.Position.X
 			if vertical {
@@ -119,14 +128,15 @@ func (g *DataWindowGesture) Update(event pointer.Event, plot image.Rectangle, cu
 			g.startWindow = current
 		}
 	case pointer.Drag:
-		if g.dragging && event.PointerID == g.pointerID {
+		if g.active && event.PointerID == g.pointerID {
+			g.dragging = true
 			position := event.Position.X
 			length := float32(plot.Dx())
 			if vertical {
 				position = event.Position.Y
 				length = float32(plot.Dy())
 			}
-			delta := (g.startPosition - position) / length * (g.startWindow.End - g.startWindow.Start)
+			delta := (float64(g.startPosition) - float64(position)) / float64(length) * (g.startWindow.End - g.startWindow.Start)
 			next := g.startWindow.pan(delta)
 			return next, next != current
 		}
@@ -139,6 +149,7 @@ func (g *DataWindowGesture) Update(event pointer.Event, plot image.Rectangle, cu
 }
 
 func (g *DataWindowGesture) Cancel() {
+	g.active = false
 	g.dragging = false
 	g.pointerID = 0
 }

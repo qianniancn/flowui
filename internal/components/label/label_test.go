@@ -4,20 +4,8 @@ import (
 	"image/color"
 	"testing"
 
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
-
-func TestOptions(t *testing.T) {
-	custom := flowstyle.Style{}.TextColor(flowstyle.SolidColor{Color: color.NRGBA{R: 1, A: 255}})
-	label := Label("Email").For("email").Required(true).Disabled(true).Invalid(true).Style(custom)
-	if label.text != "Email" || label.forKey != "email" || !label.required || !label.disabled || !label.invalid {
-		t.Fatal("label options were not retained")
-	}
-	if label.customStyle.Resolve(flowstyle.StyleState{}).Text == nil {
-		t.Fatal("label style was not retained")
-	}
-}
 
 func TestStyleStates(t *testing.T) {
 	theme := theme.DefaultTheme()

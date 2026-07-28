@@ -32,7 +32,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			ui.Key("counter", counter.View(model.Counter, func(msg counter.Msg) {
 				send(CounterMsg{Value: msg})
 			})),
-		).Padding(24),
+		).Style(ui.Padding(24)),
 	)
 }
 

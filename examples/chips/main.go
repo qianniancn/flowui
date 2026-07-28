@@ -63,7 +63,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(20),
 			).Vertical(),
-		).FillWidth().MaxWidth(860).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(860)).Style(ui.Padding(24)),
 	)
 }
 
@@ -86,7 +86,7 @@ func statusRow(variant ui.ChipVariant) ui.Widget {
 
 func variantRow(label string, variant ui.ChipVariant) ui.Widget {
 	return ui.Row(
-		ui.Box(ui.Text(label).Size(13)).Width(82),
+		ui.Box(ui.Text(label).Size(13)).Style(ui.Width(82)),
 		chipRow(
 			ui.Chip("Default").Variant(variant),
 			ui.Chip("Accent").Color(ui.ChipAccent).Variant(variant),

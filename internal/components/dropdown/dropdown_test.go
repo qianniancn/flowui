@@ -287,6 +287,23 @@ func TestDropdownCustomPopoverContentIsLaidOutByMenu(t *testing.T) {
 	}
 }
 
+func TestDropdownUsesMenuRootBackground(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	got := frame.ActiveTheme(ctx).Palette.Background
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).
+		BeforeContent(frame.WidgetFunc(func(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+			got = ctx.BackgroundColor()
+			return layout.Dimensions{}
+		}))
+
+	openDropdownForTest(ctx, router, widget)
+	activeTheme := frame.ActiveTheme(ctx)
+	if want := theme.ColorOr(activeTheme.Components.Menu.BackgroundColor, activeTheme.Palette.OverlayColor()); got != want {
+		t.Fatalf("dropdown background = %#v, want %#v", got, want)
+	}
+}
+
 func openDropdownForTest(ctx *frame.Context, router *input.Router, widget Widget) time.Time {
 	start := time.Unix(2, 0)
 	layoutDropdownFrame(ctx, router, widget, start)

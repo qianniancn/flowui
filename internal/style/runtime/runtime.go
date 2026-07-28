@@ -2,7 +2,9 @@ package runtime
 
 import (
 	"image/color"
+	"math"
 	"time"
+	"unsafe"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -21,20 +23,30 @@ func Resolve(
 	ctx *frame.Context,
 	gtx layout.Context,
 	key string,
-	state style.StyleState,
+	styleState style.StyleState,
 	defaults, variant, size, custom style.Style,
 ) style.ResolvedStyle {
-	resolved := ResolveStatic(ctx, state, defaults, variant, size, custom)
+	resolved := ResolveStatic(ctx, styleState, defaults, variant, size, custom)
 	return ApplyTransitions(ctx, gtx, key, resolved)
 }
 
 // ApplyTransitions animates a style that has already been resolved. Styles
 // without transitions remain stateless.
+//
+// An empty key soft-fails: transitions are not applied (values stay at their
+// resolved targets) so callers without identity do not panic on state slots.
 func ApplyTransitions(ctx *frame.Context, gtx layout.Context, key string, resolved style.ResolvedStyle) style.ResolvedStyle {
 	if len(resolved.Transitions) == 0 {
 		return resolved
 	}
-	animate(ctx, gtx, key, &resolved)
+	if key == "" {
+		return resolved
+	}
+	// Isolate transition slots from interact/component kinds under a derived
+	// identity so two unrelated claims on the user key cannot collide, while
+	// the same component key still shares one animation state.
+	animKey := frame.DerivedKey(ctx, key, "style-transition")
+	animate(ctx, gtx, animKey, &resolved)
 	return resolved
 }
 
@@ -80,10 +92,47 @@ func ResolveStatic(
 	state style.StyleState,
 	defaults, variant, size, custom style.Style,
 ) style.ResolvedStyle {
+	cacheSafe := styleLayersCacheSafe(ctx, defaults, variant, size, custom)
+
+	// Check cascade cache first (if enabled)
+	if !DisableCascadeCache && cacheSafe {
+		activeTheme := frame.ActiveTheme(ctx)
+		themeHash := computeThemeHash(activeTheme)
+		stateHash := computeStyleStateHash(state)
+
+		allLayersHash := hashStyleLayers(ctx, state, defaults, variant, size, custom)
+
+		cacheKey := cascadeCacheKey{
+			contextPtr:   uintptr(unsafe.Pointer(ctx)), // Per-context caching
+			componentKey: "",                           // Static resolve doesn't have component identity
+			stateHash:    stateHash,
+			themeHash:    themeHash,
+			customHash:   allLayersHash,
+		}
+
+		if cached, found := globalCascadeCache.get(cacheKey); found {
+			return cached
+		}
+
+		// Cache miss - perform full resolution
+		resolved := resolveStaticUncached(ctx, state, defaults, variant, size, custom)
+		globalCascadeCache.put(cacheKey, resolved)
+		return resolved
+	}
+
+	// Cache disabled - direct resolution
+	return resolveStaticUncached(ctx, state, defaults, variant, size, custom)
+}
+
+func resolveStaticUncached(
+	ctx *frame.Context,
+	state style.StyleState,
+	defaults, variant, size, custom style.Style,
+) style.ResolvedStyle {
 	layers := []style.Style{defaults}
-	layers = append(layers, frame.ActiveInheritedStyles(ctx)...)
+	layers = append(layers, frame.ActiveInheritedStylesReadOnly(ctx)...)
 	layers = append(layers, variant, size)
-	layers = append(layers, frame.ActiveStyles(ctx)...)
+	layers = append(layers, frame.ActiveStylesReadOnly(ctx)...)
 	layers = append(layers, custom)
 	layers = resolveThemeMetrics(layers, frame.ActiveTheme(ctx))
 	resolved := style.Cascade(state, layers...)
@@ -113,6 +162,10 @@ func ApplyPartTransitions(ctx *frame.Context, gtx layout.Context, key string, pa
 	if part == style.PartRoot {
 		return ApplyTransitions(ctx, gtx, key, resolved)
 	}
+	// Soft-fail like root ApplyTransitions: no identity means snap, no panic.
+	if key == "" {
+		return resolved
+	}
 	return ApplyTransitions(ctx, gtx, frame.DerivedKey(ctx, key, "style-part:"+string(part)), resolved)
 }
 
@@ -126,10 +179,49 @@ func ResolvePartStatic(
 	if part == style.PartRoot {
 		return ResolveStatic(ctx, state, defaults, variant, size, custom)
 	}
+
+	cacheSafe := styleLayersCacheSafe(ctx, defaults, variant, size, custom)
+
+	// Check cascade cache first (if enabled)
+	if !DisableCascadeCache && cacheSafe {
+		activeTheme := frame.ActiveTheme(ctx)
+		themeHash := computeThemeHash(activeTheme)
+		stateHash := computeStyleStateHash(state)
+
+		allLayersHash := hashStyleLayers(ctx, state, defaults, variant, size, custom)
+
+		cacheKey := cascadeCacheKey{
+			contextPtr:   uintptr(unsafe.Pointer(ctx)), // Per-context caching
+			componentKey: string(part),                 // Use part name as component key
+			stateHash:    stateHash,
+			themeHash:    themeHash,
+			customHash:   allLayersHash,
+		}
+
+		if cached, found := globalCascadeCache.get(cacheKey); found {
+			return cached
+		}
+
+		// Cache miss - perform full resolution
+		resolved := resolvePartStaticUncached(ctx, part, state, defaults, variant, size, custom)
+		globalCascadeCache.put(cacheKey, resolved)
+		return resolved
+	}
+
+	// Cache disabled - direct resolution
+	return resolvePartStaticUncached(ctx, part, state, defaults, variant, size, custom)
+}
+
+func resolvePartStaticUncached(
+	ctx *frame.Context,
+	part style.Part,
+	state style.StyleState,
+	defaults, variant, size, custom style.Style,
+) style.ResolvedStyle {
 	layers := []style.Style{defaults}
-	layers = append(layers, frame.ActiveInheritedStyles(ctx)...)
+	layers = append(layers, frame.ActiveInheritedStylesReadOnly(ctx)...)
 	layers = append(layers, variant, size)
-	layers = append(layers, frame.ActiveStyles(ctx)...)
+	layers = append(layers, frame.ActiveStylesReadOnly(ctx)...)
 	layers = append(layers, custom)
 	layers = resolveThemeMetrics(layers, frame.ActiveTheme(ctx))
 	resolved := style.CascadePart(state, part, layers...)
@@ -142,8 +234,22 @@ func resolveThemeMetrics(layers []style.Style, activeTheme *theme.Theme) []style
 		fallback := theme.DefaultTheme()
 		activeTheme = &fallback
 	}
+
+	// Compute theme hash for cache key
+	themeHash := computeThemeHash(activeTheme)
+
 	for index := range layers {
 		layers[index] = style.ExpandTokens(layers[index], func(token style.StyleToken) style.Style {
+			// Check cache first
+			cacheKey := tokenCacheKey{
+				token:     token,
+				themeHash: themeHash,
+			}
+			if cached, found := globalTokenCache.get(cacheKey); found {
+				return cached
+			}
+
+			// Cache miss - compute and store
 			var declaration style.Style
 			switch token {
 			case style.TokenBodyFontSize:
@@ -179,10 +285,65 @@ func resolveThemeMetrics(layers []style.Style, activeTheme *theme.Theme) []style
 			case style.TokenItemHeight:
 				declaration = declaration.Height(activeTheme.Spacing.ItemHeight)
 			}
+
+			globalTokenCache.put(cacheKey, declaration)
 			return declaration
 		})
 	}
 	return layers
+}
+
+// computeThemeHash hashes every theme value consumed by metric, color, and
+// shadow token resolution.
+func computeThemeHash(t *theme.Theme) uint64 {
+	const offset64 = 14695981039346656037
+	const prime64 = 1099511628211
+	hash := uint64(offset64)
+	mix := func(value uint64) {
+		hash ^= value
+		hash *= prime64
+	}
+	mixMetric := func(value float32) { mix(uint64(math.Float32bits(value))) }
+	mixColor := func(value color.NRGBA) {
+		mix(uint64(value.R)<<24 | uint64(value.G)<<16 | uint64(value.B)<<8 | uint64(value.A))
+	}
+
+	for _, value := range []float32{
+		float32(t.Typography.BodySize), float32(t.Typography.ControlSize), float32(t.Typography.SmallSize),
+		float32(t.Shape.ControlRadius), float32(t.Shape.PopoverRadius), float32(t.Shape.ItemRadius), float32(t.Shape.CheckboxRadius),
+		float32(t.Spacing.ControlHeight), float32(t.Spacing.SmallControlHeight), float32(t.Spacing.LargeControlHeight),
+		float32(t.Spacing.ControlPaddingX), float32(t.Spacing.SmallControlPaddingX), float32(t.Spacing.LargeControlPaddingX),
+		float32(t.Spacing.IconButtonSize), float32(t.Spacing.PanelPadding), float32(t.Spacing.ItemHeight),
+	} {
+		mixMetric(value)
+	}
+
+	p := t.Palette
+	for _, value := range []color.NRGBA{
+		p.Background, p.Surface, p.SurfaceForeground, p.SurfaceSecondary, p.SurfaceSecondaryForeground,
+		p.SurfaceTertiary, p.SurfaceTertiaryForeground, p.SurfaceHover, p.SurfacePressed, p.SurfaceRaised,
+		p.Overlay, p.OverlayForeground, p.Foreground, p.MutedForeground, p.Border, p.Separator,
+		p.Default, p.DefaultForeground, p.DefaultHover, p.FieldBackground, p.FieldHover, p.FieldForeground,
+		p.FieldPlaceholder, p.FieldFocus, p.Segment, p.SegmentForeground, p.Accent, p.AccentHover,
+		p.AccentPressed, p.AccentForeground, p.AccentSoft, p.AccentSoftHover, p.AccentSoftForeground,
+		p.Success, p.SuccessForeground, p.SuccessSoft, p.SuccessSoftForeground, p.Warning, p.WarningForeground,
+		p.WarningSoft, p.WarningSoftForeground, p.Danger, p.DangerHover, p.DangerPressed, p.DangerForeground,
+		p.DangerSoft, p.DangerSoftHover, p.DangerSoftForeground, p.Focus, p.Selection, p.SurfaceShadow, p.OverlayShadow,
+	} {
+		mixColor(value)
+	}
+
+	for _, profile := range []theme.ShadowTheme{t.Shadows.Surface, t.Shadows.Overlay, t.Shadows.Menu} {
+		for _, layer := range profile.Layers {
+			mixMetric(float32(layer.OffsetX))
+			mixMetric(float32(layer.OffsetY))
+			mixMetric(float32(layer.Blur))
+			mixMetric(float32(layer.Spread))
+			mixMetric(layer.Opacity)
+		}
+	}
+	mixColor(t.Components.Menu.ShadowColor)
+	return hash
 }
 
 func resolveThemeColors(resolved *style.ResolvedStyle, activeTheme *theme.Theme) {
@@ -521,6 +682,9 @@ func solidColor(source any) (color.NRGBA, bool) {
 	case style.SolidColor:
 		return value.Color, true
 	case *style.SolidColor:
+		if value == nil {
+			return color.NRGBA{}, false
+		}
 		return value.Color, true
 	default:
 		return color.NRGBA{}, false

@@ -178,6 +178,25 @@ func TestCurrentlyFocusedTargetDoesNotClearNewRequest(t *testing.T) {
 	}
 }
 
+func TestCommitObservationsClearsLostFocus(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.Visible(tag, true)
+	focus.BeginFrame()
+	if focus.Observe(tag, false) {
+		t.Fatal("unfocused target reported a visible focus ring")
+	}
+	focus.CommitObservations()
+	if focus.active.tag != nil {
+		t.Fatal("lost focus remained active after observations were committed")
+	}
+	focus.active = focusTarget{tag: tag, origin: FocusOriginPointer}
+	focus.CommitObservations()
+	if focus.active.tag != tag {
+		t.Fatal("committing the same observations twice changed focus again")
+	}
+}
+
 func registerFocusTestTarget(router *input.Router, tag event.Tag, focus *Focus) {
 	var ops op.Ops
 	gtx := layout.Context{

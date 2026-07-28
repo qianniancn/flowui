@@ -138,7 +138,7 @@ func (m Widget) layoutSubmenuOverlay(ctx *frame.Context, gtx layout.Context, sta
 	}
 	macro := op.Record(gtx.Ops)
 	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
-		return m.layout(ctx, panelGtx, state, open && (interactive || state.openSubmenu != "" || state.submenuActive))
+		return m.layoutRoot(ctx, panelGtx, state, open && (interactive || state.openSubmenu != "" || state.submenuActive))
 	})
 	panelCall := macro.Stop()
 

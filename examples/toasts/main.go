@@ -92,7 +92,7 @@ func View(_ *ui.Context, model Model, send ui.Send[any]) ui.Widget {
 					),
 					ui.Text(model.lastEvent).Size(12),
 				).Gap(20),
-			).FillWidth().MaxWidth(760).Padding(24),
+			).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 		)),
 		ui.Overlay(ui.ToastProvider("notifications", model.toasts).
 			Placement(model.placement).

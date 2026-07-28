@@ -85,9 +85,9 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 						ui.Divider(),
 						ui.Column(alerts...).Gap(16),
 					).Gap(20),
-				).Padding(3),
+				).Style(ui.Padding(3)),
 			).Vertical(),
-		).FillWidth().MaxWidth(680).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(680)).Style(ui.Padding(24)),
 	)
 }
 

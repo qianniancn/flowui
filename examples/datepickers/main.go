@@ -12,6 +12,7 @@ type Model struct {
 	Trip        ui.DateRange
 	Start       time.Time
 	Review      time.Time
+	PickerOnly  time.Time
 	Appointment time.Time
 	Full        time.Time
 	Last        string
@@ -22,6 +23,7 @@ type Field string
 const (
 	fieldStart       Field = "start"
 	fieldReview      Field = "review"
+	fieldPickerOnly  Field = "picker-only"
 	fieldAppointment Field = "appointment"
 	fieldFull        Field = "full"
 	fieldDate        Field = "date-field"
@@ -44,6 +46,8 @@ func Update(m *Model, msg Msg) {
 		m.Start = msg.Date
 	case fieldReview:
 		m.Review = msg.Date
+	case fieldPickerOnly:
+		m.PickerOnly = msg.Date
 	case fieldAppointment:
 		m.Appointment = msg.Date
 	case fieldFull:
@@ -66,7 +70,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	return ui.Center(
 		ui.Box(
 			ui.Scroll("datepickers",
-				ui.Column(
+				ui.Box(ui.Column(
 					ui.Text("FlowUI date components").Size(24),
 					ui.Text(status).Size(16),
 					ui.Divider(),
@@ -77,13 +81,13 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 								Description("Use the arrow keys or type each segment").
 								OnChange(func(value time.Time) {
 									send(Msg{Field: fieldDate, Date: value})
-								})).Width(256),
+								})).Style(ui.Width(256)),
 							ui.Box(ui.DateField("date-field-secondary", m.FieldDate).
 								Label("Secondary date").
 								Variant(ui.InputSecondary).
 								OnChange(func(value time.Time) {
 									send(Msg{Field: fieldDate, Date: value})
-								})).Width(256),
+								})).Style(ui.Width(256)),
 						).Gap(12),
 					),
 					section("DateRangePicker",
@@ -93,7 +97,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							FullWidth().
 							OnChange(func(value ui.DateRange) {
 								send(Msg{Field: fieldTrip, Range: value})
-							})).Width(320),
+							})).Style(ui.Width(320)),
 					),
 					section("DatePicker variants",
 						ui.Column(
@@ -101,12 +105,17 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 								Label("Date").
 								Description("Choose a date from the calendar or edit each segment").
 								FullWidth()).
-								Width(280),
+								Style(ui.Width(280)),
 							ui.Box(datePicker("review", fieldReview, m.Review, send).
 								Label("Secondary date").
 								Variant(ui.InputSecondary).
 								FullWidth()).
-								Width(280),
+								Style(ui.Width(280)),
+							ui.Box(datePicker("picker-only", fieldPickerOnly, m.PickerOnly, send).
+								Label("Picker-only date").
+								Editable(false).
+								FullWidth()).
+								Style(ui.Width(280)),
 						).Gap(12),
 					),
 					section("States",
@@ -117,12 +126,12 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 								MinDate(today).
 								Invalid(m.Appointment.IsZero()).
 								FullWidth()).
-								Width(256),
+								Style(ui.Width(256)),
 							ui.Box(ui.DatePicker("disabled", today).
 								Label("Disabled date").
 								Disabled(true).
 								FullWidth()).
-								Width(256),
+								Style(ui.Width(256)),
 						).Gap(12),
 					),
 					section("Full width",
@@ -132,9 +141,9 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							Variant(ui.InputSecondary).
 							FullWidth(),
 					),
-				).Gap(18),
+				).Gap(18)).Style(ui.Padding(3)),
 			).Vertical(),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 

@@ -1,4 +1,5 @@
-package interaction
+// Package interact is the shared interaction kernel: input → StyleState + intent callbacks.
+package interact
 
 import (
 	"gioui.org/io/semantic"
@@ -19,8 +20,9 @@ type Click struct {
 	StyleState flowstyle.StyleState
 }
 
-// BeginClick consumes queued clicks and derives the common interaction state.
-func BeginClick(
+// Begin consumes queued clicks and derives the common interaction state.
+// key must be non-empty for retained interaction (enforced in debug later).
+func Begin(
 	ctx *frame.Context,
 	gtx layout.Context,
 	key string,

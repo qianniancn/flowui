@@ -72,36 +72,7 @@ func TestButtonDisabled(t *testing.T) {
 	}
 }
 
-func TestButtonOptions(t *testing.T) {
-	b := Button("save", text.New("Save")).
-		Label("Save changes").
-		Variant(ButtonOutline).
-		Size(ButtonLarge).
-		Loading(true).
-		FullWidth().
-		IconOnly()
-
-	if b.variant != ButtonOutline {
-		t.Fatal("button variant was not set")
-	}
-	if b.label != "Save changes" {
-		t.Fatal("button label was not set")
-	}
-	if b.size != ButtonLarge {
-		t.Fatal("button size was not set")
-	}
-	if !b.loading {
-		t.Fatal("button was not loading")
-	}
-	if !b.fullWidth {
-		t.Fatal("button was not full width")
-	}
-	if !b.iconOnly {
-		t.Fatal("button was not icon only")
-	}
-}
-
-func TestButtonStyleCascadesScopeBeforeInstance(t *testing.T) {
+func TestButtonWidgetCascadesScopeBeforeInstance(t *testing.T) {
 	ctx := newContext(nil)
 	scope := flowstyle.Style{}.
 		PaddingX(12).
@@ -133,7 +104,7 @@ func TestButtonStyleCascadesScopeBeforeInstance(t *testing.T) {
 	}
 }
 
-func TestButtonStylePartsOverrideContentAndIndicator(t *testing.T) {
+func TestButtonWidgetPartsOverrideContentAndIndicator(t *testing.T) {
 	ctx := newContext(nil)
 	labelColor := color.NRGBA{R: 1, A: 0xff}
 	iconColor := color.NRGBA{G: 2, A: 0xff}
@@ -153,7 +124,7 @@ func TestButtonStylePartsOverrideContentAndIndicator(t *testing.T) {
 	}
 }
 
-func TestButtonStyleCanOverrideHeight(t *testing.T) {
+func TestButtonWidgetCanOverrideHeight(t *testing.T) {
 	dims := Button("tall", text.New("Tall")).
 		Style(flowstyle.Style{}.Height(52)).
 		Layout(newContext(nil), testLayoutContext())

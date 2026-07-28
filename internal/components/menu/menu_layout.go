@@ -257,7 +257,6 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 			style.foreground = col
 			style.description = col
 			style.shortcut = col
-			style.indicator = col
 		}
 	}
 	itemState.focus.Opacity(animGtx, focusVisible && !styleDisabled, frame.ActiveTheme(ctx).Motion)
@@ -277,7 +276,11 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 		}
 		semantic.SelectedOp(selected).Add(gtx.Ops)
 		semantic.EnabledOp(!disabled).Add(gtx.Ops)
-		return m.layoutItemContent(ctx, gtx, entry, style)
+		return layout.Stack{Alignment: layout.W}.Layout(gtx,
+			layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+				return m.layoutItemContent(ctx, gtx, entry, style)
+			}),
+		)
 	})
 	dims := layoutui.LayoutInteractiveResolved(ctx, eventGtx, part, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
 		return itemState.clickable.Layout(gtx, visual)
@@ -416,6 +419,8 @@ func (m Widget) layoutIndicator(ctx *frame.Context, gtx layout.Context, entry en
 	if !selected || indicatorType == IndicatorNone {
 		return layout.Dimensions{Size: size}
 	}
+	offset := op.Offset(image.Pt(0, gtx.Dp(tokens.IndicatorOffsetY))).Push(gtx.Ops)
+	defer offset.Pop()
 	if indicatorType == IndicatorDot {
 		drawMenuDot(gtx, size, gtx.Dp(tokens.RadioDotSize), style.indicator)
 		return layout.Dimensions{Size: size}

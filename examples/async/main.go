@@ -74,10 +74,10 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 						OnClick(func() {
 							send(Load{})
 						}),
-				).Width(160),
+				).Style(ui.Width(160)),
 				ui.Text(status).Size(18),
 			).Gap(12),
-		).Padding(24),
+		).Style(ui.Padding(24)),
 	)
 }
 

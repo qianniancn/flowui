@@ -13,6 +13,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/components/text"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
@@ -420,21 +421,25 @@ func TestListBoxDisabledKeysIgnoreClick(t *testing.T) {
 	}
 }
 
+// These exercise the item-model → nav wiring (Disabled field + disabledKeys
+// feeding nav.List); the navigation algorithms themselves are unit-tested in
+// package nav.
+
 func TestListBoxMoveIndexSkipsDisabledAndDoesNotWrap(t *testing.T) {
 	items := listBoxTestItems()
-	if got, ok := listBoxMoveIndex(items, nil, 0, 1); !ok || got != 1 {
+	if got, ok := nav.Move(sliceList(items, nil), 0, 1, false); !ok || got != 1 {
 		t.Fatalf("move from first = %d %v, want 1 true", got, ok)
 	}
-	if got, ok := listBoxMoveIndex(items, nil, 1, 1); ok || got != 1 {
+	if got, ok := nav.Move(sliceList(items, nil), 1, 1, false); ok || got != 1 {
 		t.Fatalf("move past end = %d %v, want current false", got, ok)
 	}
-	if got, ok := listBoxMoveIndex(items, nil, 1, -1); !ok || got != 0 {
+	if got, ok := nav.Move(sliceList(items, nil), 1, -1, false); !ok || got != 0 {
 		t.Fatalf("move up = %d %v, want 0 true", got, ok)
 	}
-	if got, ok := listBoxMoveIndex(items, []string{"rust"}, 0, 1); ok || got != 0 {
+	if got, ok := nav.Move(sliceList(items, []string{"rust"}), 0, 1, false); ok || got != 0 {
 		t.Fatalf("move into disabled key = %d %v, want current false", got, ok)
 	}
-	if got, ok := listBoxMoveIndex(items, []string{"rust"}, 1, 1); !ok || got != 0 {
+	if got, ok := nav.Move(sliceList(items, []string{"rust"}), 1, 1, false); !ok || got != 0 {
 		t.Fatalf("move away from disabled current = %d %v, want 0 true", got, ok)
 	}
 }
@@ -445,13 +450,13 @@ func TestListBoxFirstLastEnabled(t *testing.T) {
 		{Key: "b", Label: "B"},
 		{Key: "c", Label: "C", Disabled: true},
 	}
-	if got, ok := listBoxFirstEnabled(items, nil); !ok || got != 1 {
+	if got, ok := FirstEnabled(items, nil); !ok || got != 1 {
 		t.Fatalf("first enabled = %d %v, want 1 true", got, ok)
 	}
-	if got, ok := listBoxLastEnabled(items, nil); !ok || got != 1 {
+	if got, ok := LastEnabled(items, nil); !ok || got != 1 {
 		t.Fatalf("last enabled = %d %v, want 1 true", got, ok)
 	}
-	if _, ok := listBoxFirstEnabled(items, []string{"b"}); ok {
+	if _, ok := FirstEnabled(items, []string{"b"}); ok {
 		t.Fatal("disabled key was returned as first enabled")
 	}
 }
@@ -464,13 +469,13 @@ func TestListBoxTypeaheadSkipsDisabledAndWraps(t *testing.T) {
 		{Key: "charlie", Label: "Charlie"},
 	}
 
-	if index, ok := listBoxTypeaheadIndex(items, nil, 0, "b"); !ok || index != 2 {
+	if index, ok := nav.Match(sliceList(items, nil), 0, "b"); !ok || index != 2 {
 		t.Fatalf("typeahead b = %d %v, want enabled Bravo", index, ok)
 	}
-	if index, ok := listBoxTypeaheadIndex(items, nil, 3, "a"); !ok || index != 0 {
+	if index, ok := nav.Match(sliceList(items, nil), 3, "a"); !ok || index != 0 {
 		t.Fatalf("wrapped typeahead a = %d %v, want Alpha", index, ok)
 	}
-	if index, ok := listBoxTypeaheadIndex(items, []string{"bravo"}, 0, "b"); ok || index != 0 {
+	if index, ok := nav.Match(sliceList(items, []string{"bravo"}), 0, "b"); ok || index != 0 {
 		t.Fatalf("disabled typeahead b = %d %v, want no match", index, ok)
 	}
 }

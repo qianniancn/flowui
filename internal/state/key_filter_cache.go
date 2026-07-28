@@ -9,14 +9,16 @@ import (
 
 // KeyFilterCache reuses boxed key filters for a stable event target.
 type KeyFilterCache struct {
+	target  event.Tag
 	names   []key.Name
 	filters []event.Filter
 }
 
 func (c *KeyFilterCache) Resolve(target event.Tag, names ...key.Name) []event.Filter {
-	if slices.Equal(c.names, names) {
+	if c.target == target && slices.Equal(c.names, names) {
 		return c.filters
 	}
+	c.target = target
 	c.names = append(c.names[:0], names...)
 	if cap(c.filters) < len(names) {
 		c.filters = make([]event.Filter, len(names))

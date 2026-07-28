@@ -12,20 +12,23 @@ import (
 )
 
 type InputWidget struct {
-	key         string
-	value       string
-	hint        string
-	onChange    func(string)
-	onSubmit    func(string)
-	variant     InputVariant
-	disabled    bool
-	invalid     bool
-	fullWidth   bool
-	inputType   InputType
-	readOnly    bool
-	maxLength   int
-	label       string
-	customStyle flowstyle.Style
+	key          string
+	value        string
+	hasValue     bool
+	defaultValue string
+	hasDefault   bool
+	hint         string
+	onChange     func(string)
+	onSubmit     func(string)
+	variant      InputVariant
+	disabled     bool
+	invalid      bool
+	fullWidth    bool
+	inputType    InputType
+	readOnly     bool
+	maxLength    int
+	label        string
+	customStyle  flowstyle.Style
 }
 
 type InputVariant = field.Variant
@@ -47,7 +50,11 @@ const (
 const stateSlotInput = "input"
 
 func Input(key, value string) InputWidget {
-	return InputWidget{key: key, value: value}
+	return InputWidget{
+		key:      key,
+		value:    value,
+		hasValue: true,
+	}
 }
 
 func (i InputWidget) Hint(hint string) InputWidget {
@@ -62,6 +69,19 @@ func (i InputWidget) Placeholder(placeholder string) InputWidget {
 
 func (i InputWidget) OnChange(fn func(string)) InputWidget {
 	i.onChange = fn
+	return i
+}
+
+func (i InputWidget) Value(value string) InputWidget {
+	i.value = value
+	i.hasValue = true
+	return i
+}
+
+func (i InputWidget) DefaultValue(value string) InputWidget {
+	i.defaultValue = value
+	i.hasDefault = true
+	i.hasValue = false
 	return i
 }
 
@@ -116,9 +136,14 @@ func (i InputWidget) Style(value flowstyle.Style) InputWidget {
 }
 
 func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	gtx, key, editor, enabled := i.prepareEditor(ctx, gtx, i.disabled)
+	state := inputStateFor(ctx, frame.FullKey(ctx, i.key))
+
+	// Bind disclosure and get current value
+	state.bind(i)
+	currentValue := state.currentValue(i)
+
+	gtx, key, editor, enabled := i.prepareEditor(ctx, gtx, state, currentValue, i.disabled)
 	disabled := !enabled
-	state := inputStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
@@ -132,17 +157,17 @@ func (i InputWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 		Invalid:      i.invalid,
 	}
 	activeTheme := frame.ActiveTheme(ctx)
-	defaults := inputDefaultDeclaration(activeTheme, i.variant, i.fullWidth)
-	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
-	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
-	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, i.customStyle)
+	defaults, variant, size := i.styleDeclarations(activeTheme)
+	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, variant, size, i.customStyle)
+	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, variant, size, i.customStyle)
+	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, variant, size, i.customStyle)
 	style := resolvedInputStyle(root, placeholder, selection, activeTheme)
 	textSize, lineHeight := resolvedTypography(root, activeTheme.Components.Input.TextSize, activeTheme.Components.Input.LineHeight)
 	editorLayout := i.editorLayoutWithTypography(ctx, key, enabled, editor, style, textSize, lineHeight)
 	return i.layoutFrame(ctx, gtx, state, root, enabled, editorLayout)
 }
 
-func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disabled bool) (layout.Context, string, *widget.Editor, bool) {
+func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, state *inputState, currentValue string, disabled bool) (layout.Context, string, *widget.Editor, bool) {
 	key, editor := frame.InputEditor(ctx, i.key)
 	enabled := gtx.Enabled() && !disabled
 	frame.RegisterFieldFocus(ctx, key, editor, enabled)
@@ -165,9 +190,9 @@ func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disab
 		events.add(event)
 	}
 	if events.changed || events.submitted {
-		i.dispatchEvents(editor, events)
-	} else if editor.Text() != i.value {
-		editor.SetText(i.value)
+		i.dispatchEvents(state, editor, events)
+	} else if editor.Text() != currentValue {
+		editor.SetText(currentValue)
 	}
 	return gtx, key, editor, enabled
 }

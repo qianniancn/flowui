@@ -14,6 +14,9 @@ import (
 type ModalWidget struct {
 	key                     string
 	open                    bool
+	hasOpen                 bool
+	defaultOpen             bool
+	hasDefaultOpen          bool
 	title                   string
 	body                    frame.Widget
 	header                  frame.Widget
@@ -111,11 +114,23 @@ const (
 
 const modalEnterDuration = 250 * time.Millisecond
 
-// Modal creates a controlled modal dialog.
+// Modal creates a modal dialog. When open is true, it starts in controlled
+// mode with the modal open. When open is false, it starts in uncontrolled mode
+// with the modal closed (use DefaultOpen(true) for uncontrolled mode starting open).
 func Modal(key string, open bool, title string, body frame.Widget) ModalWidget {
+	if open {
+		// open=true means controlled mode, immediately open
+		return ModalWidget{
+			key:     key,
+			open:    true,
+			hasOpen: true,
+			title:   title,
+			body:    body,
+		}
+	}
+	// open=false means uncontrolled mode, initially closed
 	return ModalWidget{
 		key:   key,
-		open:  open,
 		title: title,
 		body:  body,
 	}
@@ -124,6 +139,20 @@ func Modal(key string, open bool, title string, body frame.Widget) ModalWidget {
 // OnOpenChange registers a callback for close requests.
 func (m ModalWidget) OnOpenChange(fn func(bool)) ModalWidget {
 	m.onOpenChange = fn
+	return m
+}
+
+// Open sets the modal to controlled mode with the given open state.
+func (m ModalWidget) Open(open bool) ModalWidget {
+	m.open = open
+	m.hasOpen = true
+	return m
+}
+
+// DefaultOpen sets the initial open state for uncontrolled mode.
+func (m ModalWidget) DefaultOpen(open bool) ModalWidget {
+	m.defaultOpen = open
+	m.hasDefaultOpen = true
 	return m
 }
 
@@ -210,15 +239,37 @@ func (m ModalWidget) Style(value flowstyle.Style) ModalWidget {
 func (m ModalWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	fullKey := frame.FullKey(ctx, m.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
-	if !m.open && !hasVisibleModal(ctx, fullKey) {
+
+	// Check if we need to evaluate open state (peek first to avoid claiming state)
+	needsState := hasVisibleModal(ctx, fullKey)
+	if !needsState {
+		// For uncontrolled mode, check if we have a default that would open it
+		if !m.hasOpen && m.hasDefaultOpen && m.defaultOpen {
+			needsState = true
+		} else if m.hasOpen && m.open {
+			needsState = true
+		}
+	}
+
+	if !needsState {
 		return layout.Dimensions{}
 	}
+
+	// Now we know we need state, claim it
 	state := modalStateFor(ctx, m.key)
-	progress := state.progress(gtx, m.open, frame.ActiveTheme(ctx).Motion)
-	if m.open && naturallyDisabled {
+	state.bind(m)
+	open := state.isOpen(m)
+
+	if !open && !state.visible() {
+		deleteModalState(ctx, fullKey)
+		return layout.Dimensions{}
+	}
+
+	progress := state.progress(gtx, open, frame.ActiveTheme(ctx).Motion)
+	if open && naturallyDisabled {
 		state.focusPending = true
 	}
-	if !m.open && progress <= 0 {
+	if !open && progress <= 0 {
 		deleteModalState(ctx, fullKey)
 		return layout.Dimensions{}
 	}
@@ -234,17 +285,17 @@ func (m ModalWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 		Disabled: naturallyDisabled,
 		Layout: func(gtx layout.Context, _ image.Rectangle, interactive bool) layout.Dimensions {
 			if interactive && gtx.Enabled() {
-				if m.open {
+				if open {
 					m.handleCloseEvents(ctx, gtx, state)
 				} else {
 					m.handleExitSurfaceEvents(ctx, gtx, state)
 				}
 			}
-			return m.layoutOverlay(ctx, gtx, state, progress, m.open && gtx.Enabled())
+			return m.layoutOverlay(ctx, gtx, state, progress, open && gtx.Enabled())
 		},
 		Tail: tail,
 	})
-	if m.open && !naturallyDisabled {
+	if open && !naturallyDisabled {
 		frame.AfterOverlays(ctx, func() {
 			becameTopmost := frame.OverlayFocusScopeBecameTopmost(ctx, frame.OverlayLayerModal, fullKey)
 			if frame.OverlayFocusScopeTopmost(ctx, frame.OverlayLayerModal, fullKey) && (state.focusPending || becameTopmost) {
@@ -285,12 +336,12 @@ func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, m
 		frame.RequestFocus(ctx, modalStateValue.endFocusTag())
 	}
 	if !m.keyboardDismissDisabled && modalStateValue.escapePressed(gtx) {
-		m.requestClose()
+		m.requestClose(modalStateValue)
 	}
 	if m.showCloseButton() {
 		presses := state.SnapshotPresses(modalStateValue.close.History())
 		for modalStateValue.close.Clicked(gtx) {
-			m.requestClose()
+			m.requestClose(modalStateValue)
 			frame.RequestFocusVisible(ctx, &modalStateValue.close, presses.ClickFocusVisible(modalStateValue.close.History()))
 		}
 		frame.FocusOnPress(ctx, &modalStateValue.close, modalStateValue.close.History(), presses.Active())
@@ -298,7 +349,7 @@ func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, m
 	for i := range modalStateValue.dismiss {
 		for modalStateValue.dismiss[i].Clicked(gtx) {
 			if m.isDismissable() {
-				m.requestClose()
+				m.requestClose(modalStateValue)
 			}
 		}
 		if modalStateValue.dismiss[i].TakePressed() {
@@ -307,10 +358,8 @@ func (m ModalWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context, m
 	}
 }
 
-func (m ModalWidget) requestClose() {
-	if m.onOpenChange != nil {
-		m.onOpenChange(false)
-	}
+func (m ModalWidget) requestClose(state *modalState) {
+	state.requestOpen(m, false)
 }
 
 func (m ModalWidget) isDismissable() bool {

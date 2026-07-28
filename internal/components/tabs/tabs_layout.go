@@ -210,7 +210,7 @@ func (t TabsWidget) measureTabWidth(ctx *frame.Context, gtx layout.Context, labe
 	measure := gtx
 	measure.Ops = &ops
 	measure.Constraints = layout.Constraints{Max: image.Pt(1e6, max(gtx.Constraints.Max.Y, 1))}
-	label := material.Label(frame.ActiveTheme(ctx).Material, sizeStyle.textSize, labelText)
+	label := material.Label(frame.ActiveMaterial(ctx), sizeStyle.textSize, labelText)
 	label.Font.Weight = sizeStyle.weight
 	dims := label.Layout(measure)
 	return dims.Size.X + gtx.Dp(sizeStyle.paddingX)*2
@@ -291,7 +291,7 @@ func (t TabsWidget) layoutTab(ctx *frame.Context, gtx layout.Context, componentS
 					color = value
 				}
 			}
-			label := material.Label(frame.ActiveTheme(ctx).Material, textSize, item.Label)
+			label := material.Label(frame.ActiveMaterial(ctx), textSize, item.Label)
 			label.Font.Weight = weight
 			label.Color = color
 			layout.Center.Layout(gtx, label.Layout)
@@ -302,11 +302,18 @@ func (t TabsWidget) layoutTab(ctx *frame.Context, gtx layout.Context, componentS
 }
 
 func (t TabsWidget) resolveItemStyle(ctx *frame.Context, gtx layout.Context, itemKey string, state flowstyle.StyleState, foreground color.NRGBA, size tabsSizeStyle) flowstyle.ResolvedStyle {
+	activeTheme := frame.ActiveTheme(ctx)
 	defaults := flowstyle.Style{}.
 		Part(flowstyle.PartItem, flowstyle.Style{}.
 			TextColor(flowstyle.SolidColor{Color: foreground}).
 			FontSize(size.textSize).
-			FontWeight(int(size.weight)))
+			FontWeight(int(size.weight)).
+			Opacity(1).
+			Transition(flowstyle.PropOpacity, tabsColorDuration).
+			When(flowstyle.All(flowstyle.Hovered, flowstyle.Not(flowstyle.Selected), flowstyle.Not(flowstyle.Disabled)),
+				flowstyle.Style{}.Opacity(0.7)).
+			When(flowstyle.Disabled,
+				flowstyle.Style{}.Opacity(activeTheme.DisabledOpacityValue())))
 
 	return styleruntime.ResolvePart(
 		ctx, gtx, frame.DerivedKey(ctx, frame.FullKey(ctx, t.key), "item:"+itemKey),

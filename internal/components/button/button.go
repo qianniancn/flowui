@@ -6,9 +6,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/interaction"
+	"github.com/qianniancn/FlowUI/internal/host"
+	"github.com/qianniancn/FlowUI/internal/interact"
 	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
@@ -108,8 +108,8 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 	return b
 }
 
-// Style applies an instance style after the Button defaults, variant, size,
-// and inherited StyleScope declarations.
+// Style applies the instance style layer (final cascade slot after defaults,
+// variant, size, and StyleScope). See styleDeclarations and resolveStyle.
 func (b ButtonWidget) Style(value flowstyle.Style) ButtonWidget {
 	b.customStyle = value
 	return b
@@ -133,7 +133,7 @@ func LayoutWithClickableNoEvents(b ButtonWidget, ctx *frame.Context, gtx layout.
 func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
 	animGtx := gtx
-	click := interaction.BeginClick(ctx, gtx, b.key, clickable, !b.disabled && !b.loading, handleEvents, b.onClick)
+	click := interact.Begin(ctx, gtx, b.key, clickable, !b.disabled && !b.loading, handleEvents, b.onClick)
 	styleState := click.StyleState
 	styleState.Disabled = b.disabled || !gtx.Enabled()
 	styleState.Loading = b.loading
@@ -160,7 +160,7 @@ func layoutWithClickable(b ButtonWidget, ctx *frame.Context, gtx layout.Context,
 		})
 	})
 
-	return layoutui.LayoutInteractiveResolved(ctx, gtx, resolvedStyle.root, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+	return host.LayoutInteractiveBox(ctx, gtx, resolvedStyle.root, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
 		return click.Layout(gtx, visual, b.label)
 	})
 }

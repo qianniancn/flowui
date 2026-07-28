@@ -25,7 +25,7 @@ func View(ctx *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 				).Gap(16),
 				horizontalPanel(muted),
 			).Gap(18),
-		).Padding(24).FillWidth().FillHeight(),
+		).Style(ui.Padding(24)).Style(ui.FillWidth()).Style(ui.FillHeight()),
 	).Variant(ui.SurfaceSecondary)
 }
 
@@ -36,7 +36,7 @@ func scrollPanel(title, key string, content ui.Widget) ui.Widget {
 				ui.Text(title).Size(15),
 				ui.Expanded(ui.Scrollbar(key, content)),
 			).Gap(10),
-		).Padding(14).FillWidth().Height(300),
+		).Style(ui.Padding(14)).Style(ui.FillWidth()).Style(ui.Height(300)),
 	).Variant(ui.SurfaceDefault).Style(ui.Radius(8))
 }
 
@@ -75,7 +75,7 @@ func horizontalPanel(muted color.NRGBA) ui.Widget {
 					ui.Text(fmt.Sprintf("Sprint %02d", index+1)).Size(14),
 					ui.Text(fmt.Sprintf("%d deliverables", 4+index%5)).Size(12).Color(muted),
 				).Gap(5),
-			).Padding(12).Width(132).Height(68),
+			).Style(ui.Padding(12)).Style(ui.Width(132)).Style(ui.Height(68)),
 		).Variant(ui.SurfaceTertiary).Style(ui.Radius(6))
 	}
 	return ui.Surface(
@@ -88,7 +88,7 @@ func horizontalPanel(muted color.NRGBA) ui.Widget {
 						Overlay(),
 				),
 			).Gap(10),
-		).Padding(14).FillWidth().Height(122),
+		).Style(ui.Padding(14)).Style(ui.FillWidth()).Style(ui.Height(122)),
 	).Variant(ui.SurfaceDefault).Style(ui.Radius(8))
 }
 

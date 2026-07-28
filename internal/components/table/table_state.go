@@ -5,9 +5,7 @@ import (
 	"image"
 	"math"
 	"slices"
-	"strings"
 	"time"
-	"unicode"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -16,16 +14,14 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
 	"github.com/qianniancn/FlowUI/internal/components/checkbox"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
 
 const stateSlotTable = "table"
 
-const (
-	tableTypeaheadTimeout = 500 * time.Millisecond
-	tableColorDuration    = 100 * time.Millisecond
-)
+const tableColorDuration = 100 * time.Millisecond
 
 type tableState struct {
 	vertical           layout.List
@@ -45,9 +41,7 @@ type tableState struct {
 	pressedRowKey      string
 	pressedModifiers   key.Modifiers
 	selectionAnchor    string
-	typeahead          string
-	typeaheadAt        time.Time
-	typeaheadReady     bool
+	typeahead          nav.Typeahead
 	selectAll          widget.Clickable
 	selectAllFocus     state.FocusAnimation
 	selectAllSelection checkbox.SelectionAnimation
@@ -209,6 +203,7 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 		return tableKeyResult{}
 	}
 	current := s.focusedIndex(gtx, table)
+	list := tableNavList(table)
 	result := tableKeyResult{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -225,7 +220,7 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 		switch event.Name {
 		case key.NameDownArrow:
 			if event.State == key.Press {
-				if next, ok := moveRow(table, current, 1); ok {
+				if next, ok := nav.Move(list, current, 1, false); ok {
 					current = next
 					result.focusKey = table.row(next).Key
 					if event.Modifiers.Contain(key.ModShift) && table.selectionMode == SelectionMultiple {
@@ -235,7 +230,7 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 			}
 		case key.NameUpArrow:
 			if event.State == key.Press {
-				if next, ok := moveRow(table, current, -1); ok {
+				if next, ok := nav.Move(list, current, -1, false); ok {
 					current = next
 					result.focusKey = table.row(next).Key
 					if event.Modifiers.Contain(key.ModShift) && table.selectionMode == SelectionMultiple {
@@ -245,7 +240,7 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 			}
 		case key.NameHome:
 			if event.State == key.Press {
-				if next, ok := firstEnabledRow(table); ok {
+				if next, ok := nav.First(list); ok {
 					current = next
 					result.focusKey = table.row(next).Key
 					if event.Modifiers.Contain(key.ModShift) && table.selectionMode == SelectionMultiple {
@@ -255,7 +250,7 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 			}
 		case key.NameEnd:
 			if event.State == key.Press {
-				if next, ok := lastEnabledRow(table); ok {
+				if next, ok := nav.Last(list); ok {
 					current = next
 					result.focusKey = table.row(next).Key
 					if event.Modifiers.Contain(key.ModShift) && table.selectionMode == SelectionMultiple {
@@ -269,15 +264,15 @@ func (s *tableState) updateKeys(gtx layout.Context, table Widget) tableKeyResult
 			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
 			}
-			text := tableTypeaheadText(event.Name)
+			text := nav.Printable(event.Name)
 			if text == "" {
 				continue
 			}
-			query := s.appendTypeahead(gtx.Now, text)
-			next, ok := typeaheadRow(table, current, query)
+			query := s.typeahead.Append(gtx.Now, text)
+			next, ok := nav.Match(list, current, query)
 			if !ok && query != text {
-				s.typeahead = text
-				next, ok = typeaheadRow(table, current, text)
+				s.typeahead.Set(text)
+				next, ok = nav.Match(list, current, text)
 			}
 			if ok {
 				current = next
@@ -340,24 +335,6 @@ func (s *tableState) ensureVisible(index int) {
 	}
 }
 
-func (s *tableState) appendTypeahead(now time.Time, value string) string {
-	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > tableTypeaheadTimeout {
-		s.typeahead = ""
-	}
-	s.typeahead += value
-	s.typeaheadAt = now
-	s.typeaheadReady = true
-	return s.typeahead
-}
-
-func tableTypeaheadText(name key.Name) string {
-	runes := []rune(string(name))
-	if len(runes) != 1 || unicode.IsControl(runes[0]) {
-		return ""
-	}
-	return strings.ToLower(string(runes[0]))
-}
-
 func (t Widget) keyboardActiveIndex() int {
 	if t.selectionMode == SelectionSingle {
 		return t.rowIndex(t.selectedKey)
@@ -372,56 +349,15 @@ func (t Widget) keyboardActiveIndex() int {
 	return -1
 }
 
-func moveRow(table Widget, current, delta int) (int, bool) {
-	if current < 0 || current >= table.count() {
-		if delta < 0 {
-			return lastEnabledRow(table)
-		}
-		return firstEnabledRow(table)
+// tableNavList adapts the table's rows into a nav.List. rowDisabled resolves in
+// O(1) via the table's disabled-key set, so per-keystroke navigation does not
+// linearly scan disabledKeys.
+func tableNavList(table Widget) nav.List {
+	return nav.List{
+		Count:    table.count(),
+		Disabled: func(i int) bool { return table.rowDisabled(table.row(i)) },
+		Label:    func(i int) string { return table.rowLabel(table.row(i)) },
 	}
-	for next := current + delta; next >= 0 && next < table.count(); next += delta {
-		if !table.rowDisabled(table.row(next)) {
-			return next, true
-		}
-	}
-	return current, false
-}
-
-func firstEnabledRow(table Widget) (int, bool) {
-	for index := range table.count() {
-		row := table.row(index)
-		if !table.rowDisabled(row) {
-			return index, true
-		}
-	}
-	return -1, false
-}
-
-func lastEnabledRow(table Widget) (int, bool) {
-	for index := table.count() - 1; index >= 0; index-- {
-		if !table.rowDisabled(table.row(index)) {
-			return index, true
-		}
-	}
-	return -1, false
-}
-
-func typeaheadRow(table Widget, current int, query string) (int, bool) {
-	if table.count() == 0 || query == "" {
-		return -1, false
-	}
-	query = strings.ToLower(query)
-	for step := 1; step <= table.count(); step++ {
-		index := (current + step + table.count()) % table.count()
-		row := table.row(index)
-		if table.rowDisabled(row) {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(table.rowLabel(row)), query) {
-			return index, true
-		}
-	}
-	return current, false
 }
 
 func (t Widget) rowLabel(row Row) string {

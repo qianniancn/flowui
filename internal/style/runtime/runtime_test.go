@@ -15,6 +15,14 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
+func init() {
+	// Disable cascade cache for tests to ensure test isolation.
+	// In production, contexts are long-lived and per-context caching works well.
+	// In tests, each test creates a new short-lived context, which can cause
+	// cache key collisions when the same pointer address is reused.
+	DisableCascadeCache = true
+}
+
 func TestResolveOrderAndThemeTokens(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
@@ -37,6 +45,64 @@ func TestResolveOrderAndThemeTokens(t *testing.T) {
 	}
 	if got, _ := solidColor(resolved.Paint.Border.Color); got != activeTheme.Palette.Accent {
 		t.Fatalf("border = %#v, want accent token", got)
+	}
+}
+
+// TestResolveStaticLayerOrder locks the public cascade contract:
+// defaults → inherited text → variant → size → StyleScope → instance.
+func TestResolveStaticLayerOrder(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+
+	// Inherited text is pushed by layout hosts; inject it like a parent TextDeclaration.
+	restoreInherited := frame.PushInheritedStyle(ctx, style.Style{}.
+		TextColor(style.RGB(0x111111)).
+		FontSize(10))
+	defer restoreInherited()
+
+	restoreScope := frame.PushStyle(ctx, style.Style{}.
+		PaddingX(12).
+		Background(style.RGB(0xaaaaaa)))
+	defer restoreScope()
+
+	defaults := style.Style{}.
+		Padding(2).
+		Background(style.RGB(0x010101)).
+		FontSize(8)
+	variant := style.Style{}.Background(style.RGB(0x020202))
+	size := style.Style{}.Height(40)
+	instance := style.Style{}.
+		Width(100).
+		PaddingLeft(20). // overrides scope PaddingX on the left only
+		Background(style.RGB(0x030303)).
+		TextColor(style.RGB(0xffffff)) // overrides inherited text
+
+	resolved := ResolveStatic(ctx, style.StyleState{}, defaults, variant, size, instance)
+
+	if resolved.Box == nil || resolved.Box.Width == nil || *resolved.Box.Width != 100 {
+		t.Fatalf("instance width = %#v", resolved.Box)
+	}
+	if resolved.Box.Height == nil || *resolved.Box.Height != 40 {
+		t.Fatalf("size height = %#v", resolved.Box)
+	}
+	// Padding: defaults 2 all sides, scope X=12, instance left=20 → L=20 R=12 T/B=2
+	if resolved.Box.Padding == nil ||
+		resolved.Box.Padding.Left != 20 || resolved.Box.Padding.Right != 12 ||
+		resolved.Box.Padding.Top != 2 || resolved.Box.Padding.Bottom != 2 {
+		t.Fatalf("padding = %#v, want L20 R12 T2 B2", resolved.Box.Padding)
+	}
+	if got, _ := solidColor(resolved.Paint.Background); got != style.RGB(0x030303).Color {
+		t.Fatalf("background = %#v, want instance %#v", got, style.RGB(0x030303).Color)
+	}
+	if resolved.Text == nil || resolved.Text.Color == nil {
+		t.Fatal("expected text style")
+	}
+	if got, _ := solidColor(resolved.Text.Color); got != style.RGB(0xffffff).Color {
+		t.Fatalf("text color = %#v, want instance white", got)
+	}
+	// FontSize from inherited text (10) should win over defaults (8); instance did not set size.
+	if resolved.Text.FontSize == nil || *resolved.Text.FontSize != 10 {
+		t.Fatalf("font size = %#v, want inherited 10", resolved.Text.FontSize)
 	}
 }
 
@@ -207,6 +273,48 @@ func TestResolvePartStateDoesNotCollideWithUserKey(t *testing.T) {
 	}
 }
 
+func TestSolidColorNilPointerDoesNotPanic(t *testing.T) {
+	var nilSolid *style.SolidColor
+	if _, ok := solidColor(nilSolid); ok {
+		t.Fatal("nil *SolidColor should not report a color")
+	}
+}
+
+func TestApplyPartTransitionsEmptyKeySoftSnaps(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	gtx := testContext(time.Unix(1, 0))
+	opacity := float32(0.5)
+	resolved := style.ResolvedStyle{
+		Paint: &style.PaintStyle{Opacity: &opacity},
+		Transitions: []style.Transition{{
+			Property: style.PropOpacity,
+			Duration: time.Second,
+		}},
+	}
+	out := ApplyPartTransitions(ctx, gtx, "", style.PartLabel, resolved)
+	if out.Paint == nil || out.Paint.Opacity == nil || *out.Paint.Opacity != 0.5 {
+		t.Fatalf("empty part key should soft-snap, got %#v", out.Paint)
+	}
+	if got := frame.StateLen(ctx); got != 0 {
+		t.Fatalf("empty part key retained %d states, want 0", got)
+	}
+}
+
+func TestApplyTransitionsEmptyKeySnapsWithoutState(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageAuto)
+	declaration := style.Style{}.
+		Opacity(0.5).
+		Transition(style.PropOpacity, time.Second)
+
+	resolved := Resolve(ctx, testContext(time.Unix(1, 0)), "", style.StyleState{}, declaration, style.Style{}, style.Style{}, style.Style{})
+	if resolved.Paint == nil || resolved.Paint.Opacity == nil || *resolved.Paint.Opacity != 0.5 {
+		t.Fatalf("empty key should soft-snap to target opacity, got %#v", resolved.Paint)
+	}
+	if got := frame.StateLen(ctx); got != 0 {
+		t.Fatalf("empty key retained %d style states, want 0", got)
+	}
+}
+
 func TestResolveTransitionsConditionalBackground(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	from := style.RGB(0x102030)
@@ -298,8 +406,12 @@ func TestResolveTransitionsCompleteTransform(t *testing.T) {
 	Resolve(ctx, testContext(start), "transform", style.StyleState{}, declaration, style.Style{}, style.Style{}, style.Style{})
 	Resolve(ctx, testContext(start), "transform", style.StyleState{Hovered: true}, declaration, style.Style{}, style.Style{}, style.Style{})
 	middle := Resolve(ctx, testContext(start.Add(500*time.Millisecond)), "transform", style.StyleState{Hovered: true}, declaration, style.Style{}, style.Style{}, style.Style{})
-	if *middle.Trans.TranslateX != 5 || *middle.Trans.TranslateY != 10 || *middle.Trans.Rotate != .5 {
-		t.Fatalf("transform midpoint = %#v", middle.Trans)
+	if middle.Trans == nil || middle.Trans.TranslateX == nil || middle.Trans.TranslateY == nil || middle.Trans.Rotate == nil {
+		t.Fatalf("transform is nil or incomplete: %#v", middle.Trans)
+	}
+	tx, ty, rot := *middle.Trans.TranslateX, *middle.Trans.TranslateY, *middle.Trans.Rotate
+	if tx != 5 || ty != 10 || rot != .5 {
+		t.Fatalf("transform midpoint = TX:%v TY:%v Rotate:%v, want TX:5 TY:10 Rotate:0.5", tx, ty, rot)
 	}
 }
 
@@ -323,5 +435,105 @@ func testContext(now time.Time) layout.Context {
 		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
 		Ops:         new(op.Ops),
 		Now:         now,
+	}
+}
+
+// Benchmarks for #5 and #6 optimizations
+
+// BenchmarkResolveStatic_SimpleLayers benchmarks #5 - cascade without tokens/conditions
+func BenchmarkResolveStatic_SimpleLayers(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+
+	// Simple layers without tokens (should benefit from fast path)
+	defaults := style.Style{}.Padding(8).Background(style.RGB(0xffffff))
+	variant := style.Style{}.PaddingX(16)
+	size := style.Style{}.Height(36)
+	custom := style.Style{}.Opacity(0.9)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ResolveStatic(ctx, style.StyleState{}, defaults, variant, size, custom)
+	}
+}
+
+// BenchmarkResolveStatic_WithTokens benchmarks the full expansion path with theme tokens
+func BenchmarkResolveStatic_WithTokens(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+
+	// Layers with color tokens (must expand fully)
+	defaults := style.Style{}.Padding(8).Background(style.TokenSurface)
+	variant := style.Style{}.PaddingX(16).TextColor(style.TokenForeground)
+	size := style.Style{}.Height(36).BorderColor(style.TokenBorder)
+	custom := style.Style{}.Opacity(0.9)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ResolveStatic(ctx, style.StyleState{}, defaults, variant, size, custom)
+	}
+}
+
+// BenchmarkResolve_CascadeLayers benchmarks the full cascade resolution with transitions
+func BenchmarkResolve_CascadeLayers(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+	gtx := testContext(time.Now())
+
+	// Multi-layer cascade (typical button scenario)
+	defaults := style.Style{}.Padding(8).Background(style.TokenSurface)
+	variant := style.Style{}.PaddingX(16)
+	size := style.Style{}.Height(36)
+	instance := style.Style{}.TextColor(style.TokenAccentForeground)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Resolve(ctx, gtx, "button", style.StyleState{}, defaults, variant, size, instance)
+	}
+}
+
+// BenchmarkResolve_WithHover benchmarks resolution with hover state (triggers animations)
+func BenchmarkResolve_WithHover(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+	gtx := testContext(time.Now())
+
+	declaration := style.Style{}.
+		Background(style.TokenSurface).
+		When(style.Hovered, style.Style{}.Background(style.TokenSurfaceHover))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Resolve(ctx, gtx, "button", style.StyleState{Hovered: true}, declaration, style.Style{}, style.Style{}, style.Style{})
+	}
+}
+
+// BenchmarkActiveStyles_ReadOnly benchmarks #6 - zero-copy accessor
+func BenchmarkActiveStyles_ReadOnly(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+
+	// Push some styles to simulate real usage
+	restore := frame.PushStyle(ctx, style.Style{}.Padding(12).Background(style.TokenSurface))
+	defer restore()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = frame.ActiveStylesReadOnly(ctx)
+	}
+}
+
+// BenchmarkActiveInheritedStyles_ReadOnly benchmarks #6 - zero-copy inherited accessor
+func BenchmarkActiveInheritedStyles_ReadOnly(b *testing.B) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+
+	// Push inherited text styles
+	restore := frame.PushInheritedStyle(ctx, style.Style{}.FontSize(14).TextColor(style.TokenForeground))
+	defer restore()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = frame.ActiveInheritedStylesReadOnly(ctx)
 	}
 }

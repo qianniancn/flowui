@@ -66,7 +66,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		MarkLines([]ui.ChartMarkLine{ui.MarkLine(ui.ChartAxisY, 250).Text("Target")}).
 		MarkAreas([]ui.ChartMarkArea{ui.MarkArea(ui.ChartAxisY, 280, 330).Text("Stretch")}).
 		MarkPoints([]ui.ChartMarkPoint{ui.MarkPoint(5, 312).Text("Peak")}).
-		DataWindow(ordersWindow.Start, ordersWindow.End).
+		DataWindow(float32(ordersWindow.Start), float32(ordersWindow.End)).
 		OnDataWindowChange(func(window ui.ChartDataWindow) {
 			send(DataWindowChanged{Chart: "quarterly-orders", Window: window})
 		}).
@@ -84,7 +84,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		Label("Traffic composition and returns").
 		OnLegendChange(func(key string, hidden bool) { send(LegendChanged{Key: key, Hidden: hidden}) }).
 		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
-		DataWindow(trafficWindow.Start, trafficWindow.End).
+		DataWindow(float32(trafficWindow.Start), float32(trafficWindow.End)).
 		OnDataWindowChange(func(window ui.ChartDataWindow) {
 			send(DataWindowChanged{Chart: "weekly-traffic", Window: window})
 		}).
@@ -127,11 +127,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 						OnClick(func() { send(ResetView{}) }),
 				).AlignMiddle(),
 				ui.Text(selection).Size(14),
-				ui.Surface(ui.Box(orders).Padding(16)).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(traffic).Padding(16)).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(regions).Padding(16)).Style(ui.Radius(8)),
+				ui.Surface(ui.Box(orders).Style(ui.Padding(16).Radius(8))),
+				ui.Surface(ui.Box(traffic).Style(ui.Padding(16).Radius(8))),
+				ui.Surface(ui.Box(regions).Style(ui.Padding(16).Radius(8))),
 			).Gap(16),
-		).FillWidth().MaxWidth(980).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(980).Padding(24)),
 	)
 }
 

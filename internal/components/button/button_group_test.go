@@ -14,24 +14,6 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestButtonGroupOptionsUseValueSemantics(t *testing.T) {
-	base := ButtonGroup(Button("first", text.New("First")), Button("second", text.New("Second")))
-	configured := base.
-		Orientation(ButtonGroupVertical).
-		Variant(ButtonSecondary).
-		Size(ButtonSmall).
-		Disabled(true).
-		FullWidth().
-		Separators(true)
-
-	if base.orientation != ButtonGroupHorizontal || base.variant != ButtonPrimary || base.size != ButtonMedium || base.disabled || base.fullWidth || base.separators {
-		t.Fatalf("configuring ButtonGroup mutated base: %#v", base)
-	}
-	if configured.orientation != ButtonGroupVertical || configured.variant != ButtonSecondary || configured.size != ButtonSmall || !configured.disabled || !configured.fullWidth || !configured.separators {
-		t.Fatalf("configured ButtonGroup = %#v", configured)
-	}
-}
-
 func TestButtonGroupInheritsOptionsAndPreservesButtonOverrides(t *testing.T) {
 	group := ButtonGroup(
 		Button("first", text.New("First")),

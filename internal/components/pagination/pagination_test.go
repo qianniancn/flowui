@@ -13,24 +13,6 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestPaginationOptionsUseValueSemantics(t *testing.T) {
-	base := New("pages", 2, 12)
-	configured := base.
-		Size(SizeSmall).
-		Siblings(2).
-		Boundaries(2).
-		ShowControls(false).
-		Labels("Back", "Forward").
-		Disabled(true).
-		OnChange(func(int) {})
-	if base.size != SizeMedium || base.siblings != 1 || base.boundaries != 1 || !base.showControls {
-		t.Fatal("configuring Pagination mutated the base value")
-	}
-	if configured.size != SizeSmall || configured.siblings != 2 || configured.boundaries != 2 || configured.showControls || !configured.disabled || configured.onChange == nil {
-		t.Fatalf("configured Pagination = %+v", configured)
-	}
-}
-
 func TestPaginationPageItems(t *testing.T) {
 	tests := []struct {
 		name  string

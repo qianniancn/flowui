@@ -18,7 +18,8 @@ func TestMaterialThemeOption(t *testing.T) {
 		}),
 	})
 
-	got := cfg.newTheme().Material.Palette.ContrastBg
+	theme := cfg.newTheme()
+	got := MaterialOf(theme).Palette.ContrastBg
 	if got != want {
 		t.Fatalf("contrast background = %#v, want %#v", got, want)
 	}
@@ -27,8 +28,7 @@ func TestMaterialThemeOption(t *testing.T) {
 func TestWithThemeOption(t *testing.T) {
 	want := color.NRGBA{R: 0x22, G: 0x88, B: 0xdd, A: 0xff}
 	theme := DefaultTheme()
-	sourceMaterial := theme.Material
-	sourceContrast := sourceMaterial.Palette.ContrastBg
+	sourceMaterial := MaterialOf(&theme)
 	theme.Palette.Accent = want
 	cfg := newRunOptions([]Option{
 		WithTheme(theme),
@@ -39,10 +39,7 @@ func TestWithThemeOption(t *testing.T) {
 	if first.Palette.Accent != want {
 		t.Fatalf("accent = %#v, want %#v", first.Palette.Accent, want)
 	}
-	if theme.Material != sourceMaterial || theme.Material.Palette.ContrastBg != sourceContrast {
-		t.Fatal("WithTheme mutated the source material theme")
-	}
-	if first.Material == sourceMaterial || second.Material == sourceMaterial || first.Material == second.Material {
+	if MaterialOf(first) == sourceMaterial || MaterialOf(second) == sourceMaterial || MaterialOf(first) == MaterialOf(second) {
 		t.Fatal("WithTheme reused a material theme between source or window instances")
 	}
 }
@@ -59,8 +56,8 @@ func TestCustomizeThemeOption(t *testing.T) {
 	if theme.Palette.Accent != want {
 		t.Fatalf("accent = %#v, want %#v", theme.Palette.Accent, want)
 	}
-	if theme.Material.Palette.ContrastBg != want {
-		t.Fatalf("material contrast background = %#v, want %#v", theme.Material.Palette.ContrastBg, want)
+	if MaterialOf(theme).Palette.ContrastBg != want {
+		t.Fatalf("material contrast background = %#v, want %#v", MaterialOf(theme).Palette.ContrastBg, want)
 	}
 }
 
@@ -115,5 +112,12 @@ func TestOnErrorOption(t *testing.T) {
 	cfg := newRunOptions([]Option{OnError(handler)})
 	if cfg.errorHandler == nil {
 		t.Fatal("error handler was not configured")
+	}
+}
+
+func TestRetainModelOnCloseOption(t *testing.T) {
+	cfg := newRunOptions([]Option{RetainModelOnClose()})
+	if !cfg.retainModel {
+		t.Fatal("model retention was not configured")
 	}
 }

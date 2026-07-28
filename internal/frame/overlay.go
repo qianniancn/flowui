@@ -90,7 +90,10 @@ type overlayHost struct {
 	hasBecameTail   bool
 	active          *overlayRequest
 	inTail          bool
-	afterLayout     []func()
+	// policyPass re-enters only the visual top for policy input when the
+	// preceding frame had no event owner. Paint ops are discarded.
+	policyPass  bool
+	afterLayout []func()
 }
 
 const invalidOverlayTransform = -1
@@ -126,6 +129,10 @@ func RegisterOverlay(ctx *Context, request OverlayRequest) {
 	}
 	identity := overlayIdentity{key: request.Key, layer: request.Layer}
 	host := &ctx.overlays
+	if host.policyPass {
+		// Nested registration already happened during the paint pass.
+		return
+	}
 	if host.inTail {
 		panic("flowui: overlay tail cannot register another overlay")
 	}
@@ -170,9 +177,11 @@ func RegisterOverlay(ctx *Context, request OverlayRequest) {
 	})
 }
 
-// OverlayInteractive reports whether key owned overlay input in the preceding
-// frame. With no preceding overlay, it returns true for compatibility with
-// direct component layout tests and first-frame rendering.
+// OverlayInteractive reports whether key owned overlay policy input in the
+// preceding frame. With no preceding owner it returns true so triggers keep
+// first-open behavior; root overlay Layout still grants policy input only to
+// the frozen previous owner, or—on a no-owner frame—only the visual top via
+// the policy pass in LayoutOverlays.
 func OverlayInteractive(ctx *Context, layer OverlayLayer, key string) bool {
 	host := &ctx.overlays
 	return !host.hasEventTop || host.eventTop == (overlayIdentity{key: key, layer: layer})
@@ -254,6 +263,18 @@ func DismissActiveOverlay(ctx *Context) {
 // LayoutOverlays resolves anchors and records every overlay at the root. The
 // resulting macro is deferred once so it is painted after deferred work from
 // the main widget tree.
+//
+// Overlay policy input (dismiss, Escape, exclusive open/close) is owned by at
+// most one non-passive overlay:
+//
+//   - When the preceding frame had an event owner, only that frozen identity is
+//     interactive during the paint pass (ownership lags the visual top by one
+//     frame).
+//   - When there is no preceding owner, every overlay paints with
+//     interactive=false, then only the final visual top is re-entered with
+//     interactive=true on a throwaway ops list. Key claims from the paint pass
+//     are reused; nested RegisterOverlay is ignored. This prevents a first-frame
+//     modal and nested popup from both consuming Escape.
 func LayoutOverlays(ctx *Context, gtx layout.Context) {
 	host := &ctx.overlays
 	viewport := OverlayViewport(ctx, gtx.Constraints.Max)
@@ -268,56 +289,41 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 	var top overlayIdentity
 	hasTop := false
 	var topRequest *overlayRequest
+	eventOwnerPresent := false
 	for {
 		request := host.nextResolvable(viewport)
 		if request == nil {
 			break
 		}
-		anchor, _, _, inheritedOpacity := resolveOverlayAnchor(request)
 		request.rendered = true
-		interactive := !request.Passive && (!host.hasEventTop || host.eventTop == request.identity)
-		func() {
-			host.active = request
-			previousCurrent := host.current
-			previousTheme := ctx.theme
-			previousStyles := ctx.styles
-			previousInheritedStyles := ctx.inheritedStyles
-			ctx.theme = request.activeTheme
-			ctx.styles = request.styles
-			ctx.inheritedStyles = request.inheritedStyles
-			requestRoot := host.appendTransform(overlayTransform{
-				parent:  invalidOverlayTransform,
-				local:   f32.AffineId(),
-				opacity: inheritedOpacity,
-				placed:  true,
-			})
-			host.current = requestRoot
-			restoreScope := ctx.keys.UseScope(request.scope)
-			defer func() {
-				restoreScope()
-				ctx.theme = previousTheme
-				ctx.styles = previousStyles
-				ctx.inheritedStyles = previousInheritedStyles
-				host.current = previousCurrent
-				host.active = nil
-			}()
-			requestGtx := rootGtx
-			if request.Disabled {
-				requestGtx = requestGtx.Disabled()
-			}
-			if inheritedOpacity < 1 {
-				opacity := paint.PushOpacity(requestGtx.Ops, inheritedOpacity)
-				request.Layout(requestGtx, anchor, interactive)
-				opacity.Pop()
-			} else {
-				request.Layout(requestGtx, anchor, interactive)
-			}
-		}()
+		interactive := !request.Passive && host.hasEventTop && host.eventTop == request.identity
+		if interactive {
+			eventOwnerPresent = true
+		}
+		host.layoutRequest(ctx, rootGtx, request, interactive)
 		if !request.Passive && !request.dismissed {
 			top = request.identity
 			topRequest = request
 			hasTop = true
 		}
+	}
+	// Policy pass when there is no frozen owner, or the frozen owner was not
+	// painted this frame (closed while another overlay became visual top).
+	// Without this, Escape/dismiss stay dead for a full frame.
+	needsPolicyPass := topRequest != nil && !topRequest.dismissed &&
+		(!host.hasEventTop || !eventOwnerPresent)
+	if needsPolicyPass {
+		policyGtx := rootGtx
+		policyGtx.Ops = new(op.Ops)
+		host.policyPass = true
+		ctx.keys.SetAllowReuse(true)
+		func() {
+			defer func() {
+				ctx.keys.SetAllowReuse(false)
+				host.policyPass = false
+			}()
+			host.layoutRequest(ctx, policyGtx, topRequest, true)
+		}()
 	}
 	tail := topOverlayTail(topRequest)
 	if tail != nil {
@@ -326,6 +332,45 @@ func LayoutOverlays(ctx *Context, gtx layout.Context) {
 
 	op.Defer(gtx.Ops, macro.Stop())
 	host.finishFrame(top, hasTop, tail)
+}
+
+func (h *overlayHost) layoutRequest(ctx *Context, rootGtx layout.Context, request *overlayRequest, interactive bool) {
+	anchor, _, _, inheritedOpacity := resolveOverlayAnchor(request)
+	h.active = request
+	previousCurrent := h.current
+	previousTheme := ctx.theme
+	previousStyles := ctx.styles
+	previousInheritedStyles := ctx.inheritedStyles
+	ctx.theme = request.activeTheme
+	ctx.styles = request.styles
+	ctx.inheritedStyles = request.inheritedStyles
+	requestRoot := h.appendTransform(overlayTransform{
+		parent:  invalidOverlayTransform,
+		local:   f32.AffineId(),
+		opacity: inheritedOpacity,
+		placed:  true,
+	})
+	h.current = requestRoot
+	restoreScope := ctx.keys.UseScope(request.scope)
+	defer func() {
+		restoreScope()
+		ctx.theme = previousTheme
+		ctx.styles = previousStyles
+		ctx.inheritedStyles = previousInheritedStyles
+		h.current = previousCurrent
+		h.active = nil
+	}()
+	requestGtx := rootGtx
+	if request.Disabled {
+		requestGtx = requestGtx.Disabled()
+	}
+	if inheritedOpacity < 1 {
+		opacity := paint.PushOpacity(requestGtx.Ops, inheritedOpacity)
+		request.Layout(requestGtx, anchor, interactive)
+		opacity.Pop()
+		return
+	}
+	request.Layout(requestGtx, anchor, interactive)
 }
 
 func topOverlayTail(request *overlayRequest) *overlayRequest {

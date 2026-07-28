@@ -8,6 +8,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
 )
@@ -20,12 +21,66 @@ func sliderStateFor(ctx *frame.Context, key string) (string, *sliderState) {
 }
 
 type sliderState struct {
-	lower      widget.Float
-	upper      widget.Float
-	lowerThumb sliderThumbState
-	upperThumb sliderThumbState
-	axis       layout.Axis
-	axisReady  bool
+	lowerDisclosure disclosure.Binding[float64]
+	upperDisclosure disclosure.Binding[float64]
+	currentLower    float64
+	currentUpper    float64
+	lower           widget.Float
+	upper           widget.Float
+	lowerThumb      sliderThumbState
+	upperThumb      sliderThumbState
+	axis            layout.Axis
+	axisReady       bool
+}
+
+// sliderLowerDisclosureCfg builds a disclosure.Config for the lower/value.
+func sliderLowerDisclosureCfg(widget SliderWidget) disclosure.Config[float64] {
+	return disclosure.Config[float64]{
+		Controlled: widget.hasValue,
+		Value:      widget.value,
+		HasDefault: widget.hasDefault,
+		Default:    widget.defaultValue,
+		OnChange:   widget.onChange,
+	}
+}
+
+// sliderUpperDisclosureCfg builds a disclosure.Config for the upper value (range mode).
+func sliderUpperDisclosureCfg(widget SliderWidget) disclosure.Config[float64] {
+	return disclosure.Config[float64]{
+		Controlled: widget.hasUpperValue,
+		Value:      widget.upperValue,
+		HasDefault: widget.hasDefaultUpper,
+		Default:    widget.defaultUpper,
+		OnChange:   nil, // Upper uses onRangeChange, not onChange
+	}
+}
+
+func (s *sliderState) bindLower(widget SliderWidget) {
+	s.lowerDisclosure.Bind(sliderLowerDisclosureCfg(widget))
+}
+
+func (s *sliderState) bindUpper(widget SliderWidget) {
+	s.upperDisclosure.Bind(sliderUpperDisclosureCfg(widget))
+}
+
+func (s *sliderState) currentLowerValue(widget SliderWidget) float64 {
+	s.currentLower = s.lowerDisclosure.Current(sliderLowerDisclosureCfg(widget))
+	return s.currentLower
+}
+
+func (s *sliderState) currentUpperValue(widget SliderWidget) float64 {
+	s.currentUpper = s.upperDisclosure.Current(sliderUpperDisclosureCfg(widget))
+	return s.currentUpper
+}
+
+func (s *sliderState) requestLower(widget SliderWidget, value float64) float64 {
+	s.currentLower, _ = s.lowerDisclosure.Request(sliderLowerDisclosureCfg(widget), value)
+	return s.currentLower
+}
+
+func (s *sliderState) requestUpper(widget SliderWidget, value float64) float64 {
+	s.currentUpper, _ = s.upperDisclosure.Request(sliderUpperDisclosureCfg(widget), value)
+	return s.currentUpper
 }
 
 type sliderThumbState struct {

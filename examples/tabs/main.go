@@ -56,14 +56,14 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 							ui.Tabs("primary", model.Primary, projectTabs()).
 								Separators(true).
 								OnChange(func(key string) { send(SelectTab{Group: primaryTabs, Key: key}) }),
-						).Width(620),
+						).Style(ui.Width(620)),
 					),
 					section("Secondary",
 						ui.Box(
 							ui.Tabs("secondary", model.Secondary, projectTabs()).
 								Variant(ui.TabsSecondary).
 								OnChange(func(key string) { send(SelectTab{Group: secondaryTabs, Key: key}) }),
-						).Width(620),
+						).Style(ui.Width(620)),
 					),
 					section("Vertical and disabled",
 						ui.Box(
@@ -71,7 +71,7 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 								Vertical().
 								Separators(true).
 								OnChange(func(key string) { send(SelectTab{Group: verticalTabs, Key: key}) }),
-						).Width(620).Height(240),
+						).Style(ui.Width(620).Height(240)),
 					),
 					section("Secondary vertical",
 						ui.Box(
@@ -79,7 +79,7 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 								Variant(ui.TabsSecondary).
 								Vertical().
 								OnChange(func(key string) { send(SelectTab{Group: secondaryVerticalTabs, Key: key}) }),
-						).Width(620).Height(240),
+						).Style(ui.Width(620).Height(240)),
 					),
 					section("Custom styles",
 						ui.Box(
@@ -90,17 +90,17 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 									Fit().
 									OnChange(func(key string) { send(SelectTab{Group: customTabs, Key: key}) }),
 							),
-						).Width(380),
+						).Style(ui.Width(380)),
 					),
 					section("Overflow",
 						ui.Box(
 							ui.Tabs("overflow", model.Overflow, overflowTabsItems()).
 								OnChange(func(key string) { send(SelectTab{Group: overflowTabs, Key: key}) }),
-						).Width(460),
+						).Style(ui.Width(460)),
 					),
 				).Gap(24),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 

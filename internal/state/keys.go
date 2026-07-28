@@ -36,7 +36,11 @@ const (
 	KindBarChart         Kind = "bar-chart"
 	KindPieChart         Kind = "pie-chart"
 	KindCandlestickChart Kind = "candlestick-chart"
+	KindHeatmap          Kind = "heatmap"
+	KindGanttChart       Kind = "gantt-chart"
 	KindTween            Kind = "tween"
+	KindTimeline         Kind = "timeline"
+	KindLayoutAnim       Kind = "layout-anim"
 	KindTabs             Kind = "tabs"
 	KindCollapsible      Kind = "collapsible"
 	KindPopover          Kind = "popover"
@@ -65,6 +69,9 @@ const (
 type Keys struct {
 	frame map[string]Kind
 	path  []string
+	// allowReuse lets a same-frame re-layout (overlay policy pass) reclaim keys
+	// that were already claimed during the paint pass.
+	allowReuse bool
 }
 
 // Scope returns a copy of the current key path. It is used by deferred frame
@@ -145,11 +152,24 @@ func (k *Keys) Derived(owner, role string) string {
 	return key.String()
 }
 
+// SetAllowReuse enables or disables same-frame key reclaim. Overlay policy
+// pass uses this so the visual top can re-enter Layout for input without
+// panicking on keys claimed during the paint pass.
+func (k *Keys) SetAllowReuse(allow bool) {
+	k.allowReuse = allow
+}
+
 func (k *Keys) claim(kind Kind, key string) string {
 	if k.frame == nil {
 		k.BeginFrame()
 	}
-	if _, ok := k.frame[key]; ok {
+	if existing, ok := k.frame[key]; ok {
+		if k.allowReuse {
+			if existing != kind {
+				panic(fmt.Sprintf("flowui: key %q has kind %q, want %q", key, existing, kind))
+			}
+			return key
+		}
 		panic(fmt.Sprintf("flowui: duplicate key %q", key))
 	}
 	k.frame[key] = kind

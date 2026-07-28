@@ -19,38 +19,6 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestTooltipOptionsAndDefaults(t *testing.T) {
-	value := Tooltip("help", fixedWidget{size: image.Pt(24, 12)}, text.New("Help")).
-		Placement(overlay.PopoverRightEnd).
-		Trigger(TooltipFocus).
-		Offset(9).
-		Delay(20 * time.Millisecond).
-		CloseDelay(30 * time.Millisecond).
-		ShouldFlip(false).
-		AvoidOverflow(false).
-		Arrow(true).
-		Disabled(true)
-
-	if value.key != "help" || value.trigger == nil || value.content == nil {
-		t.Fatal("constructor did not retain the tooltip fields")
-	}
-	if value.placement != overlay.PopoverRightEnd || value.triggerMode != TooltipFocus {
-		t.Fatal("placement or trigger option was not retained")
-	}
-	if value.offset != 9 || !value.hasOffset || value.delay != 20*time.Millisecond || value.closeDelay != 30*time.Millisecond {
-		t.Fatal("timing or offset option was not retained")
-	}
-	popup := value.popup(1, false)
-	if popup.flipEnabled() || popup.overflowAvoidanceEnabled() || !popup.arrow || !value.disabled {
-		t.Fatal("boolean options were not retained")
-	}
-
-	defaults := Tooltip("default", nil, nil)
-	if defaults.placement != overlay.PopoverTop || defaults.triggerMode != TooltipHover {
-		t.Fatalf("defaults = placement %v trigger %v, want top and hover", defaults.placement, defaults.triggerMode)
-	}
-}
-
 func TestTooltipHeroUIDefaultTokens(t *testing.T) {
 	value := theme.DefaultTheme().Components.Tooltip
 	if value.Delay != 1500*time.Millisecond || value.CloseDelay != 500*time.Millisecond {

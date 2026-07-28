@@ -8,6 +8,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
@@ -30,6 +32,8 @@ type comboBoxState struct {
 	dialog             overlay.ClickArea
 	list               layout.List
 	bar                widget.Scrollbar
+	disclosure         disclosure.Binding[string]
+	selectedKey        string
 	open               bool
 	wasFocused         bool
 	highlight          int
@@ -46,8 +50,34 @@ type comboBoxState struct {
 	dataReady          bool
 	visibleQuery       string
 	visibleSelected    string
+	visibleDataVersion uint64
 	cachedVisibleItems []int
 	visibleReady       bool
+}
+
+// comboBoxDisclosureCfg builds a disclosure.Config from the widget's selected-key fields.
+func comboBoxDisclosureCfg(widget ComboBoxWidget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasSelectedKey,
+		Value:      widget.selectedKey,
+		HasDefault: widget.hasDefaultSelected,
+		Default:    widget.defaultSelectedKey,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *comboBoxState) currentSelectedKey(widget ComboBoxWidget) string {
+	s.selectedKey = s.disclosure.Current(comboBoxDisclosureCfg(widget))
+	return s.selectedKey
+}
+
+func (s *comboBoxState) bind(widget ComboBoxWidget) {
+	s.disclosure.Bind(comboBoxDisclosureCfg(widget))
+}
+
+func (s *comboBoxState) requestSelectedKey(widget ComboBoxWidget, key string) string {
+	s.selectedKey, _ = s.disclosure.Request(comboBoxDisclosureCfg(widget), key)
+	return s.selectedKey
 }
 
 func (s *comboBoxState) beginFrame() {
@@ -100,15 +130,22 @@ func (s *comboBoxState) selectedLabel(widget ComboBoxWidget) (string, bool) {
 }
 
 func (s *comboBoxState) visibleItems(widget ComboBoxWidget, query, selectedLabel string) []int {
-	if widget.hasDataVersion && s.visibleReady && s.visibleQuery == query && s.visibleSelected == selectedLabel {
-		return s.cachedVisibleItems
+	// Always check cache based on query and selectedLabel, regardless of DataVersion.
+	if s.visibleReady && s.visibleQuery == query && s.visibleSelected == selectedLabel {
+		// If DataVersion is set and changed, invalidate cache.
+		if widget.hasDataVersion && s.visibleDataVersion != widget.dataVersion {
+			// Fall through to recompute
+		} else {
+			return s.cachedVisibleItems
+		}
 	}
 	visible := comboBoxVisibleItems(widget.items, query, selectedLabel)
+	s.visibleQuery = query
+	s.visibleSelected = selectedLabel
+	s.cachedVisibleItems = visible
+	s.visibleReady = true
 	if widget.hasDataVersion {
-		s.visibleQuery = query
-		s.visibleSelected = selectedLabel
-		s.cachedVisibleItems = visible
-		s.visibleReady = true
+		s.visibleDataVersion = widget.dataVersion
 	}
 	return visible
 }
@@ -215,41 +252,37 @@ func (s *comboBoxState) updateKeys(gtx layout.Context, editor *widget.Editor, it
 	}
 }
 
-func comboBoxFirstEnabled(items []ComboBoxItem, visible []int) int {
-	for i, index := range visible {
-		if !items[index].Disabled {
-			return i
-		}
+// comboBoxNavList adapts the filtered visible indices into a nav.List; the
+// highlight is a position within visible, and Disabled indexes back through it.
+func comboBoxNavList(items []ComboBoxItem, visible []int) nav.List {
+	return nav.List{
+		Count:    len(visible),
+		Disabled: func(i int) bool { return items[visible[i]].Disabled },
 	}
-	return -1
+}
+
+func comboBoxFirstEnabled(items []ComboBoxItem, visible []int) int {
+	index, _ := nav.First(comboBoxNavList(items, visible))
+	return index
 }
 
 func comboBoxLastEnabled(items []ComboBoxItem, visible []int) int {
-	for i := len(visible) - 1; i >= 0; i-- {
-		if !items[visible[i]].Disabled {
-			return i
-		}
-	}
-	return -1
+	index, _ := nav.Last(comboBoxNavList(items, visible))
+	return index
 }
 
 func comboBoxMoveHighlight(items []ComboBoxItem, visible []int, current, delta int) int {
-	count := len(visible)
-	if count == 0 {
-		return -1
-	}
-	if current < 0 || current >= count || items[visible[current]].Disabled {
+	list := comboBoxNavList(items, visible)
+	// ComboBox jumps to the first/last enabled when the highlight is unset or
+	// stale; from a valid highlight it wraps.
+	if current < 0 || current >= list.Count || list.Disabled(current) {
 		if delta < 0 {
 			return comboBoxLastEnabled(items, visible)
 		}
 		return comboBoxFirstEnabled(items, visible)
 	}
-	next := current
-	for range count {
-		next = (next + delta + count) % count
-		if !items[visible[next]].Disabled {
-			return next
-		}
+	if next, ok := nav.Move(list, current, delta, true); ok {
+		return next
 	}
 	return current
 }

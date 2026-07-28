@@ -45,7 +45,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(24).LineGap(24),
 			).Gap(24),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
@@ -55,7 +55,7 @@ func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow
 			ui.Text(title).Size(18),
 			ui.Text(description).Size(14),
 		).Gap(8),
-	).Width(320).MinHeight(132).Padding(20)
+	).Style(ui.Width(320).MinHeight(132).Padding(20))
 
 	declaration := ui.Radius(24)
 	if shadow {

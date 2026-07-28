@@ -45,8 +45,12 @@ func CascadePart(state StyleState, part Part, layers ...Style) ResolvedStyle {
 		resolved := layer.resolve(state)
 		if resolved.text != nil {
 			inherited := Style{text: cloneText(resolved.text)}
+			// Pre-allocate for text color transitions if any exist
 			for _, transition := range resolved.transitions {
 				if transition.Property == PropTextColor {
+					if inherited.transitions == nil {
+						inherited.transitions = make([]Transition, 0, 1)
+					}
 					inherited.transitions = append(inherited.transitions, transition)
 				}
 			}
@@ -67,56 +71,95 @@ func TextDeclaration(value *TextStyle) Style {
 }
 
 func resolvedStyle(source Style) ResolvedStyle {
+	// Pre-allocate transitions slice with exact capacity
+	var transitions []Transition
+	if len(source.transitions) > 0 {
+		transitions = make([]Transition, len(source.transitions))
+		copy(transitions, source.transitions)
+	}
 	return ResolvedStyle{
 		Box:         cloneBox(source.box),
 		Paint:       clonePaint(source.paint),
 		Text:        cloneText(source.text),
 		Trans:       cloneTransform(source.trans),
-		Transitions: append([]Transition(nil), source.transitions...),
+		Transitions: transitions,
 	}
 }
 
 func merge(first, second Style) Style {
+	// Fast path: second is empty
+	if second.box == nil && second.paint == nil && second.text == nil && second.trans == nil &&
+		len(second.transitions) == 0 && len(second.conditions) == 0 && len(second.parts) == 0 && len(second.tokens) == 0 {
+		return clone(first)
+	}
+
 	result := first
+
+	// Box merge with fast paths
 	if second.box != nil {
-		result.box = cloneBox(first.box)
-		if result.box == nil {
-			result.box = &BoxStyle{}
+		if first.box == nil {
+			// Fast path: first has no box, just clone second
+			result.box = cloneBox(second.box)
+		} else {
+			// Full merge needed
+			result.box = cloneBox(first.box)
+			mergeBox(result.box, second.box)
 		}
-		mergeBox(result.box, second.box)
 	}
+
+	// Paint merge with fast paths
 	if second.paint != nil {
-		result.paint = clonePaint(first.paint)
-		if result.paint == nil {
-			result.paint = &PaintStyle{}
+		if first.paint == nil {
+			// Fast path: first has no paint, just clone second
+			result.paint = clonePaint(second.paint)
+		} else {
+			// Full merge needed
+			result.paint = clonePaint(first.paint)
+			mergePaint(result.paint, second.paint)
 		}
-		mergePaint(result.paint, second.paint)
 	}
+
+	// Text merge with fast paths
 	if second.text != nil {
-		result.text = cloneText(first.text)
-		if result.text == nil {
-			result.text = &TextStyle{}
+		if first.text == nil {
+			// Fast path: first has no text, just clone second
+			result.text = cloneText(second.text)
+		} else {
+			// Full merge needed
+			result.text = cloneText(first.text)
+			mergeText(result.text, second.text)
 		}
-		mergeText(result.text, second.text)
 	}
+
+	// Transform merge with fast paths
 	if second.trans != nil {
-		result.trans = cloneTransform(first.trans)
-		if result.trans == nil {
-			result.trans = &TransformStyle{}
+		if first.trans == nil {
+			// Fast path: first has no transform, just clone second
+			result.trans = cloneTransform(second.trans)
+		} else {
+			// Full merge needed
+			result.trans = cloneTransform(first.trans)
+			mergeTransform(result.trans, second.trans)
 		}
-		mergeTransform(result.trans, second.trans)
 	}
+
 	if len(second.transitions) != 0 {
 		result.transitions = mergeTransitions(first.transitions, second.transitions)
 	}
 	if len(second.conditions) != 0 {
-		result.conditions = append(append([]condition(nil), first.conditions...), cloneConditions(second.conditions)...)
+		// Pre-allocate with exact capacity needed
+		result.conditions = make([]condition, len(first.conditions), len(first.conditions)+len(second.conditions))
+		copy(result.conditions, first.conditions)
+		result.conditions = append(result.conditions, cloneConditions(second.conditions)...)
 	}
 	if len(second.parts) != 0 {
 		result.parts = mergeParts(first.parts, second.parts)
 	}
 	if len(second.tokens) != 0 {
-		result.tokens = append(append([]StyleToken(nil), first.tokens...), second.tokens...)
+		// Pre-allocate with exact capacity needed
+		result.tokens = make([]StyleToken, len(first.tokens), len(first.tokens)+len(second.tokens))
+		copy(result.tokens, first.tokens)
+		result.tokens = append(result.tokens, second.tokens...)
 	}
 	return result
 }
@@ -263,7 +306,9 @@ func mergeTransform(dst, src *TransformStyle) {
 }
 
 func mergeTransitions(first, second []Transition) []Transition {
-	result := append([]Transition(nil), first...)
+	// Pre-allocate with capacity for worst case (no duplicates)
+	result := make([]Transition, len(first), len(first)+len(second))
+	copy(result, first)
 	for _, incoming := range second {
 		found := false
 		for index := range result {
@@ -286,10 +331,21 @@ func clone(source Style) Style {
 	result.paint = clonePaint(source.paint)
 	result.text = cloneText(source.text)
 	result.trans = cloneTransform(source.trans)
-	result.transitions = append([]Transition(nil), source.transitions...)
+	// Pre-allocate slices with exact capacity
+	if len(source.transitions) > 0 {
+		result.transitions = make([]Transition, len(source.transitions))
+		copy(result.transitions, source.transitions)
+	} else {
+		result.transitions = nil
+	}
 	result.conditions = cloneConditions(source.conditions)
 	result.parts = cloneParts(source.parts)
-	result.tokens = append([]StyleToken(nil), source.tokens...)
+	if len(source.tokens) > 0 {
+		result.tokens = make([]StyleToken, len(source.tokens))
+		copy(result.tokens, source.tokens)
+	} else {
+		result.tokens = nil
+	}
 	return result
 }
 
@@ -298,6 +354,10 @@ func clone(source Style) Style {
 func ExpandTokens(source Style, resolver func(StyleToken) Style) Style {
 	if resolver == nil {
 		return clone(source)
+	}
+	// Fast path: if no tokens, conditions, or parts, return source directly (immutable, already owned).
+	if len(source.tokens) == 0 && len(source.conditions) == 0 && len(source.parts) == 0 {
+		return source
 	}
 	var defaults Style
 	for _, token := range source.tokens {
@@ -375,7 +435,11 @@ func clonePaint(source *PaintStyle) *PaintStyle {
 	return &result
 }
 
+//go:inline
 func cloneShadows(source []Shadow) []Shadow {
+	if len(source) == 0 {
+		return nil
+	}
 	result := make([]Shadow, len(source))
 	for index, shadow := range source {
 		result[index] = shadow
@@ -426,6 +490,7 @@ func cloneConditions(source []condition) []condition {
 		result[index] = condition{
 			predicate: item.predicate,
 			override:  clone(item.override),
+			unsafe:    item.unsafe,
 		}
 	}
 	return result
@@ -470,7 +535,11 @@ func clonePaintSource(source PaintSource) PaintSource {
 	}
 }
 
+//go:inline
 func cloneGradientStops(source []StyleGradientStop) []StyleGradientStop {
+	if len(source) == 0 {
+		return nil
+	}
 	result := make([]StyleGradientStop, len(source))
 	for index, stop := range source {
 		result[index] = StyleGradientStop{Offset: stop.Offset, Color: cloneColorSource(stop.Color)}
@@ -489,6 +558,7 @@ func cloneColorSource(source ColorSource) ColorSource {
 	return cloned.(ColorSource)
 }
 
+//go:inline
 func clonePtr[T any](value *T) *T {
 	if value == nil {
 		return nil
@@ -497,6 +567,7 @@ func clonePtr[T any](value *T) *T {
 	return &copy
 }
 
+//go:inline
 func pick[T any](current, incoming *T) *T {
 	if incoming == nil {
 		return current

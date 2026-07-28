@@ -8,6 +8,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -22,10 +24,37 @@ func radioGroupStateFor(ctx *frame.Context, key string) *radioGroupState {
 }
 
 type radioGroupState struct {
-	items      map[string]*radioItemState
-	frameItems map[string]struct{}
-	itemKeys   map[string]struct{}
-	keyFilters []event.Filter
+	disclosure  disclosure.Binding[string]
+	selectedKey string
+	items       map[string]*radioItemState
+	frameItems  map[string]struct{}
+	itemKeys    map[string]struct{}
+	keyFilters  []event.Filter
+}
+
+// radioGroupDisclosureCfg builds a disclosure.Config from the widget's selected-key fields.
+func radioGroupDisclosureCfg(widget RadioGroupWidget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasSelectedKey,
+		Value:      widget.selectedKey,
+		HasDefault: widget.hasDefaultSelected,
+		Default:    widget.defaultSelectedKey,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *radioGroupState) currentSelectedKey(widget RadioGroupWidget) string {
+	s.selectedKey = s.disclosure.Current(radioGroupDisclosureCfg(widget))
+	return s.selectedKey
+}
+
+func (s *radioGroupState) bind(widget RadioGroupWidget) {
+	s.disclosure.Bind(radioGroupDisclosureCfg(widget))
+}
+
+func (s *radioGroupState) requestSelectedKey(widget RadioGroupWidget, key string) string {
+	s.selectedKey, _ = s.disclosure.Request(radioGroupDisclosureCfg(widget), key)
+	return s.selectedKey
 }
 
 func (s *radioGroupState) beginFrame() {
@@ -83,6 +112,8 @@ func (s *radioGroupState) updateKeys(gtx layout.Context, items []RadioItem, sele
 	if current < 0 {
 		current = radioIndexByKey(items, target)
 	}
+	// Radio groups wrap arrow navigation (ARIA convention); no typeahead.
+	list := radioNavList(items)
 	changed := false
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -95,25 +126,25 @@ func (s *radioGroupState) updateKeys(gtx layout.Context, items []RadioItem, sele
 		}
 		switch event.Name {
 		case key.NameRightArrow, key.NameDownArrow:
-			if next, ok := radioMoveIndex(items, current, 1); ok {
+			if next, ok := nav.Move(list, current, 1, true); ok {
 				current = next
 				target = items[next].Key
 				changed = true
 			}
 		case key.NameLeftArrow, key.NameUpArrow:
-			if next, ok := radioMoveIndex(items, current, -1); ok {
+			if next, ok := nav.Move(list, current, -1, true); ok {
 				current = next
 				target = items[next].Key
 				changed = true
 			}
 		case key.NameHome:
-			if next, ok := radioFirstEnabled(items); ok {
+			if next, ok := nav.First(list); ok {
 				current = next
 				target = items[next].Key
 				changed = true
 			}
 		case key.NameEnd:
-			if next, ok := radioLastEnabled(items); ok {
+			if next, ok := nav.Last(list); ok {
 				current = next
 				target = items[next].Key
 				changed = true
@@ -121,6 +152,13 @@ func (s *radioGroupState) updateKeys(gtx layout.Context, items []RadioItem, sele
 		}
 	}
 	return target, changed
+}
+
+func radioNavList(items []RadioItem) nav.List {
+	return nav.List{
+		Count:    len(items),
+		Disabled: func(i int) bool { return items[i].Disabled },
+	}
 }
 
 func (s *radioGroupState) focusedIndex(gtx layout.Context, items []RadioItem) int {
@@ -142,45 +180,6 @@ func radioIndexByKey(items []RadioItem, key string) int {
 		}
 	}
 	return -1
-}
-
-func radioMoveIndex(items []RadioItem, current, delta int) (int, bool) {
-	count := len(items)
-	if count == 0 {
-		return -1, false
-	}
-	if current < 0 || current >= count {
-		if delta < 0 {
-			return radioLastEnabled(items)
-		}
-		return radioFirstEnabled(items)
-	}
-	next := current
-	for range count {
-		next = (next + delta + count) % count
-		if !items[next].Disabled {
-			return next, true
-		}
-	}
-	return -1, false
-}
-
-func radioFirstEnabled(items []RadioItem) (int, bool) {
-	for i, item := range items {
-		if !item.Disabled {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
-func radioLastEnabled(items []RadioItem) (int, bool) {
-	for i := len(items) - 1; i >= 0; i-- {
-		if !items[i].Disabled {
-			return i, true
-		}
-	}
-	return -1, false
 }
 
 type radioItemState struct {

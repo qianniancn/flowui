@@ -18,6 +18,31 @@ type WindowSpec struct {
 	onError func(error)
 }
 
+type retainedWindowModel[M any, Msg any] struct {
+	mu          sync.Mutex
+	initialized bool
+	model       M
+}
+
+func (state *retainedWindowModel[M, Msg]) start(initialize func() (M, Cmd[Msg])) (M, Cmd[Msg]) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.initialized {
+		return state.model, nil
+	}
+	model, cmd := initialize()
+	state.model = model
+	state.initialized = true
+	return model, cmd
+}
+
+func (state *retainedWindowModel[M, Msg]) save(model M) {
+	state.mu.Lock()
+	state.model = model
+	state.initialized = true
+	state.mu.Unlock()
+}
+
 type windowAppearance struct {
 	mu          sync.Mutex
 	theme       *Theme
@@ -26,9 +51,8 @@ type windowAppearance struct {
 }
 
 func (appearance *windowAppearance) setTheme(value Theme) {
-	if value.Material != nil {
-		materialTheme := *value.Material
-		value.Material = &materialTheme
+	if MaterialOf(&value) != nil {
+		DetachMaterial(&value)
 	}
 	syncMaterialTheme(&value)
 	appearance.mu.Lock()
@@ -80,7 +104,7 @@ func (w WindowSpec) Key() string {
 }
 
 // NewWindow creates a window using a synchronous Update function. Initialize
-// runs once for each window instance and must return independent model state.
+// runs once for each native window instance unless RetainModelOnClose is used.
 func NewWindow[M any, Msg any](key string, initialize func() M, update Update[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
 	if update == nil {
 		panic("flowui: nil window update")
@@ -92,8 +116,8 @@ func NewWindow[M any, Msg any](key string, initialize func() M, update Update[M,
 }
 
 // NewWindowCmd creates a window whose Update function may return commands.
-// Initialize runs once for each window instance and must return independent
-// model state.
+// Initialize runs once for each native window instance unless
+// RetainModelOnClose is used.
 func NewWindowCmd[M any, Msg any](key string, initialize func() M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) WindowSpec {
 	if initialize == nil {
 		panic("flowui: nil window initializer")
@@ -102,8 +126,8 @@ func NewWindowCmd[M any, Msg any](key string, initialize func() M, update Update
 }
 
 // NewWindowWithSubscriptions creates a window with commands and subscriptions.
-// Initialize runs once for each window instance and must return independent
-// model state.
+// Initialize runs once for each native window instance unless
+// RetainModelOnClose is used.
 func NewWindowWithSubscriptions[M any, Msg any](
 	key string,
 	initialize func() M,
@@ -153,13 +177,25 @@ func newWindowSpec[M any, Msg any](
 		panic("flowui: nil window view")
 	}
 	cfg := newRunOptions(opts)
+	var retained *retainedWindowModel[M, Msg]
+	if cfg.retainModel {
+		retained = new(retainedWindowModel[M, Msg])
+	}
 	return WindowSpec{
 		key:     key,
 		options: append([]app.Option(nil), cfg.window...),
 		onError: cfg.errorHandler,
 		run: func(window *app.Window, appearance *windowAppearance, onDestroy func(), onWindowState func(WindowState)) error {
-			initial, initialCmd := initialize()
-			return runWindowCmd(window, appearance, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState)
+			var initial M
+			var initialCmd Cmd[Msg]
+			var onExit func(M)
+			if retained != nil {
+				initial, initialCmd = retained.start(initialize)
+				onExit = retained.save
+			} else {
+				initial, initialCmd = initialize()
+			}
+			return runWindowCmd(window, appearance, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState, onExit)
 		},
 	}
 }
@@ -193,6 +229,16 @@ type Application struct {
 // NewApplication creates an application that can open windows dynamically.
 func NewApplication() *Application {
 	return &Application{exit: os.Exit}
+}
+
+// SetKeepAlive controls whether the application remains running after its
+// last window closes. Enable it before Run for tray and background apps that
+// may open a new window later.
+func (a *Application) SetKeepAlive(enabled bool) {
+	if a == nil {
+		return
+	}
+	a.windows.setKeepAlive(enabled)
 }
 
 // Run opens the initial windows and hands the main thread to Gio. It must be
@@ -369,6 +415,16 @@ func (a *Application) CloseAll() {
 	}
 }
 
+// Quit disables keep-alive and requests that every active window close. If no
+// windows are open, the application exits immediately.
+func (a *Application) Quit() {
+	if a == nil {
+		return
+	}
+	a.windows.setKeepAlive(false)
+	a.CloseAll()
+}
+
 // RunWindows runs a fixed set of independent FlowUI windows.
 func RunWindows(windows ...WindowSpec) {
 	NewApplication().Run(windows...)
@@ -384,7 +440,18 @@ type windowSet struct {
 	starting    bool
 	closing     bool
 	failed      bool
+	keepAlive   bool
 	loops       int
+}
+
+func (s *windowSet) setKeepAlive(enabled bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closing {
+		return
+	}
+	s.keepAlive = enabled
+	s.finishLocked()
 }
 
 func (s *windowSet) begin() <-chan int {
@@ -458,7 +525,7 @@ func (s *windowSet) complete(failed bool) {
 }
 
 func (s *windowSet) finishLocked() {
-	if s.starting || s.closing || s.loops != 0 {
+	if !s.running || s.starting || s.closing || s.keepAlive || s.loops != 0 {
 		return
 	}
 	s.closing = true

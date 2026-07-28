@@ -57,30 +57,30 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					section("Plan",
 						ui.Box(radioGroup("plan", fieldPlan, m.Plan, plans, send)).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("Variants",
 						ui.Column(
 							ui.Box(radioGroup("billing", fieldBilling, m.Billing, billing, send).
 								Variant(ui.RadioSecondary)).
-								Width(420),
+								Style(ui.Width(420)),
 							ui.Box(ui.RadioGroup("disabled", "pro", plans).
 								Disabled(true)).
-								Width(420),
+								Style(ui.Width(420)),
 						).Gap(18),
 					),
 					section("Horizontal",
 						ui.Box(radioGroup("delivery", fieldDelivery, m.Delivery, delivery, send).
 							Horizontal()).
-							Width(520),
+							Style(ui.Width(520)),
 					),
 					section("Item states",
 						ui.Box(radioGroup("support", fieldSupport, m.Support, support, send)).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 

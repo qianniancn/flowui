@@ -76,7 +76,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 									OnChange(func(value float64) {
 										send(IntensityChanged(value))
 									}),
-							).Width(96).Height(260),
+							).Style(ui.Width(96)).Style(ui.Height(260)),
 						),
 						ui.Expanded(
 							ui.Card(
@@ -90,7 +90,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					).Gap(16).AlignStart(),
 				).Gap(16),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 

@@ -74,10 +74,16 @@ func (w Widget) drawCrosshair(ctx *frame.Context, gtx layout.Context, geometry c
 
 	activeTheme := frame.ActiveTheme(ctx)
 	tooltipTokens := activeTheme.Components.Tooltip
-	padding := max(gtx.Dp(tooltipTokens.Padding), 0)
+	padding := max(gtx.Dp(tokens.CrosshairLabelPadding), 0)
 	radius := max(gtx.Dp(tooltipTokens.Radius), 0)
-	background := activeTheme.Palette.MutedForeground
-	foreground := activeTheme.Palette.Background
+	background := tokens.CrosshairLabelBackground
+	if background.A == 0 {
+		background = activeTheme.Palette.MutedForeground
+	}
+	foreground := tokens.CrosshairLabelForeground
+	if foreground.A == 0 {
+		foreground = activeTheme.Palette.Background
+	}
 
 	xLabel := recordChartText(ctx, gtx, w.categoryLabel(selection.index), tokens.AxisTextSize, font.Normal, foreground, max(geometry.plot.Dx()-padding*2, 1))
 	xSize := xLabel.dims.Size.Add(image.Pt(padding*2, padding*2))

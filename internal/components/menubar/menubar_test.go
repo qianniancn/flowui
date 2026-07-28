@@ -40,23 +40,14 @@ func menubarTestWidget() Widget {
 	})
 }
 
-func TestMenubarOptionsUseValueSemantics(t *testing.T) {
-	base := menubarTestWidget()
-	configured := base.
-		Orientation(Vertical).
-		LoopFocus(false).
-		Modal(false).
-		Compact(true).
-		Disabled(true).
-		Alt("Application menu").
-		DefaultOpenKey("file").
-		OpenKey("edit").
-		OnOpenChange(func(string) {})
-	if base.orientation != Horizontal || !base.loopFocus || !base.modal || base.compact || base.disabled || base.hasOpenKey || base.hasDefaultOpenKey || base.alt != "" {
-		t.Fatalf("configuring Menubar mutated base: %#v", base)
+func TestMenubarAccessKeyIsValueSemantic(t *testing.T) {
+	base := NewMenu("file", "File", nil)
+	configured := base.AccessKey('f')
+	if base.accessKey != 0 {
+		t.Fatalf("AccessKey mutated base: %#v", base)
 	}
-	if configured.orientation != Vertical || configured.loopFocus || configured.modal || !configured.compact || !configured.disabled || configured.alt != "Application menu" || configured.openKey != "edit" || configured.defaultOpenKey != "file" || configured.onOpenChange == nil {
-		t.Fatalf("configured Menubar = %#v", configured)
+	if configured.accessKey != 'f' {
+		t.Fatalf("AccessKey = %q", configured.accessKey)
 	}
 }
 

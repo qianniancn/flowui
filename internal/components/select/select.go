@@ -30,40 +30,46 @@ const (
 )
 
 type SelectWidget struct {
-	key               string
-	selectedKey       string
-	selectedKeys      []string
-	items             []SelectItem
-	sections          []SelectSection
-	dataVersion       uint64
-	hasDataVersion    bool
-	placeholder       string
-	emptyText         string
-	label             string
-	description       string
-	errorMessage      string
-	valueText         string
-	indicator         frame.Widget
-	onChange          func(string)
-	onSelectionChange func([]string)
-	onOpenChange      func(bool)
-	selectionMode     SelectSelectionMode
-	disabledKeys      []string
-	variant           SelectVariant
-	open              bool
-	hasOpen           bool
-	defaultOpen       bool
-	hasDefaultOpen    bool
-	placement         overlay.PopoverPlacement
-	shouldFlip        bool
-	hasShouldFlip     bool
-	avoidOverflow     bool
-	hasAvoidOverflow  bool
-	disabled          bool
-	invalid           bool
-	required          bool
-	fullWidth         bool
-	customStyle       flowstyle.Style
+	key                 string
+	selectedKey         string
+	hasSelectedKey      bool
+	defaultSelectedKey  string
+	hasDefaultSelected  bool
+	selectedKeys        []string
+	hasSelectedKeys     bool
+	defaultSelectedKeys []string
+	hasDefaultSelecteds bool
+	items               []SelectItem
+	sections            []SelectSection
+	dataVersion         uint64
+	hasDataVersion      bool
+	placeholder         string
+	emptyText           string
+	label               string
+	description         string
+	errorMessage        string
+	valueText           string
+	indicator           frame.Widget
+	onChange            func(string)
+	onSelectionChange   func([]string)
+	onOpenChange        func(bool)
+	selectionMode       SelectSelectionMode
+	disabledKeys        []string
+	variant             SelectVariant
+	open                bool
+	hasOpen             bool
+	defaultOpen         bool
+	hasDefaultOpen      bool
+	placement           overlay.PopoverPlacement
+	shouldFlip          bool
+	hasShouldFlip       bool
+	avoidOverflow       bool
+	hasAvoidOverflow    bool
+	disabled            bool
+	invalid             bool
+	required            bool
+	fullWidth           bool
+	customStyle         flowstyle.Style
 }
 
 const (
@@ -74,23 +80,25 @@ const (
 
 func Select(key, selectedKey string, items []SelectItem) SelectWidget {
 	return SelectWidget{
-		key:           key,
-		selectedKey:   selectedKey,
-		items:         items,
-		placeholder:   "Select an item",
-		emptyText:     "No items",
-		selectionMode: SelectSelectionSingle,
+		key:            key,
+		selectedKey:    selectedKey,
+		hasSelectedKey: true,
+		items:          items,
+		placeholder:    "Select an item",
+		emptyText:      "No items",
+		selectionMode:  SelectSelectionSingle,
 	}
 }
 
 func SelectMultiple(key string, selectedKeys []string, items []SelectItem) SelectWidget {
 	return SelectWidget{
-		key:           key,
-		selectedKeys:  selectedKeys,
-		items:         items,
-		placeholder:   "Select items",
-		emptyText:     "No items",
-		selectionMode: SelectSelectionMultiple,
+		key:             key,
+		selectedKeys:    selectedKeys,
+		hasSelectedKeys: true,
+		items:           items,
+		placeholder:     "Select items",
+		emptyText:       "No items",
+		selectionMode:   SelectSelectionMultiple,
 	}
 }
 
@@ -152,6 +160,32 @@ func (s SelectWidget) Sections(sections []SelectSection) SelectWidget {
 
 func (s SelectWidget) OnChange(fn func(string)) SelectWidget {
 	s.onChange = fn
+	return s
+}
+
+func (s SelectWidget) SelectedKey(key string) SelectWidget {
+	s.selectedKey = key
+	s.hasSelectedKey = true
+	return s
+}
+
+func (s SelectWidget) DefaultSelectedKey(key string) SelectWidget {
+	s.defaultSelectedKey = key
+	s.hasDefaultSelected = true
+	s.hasSelectedKey = false
+	return s
+}
+
+func (s SelectWidget) SelectedKeys(keys []string) SelectWidget {
+	s.selectedKeys = keys
+	s.hasSelectedKeys = true
+	return s
+}
+
+func (s SelectWidget) DefaultSelectedKeys(keys []string) SelectWidget {
+	s.defaultSelectedKeys = keys
+	s.hasDefaultSelecteds = true
+	s.hasSelectedKeys = false
 	return s
 }
 
@@ -240,7 +274,18 @@ func (s SelectWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 		frame.PrepareFieldDescription(ctx, state.key, message)
 	}
 	frame.RegisterFieldFocus(ctx, state.key, &state.trigger, gtx.Enabled() && !s.disabled)
+
+	// Bind disclosure state for open/close
 	state.bind(s)
+
+	// Bind and get current selection state
+	state.bindSelected(s)
+	if s.selectionMode == SelectSelectionSingle {
+		s.selectedKey = state.currentSelectedKey(s)
+	} else {
+		s.selectedKeys = state.currentSelectedKeys(s)
+	}
+
 	open := state.isOpen(s)
 	if s.disabled {
 		state.open = false

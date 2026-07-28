@@ -43,13 +43,13 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 					).Angle(90),
 				),
 			).Gap(16),
-		).FillWidth().MaxWidth(720).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
 	)
 }
 
 func gradientBand(label string, brush ui.PaintSource) ui.Widget {
 	return ui.Surface(
-		ui.Box(ui.Text(label).Size(16)).FillWidth().Padding(20),
+		ui.Box(ui.Text(label).Size(16)).Style(ui.FillWidth()).Style(ui.Padding(20)),
 	).Style(ui.Background(brush).
 		TextColor(ui.Color(color.NRGBA{R: 255, G: 255, B: 255, A: 255})).
 		Radius(8),

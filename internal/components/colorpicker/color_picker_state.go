@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -25,6 +26,7 @@ func colorPickerStateFor(ctx *frame.Context, key string) (string, *colorPickerSt
 }
 
 type colorPickerState struct {
+	disclosure        disclosure.Binding[color.NRGBA]
 	trigger           widget.Clickable
 	triggerFocus      state.FocusAnimation
 	dialog            overlay.ClickArea
@@ -33,6 +35,29 @@ type colorPickerState struct {
 	popoverTransition animation.FloatTransition
 	panelList         layout.List
 	color             colorValueState
+	history           []color.NRGBA
+}
+
+func (pickerState *colorPickerState) pushHistory(value color.NRGBA, limit int) {
+	if limit <= 0 {
+		return
+	}
+	// Skip duplicate of most recent.
+	if len(pickerState.history) > 0 && pickerState.history[0] == value {
+		return
+	}
+	next := make([]color.NRGBA, 0, limit+1)
+	next = append(next, value)
+	for _, item := range pickerState.history {
+		if item == value {
+			continue
+		}
+		next = append(next, item)
+		if len(next) >= limit {
+			break
+		}
+	}
+	pickerState.history = next
 }
 
 type colorControlState struct {
@@ -51,17 +76,24 @@ func (pickerState *colorPickerState) popoverProgress(gtx layout.Context, open bo
 	return pickerState.popoverTransition.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
 }
 
-func (pickerState *colorPickerState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context) {
+func (pickerState *colorPickerState) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, historyLimit int, recordHistory bool) {
 	for pickerState.dialog.Clicked(gtx) {
 	}
 	if pickerState.dialog.TakePressed() {
 		frame.PreserveFocus(ctx)
 	}
 	for i := range pickerState.dismiss {
+		closed := false
 		for pickerState.dismiss[i].Clicked(gtx) {
-			pickerState.open = false
+			closed = true
 		}
 		if pickerState.dismiss[i].TakePressed() {
+			closed = true
+		}
+		if closed {
+			if recordHistory {
+				pickerState.pushHistory(pickerState.color.syncedColor, historyLimit)
+			}
 			pickerState.open = false
 		}
 	}
@@ -333,4 +365,28 @@ func clampUnit(value float64) float64 {
 		return 0
 	}
 	return min(max(value, 0), 1)
+}
+
+// Disclosure helpers
+func colorPickerDisclosureCfg(widget ColorPickerWidget) disclosure.Config[color.NRGBA] {
+	return disclosure.Config[color.NRGBA]{
+		Controlled: widget.hasValue,
+		Value:      widget.value,
+		HasDefault: widget.hasDefault,
+		Default:    widget.defaultValue,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *colorPickerState) currentValue(widget ColorPickerWidget) color.NRGBA {
+	return s.disclosure.Current(colorPickerDisclosureCfg(widget))
+}
+
+func (s *colorPickerState) bind(widget ColorPickerWidget) {
+	s.disclosure.Bind(colorPickerDisclosureCfg(widget))
+}
+
+func (s *colorPickerState) requestValue(widget ColorPickerWidget, value color.NRGBA) color.NRGBA {
+	newValue, _ := s.disclosure.Request(colorPickerDisclosureCfg(widget), value)
+	return newValue
 }

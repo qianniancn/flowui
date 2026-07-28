@@ -98,6 +98,10 @@ func TestMenuCompactTokensAndSubmenu(t *testing.T) {
 	if tokens.Padding != 4 || tokens.Radius != 8 || tokens.ItemGap != 1 || tokens.ItemMinHeight != 28 || tokens.ItemRadius != 4 || tokens.ItemPaddingX != 8 || tokens.ItemPaddingY != 3 || tokens.ItemTextSize != 13 {
 		t.Fatalf("compact menu tokens = %#v", tokens)
 	}
+	root := menuRootDeclaration(frame.ActiveTheme(ctx), tokens).Resolve(flowstyle.StyleState{})
+	if root.Paint == nil || root.Paint.Radius == nil || *root.Paint.Radius != 8 {
+		t.Fatalf("compact menu root radius = %#v, want 8", root.Paint)
+	}
 	state := &menuState{key: "actions"}
 	child := base.Compact(true).submenu(state, Item{Key: "more"})
 	if !child.compact {
@@ -106,22 +110,33 @@ func TestMenuCompactTokensAndSubmenu(t *testing.T) {
 }
 
 func TestMenuHeroUIDefaultTheme(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Menu
+	activeTheme := theme.DefaultTheme()
+	tokens := activeTheme.Components.Menu
 	if tokens.Width != 220 || tokens.MaxHeight != 0 || tokens.Padding != 6 || tokens.Radius != 24 || tokens.BorderWidth != 0 || tokens.ItemGap != 2 || tokens.ItemMinHeight != 36 || tokens.ItemRadius != 16 {
 		t.Fatalf("menu geometry = %#v", tokens)
 	}
 	if tokens.ItemPaddingX != 10 || tokens.ItemPaddingY != 6 || tokens.ItemContentGap != 12 || tokens.ItemTextSize != 14 || tokens.ShortcutTextSize != 14 || tokens.ShortcutHeight != 24 || tokens.ShortcutPaddingX != 8 {
 		t.Fatalf("menu content tokens = %#v", tokens)
 	}
-	if tokens.IndicatorSize != 16 || tokens.IndicatorContentGap != 2 || tokens.CheckmarkSize != 10 || tokens.RadioDotSize != 8 || tokens.SubmenuIndicatorSize != 14 {
+	if tokens.IndicatorSize != 16 || tokens.IndicatorContentGap != 2 || tokens.CheckmarkSize != 10 || tokens.RadioDotSize != 8 || tokens.IndicatorOffsetY != 1.5 || tokens.SubmenuIndicatorSize != 14 || tokens.IndicatorColor != activeTheme.Palette.Accent {
 		t.Fatalf("menu indicator tokens = %#v", tokens)
 	}
 	if tokens.FocusRingWidth != 2 || tokens.FocusRingOffset != 2 || tokens.PressedScale != 0.98 || tokens.SubmenuGap != 8 || tokens.ContextMenuOffset != 2 || tokens.EnterScale != 0.9 || tokens.ExitScale != 0.95 || tokens.ShadowOpacity != 1 {
 		t.Fatalf("menu state tokens = %#v", tokens)
 	}
-	dark := theme.DarkTheme().Components.Menu
-	if dark.ShadowOpacity != 0 || dark.BorderWidth != 1 || dark.BorderColor != (color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x4d}) {
+	darkTheme := theme.DarkTheme()
+	dark := darkTheme.Components.Menu
+	if dark.ShadowOpacity != 0 || dark.BorderWidth != 1 || dark.BorderColor != (color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x4d}) || dark.IndicatorColor != darkTheme.Palette.Accent {
 		t.Fatalf("dark menu elevation = shadow %v border %v", dark.ShadowOpacity, dark.BorderWidth)
+	}
+}
+
+func TestMenuItemIndicatorUsesThemeColor(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	want := color.NRGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}
+	activeTheme.Components.Menu.IndicatorColor = want
+	if got := menuItemStyle(&activeTheme, ItemDefault).indicator; got != want {
+		t.Fatalf("menu indicator color = %#v, want %#v", got, want)
 	}
 }
 
@@ -275,6 +290,19 @@ func TestMenuPartItemUsesPressedScale(t *testing.T) {
 	)
 	if resolved.Trans == nil || resolved.Trans.ScaleX == nil || *resolved.Trans.ScaleX != activeTheme.Components.Menu.PressedScale {
 		t.Fatalf("pressed menu item style = %#v", resolved.Trans)
+	}
+}
+
+func TestMenuDangerItemUsesDangerHover(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	resolved := flowstyle.CascadePart(
+		flowstyle.StyleState{Hovered: true},
+		flowstyle.PartItem,
+		menuItemDefaultDeclaration(&activeTheme, activeTheme.Components.Menu),
+		menuItemVariantDeclaration(&activeTheme, ItemDanger),
+	)
+	if resolved.Paint == nil || resolved.Paint.Background != flowstyle.TokenDangerSoftHover {
+		t.Fatalf("danger menu hover background = %#v", resolved.Paint)
 	}
 }
 

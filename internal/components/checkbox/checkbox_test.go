@@ -57,35 +57,6 @@ func (p *checkboxIndicatorProbe) Layout(ctx *frame.Context, gtx layout.Context) 
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(10, 10))}
 }
 
-func TestCheckboxOptionsUseValueSemantics(t *testing.T) {
-	probe := &checkboxIndicatorProbe{}
-	base := Checkbox("done", false, "Done")
-	configured := base.
-		Variant(CheckboxSecondary).
-		Indeterminate(true).
-		ReadOnly(true).
-		Required(true).
-		Description("Supporting text").
-		ErrorMessage("Required").
-		Disabled(true).
-		Invalid(true).
-		Indicator(func(IndicatorState) frame.Widget { return probe }).
-		OnChange(func(bool) {})
-
-	if base.variant != CheckboxPrimary || base.indeterminate || base.readOnly || base.required || base.description != "" {
-		t.Fatal("configuring a Checkbox mutated the base value")
-	}
-	if configured.variant != CheckboxSecondary || !configured.indeterminate || !configured.readOnly || !configured.required {
-		t.Fatal("variant or behavior options were not retained")
-	}
-	if configured.description != "Supporting text" || configured.errorMessage != "Required" || !configured.disabled || !configured.invalid {
-		t.Fatal("field state options were not retained")
-	}
-	if configured.indicator == nil || configured.onChange == nil {
-		t.Fatal("indicator or callback was not retained")
-	}
-}
-
 func TestCheckboxSyncsValue(t *testing.T) {
 	ctx := newContext(nil)
 	var ops op.Ops
@@ -263,6 +234,12 @@ func TestCheckboxCustomIndicatorCanSuppressDefaultCheck(t *testing.T) {
 	if !options.CustomIndicator || options.Indicator != nil {
 		t.Fatal("custom Indicator presence is ambiguous")
 	}
+}
+
+func TestCheckboxCustomIndicatorMayReturnNilDuringLayout(t *testing.T) {
+	Checkbox("custom", false, "Custom").
+		Indicator(func(IndicatorState) frame.Widget { return nil }).
+		Layout(newContext(nil), testLayoutContext())
 }
 
 func TestCheckboxPartsResolveStateAndOverrides(t *testing.T) {

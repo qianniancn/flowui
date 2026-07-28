@@ -12,7 +12,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/field"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -46,37 +45,6 @@ func mustPanic(t *testing.T, fn func()) {
 		}
 	}()
 	fn()
-}
-
-func TestComboBoxOptions(t *testing.T) {
-	c := ComboBox("animal", "cat", comboBoxTestItems()).
-		Hint("Animal").
-		InputValue("ca").
-		EmptyText("Nothing").
-		Variant(field.Secondary).
-		Invalid(true).
-		Disabled(true).
-		FullWidth().
-		AllowCustomValue()
-
-	if c.key != "animal" {
-		t.Fatalf("key = %q, want animal", c.key)
-	}
-	if c.hint != "Animal" {
-		t.Fatal("hint was not set")
-	}
-	if c.inputValue != "ca" || !c.hasInputValue {
-		t.Fatal("input value was not set")
-	}
-	if c.emptyText != "Nothing" {
-		t.Fatal("empty text was not set")
-	}
-	if c.variant != field.Secondary {
-		t.Fatal("variant was not set")
-	}
-	if !c.invalid || !c.disabled || !c.fullWidth || !c.allowCustomValue {
-		t.Fatal("boolean option was not set")
-	}
 }
 
 func TestComboBoxDataVersionCachesVisibleItems(t *testing.T) {

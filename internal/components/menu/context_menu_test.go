@@ -2,16 +2,20 @@ package menu
 
 import (
 	"image"
+	"image/color"
 	"testing"
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/gpu/headless"
 	"gioui.org/io/event"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"github.com/qianniancn/FlowUI/internal/frame"
 )
 
@@ -22,6 +26,24 @@ type contextMenuFixedWidget struct {
 type contextMenuFocusWidget struct {
 	size   image.Point
 	target event.Tag
+}
+
+type contextMenuOverflowWidget struct {
+	color color.NRGBA
+}
+
+type menuAlignmentWidget struct {
+	color color.NRGBA
+}
+
+func (w contextMenuOverflowWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	paint.FillShape(gtx.Ops, w.color, clip.Rect{Min: image.Pt(0, -1), Max: image.Pt(1, 1)}.Op())
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(10, 10))}
+}
+
+func (w menuAlignmentWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	paint.FillShape(gtx.Ops, w.color, clip.Rect{Max: image.Pt(2, 2)}.Op())
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(2, 2))}
 }
 
 func (w contextMenuFocusWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -67,6 +89,139 @@ func TestContextMenuOpensAtSecondaryClickPosition(t *testing.T) {
 	if !router.Source().Focused(&menuState.item("copy").clickable) {
 		t.Fatal("opening context menu did not focus first action")
 	}
+}
+
+func TestContextMenuUsesMenuRootBackground(t *testing.T) {
+	ctx := menuTestContext()
+	router := new(input.Router)
+	got := frame.ActiveTheme(ctx).Palette.Background
+	content := Menu("actions", []Item{{Key: "copy", Label: "Copy"}}).
+		BeforeContent(frame.WidgetFunc(func(ctx *frame.Context, _ layout.Context) layout.Dimensions {
+			got = ctx.BackgroundColor()
+			return layout.Dimensions{}
+		}))
+	widget := ContextMenu("row-menu", contextMenuFixedWidget{size: image.Pt(160, 100)}, content)
+
+	openContextMenuForTest(ctx, router, widget)
+	if want := menuBackgroundColor(frame.ActiveTheme(ctx)); got != want {
+		t.Fatalf("context menu background = %#v, want %#v", got, want)
+	}
+}
+
+func TestContextMenuDoesNotClipTriggerVisual(t *testing.T) {
+	window, err := headless.NewWindow(14, 14)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	ctx := menuTestContext()
+	var router input.Router
+	var ops op.Ops
+	want := color.NRGBA{R: 0x24, G: 0x68, B: 0xf2, A: 0xff}
+	frame.BeginFrameWithViewport(ctx, image.Pt(14, 14))
+	offset := op.Offset(image.Pt(2, 2)).Push(&ops)
+	ContextMenu("overflow", contextMenuOverflowWidget{color: want}, Menu("actions", nil)).Layout(ctx, layout.Context{
+		Constraints: layout.Exact(image.Pt(10, 10)), Source: router.Source(), Ops: &ops,
+	})
+	offset.Pop()
+	frame.EndFrame(ctx)
+
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 14, 14))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	if got := color.NRGBAModel.Convert(pixels.At(2, 1)).(color.NRGBA); got != want {
+		t.Fatalf("trigger overflow pixel = %#v, want %#v", got, want)
+	}
+}
+
+func TestMenuItemContentIsVerticallyCentered(t *testing.T) {
+	window, err := headless.NewWindow(80, 30)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	ctx := menuTestContext()
+	tokens := &frame.ActiveTheme(ctx).Components.Menu
+	tokens.Width = 80
+	tokens.Padding = 0
+	tokens.ItemMinHeight = 30
+	tokens.ItemPaddingX = 0
+	tokens.ItemPaddingY = 0
+	var router input.Router
+	var ops op.Ops
+	want := color.NRGBA{R: 0xff, A: 0xff}
+	frame.BeginFrameWithViewport(ctx, image.Pt(80, 30))
+	item := Item{Key: "probe", Label: "Copy", Leading: menuAlignmentWidget{color: want}}
+	menu := Menu("alignment", []Item{item})
+	menu.layoutItem(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(80, 30)}, Source: router.Source(), Ops: &ops,
+	}, menu.stateFor(ctx), entry{item: item}, true)
+	frame.EndFrame(ctx)
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 80, 30))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	bounds := image.Rectangle{}
+	for y := range 30 {
+		for x := range 80 {
+			if color.NRGBAModel.Convert(pixels.At(x, y)).(color.NRGBA) == want {
+				point := image.Rect(x, y, x+1, y+1)
+				if bounds.Empty() {
+					bounds = point
+				} else {
+					bounds = bounds.Union(point)
+				}
+			}
+		}
+	}
+	if bounds != image.Rect(0, 14, 2, 16) {
+		t.Fatalf("menu item content bounds = %v, want vertically centered %v", bounds, image.Rect(0, 14, 2, 16))
+	}
+}
+
+func TestMenuIndicatorUsesThemeColor(t *testing.T) {
+	window, err := headless.NewWindow(40, 30)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	ctx := menuTestContext()
+	tokens := &frame.ActiveTheme(ctx).Components.Menu
+	tokens.IndicatorColor = color.NRGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}
+	var router input.Router
+	var ops op.Ops
+	frame.BeginFrameWithViewport(ctx, image.Pt(40, 30))
+	item := Item{Key: "selected", Kind: ItemRadio, Checked: true}
+	menu := Menu("indicator-color", []Item{item})
+	menu.layoutItem(ctx, layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(40, 30)}, Source: router.Source(), Ops: &ops,
+	}, menu.stateFor(ctx), entry{item: item}, true)
+	frame.EndFrame(ctx)
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 40, 30))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	for y := range 30 {
+		for x := range 40 {
+			if got := color.NRGBAModel.Convert(pixels.At(x, y)).(color.NRGBA); got == tokens.IndicatorColor {
+				return
+			}
+		}
+	}
+	t.Fatalf("menu indicator did not use theme color %#v", tokens.IndicatorColor)
 }
 
 func TestContextMenuShiftF10OpensAtTriggerCenter(t *testing.T) {

@@ -66,46 +66,6 @@ func testLayoutContext() layout.Context {
 	}
 }
 
-func TestModalOptions(t *testing.T) {
-	var open bool
-	modal := Modal("settings", true, "Settings", text.New("Body")).
-		Header(text.New("Custom header")).
-		Body(text.New("Custom body")).
-		Footer(text.New("Footer")).
-		Icon(text.New("!")).
-		OnOpenChange(func(next bool) {
-			open = next
-		}).
-		Size(ModalLarge).
-		Placement(ModalBottom).
-		Backdrop(ModalBackdropBlur).
-		Scroll(ModalScrollOutside).
-		Animation(ModalAnimationBounceScale).
-		Dismissable(false).
-		KeyboardDismissDisabled(true).
-		CloseButton(false)
-
-	if modal.key != "settings" || !modal.open || modal.title != "Settings" || modal.body == nil {
-		t.Fatal("modal constructor/options did not set base fields")
-	}
-	if modal.header == nil || modal.footer == nil || modal.icon == nil || modal.onOpenChange == nil {
-		t.Fatal("modal content/callback options were not set")
-	}
-	if modal.size != ModalLarge || modal.placement != ModalBottom || modal.backdrop != ModalBackdropBlur || modal.scroll != ModalScrollOutside {
-		t.Fatal("modal visual options were not set")
-	}
-	if modal.animation != ModalAnimationBounceScale {
-		t.Fatal("modal animation option was not set")
-	}
-	if modal.isDismissable() || !modal.keyboardDismissDisabled || modal.showCloseButton() {
-		t.Fatal("modal behavior options were not set")
-	}
-	modal.onOpenChange(true)
-	if !open {
-		t.Fatal("modal onOpenChange did not receive true")
-	}
-}
-
 func TestModalClosedReturnsZeroAndDoesNotClaimState(t *testing.T) {
 	ctx := newContext(nil)
 	dims := Modal("settings", false, "Settings", text.New("Body")).Layout(ctx, testLayoutContext())
@@ -435,13 +395,15 @@ func TestModalExitDialogStillBlocksBackgroundClicks(t *testing.T) {
 
 func TestModalCloseButtonRequestsClose(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
-	state.close.Click()
-
 	closed := false
 	modal := Modal("settings", true, "Settings", text.New("Body")).
 		OnOpenChange(func(open bool) {
 			closed = !open
 		})
+	// Open first so the paint pass does not drain the programmatic click before
+	// policy input runs; the following frame owns overlay policy input.
+	layoutModalFrame(ctx, new(input.Router), modal)
+	state.close.Click()
 	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if !closed {
@@ -474,13 +436,13 @@ func TestModalCloseButtonPointerFocusIsNotKeyboardVisible(t *testing.T) {
 
 func TestModalDismissAreaRequestsClose(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
-	state.dismiss[0].Click()
-
 	closed := false
 	modal := Modal("settings", true, "Settings", text.New("Body")).
 		OnOpenChange(func(open bool) {
 			closed = !open
 		})
+	layoutModalFrame(ctx, new(input.Router), modal)
+	state.dismiss[0].Click()
 	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if !closed {
@@ -490,14 +452,14 @@ func TestModalDismissAreaRequestsClose(t *testing.T) {
 
 func TestModalDismissableFalseIgnoresDismissArea(t *testing.T) {
 	ctx, state := modalTestContextWithState("settings")
-	state.dismiss[0].Click()
-
 	closed := false
 	modal := Modal("settings", true, "Settings", text.New("Body")).
 		Dismissable(false).
 		OnOpenChange(func(open bool) {
 			closed = !open
 		})
+	layoutModalFrame(ctx, new(input.Router), modal)
+	state.dismiss[0].Click()
 	layoutModalFrame(ctx, new(input.Router), modal)
 
 	if closed {

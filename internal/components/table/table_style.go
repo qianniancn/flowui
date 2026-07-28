@@ -51,8 +51,9 @@ type tableRowStyle struct {
 	opacity    float32
 }
 
-func tableRowStyleFor(activeTheme *theme.Theme, variant Variant, selected, hovered, pressed, disabled bool) tableRowStyle {
+func tableRowStyleFor(activeTheme *theme.Theme, variant Variant, stripe color.NRGBA, selected, hovered, pressed, disabled bool) tableRowStyle {
 	style := tableRowStyle{
+		background: stripe,
 		foreground: activeTheme.Palette.Foreground,
 		focus:      activeTheme.Palette.Focus,
 		opacity:    1,

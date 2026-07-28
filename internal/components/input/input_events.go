@@ -18,9 +18,9 @@ func (e *inputEvents) add(event widget.EditorEvent) {
 	}
 }
 
-func (i InputWidget) dispatchEvents(editor *widget.Editor, events inputEvents) {
-	if events.changed && i.onChange != nil {
-		i.onChange(editor.Text())
+func (i InputWidget) dispatchEvents(state *inputState, editor *widget.Editor, events inputEvents) {
+	if events.changed {
+		state.requestValue(i, editor.Text())
 	}
 	if events.submitted && i.onSubmit != nil {
 		i.onSubmit(events.submitText)

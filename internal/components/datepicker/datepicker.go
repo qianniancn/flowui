@@ -15,6 +15,9 @@ import (
 type DatePickerWidget struct {
 	key          string
 	value        time.Time
+	hasValue     bool
+	defaultValue time.Time
+	hasDefault   bool
 	hint         string
 	hintSet      bool
 	label        string
@@ -25,6 +28,7 @@ type DatePickerWidget struct {
 	onChange     func(time.Time)
 	variant      field.Variant
 	disabled     bool
+	editable     bool
 	invalid      bool
 	required     bool
 	fullWidth    bool
@@ -64,9 +68,24 @@ func DatePickerChinese() DatePickerLocale {
 
 func DatePicker(key string, value time.Time) DatePickerWidget {
 	return DatePickerWidget{
-		key:   key,
-		value: dateOnly(value),
+		key:      key,
+		value:    dateOnly(value),
+		hasValue: true,
+		editable: true,
 	}
+}
+
+func (d DatePickerWidget) Value(value time.Time) DatePickerWidget {
+	d.value = dateOnly(value)
+	d.hasValue = true
+	return d
+}
+
+func (d DatePickerWidget) DefaultValue(value time.Time) DatePickerWidget {
+	d.defaultValue = dateOnly(value)
+	d.hasDefault = true
+	d.hasValue = false
+	return d
 }
 
 func (d DatePickerWidget) Hint(hint string) DatePickerWidget {
@@ -109,6 +128,11 @@ func (d DatePickerWidget) Disabled(disabled bool) DatePickerWidget {
 	return d
 }
 
+func (d DatePickerWidget) Editable(editable bool) DatePickerWidget {
+	d.editable = editable
+	return d
+}
+
 func (d DatePickerWidget) Invalid(invalid bool) DatePickerWidget {
 	d.invalid = invalid
 	return d
@@ -148,18 +172,31 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	d = d.resolveLocale(ctx)
 	now := datePickerFrameNow(gtx.Now)
 	state := datePickerStateFor(ctx, d.key)
+
+	// Bind disclosure and get current value
+	state.bind(d)
+	currentValue := state.currentValue(d)
+
+	// Use currentValue for all subsequent operations
+	d.value = currentValue
+
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	state.beginFrame()
-	state.sync(d.value, d.initialMonth(now))
+	state.sync(currentValue, d.initialMonth(now))
 	state.hover.update(gtx)
 	enabled := gtx.Enabled() && !d.disabled
-	frame.RegisterFieldFocus(ctx, frame.FullKey(ctx, d.key), &state.segments.segments[d.locale.DateOrder[0]].clickable, enabled)
+	if d.editable {
+		frame.RegisterFieldFocus(ctx, frame.FullKey(ctx, d.key), &state.segments.segments[d.locale.DateOrder[0]].clickable, enabled)
+	} else {
+		frame.RegisterFieldFocus(ctx, frame.FullKey(ctx, d.key), &state.trigger, enabled)
+	}
 	if !enabled {
 		state.open = false
 	}
 
-	inputFocused := state.segments.focused(gtx)
-	focused := inputFocused || gtx.Focused(&state.trigger) || state.calendarFocused(gtx)
+	inputFocused := d.editable && state.segments.focused(gtx)
+	triggerFocused := gtx.Focused(&state.trigger)
+	focused := inputFocused || triggerFocused || state.calendarFocused(gtx)
 	state.updateFocus(focused, !enabled)
 	if state.open && (state.segments.escapePressed(gtx) || state.calendarEscapePressed(gtx)) {
 		state.open = false
@@ -168,21 +205,24 @@ func (d DatePickerWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 		state.updateKeys(gtx, &state.trigger)
 	}
 
-	invalid := d.invalid || !state.segments.valid || dateOutsideRange(d.value, d.minDate, d.maxDate)
-	hovered := state.hover.hovered || state.segments.hovered() || state.trigger.Hovered()
+	invalid := d.invalid || (d.editable && !state.segments.valid) || dateOutsideRange(currentValue, d.minDate, d.maxDate)
+	hovered := state.hover.hovered || (d.editable && state.segments.hovered()) || state.trigger.Hovered()
 	styleState := flowstyle.StyleState{
 		Hovered:      hovered,
 		Focused:      focused,
 		FocusVisible: state.focusVisible(ctx, gtx),
 		Disabled:     !enabled,
 		Invalid:      invalid,
-		Selected:     !d.value.IsZero(),
+		Selected:     !currentValue.IsZero(),
 		Open:         state.open,
 	}
 	fieldState := styleState
 	fieldState.Hovered = hovered && !focused
-	fieldState.Focused = inputFocused
+	fieldState.Focused = inputFocused || (!d.editable && triggerFocused)
 	fieldState.FocusVisible = state.segments.focusVisible(ctx, gtx)
+	if !d.editable {
+		fieldState.FocusVisible = frame.FocusVisible(ctx, &state.trigger, triggerFocused)
+	}
 	tokens := frame.ActiveTheme(ctx).Components
 	resolved := field.Resolve(ctx, gtx, frame.FullKey(ctx, d.key), fieldState, d.variant, field.DeclarationOptions{
 		Radius:         tokens.DatePicker.Radius,

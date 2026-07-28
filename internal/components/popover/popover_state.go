@@ -4,6 +4,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -31,6 +32,33 @@ type popoverState struct {
 	dialog     overlay.ClickArea
 	arrow      overlay.ClickArea
 	transition animation.FloatTransition
+	disclosure disclosure.Binding[bool]
+	open       bool // cached effective open, updated by isOpen/requestOpen
+}
+
+// popoverDisclosureCfg builds a disclosure.Config from the widget's open-state fields.
+func popoverDisclosureCfg(widget PopoverWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasOpen,
+		Value:      widget.open,
+		HasDefault: widget.hasDefaultOpen,
+		Default:    widget.defaultOpen,
+		OnChange:   widget.onOpenChange,
+	}
+}
+
+func (s *popoverState) isOpen(widget PopoverWidget) bool {
+	s.open = s.disclosure.Current(popoverDisclosureCfg(widget))
+	return s.open
+}
+
+func (s *popoverState) bind(widget PopoverWidget) {
+	s.disclosure.Bind(popoverDisclosureCfg(widget))
+}
+
+func (s *popoverState) requestOpen(widget PopoverWidget, open bool) bool {
+	s.open, _ = s.disclosure.Request(popoverDisclosureCfg(widget), open)
+	return s.open
 }
 
 func (s *popoverState) progress(gtx layout.Context, open bool, motions ...theme.MotionTheme) float32 {

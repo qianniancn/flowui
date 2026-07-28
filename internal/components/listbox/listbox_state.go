@@ -2,14 +2,14 @@ package listbox
 
 import (
 	"fmt"
-	"strings"
 	"time"
-	"unicode"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
@@ -31,6 +31,10 @@ func (l ListBoxWidget) stateFor(ctx *frame.Context) *listBoxState {
 }
 
 type listBoxState struct {
+	disclosureSingle disclosure.Binding[string]
+	// For multiple selection, we manage state manually since []string is not comparable
+	multipleValue    []string
+	multipleReady    bool
 	list             layout.List
 	bar              widget.Scrollbar
 	items            map[string]*listBoxItemState
@@ -43,9 +47,7 @@ type listBoxState struct {
 	focusedKey       string
 	pressedKey       key.Name
 	pressedActionKey string
-	typeahead        string
-	typeaheadAt      time.Time
-	typeaheadReady   bool
+	typeahead        nav.Typeahead
 }
 
 type listBoxDataCache struct {
@@ -151,6 +153,14 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 		return listBoxKeyResult{}
 	}
 
+	// itemDisabled resolves in O(1) via the widget's disabled-key set, so the
+	// per-keystroke navigation below does not linearly scan disabledKeys.
+	list := nav.List{
+		Count:    len(items),
+		Disabled: func(i int) bool { return widget.itemDisabled(items[i]) },
+		Label:    func(i int) string { return items[i].Label },
+	}
+
 	result := listBoxKeyResult{}
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
@@ -166,7 +176,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxMoveIndex(items, widget.disabledKeys, current, 1); ok {
+			if next, ok := nav.Move(list, current, 1, false); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -174,7 +184,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxMoveIndex(items, widget.disabledKeys, current, -1); ok {
+			if next, ok := nav.Move(list, current, -1, false); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -182,7 +192,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxFirstEnabled(items, widget.disabledKeys); ok {
+			if next, ok := nav.First(list); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -190,7 +200,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			if event.State != key.Press {
 				continue
 			}
-			if next, ok := listBoxLastEnabled(items, widget.disabledKeys); ok {
+			if next, ok := nav.Last(list); ok {
 				current = next
 				result.focusKey = items[next].Key
 			}
@@ -199,7 +209,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			case key.Press:
 				s.pressedKey = event.Name
 				s.pressedActionKey = ""
-				if current >= 0 && current < len(items) && !listBoxItemDisabled(items[current], widget.disabledKeys) {
+				if current >= 0 && current < len(items) && !widget.itemDisabled(items[current]) {
 					s.pressedActionKey = items[current].Key
 				}
 			case key.Release:
@@ -211,7 +221,7 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 				actionKey := s.pressedActionKey
 				s.pressedKey = ""
 				s.pressedActionKey = ""
-				if item, ok := listBoxItemByKey(items, actionKey); ok && !listBoxItemDisabled(item, widget.disabledKeys) {
+				if item, ok := listBoxItemByKey(items, actionKey); ok && !widget.itemDisabled(item) {
 					result.actionKey = actionKey
 				}
 			}
@@ -219,15 +229,15 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 			if event.State != key.Press || event.Modifiers&(key.ModCtrl|key.ModCommand|key.ModAlt|key.ModSuper) != 0 {
 				continue
 			}
-			text := listBoxTypeaheadText(event.Name)
+			text := nav.Printable(event.Name)
 			if text == "" {
 				continue
 			}
-			query := s.appendTypeahead(gtx.Now, text)
-			next, ok := listBoxTypeaheadIndex(items, widget.disabledKeys, current, query)
+			query := s.typeahead.Append(gtx.Now, text)
+			next, ok := nav.Match(list, current, query)
 			if !ok && query != text {
-				s.typeahead = text
-				next, ok = listBoxTypeaheadIndex(items, widget.disabledKeys, current, text)
+				s.typeahead.Set(text)
+				next, ok = nav.Match(list, current, text)
 			}
 			if ok {
 				current = next
@@ -238,39 +248,10 @@ func (s *listBoxState) updateKeys(gtx layout.Context, items []ListBoxItem, widge
 	return result
 }
 
+// appendTypeahead delegates to the shared nav.Typeahead accumulator. It remains
+// a method so keyboard tests can drive the state directly.
 func (s *listBoxState) appendTypeahead(now time.Time, text string) string {
-	if !s.typeaheadReady || now.Before(s.typeaheadAt) || now.Sub(s.typeaheadAt) > listBoxTypeaheadTimeout {
-		s.typeahead = ""
-	}
-	s.typeahead += text
-	s.typeaheadAt = now
-	s.typeaheadReady = true
-	return s.typeahead
-}
-
-func listBoxTypeaheadText(name key.Name) string {
-	runes := []rune(string(name))
-	if len(runes) != 1 || unicode.IsControl(runes[0]) {
-		return ""
-	}
-	return strings.ToLower(string(runes[0]))
-}
-
-func listBoxTypeaheadIndex(items []ListBoxItem, disabledKeys []string, current int, query string) (int, bool) {
-	if len(items) == 0 || query == "" {
-		return -1, false
-	}
-	query = strings.ToLower(query)
-	for step := 1; step <= len(items); step++ {
-		index := (current + step + len(items)) % len(items)
-		if listBoxItemDisabled(items[index], disabledKeys) {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(items[index].Label), query) {
-			return index, true
-		}
-	}
-	return current, false
+	return s.typeahead.Append(now, text)
 }
 
 func (s *listBoxState) focusedIndex(gtx layout.Context) int {
@@ -320,69 +301,27 @@ func listBoxItemByKey(items []ListBoxItem, key string) (ListBoxItem, bool) {
 	return ListBoxItem{}, false
 }
 
-func listBoxMoveIndex(items []ListBoxItem, disabledKeys []string, current, delta int) (int, bool) {
-	if len(items) == 0 {
-		return -1, false
-	}
-	if current < 0 || current >= len(items) {
-		if delta < 0 {
-			return listBoxLastEnabled(items, disabledKeys)
-		}
-		return listBoxFirstEnabled(items, disabledKeys)
-	}
-	if listBoxItemDisabled(items[current], disabledKeys) {
-		return listBoxNearestEnabledFrom(items, disabledKeys, current, delta)
-	}
-	for next := current + delta; next >= 0 && next < len(items); next += delta {
-		if !listBoxItemDisabled(items[next], disabledKeys) {
-			return next, true
-		}
-	}
-	return current, false
-}
-
-func listBoxNearestEnabledFrom(items []ListBoxItem, disabledKeys []string, current, delta int) (int, bool) {
-	for next := current + delta; next >= 0 && next < len(items); next += delta {
-		if !listBoxItemDisabled(items[next], disabledKeys) {
-			return next, true
-		}
-	}
-	for next := current - delta; next >= 0 && next < len(items); next -= delta {
-		if !listBoxItemDisabled(items[next], disabledKeys) {
-			return next, true
-		}
-	}
-	return current, false
-}
-
-func listBoxFirstEnabled(items []ListBoxItem, disabledKeys []string) (int, bool) {
-	for i, item := range items {
-		if !listBoxItemDisabled(item, disabledKeys) {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
-func listBoxLastEnabled(items []ListBoxItem, disabledKeys []string) (int, bool) {
-	for i := len(items) - 1; i >= 0; i-- {
-		if !listBoxItemDisabled(items[i], disabledKeys) {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
 func listBoxItemDisabled(item ListBoxItem, disabledKeys []string) bool {
 	return item.Disabled || listBoxContainsKey(disabledKeys, item.Key)
 }
 
+// sliceList adapts an item slice + disabled-key slice into a nav.List for the
+// exported one-shot helpers used by Select/ComboBox. These lookups are not on
+// the per-keystroke path, so the slice-based disabled check is acceptable.
+func sliceList(items []ListBoxItem, disabledKeys []string) nav.List {
+	return nav.List{
+		Count:    len(items),
+		Disabled: func(i int) bool { return listBoxItemDisabled(items[i], disabledKeys) },
+		Label:    func(i int) string { return items[i].Label },
+	}
+}
+
 func FirstEnabled(items []ListBoxItem, disabledKeys []string) (int, bool) {
-	return listBoxFirstEnabled(items, disabledKeys)
+	return nav.First(sliceList(items, disabledKeys))
 }
 
 func LastEnabled(items []ListBoxItem, disabledKeys []string) (int, bool) {
-	return listBoxLastEnabled(items, disabledKeys)
+	return nav.Last(sliceList(items, disabledKeys))
 }
 
 func IndexByKey(items []ListBoxItem, key string) int {
@@ -413,4 +352,78 @@ func focusItem(ctx *frame.Context, stateKey, itemKey string, visible bool) bool 
 type listBoxItemState struct {
 	optionrow.FocusableState
 	keyFilters state.KeyFilterCache
+}
+
+// Disclosure helpers for single selection mode
+func listBoxSingleDisclosureCfg(widget ListBoxWidget) disclosure.Config[string] {
+	return disclosure.Config[string]{
+		Controlled: widget.hasSelectedKey,
+		Value:      widget.selectedKey,
+		HasDefault: widget.hasDefaultKey,
+		Default:    widget.defaultSelectedKey,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *listBoxState) currentSingleValue(widget ListBoxWidget) string {
+	return s.disclosureSingle.Current(listBoxSingleDisclosureCfg(widget))
+}
+
+func (s *listBoxState) bindSingle(widget ListBoxWidget) {
+	s.disclosureSingle.Bind(listBoxSingleDisclosureCfg(widget))
+}
+
+func (s *listBoxState) requestSingleValue(widget ListBoxWidget, value string) string {
+	newValue, _ := s.disclosureSingle.Request(listBoxSingleDisclosureCfg(widget), value)
+	return newValue
+}
+
+// Manual disclosure for multiple selection mode ([]string is not comparable)
+func (s *listBoxState) currentMultipleValue(widget ListBoxWidget) []string {
+	if widget.hasSelectedKeys {
+		// Controlled mode
+		return widget.selectedKeys
+	}
+	if !s.multipleReady {
+		// First frame - initialize from default or empty
+		if widget.hasDefaultKeys {
+			s.multipleValue = append([]string(nil), widget.defaultSelectedKeys...)
+		} else {
+			s.multipleValue = nil
+		}
+		s.multipleReady = true
+	}
+	return s.multipleValue
+}
+
+func (s *listBoxState) bindMultiple(widget ListBoxWidget) {
+	// For controlled mode, just validate
+	if widget.hasSelectedKeys {
+		return
+	}
+	// For uncontrolled mode, ensure initialized
+	if !s.multipleReady {
+		if widget.hasDefaultKeys {
+			s.multipleValue = append([]string(nil), widget.defaultSelectedKeys...)
+		} else {
+			s.multipleValue = nil
+		}
+		s.multipleReady = true
+	}
+}
+
+func (s *listBoxState) requestMultipleValue(widget ListBoxWidget, value []string) []string {
+	if widget.hasSelectedKeys {
+		// Controlled mode - just call onChange
+		if widget.onSelectionChange != nil {
+			widget.onSelectionChange(value)
+		}
+		return widget.selectedKeys
+	}
+	// Uncontrolled mode - update internal state
+	s.multipleValue = append([]string(nil), value...)
+	if widget.onSelectionChange != nil {
+		widget.onSelectionChange(value)
+	}
+	return s.multipleValue
 }

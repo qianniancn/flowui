@@ -151,9 +151,9 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							),
 						).Gap(28),
 					).Gap(28).LineGap(22).AlignStart(),
-				).Gap(22)).Padding(3),
+				).Gap(22)).Style(ui.Padding(3)),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -167,7 +167,7 @@ func section(title string, child ui.Widget) ui.Widget {
 func labeledGroup(label, key string, group ui.InputGroupWidget) ui.Widget {
 	return ui.Column(
 		ui.Label(label).For(key),
-		ui.Box(group).Width(320),
+		ui.Box(group).Style(ui.Width(320)),
 	).Gap(6)
 }
 

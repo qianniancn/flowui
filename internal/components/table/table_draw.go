@@ -168,15 +168,19 @@ func drawTableSortIndicator(gtx layout.Context, activeTheme *theme.Theme, size i
 	rotation.Pop()
 }
 
-func tableRootRadius(gtx layout.Context, activeTheme *theme.Theme, size image.Point, variant Variant) int {
-	if variant != VariantPrimary {
-		return 0
+func tableRootRadius(gtx layout.Context, activeTheme *theme.Theme, size image.Point, variant Variant, unified bool) int {
+	radius := activeTheme.Components.Table.RootRadius
+	if variant == VariantSecondary {
+		if !unified {
+			return 0
+		}
+		radius = activeTheme.Components.Table.HeaderRadius
 	}
-	return min(max(gtx.Dp(activeTheme.Components.Table.RootRadius), 0), min(size.X, size.Y)/2)
+	return min(max(gtx.Dp(radius), 0), min(size.X, size.Y)/2)
 }
 
-func tableHeaderRadius(gtx layout.Context, activeTheme *theme.Theme, size image.Point, variant Variant) int {
-	if variant != VariantSecondary {
+func tableHeaderRadius(gtx layout.Context, activeTheme *theme.Theme, size image.Point, variant Variant, unified bool) int {
+	if variant != VariantSecondary || unified {
 		return 0
 	}
 	return min(max(gtx.Dp(activeTheme.Components.Table.HeaderRadius), 0), min(size.X, size.Y)/2)

@@ -34,7 +34,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 							ui.Text("    title_bars").Size(13),
 							ui.Text("      main.go").Size(13),
 						).Gap(10),
-					).Width(210).FillHeight().Padding(14),
+					).Style(ui.Width(210).FillHeight().Padding(14)),
 				).Variant(ui.SurfaceSecondary),
 				ui.Expanded(
 					ui.Surface(
@@ -46,7 +46,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								ui.Text("    ui.Run(...)").Typeface("monospace").Size(14),
 								ui.Text("}").Typeface("monospace").Size(14),
 							).Gap(10),
-						).FillWidth().FillHeight().Padding(20),
+						).Style(ui.FillWidth().FillHeight().Padding(20)),
 					),
 				),
 			),
@@ -71,7 +71,7 @@ func applicationMenu(send ui.Send[Msg]) ui.MenubarWidget {
 		ui.MenubarMenu("view", "View", []ui.MenuItem{
 			{Key: "command-palette", Label: "Command Palette", Shortcut: "Ctrl+Shift+P"},
 			{Key: "terminal", Label: "Terminal", Shortcut: "Ctrl+`", Leading: ui.Icon(lucide.Terminal).Size(16)},
-		}).Width(260).OnAction(func(key string) { send(Msg(key)) }),
+		}).OnAction(func(key string) { send(Msg(key)) }),
 		ui.MenubarMenu("help", "Help", []ui.MenuItem{
 			{Key: "about", Label: "About FlowUI", Leading: ui.Icon(lucide.Info).Size(16)},
 		}).OnAction(func(key string) { send(Msg(key)) }),

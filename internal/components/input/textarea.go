@@ -14,19 +14,22 @@ import (
 const defaultTextAreaRows = 3
 
 type TextAreaWidget struct {
-	key         string
-	value       string
-	hint        string
-	onChange    func(string)
-	variant     TextAreaVariant
-	disabled    bool
-	invalid     bool
-	fullWidth   bool
-	readOnly    bool
-	maxLength   int
-	rows        int
-	label       string
-	customStyle flowstyle.Style
+	key          string
+	value        string
+	hasValue     bool
+	defaultValue string
+	hasDefault   bool
+	hint         string
+	onChange     func(string)
+	variant      TextAreaVariant
+	disabled     bool
+	invalid      bool
+	fullWidth    bool
+	readOnly     bool
+	maxLength    int
+	rows         int
+	label        string
+	customStyle  flowstyle.Style
 }
 
 type TextAreaVariant = field.Variant
@@ -37,7 +40,24 @@ const (
 )
 
 func TextArea(key, value string) TextAreaWidget {
-	return TextAreaWidget{key: key, value: value}
+	return TextAreaWidget{
+		key:      key,
+		value:    value,
+		hasValue: true,
+	}
+}
+
+func (t TextAreaWidget) Value(value string) TextAreaWidget {
+	t.value = value
+	t.hasValue = true
+	return t
+}
+
+func (t TextAreaWidget) DefaultValue(value string) TextAreaWidget {
+	t.defaultValue = value
+	t.hasDefault = true
+	t.hasValue = false
+	return t
 }
 
 func (t TextAreaWidget) Hint(hint string) TextAreaWidget {
@@ -101,9 +121,13 @@ func (t TextAreaWidget) Style(value flowstyle.Style) TextAreaWidget {
 }
 
 func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	gtx, key, editor, enabled := t.prepareEditor(ctx, gtx, t.disabled)
+	fullKey := frame.FullKey(ctx, t.key)
+	state := textAreaStateFor(ctx, fullKey)
+	state.bind(t)
+	currentValue := state.currentValue(t)
+
+	gtx, key, editor, enabled := t.prepareEditor(ctx, gtx, state, currentValue, t.disabled)
 	disabled := !enabled
-	state := inputStateFor(ctx, key)
 	state.State.Update(ctx, gtx, disabled, editor)
 
 	focused := gtx.Focused(editor)
@@ -120,17 +144,17 @@ func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	tokens := activeTheme.Components.TextArea
 	contentHeight := gtx.Sp(tokens.LineHeight)*t.resolvedRows() + gtx.Dp(tokens.PaddingY)*2
 	minHeight := gtx.Metric.PxToDp(contentHeight)
-	defaults := textAreaDefaultDeclaration(activeTheme, t.variant, t.fullWidth, minHeight)
-	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
-	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
-	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, flowstyle.Style{}, flowstyle.Style{}, t.customStyle)
+	defaults, variant, size := t.styleDeclarations(activeTheme, minHeight)
+	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, variant, size, t.customStyle)
+	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, variant, size, t.customStyle)
+	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, variant, size, t.customStyle)
 	style := resolvedInputStyle(root, placeholder, selection, activeTheme)
 	textSize, lineHeight := resolvedTypography(root, tokens.TextSize, tokens.LineHeight)
 	editorLayout := t.editorLayoutWithTypography(ctx, key, enabled, editor, style, textSize, lineHeight)
 	return t.layoutFrame(ctx, gtx, state, root, enabled, editorLayout)
 }
 
-func (t TextAreaWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, disabled bool) (layout.Context, string, *widget.Editor, bool) {
+func (t TextAreaWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, state *textAreaState, currentValue string, disabled bool) (layout.Context, string, *widget.Editor, bool) {
 	fieldKey, editor := frame.InputEditor(ctx, t.key)
 	enabled := gtx.Enabled() && !disabled
 	frame.RegisterFieldFocus(ctx, fieldKey, editor, enabled)
@@ -156,10 +180,10 @@ func (t TextAreaWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, di
 			changed = true
 		}
 	}
-	if changed && t.onChange != nil {
-		t.onChange(editor.Text())
-	} else if !changed && editor.Text() != t.value {
-		editor.SetText(t.value)
+	if changed {
+		state.requestValue(t, editor.Text())
+	} else if !changed && editor.Text() != currentValue {
+		editor.SetText(currentValue)
 	}
 	return gtx, fieldKey, editor, enabled
 }

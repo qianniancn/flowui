@@ -20,29 +20,36 @@ const (
 )
 
 type SliderWidget struct {
-	key           string
-	value         float64
-	upperValue    float64
-	minValue      float64
-	maxValue      float64
-	step          float64
-	label         string
-	valueText     string
-	hasValueText  bool
-	showValue     bool
-	rangeMode     bool
-	disabled      bool
-	orientation   SliderOrientation
-	formatValue   func(float64) string
-	onChange      func(float64)
-	onRangeChange func(float64, float64)
-	customStyle   flowstyle.Style
+	key             string
+	value           float64
+	hasValue        bool
+	defaultValue    float64
+	hasDefault      bool
+	upperValue      float64
+	hasUpperValue   bool
+	defaultUpper    float64
+	hasDefaultUpper bool
+	minValue        float64
+	maxValue        float64
+	step            float64
+	label           string
+	valueText       string
+	hasValueText    bool
+	showValue       bool
+	rangeMode       bool
+	disabled        bool
+	orientation     SliderOrientation
+	formatValue     func(float64) string
+	onChange        func(float64)
+	onRangeChange   func(float64, float64)
+	customStyle     flowstyle.Style
 }
 
 func Slider(key string, value float64) SliderWidget {
 	return SliderWidget{
 		key:      key,
 		value:    value,
+		hasValue: true,
 		maxValue: 100,
 		step:     1,
 	}
@@ -50,12 +57,14 @@ func Slider(key string, value float64) SliderWidget {
 
 func RangeSlider(key string, lowerValue, upperValue float64) SliderWidget {
 	return SliderWidget{
-		key:        key,
-		value:      lowerValue,
-		upperValue: upperValue,
-		maxValue:   100,
-		step:       1,
-		rangeMode:  true,
+		key:           key,
+		value:         lowerValue,
+		hasValue:      true,
+		upperValue:    upperValue,
+		hasUpperValue: true,
+		maxValue:      100,
+		step:          1,
+		rangeMode:     true,
 	}
 }
 
@@ -103,6 +112,32 @@ func (s SliderWidget) OnChange(fn func(float64)) SliderWidget {
 	return s
 }
 
+func (s SliderWidget) Value(value float64) SliderWidget {
+	s.value = value
+	s.hasValue = true
+	return s
+}
+
+func (s SliderWidget) DefaultValue(value float64) SliderWidget {
+	s.defaultValue = value
+	s.hasDefault = true
+	s.hasValue = false
+	return s
+}
+
+func (s SliderWidget) UpperValue(value float64) SliderWidget {
+	s.upperValue = value
+	s.hasUpperValue = true
+	return s
+}
+
+func (s SliderWidget) DefaultUpperValue(value float64) SliderWidget {
+	s.defaultUpper = value
+	s.hasDefaultUpper = true
+	s.hasUpperValue = false
+	return s
+}
+
 func (s SliderWidget) OnRangeChange(fn func(float64, float64)) SliderWidget {
 	s.onRangeChange = fn
 	return s
@@ -130,7 +165,18 @@ func (s SliderWidget) Style(value flowstyle.Style) SliderWidget {
 
 func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	key, state := sliderStateFor(ctx, s.key)
-	values := s.resolvedValues()
+
+	// Bind disclosure state
+	state.bindLower(s)
+	lowerValue := state.currentLowerValue(s)
+	upperValue := s.upperValue
+	if s.rangeMode {
+		state.bindUpper(s)
+		upperValue = state.currentUpperValue(s)
+	}
+
+	// Create values with current state
+	values := s.resolvedValuesWithCurrent(lowerValue, upperValue)
 	axis := s.axis()
 	state.setAxis(axis)
 	state.sync(values)
@@ -147,7 +193,7 @@ func (s SliderWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 			values = changedValues
 			state.syncRatios(values)
 			frame.RequestFocusVisible(ctx, state.thumbTag(thumb), keyboard)
-			s.dispatch(values)
+			s.dispatchWithState(state, values)
 		}
 	}
 
@@ -197,6 +243,18 @@ func (s SliderWidget) dispatch(values sliderValues) {
 	if s.onChange != nil && values.lower != s.resolvedValues().lower {
 		s.onChange(values.lower)
 	}
+}
+
+func (s SliderWidget) dispatchWithState(state *sliderState, values sliderValues) {
+	if values.rangeMode {
+		state.requestLower(s, values.lower)
+		state.requestUpper(s, values.upper)
+		if s.onRangeChange != nil {
+			s.onRangeChange(values.lower, values.upper)
+		}
+		return
+	}
+	state.requestLower(s, values.lower)
 }
 
 func (s SliderWidget) outputText(values sliderValues) string {

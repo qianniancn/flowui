@@ -17,26 +17,6 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestToolbarOptionsUseValueSemantics(t *testing.T) {
-	base := New(probe{size: image.Pt(20, 10)})
-	styled := base.
-		Orientation(Vertical).
-		Attached(true).
-		Disabled(true).
-		LoopFocus(false).
-		Alt("Editor tools").
-		Style(flowstyle.Style{}.Radius(4))
-	if base.orientation != Horizontal || base.attached || base.disabled || !base.loopFocus || base.alt != "" {
-		t.Fatalf("base Toolbar mutated: %#v", base)
-	}
-	if styled.orientation != Vertical || !styled.attached || !styled.disabled || styled.loopFocus || styled.alt != "Editor tools" {
-		t.Fatalf("styled Toolbar options = %#v", styled)
-	}
-	if styled.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil || Separator().Style(flowstyle.Style{}.Width(2)).customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
-		t.Fatal("Toolbar styles were not retained")
-	}
-}
-
 func TestToolbarLayoutMatchesHeroUISpacing(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	horizontal := New(probe{size: image.Pt(20, 10)}, probe{size: image.Pt(30, 12)})

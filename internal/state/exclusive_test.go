@@ -20,8 +20,9 @@ func TestExclusiveClosesPreviousMember(t *testing.T) {
 
 func TestExclusiveDropsUnmountedMember(t *testing.T) {
 	var exclusive Exclusive
+	closed := false
 	exclusive.BeginFrame()
-	exclusive.Register("select", "language", func() {})
+	exclusive.Register("select", "language", func() { closed = true })
 	exclusive.Activate("select", "language")
 	exclusive.EndFrame()
 
@@ -29,5 +30,8 @@ func TestExclusiveDropsUnmountedMember(t *testing.T) {
 	exclusive.EndFrame()
 	if got := exclusive.Active("select"); got != "" {
 		t.Fatalf("active member = %q, want empty", got)
+	}
+	if !closed {
+		t.Fatal("unmounted active exclusive member did not run close")
 	}
 }

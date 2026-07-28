@@ -62,7 +62,7 @@ func View(_ *ui.Context, model Model, send ui.Send[ToggleFavorite]) ui.Widget {
 					).Gap(16).AlignMiddle(),
 				),
 			).Gap(20),
-		).FillWidth().MaxWidth(640).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(640)).Style(ui.Padding(24)),
 	)
 }
 

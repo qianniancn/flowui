@@ -52,7 +52,7 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 						Color(ui.MeterWarning),
 				),
 			).Gap(20),
-		).FillWidth().MaxWidth(560).Padding(24),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(560)).Style(ui.Padding(24)),
 	)
 }
 

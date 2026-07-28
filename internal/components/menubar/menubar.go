@@ -1,10 +1,11 @@
 package menubar
 
 import (
-	"strings"
+	"unicode"
 
 	"gioui.org/layout"
 	"github.com/qianniancn/FlowUI/internal/components/menu"
+	"github.com/qianniancn/FlowUI/internal/components/nav"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -19,11 +20,12 @@ const (
 
 // Item binds a top-level trigger to one Menu.
 type Item struct {
-	key      string
-	label    string
-	trigger  frame.Widget
-	menu     menu.Widget
-	disabled bool
+	key       string
+	label     string
+	trigger   frame.Widget
+	menu      menu.Widget
+	disabled  bool
+	accessKey rune // lowercase letter for Alt+key activation; 0 disables
 }
 
 // NewMenu creates a top-level item backed by a flat Menu.
@@ -58,6 +60,17 @@ func (i Item) Trigger(trigger frame.Widget) Item {
 func (i Item) Disabled(disabled bool) Item {
 	i.disabled = disabled
 	i.menu = i.menu.Disabled(disabled)
+	return i
+}
+
+// AccessKey sets the Alt+letter accelerator that opens this top-level menu.
+// Pass 0 to clear. Matching is case-insensitive.
+func (i Item) AccessKey(key rune) Item {
+	if key == 0 {
+		i.accessKey = 0
+		return i
+	}
+	i.accessKey = unicode.ToLower(key)
 	return i
 }
 
@@ -221,64 +234,39 @@ func (m Widget) indexOf(key string) int {
 	return -1
 }
 
-func (m Widget) firstEnabled() int {
-	for index, item := range m.items {
-		if !m.itemDisabled(item) {
-			return index
-		}
+func (m Widget) navList() nav.List {
+	return nav.List{
+		Count:    len(m.items),
+		Disabled: func(i int) bool { return m.itemDisabled(m.items[i]) },
+		Label:    func(i int) string { return m.items[i].label },
 	}
-	return -1
+}
+
+func (m Widget) firstEnabled() int {
+	index, _ := nav.First(m.navList())
+	return index
 }
 
 func (m Widget) lastEnabled() int {
-	for index := len(m.items) - 1; index >= 0; index-- {
-		if !m.itemDisabled(m.items[index]) {
-			return index
-		}
-	}
-	return -1
+	index, _ := nav.Last(m.navList())
+	return index
 }
 
 func (m Widget) moveIndex(current, delta int) int {
 	if len(m.items) == 0 || delta == 0 {
 		return current
 	}
-	if current < 0 {
-		if delta > 0 {
-			return m.firstEnabled()
-		}
-		return m.lastEnabled()
+	// Menubar wrap is configurable via LoopFocus.
+	next, ok := nav.Move(m.navList(), current, delta, m.loopFocus)
+	if !ok && current >= 0 {
+		return current
 	}
-	for step := 1; step <= len(m.items); step++ {
-		index := current + delta*step
-		if m.loopFocus {
-			index %= len(m.items)
-			if index < 0 {
-				index += len(m.items)
-			}
-		} else if index < 0 || index >= len(m.items) {
-			return current
-		}
-		if !m.itemDisabled(m.items[index]) {
-			return index
-		}
-	}
-	return current
+	return next
 }
 
 func (m Widget) typeaheadIndex(current int, query string) int {
-	if len(m.items) == 0 || query == "" {
-		return -1
-	}
-	query = strings.ToLower(query)
-	for step := 1; step <= len(m.items); step++ {
-		index := (current + step + len(m.items)) % len(m.items)
-		if m.itemDisabled(m.items[index]) {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(m.items[index].label), query) {
-			return index
-		}
+	if index, ok := nav.Match(m.navList(), current, query); ok {
+		return index
 	}
 	return -1
 }

@@ -43,7 +43,7 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					),
 				).Gap(12),
 			).Gap(12),
-		).Padding(24),
+		).Style(ui.Padding(24)),
 	)
 }
 

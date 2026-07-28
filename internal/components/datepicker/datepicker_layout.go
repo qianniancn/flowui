@@ -118,9 +118,29 @@ func (d DatePickerWidget) layoutInputContent(ctx *frame.Context, gtx layout.Cont
 		Min: image.Pt(minX, 0),
 		Max: image.Pt(maxX, height),
 	}
-	contentDims := pickerState.segments.layout(ctx, contentGtx, d.locale, style, enabled, invalid, d.minDate, d.maxDate, d.onChange)
+	var contentDims layout.Dimensions
+	showHint := false
+	if d.editable {
+		contentDims = pickerState.segments.layout(ctx, contentGtx, d.locale, style, enabled, invalid, d.minDate, d.maxDate, func(value time.Time) {
+			pickerState.requestValue(d, value)
+		})
+		showHint = d.hintSet && pickerState.segments.empty() && !pickerState.segments.focused(gtx)
+	} else {
+		value := d.hint
+		color := style.Placeholder
+		if !d.value.IsZero() {
+			value = d.locale.DateLabel(d.value)
+			color = style.Foreground
+		}
+		contentGtx.Constraints.Min = image.Point{}
+		contentDims = text.New(value).
+			Size(float32(theme.TextSize)).
+			Color(color).
+			MaxLines(1).
+			Truncator("...").
+			Layout(ctx, contentGtx)
+	}
 	call := macro.Stop()
-	showHint := d.hintSet && pickerState.segments.empty() && !pickerState.segments.focused(gtx)
 	var hintCall op.CallOp
 	var hintDims layout.Dimensions
 	if showHint {
@@ -156,10 +176,15 @@ func (d DatePickerWidget) layoutInputContent(ctx *frame.Context, gtx layout.Cont
 	contentClip.Pop()
 	stack.Pop()
 
+	triggerX := size.X - right
 	triggerSize := image.Pt(right, size.Y)
+	if !d.editable {
+		triggerX = 0
+		triggerSize.X = size.X
+	}
 	triggerGtx := gtx
 	triggerGtx.Constraints = layout.Exact(triggerSize)
-	stack = op.Offset(image.Pt(size.X-right, 0)).Push(gtx.Ops)
+	stack = op.Offset(image.Pt(triggerX, 0)).Push(gtx.Ops)
 	if !enabled {
 		triggerGtx = triggerGtx.Disabled()
 	}
@@ -171,10 +196,12 @@ func (d DatePickerWidget) layoutInputContent(ctx *frame.Context, gtx layout.Cont
 		semantic.LabelOp(d.calendarLabel(ctx)).Add(gtx.Ops)
 		semantic.EnabledOp(enabled).Add(gtx.Ops)
 		iconSize := image.Pt(gtx.Dp(theme.IconSize), gtx.Dp(theme.IconSize))
-		iconOffset := op.Offset(image.Pt((right-iconSize.X)/2, (size.Y-iconSize.Y)/2)).Push(gtx.Ops)
+		iconOffset := op.Offset(image.Pt(triggerSize.X-right+(right-iconSize.X)/2, (size.Y-iconSize.Y)/2)).Push(gtx.Ops)
 		drawDatePickerCalendarIcon(gtx, iconSize, style.Placeholder)
 		iconOffset.Pop()
-		drawDatePickerTriggerFocus(gtx, frame.ActiveTheme(ctx), triggerSize, enabled && frame.FocusVisible(ctx, &pickerState.trigger, gtx.Focused(&pickerState.trigger)))
+		if d.editable {
+			drawDatePickerTriggerFocus(gtx, frame.ActiveTheme(ctx), triggerSize, enabled && frame.FocusVisible(ctx, &pickerState.trigger, gtx.Focused(&pickerState.trigger)))
+		}
 		return layout.Dimensions{Size: triggerSize}
 	})
 	stack.Pop()
@@ -695,9 +722,7 @@ func (d DatePickerWidget) layoutDay(ctx *frame.Context, gtx layout.Context, pick
 			} else {
 				pickerState.open = false
 				pickerState.sync(date, date)
-				if d.onChange != nil {
-					d.onChange(date)
-				}
+				pickerState.requestValue(d, date)
 			}
 			frame.RequestFocusVisible(ctx, &pickerState.trigger, focusVisible)
 		}

@@ -200,7 +200,7 @@ func portalPanel(anchor image.Rectangle, interactive bool, close func()) ui.Widg
 					ui.Text("Mode: Development").Size(13),
 					ui.Button("close", ui.Text("Close")).Size(ui.ButtonSmall).OnClick(close),
 				).Gap(10),
-			).Width(280).Padding(14),
+			).Style(ui.Width(280)).Style(ui.Padding(14)),
 		).Style(ui.Radius(8).Shadow(ui.ShadowSurface)))
 
 		macro := op.Record(gtx.Ops)

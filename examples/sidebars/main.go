@@ -155,7 +155,7 @@ func workspace(selected string, muted color.NRGBA) ui.Widget {
 					).Gap(12),
 				).Variant(ui.CardSecondary),
 			).Gap(20),
-		).FillWidth().FillHeight().Padding(28),
+		).Style(ui.FillWidth()).Style(ui.FillHeight()).Style(ui.Padding(28)),
 	).Variant(ui.SurfaceSecondary)
 }
 

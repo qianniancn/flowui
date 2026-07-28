@@ -19,23 +19,26 @@ type ComboBoxItem struct {
 }
 
 type ComboBoxWidget struct {
-	key              string
-	selectedKey      string
-	items            []ComboBoxItem
-	dataVersion      uint64
-	hasDataVersion   bool
-	hint             string
-	inputValue       string
-	emptyText        string
-	onChange         func(string)
-	onInputChange    func(string)
-	variant          field.Variant
-	disabled         bool
-	invalid          bool
-	fullWidth        bool
-	hasInputValue    bool
-	allowCustomValue bool
-	customStyle      flowstyle.Style
+	key                string
+	selectedKey        string
+	hasSelectedKey     bool
+	defaultSelectedKey string
+	hasDefaultSelected bool
+	items              []ComboBoxItem
+	dataVersion        uint64
+	hasDataVersion     bool
+	hint               string
+	inputValue         string
+	emptyText          string
+	onChange           func(string)
+	onInputChange      func(string)
+	variant            field.Variant
+	disabled           bool
+	invalid            bool
+	fullWidth          bool
+	hasInputValue      bool
+	allowCustomValue   bool
+	customStyle        flowstyle.Style
 }
 
 const (
@@ -47,11 +50,21 @@ const (
 )
 
 func ComboBox(key, selectedKey string, items []ComboBoxItem) ComboBoxWidget {
+	if selectedKey != "" {
+		// non-empty selectedKey → controlled mode
+		return ComboBoxWidget{
+			key:            key,
+			selectedKey:    selectedKey,
+			hasSelectedKey: true,
+			items:          items,
+			emptyText:      "No results found",
+		}
+	}
+	// empty selectedKey → uncontrolled mode
 	return ComboBoxWidget{
-		key:         key,
-		selectedKey: selectedKey,
-		items:       items,
-		emptyText:   "No results found",
+		key:       key,
+		items:     items,
+		emptyText: "No results found",
 	}
 }
 
@@ -81,6 +94,18 @@ func (c ComboBoxWidget) EmptyText(text string) ComboBoxWidget {
 
 func (c ComboBoxWidget) OnChange(fn func(string)) ComboBoxWidget {
 	c.onChange = fn
+	return c
+}
+
+func (c ComboBoxWidget) SelectedKey(key string) ComboBoxWidget {
+	c.selectedKey = key
+	c.hasSelectedKey = true
+	return c
+}
+
+func (c ComboBoxWidget) DefaultSelectedKey(key string) ComboBoxWidget {
+	c.defaultSelectedKey = key
+	c.hasDefaultSelected = true
 	return c
 }
 
@@ -130,7 +155,15 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	editor.Submit = true
 	state.beginFrame()
 	state.checkItems(c.items, c.hasDataVersion, c.dataVersion)
-	state.syncEditor(editor, c)
+
+	// Bind disclosure state
+	state.bind(c)
+	selectedKey := state.currentSelectedKey(c)
+	// Create a modified widget with the current selectedKey for internal use
+	activeWidget := c
+	activeWidget.selectedKey = selectedKey
+
+	state.syncEditor(editor, activeWidget)
 	state.input.Update(ctx, eventGtx, c.disabled, editor)
 
 	if c.disabled {
@@ -138,18 +171,20 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	}
 
 	query := editor.Text()
-	selectedLabel, _ := state.selectedLabel(c)
-	visible := state.visibleItems(c, query, selectedLabel)
+	selectedLabel, _ := state.selectedLabel(activeWidget)
+	visible := state.visibleItems(activeWidget, query, selectedLabel)
 	processMainEvents := !state.open
 	state.updateFocus(gtx.Focused(editor), c.disabled)
 	if !c.disabled && processMainEvents {
 		state.highlight = -1
 		if index, ok := state.updateKeys(gtx, editor, c.items, visible); ok {
-			c.selectItem(editor, state, c.items[visible[index]])
+			activeWidget.selectItem(editor, state, c.items[visible[index]])
+			selectedKey = state.selectedKey
+			activeWidget.selectedKey = selectedKey
 		}
-		c.updateEditor(editor, state, gtx)
+		activeWidget.updateEditor(editor, state, gtx)
 		query = editor.Text()
-		visible = state.visibleItems(c, query, selectedLabel)
+		visible = state.visibleItems(activeWidget, query, selectedLabel)
 		state.clampHighlight(c.items, visible)
 	}
 
@@ -160,7 +195,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		Focused:      focused,
 		FocusVisible: focusVisible,
 		Disabled:     c.disabled || !gtx.Enabled(),
-		Selected:     c.selectedKey != "",
+		Selected:     selectedKey != "",
 		Invalid:      c.invalid,
 		Open:         state.open,
 	}
@@ -172,7 +207,7 @@ func (c ComboBoxWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 		ShadowStrength: tokens.Input.ShadowStrength,
 	}, c.customStyle)
 
-	editorStyle := material.Editor(frame.ActiveTheme(ctx).Material, editor, c.hint)
+	editorStyle := material.Editor(frame.ActiveMaterial(ctx), editor, c.hint)
 	editorStyle.TextSize = frame.ActiveTheme(ctx).Components.ComboBox.TextSize
 	editorStyle.Color = resolved.Colors.Foreground
 	editorStyle.HintColor = resolved.Colors.Placeholder

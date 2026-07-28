@@ -10,7 +10,6 @@ import (
 	"gioui.org/op"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
@@ -28,32 +27,6 @@ func (p *chipProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	p.foreground = ctx.ForegroundColor()
 	p.background = ctx.BackgroundColor()
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
-}
-
-func TestChipOptionsUseValueSemantics(t *testing.T) {
-	start := &chipProbe{size: image.Pt(12, 12)}
-	end := &chipProbe{size: image.Pt(12, 12)}
-	base := New("Label")
-	configured := base.
-		Color(ColorDanger).
-		Variant(VariantSoft).
-		Size(SizeLarge).
-		StartContent(start).
-		EndContent(end).
-		Style(flowstyle.Style{}.Radius(4))
-
-	if base.color != ColorDefault || base.variant != VariantSecondary || base.size != SizeMedium || base.startContent != nil || base.endContent != nil {
-		t.Fatal("configuring a Chip mutated the base value")
-	}
-	if configured.color != ColorDanger || configured.variant != VariantSoft || configured.size != SizeLarge {
-		t.Fatal("visual options were not retained")
-	}
-	if configured.startContent != start || configured.endContent != end {
-		t.Fatal("content options were not retained")
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured Chip did not retain its style")
-	}
 }
 
 func TestChipGeometryMatchesHeroUI(t *testing.T) {

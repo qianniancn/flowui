@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/theme"
+import (
+	"gioui.org/widget/material"
+	"github.com/qianniancn/FlowUI/internal/theme"
+)
 
 type Theme = theme.Theme
 type Palette = theme.Palette
@@ -84,4 +87,16 @@ func DefaultShadows() ShadowsTheme {
 
 func syncMaterialTheme(activeTheme *Theme) {
 	theme.SyncMaterialTheme(activeTheme)
+}
+
+func MaterialOf(t *Theme) *material.Theme {
+	return theme.MaterialOf(t)
+}
+
+func DetachMaterial(t *Theme) {
+	theme.DetachMaterial(t)
+}
+
+func SyncMaterialTheme(t *Theme) {
+	theme.SyncMaterialTheme(t)
 }

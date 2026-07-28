@@ -74,49 +74,49 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					section("Members",
 						ui.Box(listBox("members", fieldMember, m.Member, members, send).FullWidth()).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("Actions",
 						ui.Box(actionList(send)).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("Sections",
 						ui.Box(sectionedActionList(send)).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("States",
 						ui.Column(
 							ui.Box(listBox("tools", fieldTool, m.Tool, tools, send).
 								DisabledKeys([]string{"eraser"}).
 								FullWidth()).
-								Width(420),
+								Style(ui.Width(420)),
 							ui.Box(ui.ListBox("disabled-tools", "brush", tools).
 								DisabledKeys([]string{"eraser"}).
 								FullWidth().
 								Disabled(true)).
-								Width(420),
+								Style(ui.Width(420)),
 						).Gap(12),
 					),
 					section("Multiple",
 						ui.Box(multiListBox("roles", fieldRoles, m.Roles, roles, send).
 							FullWidth()).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("Scrollable",
 						ui.Box(listBox("cities", fieldCity, m.City, cities, send).
 							FullWidth().
 							MaxHeight(160)).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 					section("Empty",
 						ui.Box(ui.ListBox("empty", "", nil).
 							EmptyText("No matching items").
 							FullWidth()).
-							Width(420),
+							Style(ui.Width(420)),
 					),
 				).Gap(18),
 			).Vertical(),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
@@ -174,8 +174,7 @@ func multiListBox(key string, field Field, selected []string, items []ui.ListBox
 
 func avatar(letter string) ui.Widget {
 	return ui.Box(ui.Text(letter).Size(14)).
-		Width(28).
-		Height(28).
+		Style(ui.Width(28).Height(28)).
 		Align(ui.AlignCenter)
 }
 

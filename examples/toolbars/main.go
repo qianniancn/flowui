@@ -56,11 +56,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								ui.Text("Editor preview").Size(14),
 								ui.Text("Use Tab to enter a toolbar and arrow keys to move between its tools.").Size(14),
 							).Gap(10),
-						).Padding(16).FillWidth(),
+						).Style(ui.Padding(16).FillWidth()),
 					).Variant(ui.SurfaceSecondary).Style(ui.Radius(12)),
 				).AlignMiddle().Gap(20)),
 			).Gap(18),
-		).FillWidth().MaxWidth(760).Padding(24),
+		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 

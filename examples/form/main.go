@@ -39,10 +39,10 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 						OnChange(func(text string) {
 							send(NameChanged{Name: text})
 						}),
-				).Width(320),
+				).Style(ui.Width(320)),
 				ui.Text(greeting).Size(18),
 			).Gap(12),
-		).Padding(24),
+		).Style(ui.Padding(24)),
 	)
 }
 

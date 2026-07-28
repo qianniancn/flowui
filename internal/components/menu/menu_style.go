@@ -22,9 +22,8 @@ type itemStyle struct {
 	indicator   color.NRGBA
 }
 
-func menuRootDeclaration(activeTheme *theme.Theme) flowstyle.Style {
+func menuRootDeclaration(activeTheme *theme.Theme, tokens theme.MenuTheme) flowstyle.Style {
 	panel := menuPanelStyle(activeTheme)
-	tokens := activeTheme.Components.Menu
 	return flowstyle.Style{}.
 		Background(flowstyle.SolidColor{Color: panel.background}).
 		TextColor(flowstyle.SolidColor{Color: panel.foreground}).
@@ -55,7 +54,7 @@ func menuItemDefaultDeclaration(activeTheme *theme.Theme, tokens theme.MenuTheme
 		Transition(flowstyle.PropBackgroundColor, menuItemColorDuration).
 		Transition(flowstyle.PropBorderColor, menuItemFocusDuration).
 		Transition(flowstyle.PropTransform, menuItemPressDuration).
-		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.TokenDefault)).
+		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.TokenDefaultHover)).
 		When(flowstyle.Pressed, flowstyle.Style{}.Scale(pressedScale, pressedScale)).
 		When(flowstyle.FocusVisible, flowstyle.Style{}.BorderColor(flowstyle.SolidColor{Color: menuFocusColor(activeTheme)})).
 		When(flowstyle.Disabled, flowstyle.Style{}.Opacity(activeTheme.DisabledOpacityValue()))
@@ -68,6 +67,7 @@ func menuItemVariantDeclaration(activeTheme *theme.Theme, variant ItemVariant) f
 	}
 	item := flowstyle.Style{}.
 		TextColor(flowstyle.SolidColor{Color: menuDangerColor(activeTheme)}).
+		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.TokenDangerSoftHover)).
 		When(flowstyle.FocusVisible, flowstyle.Style{}.BorderColor(
 			flowstyle.WithAlpha(flowstyle.SolidColor{Color: menuDangerColor(activeTheme)}, float32(menuFocusColor(activeTheme).A)/255),
 		))
@@ -102,7 +102,7 @@ func menuItemStyle(activeTheme *theme.Theme, variant ItemVariant) itemStyle {
 		foreground:  foreground,
 		description: menuMutedColor(activeTheme),
 		shortcut:    menuMutedColor(activeTheme),
-		indicator:   menuMutedColor(activeTheme),
+		indicator:   menuIndicatorColor(activeTheme),
 	}
 	if variant == ItemDanger {
 		style.indicator = menuDangerColor(activeTheme)
@@ -120,6 +120,10 @@ func menuForegroundColor(activeTheme *theme.Theme) color.NRGBA {
 
 func menuMutedColor(activeTheme *theme.Theme) color.NRGBA {
 	return theme.ColorOr(activeTheme.Components.Menu.MutedColor, activeTheme.Palette.MutedForeground)
+}
+
+func menuIndicatorColor(activeTheme *theme.Theme) color.NRGBA {
+	return theme.ColorOr(activeTheme.Components.Menu.IndicatorColor, menuMutedColor(activeTheme))
 }
 
 func menuDangerColor(activeTheme *theme.Theme) color.NRGBA {

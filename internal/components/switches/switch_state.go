@@ -4,6 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/state"
 	"github.com/qianniancn/FlowUI/internal/theme"
@@ -17,9 +18,36 @@ func switchStateFor(ctx *frame.Context, key string) *switchState {
 }
 
 type switchState struct {
-	value    widget.Bool
-	selected animation.FloatTransition
-	focus    state.FocusAnimation
+	disclosure disclosure.Binding[bool]
+	checked    bool
+	value      widget.Bool
+	selected   animation.FloatTransition
+	focus      state.FocusAnimation
+}
+
+// switchDisclosureCfg builds a disclosure.Config from the widget's checked fields.
+func switchDisclosureCfg(widget SwitchWidget) disclosure.Config[bool] {
+	return disclosure.Config[bool]{
+		Controlled: widget.hasChecked,
+		Value:      widget.checked,
+		HasDefault: widget.hasDefault,
+		Default:    widget.defaultChecked,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *switchState) currentChecked(widget SwitchWidget) bool {
+	s.checked = s.disclosure.Current(switchDisclosureCfg(widget))
+	return s.checked
+}
+
+func (s *switchState) bind(widget SwitchWidget) {
+	s.disclosure.Bind(switchDisclosureCfg(widget))
+}
+
+func (s *switchState) requestChecked(widget SwitchWidget, checked bool) bool {
+	s.checked, _ = s.disclosure.Request(switchDisclosureCfg(widget), checked)
+	return s.checked
 }
 
 func (s *switchState) selection(gtx layout.Context, checked bool, motions ...theme.MotionTheme) float32 {

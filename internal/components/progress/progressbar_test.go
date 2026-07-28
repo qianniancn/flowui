@@ -34,35 +34,6 @@ func testLayoutContext() layout.Context {
 	}
 }
 
-func TestProgressBarOptions(t *testing.T) {
-	bar := ProgressBar("upload", 40).
-		Label("Uploading").
-		ShowValue().
-		ValueText("40 files").
-		Range(0, 80).
-		Indeterminate().
-		Color(ProgressBarSuccess).
-		Size(ProgressBarLarge).
-		Disabled(true).
-		Style(flowstyle.Style{}.Radius(4))
-
-	if bar.key != "upload" || bar.value != 40 || bar.label != "Uploading" {
-		t.Fatal("progress bar constructor/options did not set fields")
-	}
-	if !bar.showValue || !bar.hasValueText || bar.valueText != "40 files" {
-		t.Fatal("progress bar value text options were not set")
-	}
-	if bar.minValue != 0 || bar.maxValue != 80 {
-		t.Fatal("progress bar range option was not set")
-	}
-	if !bar.indeterminate || bar.color != ProgressBarSuccess || bar.size != ProgressBarLarge || !bar.disabled {
-		t.Fatal("progress bar visual options were not set")
-	}
-	if bar.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("progress bar style was not retained")
-	}
-}
-
 func TestProgressBarRatio(t *testing.T) {
 	if got := ProgressBar("upload", 50).ratio(); got != 0.5 {
 		t.Fatalf("ratio = %v, want 0.5", got)

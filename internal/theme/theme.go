@@ -9,8 +9,11 @@ import (
 	"gioui.org/widget/material"
 )
 
-// Theme contains FlowUI design tokens. Gio's material theme is kept only as a
-// bridge for lower-level editor and text helpers.
+// Theme contains FlowUI design tokens.
+//
+// The Gio material theme is an unexported substrate bridge for text/editor
+// helpers. Applications theme through Palette, Typography, Shape, Spacing,
+// Motion, and Components — never through material.Theme.
 type Theme struct {
 	Palette         Palette
 	Typography      Typography
@@ -20,7 +23,7 @@ type Theme struct {
 	Motion          MotionTheme
 	Components      ComponentsTheme
 	DisabledOpacity float32
-	Material        *material.Theme
+	material        *material.Theme
 }
 
 type MotionTheme struct {
@@ -35,8 +38,7 @@ type MotionTheme struct {
 // ResolveMotionDuration applies the active motion policy to a transition.
 // A non-positive result means the transition should snap to its target.
 func ResolveMotionDuration(motion MotionTheme, duration time.Duration) time.Duration {
-	if !motion.Enabled || duration <= 0 || motion.DurationScale <= 0 ||
-		math.IsNaN(float64(motion.DurationScale)) || math.IsInf(float64(motion.DurationScale), 0) {
+	if !MotionEnabled(motion) || duration <= 0 {
 		return 0
 	}
 	scaled := time.Duration(float64(duration) * float64(motion.DurationScale))
@@ -44,6 +46,12 @@ func ResolveMotionDuration(motion MotionTheme, duration time.Duration) time.Dura
 		return 0
 	}
 	return scaled
+}
+
+// MotionEnabled reports whether the global motion policy permits animation.
+func MotionEnabled(motion MotionTheme) bool {
+	return motion.Enabled && motion.DurationScale > 0 &&
+		!math.IsNaN(float64(motion.DurationScale)) && !math.IsInf(float64(motion.DurationScale), 0)
 }
 
 type Palette struct {
@@ -196,6 +204,8 @@ type ComponentsTheme struct {
 	BarChart          BarChartTheme
 	PieChart          PieChartTheme
 	CandlestickChart  CandlestickChartTheme
+	Heatmap           HeatmapTheme
+	GanttChart        GanttChartTheme
 	Tabs              TabsTheme
 	Collapsible       CollapsibleTheme
 	Select            SelectTheme
@@ -526,7 +536,6 @@ type TreeTheme struct {
 	ItemTextSize              unit.Sp
 	ItemDescriptionSize       unit.Sp
 	FocusRingWidth            unit.Dp
-	PressedScale              float32 // Deprecated: Tree rows no longer scale when pressed.
 	SurfaceRadius             unit.Dp
 	DragPreviewOffset         unit.Dp
 	DragPreviewMaxWidth       unit.Dp
@@ -612,6 +621,7 @@ type TableTheme struct {
 	BodyRadius            unit.Dp
 	HeaderHeight          unit.Dp
 	RowMinHeight          unit.Dp
+	StripeBackground      color.NRGBA
 	EmptyHeight           unit.Dp
 	MaxHeight             unit.Dp
 	MinColumnWidth        unit.Dp
@@ -657,6 +667,7 @@ type MenuTheme struct {
 	BackgroundColor            color.NRGBA
 	ForegroundColor            color.NRGBA
 	MutedColor                 color.NRGBA
+	IndicatorColor             color.NRGBA
 	DangerColor                color.NRGBA
 	FocusColor                 color.NRGBA
 	BorderColor                color.NRGBA
@@ -682,6 +693,7 @@ type MenuTheme struct {
 	IndicatorContentGap        unit.Dp
 	CheckmarkSize              unit.Dp
 	RadioDotSize               unit.Dp
+	IndicatorOffsetY           unit.Dp
 	SubmenuIndicatorSize       unit.Dp
 	FocusRingWidth             unit.Dp
 	FocusRingOffset            unit.Dp
@@ -803,25 +815,80 @@ type PieChartTheme struct {
 }
 
 type CandlestickChartTheme struct {
-	Height              unit.Dp
-	PlotPaddingTop      unit.Dp
-	PlotPaddingRight    unit.Dp
-	PlotPaddingBottom   unit.Dp
-	PlotPaddingLeft     unit.Dp
-	AxisNameGap         unit.Dp
-	TickLabelGap        unit.Dp
-	AxisTextSize        unit.Sp
-	GridWidth           unit.Dp
-	AxisWidth           unit.Dp
-	CrosshairWidth      unit.Dp
-	WickWidth           unit.Dp
-	BorderWidth         unit.Dp
-	EmphasisBorderWidth unit.Dp
-	TooltipGap          unit.Dp
-	TooltipRowGap       unit.Dp
-	UpColor             color.NRGBA
-	DownColor           color.NRGBA
-	DojiColor           color.NRGBA
+	Height                   unit.Dp
+	PlotPaddingTop           unit.Dp
+	PlotPaddingRight         unit.Dp
+	PlotPaddingBottom        unit.Dp
+	PlotPaddingLeft          unit.Dp
+	AxisNameGap              unit.Dp
+	TickLabelGap             unit.Dp
+	AxisTextSize             unit.Sp
+	GridWidth                unit.Dp
+	AxisWidth                unit.Dp
+	CrosshairWidth           unit.Dp
+	CrosshairLabelPadding    unit.Dp
+	CrosshairLabelBackground color.NRGBA
+	CrosshairLabelForeground color.NRGBA
+	WickWidth                unit.Dp
+	BorderWidth              unit.Dp
+	EmphasisBorderWidth      unit.Dp
+	TooltipGap               unit.Dp
+	TooltipRowGap            unit.Dp
+	UpColor                  color.NRGBA
+	DownColor                color.NRGBA
+	DojiColor                color.NRGBA
+}
+
+// HeatmapTheme holds Heatmap defaults.
+type HeatmapTheme struct {
+	Height            unit.Dp
+	PlotPaddingTop    unit.Dp
+	PlotPaddingRight  unit.Dp
+	PlotPaddingBottom unit.Dp
+	PlotPaddingLeft   unit.Dp
+	AxisTextSize      unit.Sp
+	TickLabelGap      unit.Dp
+	CellSize          unit.Dp
+	CellGap           unit.Dp
+	CellRadius        unit.Dp
+	MinColor          color.NRGBA
+	MaxColor          color.NRGBA
+	EmptyColor        color.NRGBA
+	TooltipGap        unit.Dp
+}
+
+// GanttChartTheme holds GanttChart defaults.
+type GanttChartTheme struct {
+	Height            unit.Dp
+	PlotPaddingTop    unit.Dp
+	PlotPaddingRight  unit.Dp
+	PlotPaddingBottom unit.Dp
+	PlotPaddingLeft   unit.Dp
+	AxisNameGap       unit.Dp
+	TickLabelGap      unit.Dp
+	AxisTextSize      unit.Sp
+	GridWidth         unit.Dp
+	AxisWidth         unit.Dp
+	RowHeight         unit.Dp
+	BarHeight         unit.Dp
+	BarRadius         unit.Dp
+	TaskIndent        unit.Dp
+	TaskToggleSize    unit.Dp
+	TaskToggleGap     unit.Dp
+	BaselineHeight    unit.Dp
+	TaskLabelPaddingX unit.Dp
+	DependencyWidth   unit.Dp
+	DependencyDash    unit.Dp
+	MarkerWidth       unit.Dp
+	MarkerLabelGap    unit.Dp
+	LegendGap         unit.Dp
+	LegendTextSize    unit.Sp
+	LegendMarkerSize  unit.Dp
+	LegendMarkerGap   unit.Dp
+	LegendItemGap     unit.Dp
+	LegendLineGap     unit.Dp
+	TooltipGap        unit.Dp
+	SeriesColors      [9]color.NRGBA
 }
 
 type TabsTheme struct {
@@ -1439,7 +1506,6 @@ func DefaultTheme() Theme {
 				ItemTextSize:              14,
 				ItemDescriptionSize:       12,
 				FocusRingWidth:            2,
-				PressedScale:              0.98,
 				SurfaceRadius:             24,
 				DragPreviewOffset:         12,
 				DragPreviewMaxWidth:       240,
@@ -1562,6 +1628,7 @@ func DefaultTheme() Theme {
 				BackgroundColor:            color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 				ForegroundColor:            color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff},
 				MutedColor:                 color.NRGBA{R: 0x71, G: 0x71, B: 0x7a, A: 0xff},
+				IndicatorColor:             color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
 				DangerColor:                color.NRGBA{R: 0xff, G: 0x38, B: 0x3c, A: 0xff},
 				FocusColor:                 color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
 				ShadowColor:                color.NRGBA{A: 0xff},
@@ -1586,6 +1653,7 @@ func DefaultTheme() Theme {
 				IndicatorContentGap:        2,
 				CheckmarkSize:              10,
 				RadioDotSize:               8,
+				IndicatorOffsetY:           1.5,
 				SubmenuIndicatorSize:       14,
 				FocusRingWidth:             2,
 				FocusRingOffset:            2,
@@ -1731,24 +1799,53 @@ func DefaultTheme() Theme {
 				},
 			},
 			CandlestickChart: CandlestickChartTheme{
-				Height:              360,
-				PlotPaddingTop:      12,
-				PlotPaddingRight:    16,
-				PlotPaddingBottom:   36,
-				PlotPaddingLeft:     56,
-				AxisNameGap:         6,
-				TickLabelGap:        8,
-				AxisTextSize:        12,
-				GridWidth:           1,
-				AxisWidth:           1,
-				CrosshairWidth:      1,
-				WickWidth:           1,
-				BorderWidth:         1,
-				EmphasisBorderWidth: 2,
-				TooltipGap:          12,
-				TooltipRowGap:       5,
-				UpColor:             color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff},
-				DownColor:           color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff},
+				Height:                360,
+				PlotPaddingTop:        12,
+				PlotPaddingRight:      16,
+				PlotPaddingBottom:     36,
+				PlotPaddingLeft:       56,
+				AxisNameGap:           6,
+				TickLabelGap:          8,
+				AxisTextSize:          12,
+				GridWidth:             1,
+				AxisWidth:             1,
+				CrosshairWidth:        1,
+				CrosshairLabelPadding: 4,
+				WickWidth:             1,
+				BorderWidth:           1,
+				EmphasisBorderWidth:   2,
+				TooltipGap:            12,
+				TooltipRowGap:         5,
+				UpColor:               color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff},
+				DownColor:             color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff},
+			},
+			Heatmap: HeatmapTheme{
+				Height: 320, PlotPaddingTop: 28, PlotPaddingRight: 16,
+				PlotPaddingBottom: 16, PlotPaddingLeft: 64, AxisTextSize: 12,
+				TickLabelGap: 8, CellSize: 16, CellGap: 3, CellRadius: 2, TooltipGap: 12,
+				MinColor:   color.NRGBA{R: 0xe8, G: 0xf1, B: 0xff, A: 0xff},
+				MaxColor:   color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0xff},
+				EmptyColor: color.NRGBA{A: 0},
+			},
+			GanttChart: GanttChartTheme{
+				Height: 360, PlotPaddingTop: 28, PlotPaddingRight: 20,
+				PlotPaddingBottom: 34, PlotPaddingLeft: 140, AxisNameGap: 6, TickLabelGap: 8,
+				AxisTextSize: 12, GridWidth: 1, AxisWidth: 1, RowHeight: 36,
+				BarHeight: 18, BarRadius: 3, TaskIndent: 14, TaskToggleSize: 12, TaskToggleGap: 4, BaselineHeight: 4, TaskLabelPaddingX: 6,
+				DependencyWidth: 1, DependencyDash: 4, MarkerWidth: 1, MarkerLabelGap: 4,
+				LegendGap: 10, LegendTextSize: 12, LegendMarkerSize: 10, LegendMarkerGap: 5,
+				LegendItemGap: 14, LegendLineGap: 6, TooltipGap: 12,
+				SeriesColors: [9]color.NRGBA{
+					{R: 0x50, G: 0x70, B: 0xdd, A: 0xff},
+					{R: 0x0c, G: 0xa8, B: 0xdf, A: 0xff},
+					{R: 0x3f, G: 0xbe, B: 0x95, A: 0xff},
+					{R: 0xff, G: 0x99, B: 0x4d, A: 0xff},
+					{R: 0x78, G: 0x5d, B: 0xb0, A: 0xff},
+					{R: 0xfb, G: 0x62, B: 0x8b, A: 0xff},
+					{R: 0xb6, G: 0xd6, B: 0x34, A: 0xff},
+					{R: 0xff, G: 0xd1, B: 0x0a, A: 0xff},
+					{R: 0x50, G: 0x53, B: 0x72, A: 0xff},
+				},
 			},
 			Tabs: TabsTheme{
 				RootGap:             8,
@@ -1990,8 +2087,8 @@ func DefaultTheme() Theme {
 			DefaultDuration: 200 * time.Millisecond,
 			DurationScale:   1,
 		},
-		Material: material.NewTheme(),
 	}
+	theme.Components.Table.StripeBackground = theme.Palette.SurfaceSecondary
 	SyncMaterialTheme(&theme)
 	return theme
 }
@@ -2092,6 +2189,7 @@ func DarkTheme() Theme {
 	theme.Components.Menu.BackgroundColor = theme.Palette.Overlay
 	theme.Components.Menu.ForegroundColor = theme.Palette.OverlayForeground
 	theme.Components.Menu.MutedColor = theme.Palette.MutedForeground
+	theme.Components.Menu.IndicatorColor = theme.Palette.Accent
 	theme.Components.Menu.DangerColor = theme.Palette.Danger
 	theme.Components.Menu.FocusColor = theme.Palette.Focus
 	theme.Components.Dropdown.FocusColor = theme.Palette.Focus
@@ -2099,22 +2197,45 @@ func DarkTheme() Theme {
 	theme.Components.InputGroup.ShadowOpacity = 0
 	theme.Components.ColorSwatchPicker.ShadowOpacity = 0
 	theme.Components.TitleBar.ControlPressed = theme.Palette.SurfacePressed
+	theme.Components.Table.StripeBackground = theme.Palette.SurfaceSecondary
 	theme.Components.Modal.Backdrop = color.NRGBA{A: 0x99}
 	theme.Components.Modal.BlurBackdrop = color.NRGBA{A: 0x99}
 	SyncMaterialTheme(&theme)
 	return theme
 }
 
+// MaterialOf returns the internal Gio material bridge for text/editor helpers.
+// Callers outside this package must not treat it as part of the public theme API.
+func MaterialOf(theme *Theme) *material.Theme {
+	if theme == nil {
+		return nil
+	}
+	return theme.material
+}
+
+// DetachMaterial gives theme a private material bridge copy so later mutations
+// do not share state with another Theme value.
+func DetachMaterial(theme *Theme) {
+	if theme == nil || theme.material == nil {
+		return
+	}
+	clone := *theme.material
+	theme.material = &clone
+}
+
 // SyncMaterialTheme updates the Gio material bridge from FlowUI tokens.
 func SyncMaterialTheme(theme *Theme) {
-	if theme.Material == nil {
-		theme.Material = material.NewTheme()
+	if theme == nil {
+		return
 	}
-	theme.Material.TextSize = theme.Typography.BodySize
-	theme.Material.Palette.Fg = theme.Palette.Foreground
-	theme.Material.Palette.Bg = theme.Palette.Background
-	theme.Material.Palette.ContrastBg = theme.Palette.Accent
-	theme.Material.Palette.ContrastFg = theme.Palette.AccentForeground
+	if theme.material == nil {
+		theme.material = material.NewTheme()
+	}
+	theme.material.TextSize = theme.Typography.BodySize
+	theme.material.Palette.Fg = theme.Palette.Foreground
+	theme.material.Palette.Bg = theme.Palette.Background
+	theme.material.Palette.ContrastBg = theme.Palette.Accent
+	theme.material.Palette.ContrastFg = theme.Palette.AccentForeground
 }
 
 func (theme *Theme) DisabledColor(c color.NRGBA) color.NRGBA {

@@ -33,7 +33,6 @@ func (c ComboBoxWidget) selectItem(editor *widget.Editor, state *comboBoxState, 
 	state.syncedSelectedKey = item.Key
 	state.syncedInputValue = item.Label
 	state.open = false
-	if c.onChange != nil {
-		c.onChange(item.Key)
-	}
+	// Update disclosure state and trigger onChange callback
+	state.requestSelectedKey(c, item.Key)
 }

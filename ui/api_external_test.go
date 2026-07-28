@@ -865,6 +865,8 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	_ = application.Open
 	_ = application.Close
 	_ = application.CloseAll
+	_ = application.Quit
+	_ = application.SetKeepAlive
 	_ = application.IsOpen
 	_ = application.Configure
 	_ = application.SetTheme
@@ -903,6 +905,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.WindowMode = ui.WindowModeFullscreen
 	var _ ui.WindowState
 	var _ ui.Option = ui.OnError(func(error) {})
+	var _ ui.Option = ui.RetainModelOnClose()
 	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)
 	var _ ui.DatePickerLocale = ui.DatePickerEnglish()

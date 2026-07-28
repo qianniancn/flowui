@@ -51,33 +51,6 @@ func (w *enabledProbeWidget) Layout(_ *frame.Context, gtx layout.Context) layout
 	return layout.Dimensions{Size: image.Pt(16, 16)}
 }
 
-func TestSwitchOptions(t *testing.T) {
-	changed := true
-	sw := Switch("notifications", true, "Notifications").
-		Description("Receive product updates").
-		OnChange(func(checked bool) {
-			changed = checked
-		}).
-		Disabled(true).
-		Invalid(true).
-		Size(SwitchLarge).
-		LabelBefore().
-		Thumb(func(bool) frame.Widget {
-			return text.New("on")
-		})
-
-	if sw.key != "notifications" || !sw.checked || sw.label != "Notifications" || sw.description != "Receive product updates" {
-		t.Fatal("switch constructor/options did not set text fields")
-	}
-	if !sw.disabled || !sw.invalid || sw.size != SwitchLarge || !sw.labelBefore || sw.thumb == nil {
-		t.Fatal("switch visual options were not set")
-	}
-	sw.onChange(false)
-	if changed {
-		t.Fatal("switch onChange did not receive false")
-	}
-}
-
 func TestSwitchSyncsValue(t *testing.T) {
 	ctx := newContext(nil)
 

@@ -13,6 +13,9 @@ import (
 type PopoverWidget struct {
 	key                     string
 	open                    bool
+	hasOpen                 bool
+	defaultOpen             bool
+	hasDefaultOpen          bool
 	trigger                 frame.Widget
 	content                 frame.Widget
 	heading                 string
@@ -38,9 +41,19 @@ const (
 )
 
 func Popover(key string, open bool, trigger frame.Widget, content frame.Widget) PopoverWidget {
+	if open {
+		// open=true means controlled mode, immediately open
+		return PopoverWidget{
+			key:     key,
+			open:    true,
+			hasOpen: true,
+			trigger: trigger,
+			content: content,
+		}
+	}
+	// open=false means uncontrolled mode, initially closed
 	return PopoverWidget{
 		key:     key,
-		open:    open,
 		trigger: trigger,
 		content: content,
 	}
@@ -48,6 +61,18 @@ func Popover(key string, open bool, trigger frame.Widget, content frame.Widget) 
 
 func (p PopoverWidget) OnOpenChange(fn func(bool)) PopoverWidget {
 	p.onOpenChange = fn
+	return p
+}
+
+func (p PopoverWidget) Open(open bool) PopoverWidget {
+	p.open = open
+	p.hasOpen = true
+	return p
+}
+
+func (p PopoverWidget) DefaultOpen(open bool) PopoverWidget {
+	p.defaultOpen = open
+	p.hasDefaultOpen = true
 	return p
 }
 
@@ -105,13 +130,34 @@ func (p PopoverWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 	fullKey := frame.FullKey(ctx, p.key)
 	naturallyDisabled := frame.OverlayNaturallyDisabled(gtx)
 	triggerDims := p.layoutTrigger(ctx, gtx)
-	if !p.open && !hasVisiblePopover(ctx, fullKey) {
+
+	// Check if we need to evaluate open state (peek first to avoid claiming state)
+	needsState := hasVisiblePopover(ctx, fullKey)
+	if !needsState {
+		// For uncontrolled mode, check if we have a default that would open it
+		if !p.hasOpen && p.hasDefaultOpen && p.defaultOpen {
+			needsState = true
+		} else if p.hasOpen && p.open {
+			needsState = true
+		}
+	}
+
+	if !needsState {
 		return triggerDims
 	}
 
+	// Now we know we need state, claim it
 	state := popoverStateFor(ctx, p.key)
-	progress := state.progress(gtx, p.open, frame.ActiveTheme(ctx).Motion)
-	if !p.open && progress <= 0 {
+	state.bind(p)
+	open := state.isOpen(p)
+
+	if !open && !state.visible() {
+		deletePopoverState(ctx, fullKey)
+		return triggerDims
+	}
+
+	progress := state.progress(gtx, open, frame.ActiveTheme(ctx).Motion)
+	if !open && progress <= 0 {
 		deletePopoverState(ctx, fullKey)
 		return triggerDims
 	}
@@ -123,10 +169,10 @@ func (p PopoverWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dim
 		HasAnchor: true,
 		Disabled:  naturallyDisabled,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
-			if p.open && interactive && gtx.Enabled() {
+			if open && interactive && gtx.Enabled() {
 				p.handleCloseEvents(ctx, gtx, state)
 			}
-			return p.layoutOverlay(ctx, gtx, state, anchor, progress, p.open && gtx.Enabled())
+			return p.layoutOverlay(ctx, gtx, state, anchor, progress, open && gtx.Enabled())
 		},
 	})
 
@@ -152,12 +198,12 @@ func (p PopoverWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context,
 		frame.PreserveFocus(ctx)
 	}
 	if !p.keyboardDismissDisabled && popoverStateValue.escapePressed(gtx) {
-		p.requestClose()
+		p.requestClose(popoverStateValue)
 	}
 	for i := range popoverStateValue.dismiss {
 		for popoverStateValue.dismiss[i].Clicked(gtx) {
 			if p.isDismissable() {
-				p.requestClose()
+				p.requestClose(popoverStateValue)
 			}
 		}
 		if popoverStateValue.dismiss[i].TakePressed() {
@@ -166,10 +212,8 @@ func (p PopoverWidget) handleCloseEvents(ctx *frame.Context, gtx layout.Context,
 	}
 }
 
-func (p PopoverWidget) requestClose() {
-	if p.onOpenChange != nil {
-		p.onOpenChange(false)
-	}
+func (p PopoverWidget) requestClose(state *popoverState) {
+	state.requestOpen(p, false)
 }
 
 func (p PopoverWidget) isDismissable() bool {

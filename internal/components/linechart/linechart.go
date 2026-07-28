@@ -427,7 +427,7 @@ func (w Widget) TooltipContent(fn func(chart.Selection) frame.Widget) Widget {
 
 // DataWindow sets the controlled normalized visible X range.
 func (w Widget) DataWindow(start, end float32) Widget {
-	w.dataWindow = chart.NewDataWindow(start, end)
+	w.dataWindow = chart.NewDataWindow(float64(start), float64(end))
 	w.hasDataWindow = true
 	return w
 }

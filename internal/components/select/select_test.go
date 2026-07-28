@@ -2,11 +2,13 @@ package selects
 
 import (
 	"image"
+	"image/color"
 	"slices"
 	"testing"
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/gpu/headless"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -890,6 +892,40 @@ func TestSelectStylesMatchPrimaryAndSecondaryFields(t *testing.T) {
 	}
 }
 
+func TestSelectTriggerOutlineIsNotClippedToCorners(t *testing.T) {
+	window, err := headless.NewWindow(86, 42)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	want := color.NRGBA{R: 0x24, G: 0x68, B: 0xf2, A: 0xff}
+	var router input.Router
+	var ops op.Ops
+	offset := op.Offset(image.Pt(3, 3)).Push(&ops)
+	Select("paint", "", nil).FullWidth().Style(flowstyle.Style{}.
+		Part(flowstyle.PartContent, flowstyle.Style{}.
+			Outline(2, 0, flowstyle.SolidColor{Color: want}).
+			Transition(flowstyle.PropOutlineColor, 0)),
+	).Layout(newContext(nil), layout.Context{
+		Constraints: layout.Exact(image.Pt(80, 36)),
+		Source:      router.Source(),
+		Ops:         &ops,
+	})
+	offset.Pop()
+
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 86, 42))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	if got := color.NRGBAModel.Convert(pixels.At(43, 2)).(color.NRGBA); got != want {
+		t.Fatalf("select top outline pixel = %#v, want %#v", got, want)
+	}
+}
+
 func TestSelectEnterAndExitDurations(t *testing.T) {
 	state := new(selectState)
 	start := time.Unix(1, 0)
@@ -1060,7 +1096,7 @@ func layoutNestedSelectTestFrame(ctx *frame.Context, router *input.Router, selec
 	})
 	childGtx := gtx
 	childGtx.Constraints = layout.Constraints{Max: image.Pt(120, viewport.Y)}
-	layoutui.Box(selectWidget).PaddingLeft(20).Layout(ctx, childGtx)
+	layoutui.Box(selectWidget).Style(flowstyle.Style{}.PaddingLeft(20)).Layout(ctx, childGtx)
 	frame.LayoutOverlays(ctx, gtx)
 	frame.ApplyFrameCommands(ctx, gtx)
 	frame.EndFrame(ctx)

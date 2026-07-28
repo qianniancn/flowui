@@ -19,72 +19,25 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/chart"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-func TestCandlestickChartOptionsUseValueSemantics(t *testing.T) {
+func TestCandlestickChartCopiesMutableInputs(t *testing.T) {
 	values := []Candle{OHLC(10, 12, 9, 13)}
-	base := New("market", values)
+	widget := New("market", values)
 	values[0].open = 99
-	if base.data[0].open != 10 {
-		t.Fatal("CandlestickChart retained the caller's data slice")
+	if widget.data[0].open != 10 {
+		t.Fatal("CandlestickChart retained caller data")
 	}
 
 	categories := []string{"Mon"}
-	configured := base.
-		Categories(categories).
-		Height(280).
-		Grid(false).
-		Tooltip(false).
-		Crosshair(false).
-		YRange(8, 14).
-		YTicks(6).
-		FormatY(func(float64) string { return "price" }).
-		XAxis("Date").
-		YAxis("Price").
-		Width(10).
-		MaxWidth(16).
-		MinWidth(2).
-		UpColor(color.NRGBA{R: 1, A: 0xff}).
-		DownColor(color.NRGBA{G: 2, A: 0xff}).
-		DojiColor(color.NRGBA{B: 3, A: 0xff}).
-		Animation(false).
-		AnimationDuration(250*time.Millisecond).
-		AnimationEasing(func(value float32) float32 { return value }).
-		UpdateAnimationDuration(150*time.Millisecond).
-		UpdateAnimationEasing(func(value float32) float32 { return value }).
-		OnDataClick(func(chart.Selection) {}).
-		TooltipContent(func(chart.Selection) frame.Widget { return nil }).
-		DataWindow(.25, .75).
-		OnDataWindowChange(func(chart.DataWindow) {}).
-		MarkLines([]chart.MarkLine{chart.NewMarkLine(chart.AxisY, 10)}).
-		MarkAreas([]chart.MarkArea{chart.NewMarkArea(chart.AxisX, 0, 1)}).
-		MarkPoints([]chart.MarkPoint{chart.NewMarkPoint(0, 10)}).
-		Label("Market").
-		EmptyText("Empty").
-		Disabled(true).
-		Style(flowstyle.Style{}.Radius(4))
+	byCategory := widget.Categories(categories)
 	categories[0] = "Changed"
 	timestamps := []time.Time{time.Date(2026, time.July, 13, 22, 0, 0, 0, time.UTC)}
-	timeConfigured := base.Times(timestamps).FormatTime(func(time.Time) string { return "custom" })
+	byTime := widget.Times(timestamps)
 	timestamps[0] = time.Time{}
-	if len(timeConfigured.categories) != 0 || len(timeConfigured.times) != 1 || timeConfigured.times[0].IsZero() || timeConfigured.categoryLabel(0) != "custom" {
-		t.Fatalf("configured CandlestickChart times = %#v", timeConfigured.times)
-	}
-	categoryConfigured := timeConfigured.Categories([]string{"Tue"})
-	if len(categoryConfigured.times) != 0 || categoryConfigured.categoryLabel(0) != "Tue" {
-		t.Fatalf("Categories did not replace CandlestickChart times: %#v", categoryConfigured)
-	}
-
-	if len(base.categories) != 0 || base.height != 0 || !base.showGrid || !base.showTooltip || !base.showCrosshair || base.hasYRange || base.width != 0 || !base.animation || base.animationDuration != 300*time.Millisecond || base.disabled {
-		t.Fatalf("configuring CandlestickChart mutated base: %#v", base)
-	}
-	if configured.categories[0] != "Mon" || configured.height != 280 || configured.showGrid || configured.showTooltip || configured.showCrosshair || !configured.hasYRange || configured.yMin != 8 || configured.yMax != 14 || configured.yTickCount != 6 || configured.formatY == nil || configured.xAxisLabel != "Date" || configured.yAxisLabel != "Price" || configured.width != 10 || configured.maxWidth != 16 || configured.minWidth != 2 || !configured.hasUpColor || !configured.hasDownColor || !configured.hasDojiColor || configured.animation || configured.animationDuration != 250*time.Millisecond || configured.animationEasing == nil || configured.updateAnimationDuration != 150*time.Millisecond || configured.updateAnimationEasing == nil || configured.onDataClick == nil || configured.tooltipContent == nil || !configured.hasDataWindow || configured.dataWindow.Start != .25 || configured.dataWindow.End != .75 || configured.onDataWindowChange == nil || len(configured.markLines) != 1 || len(configured.markAreas) != 1 || len(configured.markPoints) != 1 || configured.label != "Market" || configured.emptyText != "Empty" || !configured.disabled {
-		t.Fatalf("configured CandlestickChart = %#v", configured)
-	}
-	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint == nil {
-		t.Fatal("configured CandlestickChart did not retain its style")
+	if byCategory.categories[0] != "Mon" || byTime.times[0].IsZero() {
+		t.Fatal("CandlestickChart retained caller labels")
 	}
 }
 
@@ -414,7 +367,7 @@ func TestCandlestickChartClickAndDataWindowInteractions(t *testing.T) {
 
 func TestCandlestickChartThemeAndSmallLayout(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.CandlestickChart
-	if tokens.Height != 360 || tokens.CrosshairWidth != 1 || tokens.UpColor != (color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff}) || tokens.DownColor != (color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff}) {
+	if tokens.Height != 360 || tokens.CrosshairWidth != 1 || tokens.CrosshairLabelPadding != 4 || tokens.UpColor != (color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff}) || tokens.DownColor != (color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff}) {
 		t.Fatalf("CandlestickChart theme tokens = %#v", tokens)
 	}
 

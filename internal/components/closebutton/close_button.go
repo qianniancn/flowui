@@ -8,7 +8,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/components/icon"
 	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
 	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/interaction"
+	"github.com/qianniancn/FlowUI/internal/interact"
 	"github.com/qianniancn/FlowUI/internal/locale"
 	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 	"github.com/qianniancn/flowui-icons-lucide"
@@ -67,7 +67,7 @@ func LayoutWithClickableNoEvents(b CloseButtonWidget, ctx *frame.Context, gtx la
 }
 
 func layoutWithClickable(b CloseButtonWidget, ctx *frame.Context, gtx layout.Context, clickable *widget.Clickable, handleEvents bool) layout.Dimensions {
-	click := interaction.BeginClick(ctx, gtx, b.key, clickable, !b.disabled, handleEvents, b.onClick)
+	click := interact.Begin(ctx, gtx, b.key, clickable, !b.disabled, handleEvents, b.onClick)
 	style := b.resolveStyle(ctx, gtx, click.Key, click.StyleState)
 	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {

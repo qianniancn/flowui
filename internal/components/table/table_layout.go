@@ -35,6 +35,9 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.Table
 	style := tableStyleFor(activeTheme, t.variant)
+	if t.striped {
+		style.body = activeTheme.Palette.Surface
+	}
 
 	padding := 0
 	if t.variant == VariantPrimary {
@@ -86,7 +89,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, stateValue *table
 
 	size := image.Pt(gtx.Constraints.Max.X, contentDims.Size.Y+footerHeight+padding)
 	size = gtx.Constraints.Constrain(size)
-	radius := tableRootRadius(gtx, activeTheme, size, t.variant)
+	radius := tableRootRadius(gtx, activeTheme, size, t.variant, t.usesUnifiedFrame())
 	drawTableRoot(gtx, size, radius, style.root)
 	root := clip.UniformRRect(image.Rectangle{Max: size}, radius).Push(gtx.Ops)
 	contentPlacement.PlaceOffset(image.Pt(padding, 0))
@@ -158,7 +161,7 @@ func (t Widget) drawColumnResizeGuide(ctx *frame.Context, gtx layout.Context, st
 
 func (t Widget) layoutHeader(ctx *frame.Context, gtx layout.Context, stateValue *tableState, columns tableColumns, style tableStyle) layout.Dimensions {
 	size := gtx.Constraints.Max
-	radius := tableHeaderRadius(gtx, frame.ActiveTheme(ctx), size, t.variant)
+	radius := tableHeaderRadius(gtx, frame.ActiveTheme(ctx), size, t.variant, t.usesUnifiedFrame())
 	headerSeparator := style.headerSeparator
 	if !t.showsGridLines() {
 		headerSeparator = color.NRGBA{}
@@ -425,7 +428,11 @@ func (t Widget) layoutRow(ctx *frame.Context, gtx layout.Context, stateValue *ta
 			semantic.LabelOp(t.rowLabel(row)).Add(gtx.Ops)
 			semantic.SelectedOp(selected).Add(gtx.Ops)
 			semantic.EnabledOp(!disabled).Add(gtx.Ops)
-			rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
+			stripe := color.NRGBA{}
+			if t.striped && index%2 == 1 {
+				stripe = frame.ActiveTheme(ctx).Components.Table.StripeBackground
+			}
+			rowStyle := tableRowStyleFor(frame.ActiveTheme(ctx), t.variant, stripe, selected, rowState.clickable.Hovered() && !disabled, rowState.clickable.Pressed() && !disabled, disabled)
 			motion := frame.ActiveTheme(ctx).Motion
 			rowStyle.background = rowState.background.Value(animGtx, rowStyle.background, tableColorDuration, animation.EaseSmoothstep, motion)
 			background := rowStyle.background
@@ -558,7 +565,7 @@ type tableCellText struct {
 }
 
 func (t tableCellText) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-	label := material.Label(frame.ActiveTheme(ctx).Material, t.size, t.text)
+	label := material.Label(frame.ActiveMaterial(ctx), t.size, t.text)
 	label.Color = t.color
 	label.Font.Weight = t.weight
 	label.MaxLines = 1

@@ -159,6 +159,7 @@ func (p ToastProviderWidget) paintRecords(ctx *frame.Context, gtx layout.Context
 		return image.Rectangle{}
 	}
 	tokens := frame.ActiveTheme(ctx).Components.Toast
+	motion := frame.ActiveTheme(ctx).Motion
 	inset := gtx.Dp(tokens.Inset)
 	offset := gtx.Dp(p.resolvedOffset(ctx))
 	gap := gtx.Dp(p.resolvedGap(ctx))
@@ -184,7 +185,8 @@ func (p ToastProviderWidget) paintRecords(ctx *frame.Context, gtx layout.Context
 		scale := render.Lerp(collapsedScale, 1, expansion)
 		x := toastRegionX(viewport.X, record.dims.Size.X, inset, p.placement)
 		collapsedOffset := record.stack * float32(gap)
-		expandedOffset := toastExpandedOffset(expandedOffsets, record.stack)
+		expandedTarget := toastExpandedOffset(expandedOffsets, float32(record.index))
+		expandedOffset := record.entry.expandedPosition(gtx, expandedTarget, tokens.AnimationDuration, motion)
 		stackOffset := int(render.Lerp(collapsedOffset, expandedOffset, expansion) + 0.5)
 		y := offset + stackOffset
 		enterOffset := -int(float32(height) * (1 - record.progress))

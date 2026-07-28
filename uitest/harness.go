@@ -2,6 +2,7 @@
 package uitest
 
 import (
+	"encoding/json"
 	"image"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/qianniancn/FlowUI/internal/frame"
+	internalocale "github.com/qianniancn/FlowUI/internal/locale"
 	internaltheme "github.com/qianniancn/FlowUI/internal/theme"
 	"github.com/qianniancn/FlowUI/ui"
 )
@@ -50,11 +52,9 @@ func NewWithConfig(config Config) *Harness {
 	if config.Theme != nil {
 		activeTheme = *config.Theme
 	}
-	if activeTheme.Material != nil {
-		materialTheme := *activeTheme.Material
-		activeTheme.Material = &materialTheme
-	}
-	internaltheme.SyncMaterialTheme(&activeTheme)
+	nativeTheme := exportTheme(activeTheme)
+	internaltheme.DetachMaterial(nativeTheme)
+	internaltheme.SyncMaterialTheme(nativeTheme)
 	now := config.Now
 	if now.IsZero() {
 		now = time.Unix(1, 0)
@@ -64,7 +64,7 @@ func NewWithConfig(config Config) *Harness {
 		language = ui.LanguageEnglish
 	}
 	return &Harness{
-		ctx:    frame.New(nil, &activeTheme, language),
+		ctx:    (*ui.Context)(frame.New(nil, nativeTheme, internalocale.Language(language))),
 		size:   config.Size,
 		metric: config.Metric,
 		now:    now,
@@ -92,16 +92,29 @@ func (h *Harness) Frame(root ui.Widget) layout.Dimensions {
 		Source:      h.router.Source(),
 		Ops:         &ops,
 	}
-	frame.BeginFrameWithViewport(h.ctx, h.size)
+	frameCtx := (*frame.Context)(h.ctx)
+	frame.BeginFrameWithViewport(frameCtx, h.size)
 	dimensions := layout.Dimensions{}
 	if root != nil {
 		dimensions = root.Layout(h.ctx, gtx)
 	}
-	frame.LayoutOverlays(h.ctx, gtx)
-	frame.ApplyFrameCommands(h.ctx, gtx)
-	frame.EndFrame(h.ctx)
+	frame.LayoutOverlays(frameCtx, gtx)
+	frame.ApplyFrameCommands(frameCtx, gtx)
+	frame.EndFrame(frameCtx)
 	h.router.Frame(&ops)
 	return dimensions
+}
+
+func exportTheme(value ui.Theme) *internaltheme.Theme {
+	data, err := json.Marshal(value)
+	if err != nil {
+		panic("flowui/uitest: encode theme: " + err.Error())
+	}
+	var native internaltheme.Theme
+	if err := json.Unmarshal(data, &native); err != nil {
+		panic("flowui/uitest: decode theme: " + err.Error())
+	}
+	return &native
 }
 
 // Click queues a primary mouse press and release for the next frame.

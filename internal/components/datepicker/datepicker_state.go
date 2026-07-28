@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/FlowUI/internal/components/disclosure"
 	"github.com/qianniancn/FlowUI/internal/components/optionrow"
 	"github.com/qianniancn/FlowUI/internal/frame"
 	"github.com/qianniancn/FlowUI/internal/overlay"
@@ -24,6 +25,7 @@ func datePickerStateFor(ctx *frame.Context, key string) *datePickerState {
 }
 
 type datePickerState struct {
+	disclosure        disclosure.Binding[time.Time]
 	segments          dateSegmentsState
 	hover             dateInputHoverState
 	trigger           widget.Clickable
@@ -265,4 +267,28 @@ func datePickerEscapePressed(gtx layout.Context, target event.Tag) bool {
 func datePickerPressScale(gtx layout.Context, history []widget.Press, disabled bool, motions ...theme.MotionTheme) float32 {
 	target := float32(0.95)
 	return optionrow.PressScale(gtx, history, disabled, target, datePickerPressInDuration, datePickerPressOutDuration, motions...)
+}
+
+// Disclosure helpers
+func datePickerDisclosureCfg(widget DatePickerWidget) disclosure.Config[time.Time] {
+	return disclosure.Config[time.Time]{
+		Controlled: widget.hasValue,
+		Value:      widget.value,
+		HasDefault: widget.hasDefault,
+		Default:    widget.defaultValue,
+		OnChange:   widget.onChange,
+	}
+}
+
+func (s *datePickerState) currentValue(widget DatePickerWidget) time.Time {
+	return s.disclosure.Current(datePickerDisclosureCfg(widget))
+}
+
+func (s *datePickerState) bind(widget DatePickerWidget) {
+	s.disclosure.Bind(datePickerDisclosureCfg(widget))
+}
+
+func (s *datePickerState) requestValue(widget DatePickerWidget, value time.Time) time.Time {
+	newValue, _ := s.disclosure.Request(datePickerDisclosureCfg(widget), value)
+	return newValue
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/qianniancn/FlowUI/internal/theme"
 )
 
-type toggleButtonStyle struct {
+type toggleButtonWidget struct {
 	background color.NRGBA
 	foreground color.NRGBA
 	radius     unit.Dp
@@ -62,10 +62,10 @@ func toggleButtonDefaultDeclaration(activeTheme *theme.Theme) flowstyle.Style {
 }
 
 func toggleButtonVariantDeclaration(activeTheme *theme.Theme, foreground color.NRGBA, variant ToggleButtonVariant) flowstyle.Style {
-	idle := toggleButtonStyleFor(activeTheme, foreground, variant, false, false, false, false)
-	hovered := toggleButtonStyleFor(activeTheme, foreground, variant, false, true, false, false)
-	selected := toggleButtonStyleFor(activeTheme, foreground, variant, true, false, false, false)
-	selectedHovered := toggleButtonStyleFor(activeTheme, foreground, variant, true, true, false, false)
+	idle := toggleButtonWidgetFor(activeTheme, foreground, variant, false, false, false, false)
+	hovered := toggleButtonWidgetFor(activeTheme, foreground, variant, false, true, false, false)
+	selected := toggleButtonWidgetFor(activeTheme, foreground, variant, true, false, false, false)
+	selectedHovered := toggleButtonWidgetFor(activeTheme, foreground, variant, true, true, false, false)
 	hoveredOrPressed := flowstyle.Any(flowstyle.Hovered, flowstyle.Pressed)
 	return flowstyle.Style{}.
 		Background(flowstyle.SolidColor{Color: idle.background}).
@@ -107,7 +107,7 @@ type toggleButtonSizeStyle struct {
 	pressedScale float32
 }
 
-func toggleButtonStyleFor(activeTheme *theme.Theme, currentForeground color.NRGBA, variant ToggleButtonVariant, selected, hovered, pressed, disabled bool) toggleButtonStyle {
+func toggleButtonWidgetFor(activeTheme *theme.Theme, currentForeground color.NRGBA, variant ToggleButtonVariant, selected, hovered, pressed, disabled bool) toggleButtonWidget {
 	background := activeTheme.Palette.SurfaceRaised
 	foreground := currentForeground
 	if variant == ToggleButtonGhost {
@@ -128,7 +128,7 @@ func toggleButtonStyleFor(activeTheme *theme.Theme, currentForeground color.NRGB
 	if disabled {
 		opacity = activeTheme.DisabledOpacityValue()
 	}
-	return toggleButtonStyle{
+	return toggleButtonWidget{
 		background: background,
 		foreground: foreground,
 		radius:     activeTheme.Components.ToggleButton.Radius,

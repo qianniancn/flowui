@@ -65,8 +65,12 @@ func sliderStyleDeclaration(activeTheme *theme.Theme, colors sliderColors, disab
 		Background(flowstyle.SolidColor{Color: colors.track}).
 		Radius(tokens.TrackRadius)
 	fill := flowstyle.Style{}.
-		Background(flowstyle.SolidColor{Color: colors.fill}).
-		Radius(tokens.TrackRadius)
+		Background(flowstyle.SolidColor{Color: colors.fill})
+	if orientation == SliderVertical {
+		fill = fill.RadiusBottomLeft(tokens.TrackRadius).RadiusBottomRight(tokens.TrackRadius)
+	} else {
+		fill = fill.RadiusTopLeft(tokens.TrackRadius).RadiusBottomLeft(tokens.TrackRadius)
+	}
 	thumbWidth := tokens.ThumbLength + tokens.ThumbExtra
 	thumbHeight := tokens.TrackThickness
 	if orientation == SliderVertical {

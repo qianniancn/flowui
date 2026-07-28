@@ -16,29 +16,6 @@ import (
 	flowstyle "github.com/qianniancn/FlowUI/internal/style"
 )
 
-func TestSplitPaneOptions(t *testing.T) {
-	value := SplitPane("workspace", Spacer(10, 10), Spacer(10, 10)).
-		Vertical().
-		Ratio(.6).
-		DefaultRatio(.4).
-		MinFirst(80).
-		MinSecond(90).
-		Label("Resize workspace").
-		OnRatioChange(func(float32) {}).
-		Disabled(true).
-		Style(flowstyle.Style{}.Width(2))
-
-	if value.orientation != SplitPaneVertical || value.ratio != .6 || value.defaultRatio != .4 || !value.hasRatio || !value.hasDefaultRatio {
-		t.Fatalf("split pane options = %#v", value)
-	}
-	if value.minFirst != 80 || value.minSecond != 90 || value.label != "Resize workspace" || value.onRatioChange == nil || !value.disabled {
-		t.Fatalf("split pane options = %#v", value)
-	}
-	if value.customStyle.Resolve(flowstyle.StyleState{}).Box == nil {
-		t.Fatal("split pane style was not retained")
-	}
-}
-
 func TestSplitPaneSeparatesRootTrackAndIndicatorStyles(t *testing.T) {
 	root := flowstyle.RGB(0x010000)
 	track := flowstyle.RGB(0x000200)

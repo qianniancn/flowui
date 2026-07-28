@@ -50,6 +50,7 @@ type toastEntryState struct {
 	value              float32
 	progressTransition animation.FloatTransition
 	stack              animation.FloatTransition
+	expandedOffset     animation.FloatTransition
 }
 
 type toastRootTag struct{ _ byte }
@@ -301,4 +302,8 @@ func (e *toastEntryState) progress(gtx layout.Context, duration time.Duration, m
 
 func (e *toastEntryState) stackPosition(gtx layout.Context, target float32, duration time.Duration, motions ...theme.MotionTheme) float32 {
 	return e.stack.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep, motions...)
+}
+
+func (e *toastEntryState) expandedPosition(gtx layout.Context, target float32, duration time.Duration, motions ...theme.MotionTheme) float32 {
+	return e.expandedOffset.Value(gtx, target, max(duration, time.Millisecond), animation.EaseSmoothstep, motions...)
 }

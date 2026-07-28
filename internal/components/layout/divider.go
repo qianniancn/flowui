@@ -8,7 +8,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type DividerWidget struct {

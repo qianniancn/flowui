@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/toolbar"
+import "github.com/qianniancn/flowui/internal/components/toolbar"
 
 type ToolbarWidget = toolbar.Widget
 type ToolbarOrientation = toolbar.Orientation

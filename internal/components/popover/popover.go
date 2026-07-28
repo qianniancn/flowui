@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type PopoverWidget struct {

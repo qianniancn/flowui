@@ -6,11 +6,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/host"
-	"github.com/qianniancn/FlowUI/internal/interact"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/host"
+	"github.com/qianniancn/flowui/internal/interact"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type ButtonWidget struct {

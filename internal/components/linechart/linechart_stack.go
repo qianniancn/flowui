@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qianniancn/FlowUI/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/components/chart"
 )
 
 func applyLineStacks(data *chartData, stackByX bool) {

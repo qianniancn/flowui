@@ -2,7 +2,7 @@ package ui
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // Widget is a FlowUI node that can lay itself out with Gio.

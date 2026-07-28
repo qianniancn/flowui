@@ -6,10 +6,10 @@ public `ui` API, component behavior, rendering, tests, and examples.
 Before changing code, read:
 
 - [`README.md`](README.md) for installation and usage.
-- [Project Wiki](https://github.com/qianniancn/FlowUI/wiki) — user-facing tutorial (final API).
+- [Project Wiki](https://github.com/qianniancn/flowui/wiki) — user-facing tutorial (final API).
 - [`docs/architecture.md`](docs/architecture.md) — dependency direction, state
   ownership, and overlay behavior for the current tree.
-- `examples/` and `go doc github.com/qianniancn/FlowUI/ui` for current usage.
+- `examples/` and `go doc github.com/qianniancn/flowui/ui` for current usage.
 
 ## Development Environment
 
@@ -25,7 +25,7 @@ go run ./examples/counter
 
 ## Code Changes
 
-- Applications import `github.com/qianniancn/FlowUI/ui`; implementation code
+- Applications import `github.com/qianniancn/flowui/ui`; implementation code
   belongs below `internal/`.
 - Keep business state in the application's model. Component state is for
   interaction and derived rendering state.

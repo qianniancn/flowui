@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/tree"
+import "github.com/qianniancn/flowui/internal/components/tree"
 
 type TreeWidget = tree.Widget
 type TreeItem = tree.Item

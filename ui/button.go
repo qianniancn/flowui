@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/button"
+import "github.com/qianniancn/flowui/internal/components/button"
 
 type ButtonWidget = button.ButtonWidget
 type ButtonVariant = button.ButtonVariant

@@ -6,7 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func drawModalIconFrame(gtx layout.Context, theme *theme.Theme, size image.Point) {

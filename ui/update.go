@@ -3,7 +3,7 @@ package ui
 import (
 	"context"
 
-	"github.com/qianniancn/FlowUI/internal/runtime"
+	"github.com/qianniancn/flowui/internal/runtime"
 )
 
 // Send dispatches a message to Update. It is safe for concurrent commands to

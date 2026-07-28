@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/titlebar"
+import "github.com/qianniancn/flowui/internal/components/titlebar"
 
 type WindowTitleBarWidget = titlebar.Widget
 

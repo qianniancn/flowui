@@ -3,9 +3,9 @@ package togglebutton
 import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/interact"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 )
 
 func (b ToggleButtonWidget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {

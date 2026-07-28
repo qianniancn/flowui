@@ -10,8 +10,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func (w Widget) drawMarkAreas(ctx *frame.Context, gtx layout.Context, geometry chartGeometry, style chartStyle) {

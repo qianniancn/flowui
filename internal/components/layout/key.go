@@ -2,7 +2,7 @@ package layoutui
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type KeyWidget struct {

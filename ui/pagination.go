@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/pagination"
+import "github.com/qianniancn/flowui/internal/components/pagination"
 
 type PaginationWidget = pagination.Widget
 type PaginationSize = pagination.Size

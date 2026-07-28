@@ -2,15 +2,15 @@
 
 Implementation notes for the current tree: dependency direction, style cascade,
 interaction host, state ownership, overlay host, and effects. For application
-usage, see the [project Wiki](https://github.com/qianniancn/FlowUI/wiki) and the public `ui` package docs.
+usage, see the [project Wiki](https://github.com/qianniancn/flowui/wiki) and the public `ui` package docs.
 
 FlowUI exposes one application-facing package:
 
 ```go
-import "github.com/qianniancn/FlowUI/ui"
+import "github.com/qianniancn/flowui/ui"
 ```
 
-Component tests may additionally import `github.com/qianniancn/FlowUI/uitest`.
+Component tests may additionally import `github.com/qianniancn/flowui/uitest`.
 The package owns a deterministic FlowUI context, Gio input router, viewport,
 and clock. Its `Harness.Frame` method follows the same main layout, root
 overlay, focus-command, state-cleanup, and router order as a real window.
@@ -108,7 +108,7 @@ layers -> ExpandTokens -> Cascade(state) -> ResolveColors -> Transitions(key)
 
 Animation is dual-track: Style `Transition` (property whitelist under a stable
 key) and imperative `Tween` for floats. Both share `Ease*` curves and honor
-`Theme.Motion`. Application-facing animation notes: [动画](https://github.com/qianniancn/FlowUI/wiki/12-动画).
+`Theme.Motion`. Application-facing animation notes: [动画](https://github.com/qianniancn/flowui/wiki/12-动画).
 
 ## Interaction Core
 
@@ -217,7 +217,7 @@ above the modal that registered it but below any pending nested modal. Panel
 content is still laid out before `EndFrame`, so keyed state, focus requests,
 animations, and MVU callbacks retain normal same-frame semantics.
 
-For application-facing overlay behavior, see [浮层与弹出](https://github.com/qianniancn/FlowUI/wiki/09-浮层与弹出).
+For application-facing overlay behavior, see [浮层与弹出](https://github.com/qianniancn/flowui/wiki/09-浮层与弹出).
 
 Input ownership for overlay *policy* events (dismiss, Escape, exclusive
 open/close) is owned by at most one non-passive overlay:
@@ -379,7 +379,7 @@ shared primitives can move into a lower package without introducing dependency
 cycles. File count alone is not a package boundary.
 
 The root module intentionally contains no Go package. This prevents two public
-entry points from drifting apart and keeps `github.com/qianniancn/FlowUI/ui` as
+entry points from drifting apart and keeps `github.com/qianniancn/flowui/ui` as
 the stable import contract.
 
 ## Internal Interface Design

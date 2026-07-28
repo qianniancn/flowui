@@ -4,8 +4,8 @@ import (
 	"image"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/state"
 )
 
 // Layer selects the Portal's root stacking group.

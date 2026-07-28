@@ -11,12 +11,12 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func newContext(_ any) *frame.Context {

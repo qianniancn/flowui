@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/linechart"
+import "github.com/qianniancn/flowui/internal/components/linechart"
 
 type LineChartWidget = linechart.Widget
 type LineChartSeries = linechart.Series

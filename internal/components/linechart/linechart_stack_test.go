@@ -5,8 +5,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestLineChartStackOptionsUseValueSemantics(t *testing.T) {

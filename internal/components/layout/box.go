@@ -3,10 +3,10 @@ package layoutui
 import (
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/host"
-	flowlayout "github.com/qianniancn/FlowUI/internal/layout"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/host"
+	flowlayout "github.com/qianniancn/flowui/internal/layout"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // BoxWidget is the single-box host (implemented in package host).

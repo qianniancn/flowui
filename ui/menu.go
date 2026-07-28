@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/menu"
+import "github.com/qianniancn/flowui/internal/components/menu"
 
 type MenuWidget = menu.Widget
 type ContextMenuWidget = menu.ContextMenuWidget

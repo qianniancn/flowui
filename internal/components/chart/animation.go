@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // DataAnimation owns the common revision and motion state for chart data.

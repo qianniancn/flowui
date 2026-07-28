@@ -9,9 +9,9 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 var hueSliderImage = newHueSliderImage()

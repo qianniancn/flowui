@@ -2,7 +2,7 @@ package ui
 
 import (
 	"gioui.org/op/paint"
-	imageview "github.com/qianniancn/FlowUI/internal/components/image"
+	imageview "github.com/qianniancn/flowui/internal/components/image"
 )
 
 type ImageWidget = imageview.Widget

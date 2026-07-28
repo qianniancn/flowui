@@ -7,7 +7,7 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/system"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // WindowSpec describes one independent FlowUI window.

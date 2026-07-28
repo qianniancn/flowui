@@ -4,8 +4,8 @@ import (
 	"image"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/portal"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/components/portal"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type PortalWidget = portal.Widget

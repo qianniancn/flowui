@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 var customButtonStyle = ui.Height(46).

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
+	"github.com/qianniancn/flowui/internal/components/icon"
 )
 
 // NewIconData validates and copies encoded IconVG bytes. Load custom icon data

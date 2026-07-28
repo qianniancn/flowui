@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/qianniancn/FlowUI/internal/sys/windows"
+	"github.com/qianniancn/flowui/internal/sys/windows"
 )
 
 const (

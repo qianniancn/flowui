@@ -3,7 +3,7 @@ package tree
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func treeTokensFor(activeTheme *theme.Theme, size Size) theme.TreeTheme {

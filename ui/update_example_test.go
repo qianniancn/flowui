@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func ExampleDo() {

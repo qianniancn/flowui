@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/piechart"
+import "github.com/qianniancn/flowui/internal/components/piechart"
 
 type PieChartWidget = piechart.Widget
 type PieChartData = piechart.Data

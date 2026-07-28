@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // ModalWidget renders an overlay dialog controlled by application state.

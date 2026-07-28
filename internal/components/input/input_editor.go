@@ -5,7 +5,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func editorLayoutFor(ctx *frame.Context, editor *widget.Editor, hint string, style inputStyle, textSize, lineHeight unit.Sp) layout.Widget {

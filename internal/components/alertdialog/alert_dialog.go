@@ -2,10 +2,10 @@ package alertdialog
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/modal"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/modal"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // Status identifies the semantic tone of an AlertDialog icon.

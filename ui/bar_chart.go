@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/barchart"
+import "github.com/qianniancn/flowui/internal/components/barchart"
 
 type BarChartWidget = barchart.Widget
 type BarChartSeries = barchart.Series

@@ -2,7 +2,7 @@
 
 package locale
 
-import "github.com/qianniancn/FlowUI/internal/sys/darwin"
+import "github.com/qianniancn/flowui/internal/sys/darwin"
 
 func systemLocaleName() string {
 	return darwin.SystemLocaleName()

@@ -2,8 +2,8 @@ package listbox
 
 import (
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 )
 
 type ItemFocusState struct {

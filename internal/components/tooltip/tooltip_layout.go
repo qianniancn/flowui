@@ -7,11 +7,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func (p Popup) panelConstraints(ctx *frame.Context, gtx layout.Context, overlaySize image.Point) layout.Constraints {

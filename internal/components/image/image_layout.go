@@ -9,7 +9,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func (i Widget) layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {

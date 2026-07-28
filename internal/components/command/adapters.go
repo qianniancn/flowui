@@ -3,12 +3,12 @@ package command
 import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/components/togglebutton"
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/components/button"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/components/togglebutton"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func MenuItem(command Command) menu.Item {

@@ -10,8 +10,8 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/runtime"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/internal/runtime"
+	"github.com/qianniancn/flowui/ui"
 )
 
 // AppConfig configures an AppHarness. Update is required; Init is optional.

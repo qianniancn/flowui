@@ -16,9 +16,9 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 const (

@@ -10,7 +10,7 @@ primitives, popups, and test tools.
 The public API is:
 
 ```go
-import "github.com/qianniancn/FlowUI/ui"
+import "github.com/qianniancn/flowui/ui"
 ```
 
 Three teaching rules:
@@ -26,7 +26,7 @@ Three teaching rules:
 
 | Audience | Start here |
 |----------|------------|
-| **App developers** | [User tutorial (Chinese)](https://github.com/qianniancn/FlowUI/wiki) — getting started through custom widgets, multi-window, animation, and FAQ |
+| **App developers** | [User tutorial (Chinese)](https://github.com/qianniancn/flowui/wiki) — getting started through custom widgets, multi-window, animation, and FAQ |
 | **Architecture notes** | [`docs/architecture.md`](docs/architecture.md) |
 
 The user tutorial is maintained in the project Wiki.
@@ -39,7 +39,7 @@ The user tutorial is maintained in the project Wiki.
 ## Install
 
 ```bash
-go get github.com/qianniancn/FlowUI/ui
+go get github.com/qianniancn/flowui/ui
 ```
 
 ## Quick Start
@@ -52,7 +52,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {
@@ -113,7 +113,7 @@ go run .
 ```
 
 Same program in the repo: `go run ./examples/counter`.
-Step-by-step guide (Chinese): [Quick Start](https://github.com/qianniancn/FlowUI/wiki/01-快速开始).
+Step-by-step guide (Chinese): [Quick Start](https://github.com/qianniancn/flowui/wiki/01-快速开始).
 
 ## Application Model
 
@@ -197,9 +197,9 @@ independent model state. `Application.Open` returns `true` only when a new
 window starts. If the same key is already open, FlowUI raises that window and
 returns `false`; rejected opens also return `false`.
 
-Deeper walkthroughs: [MVU & messages](https://github.com/qianniancn/FlowUI/wiki/03-MVU与消息),
-[commands & subscriptions](https://github.com/qianniancn/FlowUI/wiki/08-命令与订阅),
-[multi-window](https://github.com/qianniancn/FlowUI/wiki/11-多窗口) (Chinese tutorial).
+Deeper walkthroughs: [MVU & messages](https://github.com/qianniancn/flowui/wiki/03-MVU与消息),
+[commands & subscriptions](https://github.com/qianniancn/flowui/wiki/08-命令与订阅),
+[multi-window](https://github.com/qianniancn/flowui/wiki/11-多窗口) (Chinese tutorial).
 
 ## Components
 
@@ -232,7 +232,7 @@ package main
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func main() {
@@ -306,7 +306,7 @@ Custom composites follow path B: `BeginInteract` → `Resolve` / `ResolvePart`
 (`RequestFocus`, `RequestFocusVisible`, `FocusVisible`) use the
 `Interact.Clickable` tag so custom rings match official controls. Domain
 pixels use path C: `ui.Canvas` as the host child (no chrome painting). See
-`examples/custom_widgets` and the [custom widgets tutorial](https://github.com/qianniancn/FlowUI/wiki/10-自定义组件).
+`examples/custom_widgets` and the [custom widgets tutorial](https://github.com/qianniancn/flowui/wiki/10-自定义组件).
 
 `Surface` uses the same style API for per-instance geometry and paint:
 
@@ -366,7 +366,7 @@ charts, animations, window chrome, and layout primitives.
 
 `uitest` provides deterministic helpers for frame, input, time, and application
 tests. It is a test helper and is not required by applications at runtime.
-Tutorial: [Testing](https://github.com/qianniancn/FlowUI/wiki/13-测试).
+Tutorial: [Testing](https://github.com/qianniancn/flowui/wiki/13-测试).
 
 ```bash
 go test ./...
@@ -379,13 +379,13 @@ go vet ./...
 - `internal/` — runtime, style, host, interact, components, theme, …
 - `uitest/` — deterministic test harnesses.
 - `examples/` — runnable demos aligned with the final API.
-- [Project Wiki](https://github.com/qianniancn/FlowUI/wiki) — **user tutorial** (Chinese).
+- [Project Wiki](https://github.com/qianniancn/flowui/wiki) — **user tutorial** (Chinese).
 - [`docs/architecture.md`](docs/architecture.md) — dependency direction, state
   ownership, overlay behavior.
 
 Applications should import `ui`, not `internal` packages. For day-to-day usage,
-prefer the [user tutorial](https://github.com/qianniancn/FlowUI/wiki), `examples/`, and
-`go doc github.com/qianniancn/FlowUI/ui`.
+prefer the [user tutorial](https://github.com/qianniancn/flowui/wiki), `examples/`, and
+`go doc github.com/qianniancn/flowui/ui`.
 
 ## License
 

@@ -9,7 +9,7 @@ FlowUI 是一个基于 [Gio](https://gioui.org/) 构建的 Go 桌面 UI 框架�
 应用统一使用：
 
 ```go
-import "github.com/qianniancn/FlowUI/ui"
+import "github.com/qianniancn/flowui/ui"
 ```
 
 可教的三句话：
@@ -22,7 +22,7 @@ import "github.com/qianniancn/FlowUI/ui"
 
 | 读者 | 从这里开始 |
 |------|------------|
-| **应用开发者** | [使用教程](https://github.com/qianniancn/FlowUI/wiki) — 从快速开始到自定义组件、多窗口、动画、FAQ |
+| **应用开发者** | [使用教程](https://github.com/qianniancn/flowui/wiki) — 从快速开始到自定义组件、多窗口、动画、FAQ |
 | **架构说明** | [`docs/architecture.md`](docs/architecture.md) |
 
 使用教程维护在项目 Wiki 中。
@@ -35,7 +35,7 @@ import "github.com/qianniancn/FlowUI/ui"
 ## 安装
 
 ```bash
-go get github.com/qianniancn/FlowUI/ui
+go get github.com/qianniancn/flowui/ui
 ```
 
 ## 快速开始
@@ -48,7 +48,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {
@@ -109,7 +109,7 @@ go run .
 ```
 
 仓库内同款：`go run ./examples/counter`。
-分步教程：[快速开始](https://github.com/qianniancn/FlowUI/wiki/01-快速开始)。
+分步教程：[快速开始](https://github.com/qianniancn/flowui/wiki/01-快速开始)。
 
 ## 应用模型
 
@@ -190,9 +190,9 @@ Command 在事件循环之外运行。捕获不可变的值，并通过 `ui.Send
 `true`；同 key 窗口已打开时会将其前置并返回 `false`，拒绝打开时也返回
 `false`。
 
-更细的讲解见教程：[MVU 与消息](https://github.com/qianniancn/FlowUI/wiki/03-MVU与消息)、
-[命令与订阅](https://github.com/qianniancn/FlowUI/wiki/08-命令与订阅)、
-[多窗口](https://github.com/qianniancn/FlowUI/wiki/11-多窗口)。
+更细的讲解见教程：[MVU 与消息](https://github.com/qianniancn/flowui/wiki/03-MVU与消息)、
+[命令与订阅](https://github.com/qianniancn/flowui/wiki/08-命令与订阅)、
+[多窗口](https://github.com/qianniancn/flowui/wiki/11-多窗口)。
 
 ## 组件
 
@@ -223,7 +223,7 @@ package main
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func main() {
@@ -294,7 +294,7 @@ Select、ComboBox 和日期控件这类复合字段使用 `PartContent` 表示�
 （`RequestFocus` / `RequestFocusVisible` / `FocusVisible`）使用
 `Interact.Clickable` 作为 tag，与官方控件同一套键盘/指针模态。领域像素走路径 C：
 `ui.Canvas` 作为 Host 子节点（禁止在画布里画外壳）。完整写法见
-`examples/custom_widgets` 与 [自定义组件教程](https://github.com/qianniancn/FlowUI/wiki/10-自定义组件)。
+`examples/custom_widgets` 与 [自定义组件教程](https://github.com/qianniancn/flowui/wiki/10-自定义组件)。
 
 `Surface` 也使用同一套 Style API 设置实例几何和绘制属性：
 
@@ -349,7 +349,7 @@ go run ./examples/components
 ## 测试
 
 `uitest` 提供确定性的帧、输入、时间和应用测试工具，用于组件和应用
-测试。它不是应用运行时依赖。教程：[测试](https://github.com/qianniancn/FlowUI/wiki/13-测试)。
+测试。它不是应用运行时依赖。教程：[测试](https://github.com/qianniancn/flowui/wiki/13-测试)。
 
 ```bash
 go test ./...
@@ -362,12 +362,12 @@ go vet ./...
 - `internal/`：运行时、样式、Host、交互、组件、主题等实现。
 - `uitest/`：确定性测试工具。
 - `examples/`：与终态 API 对齐的可运行示例。
-- [项目 Wiki](https://github.com/qianniancn/FlowUI/wiki)：**使用教程**。
+- [项目 Wiki](https://github.com/qianniancn/flowui/wiki)：**使用教程**。
 - [`docs/architecture.md`](docs/architecture.md)：依赖方向、状态归属、浮层行为。
 
 应用应使用 `ui`，不要直接导入 `internal` 包。日常用法优先看
-[使用教程](https://github.com/qianniancn/FlowUI/wiki)、`examples/` 与
-`go doc github.com/qianniancn/FlowUI/ui`。
+[使用教程](https://github.com/qianniancn/flowui/wiki)、`examples/` 与
+`go doc github.com/qianniancn/flowui/ui`。
 
 ## 许可证
 

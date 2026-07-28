@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/togglebutton"
+import "github.com/qianniancn/flowui/internal/components/togglebutton"
 
 type ToggleButtonWidget = togglebutton.ToggleButtonWidget
 type ToggleButtonVariant = togglebutton.ToggleButtonVariant

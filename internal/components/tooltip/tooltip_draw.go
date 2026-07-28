@@ -7,9 +7,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/overlay"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func drawTooltipSurface(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int, style tooltipStyle) {

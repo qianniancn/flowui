@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct{ selected string }

@@ -7,8 +7,8 @@ import (
 	"sort"
 
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type resolvedPoint struct {

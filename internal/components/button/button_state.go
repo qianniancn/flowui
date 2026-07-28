@@ -1,6 +1,6 @@
 package button
 
-import "github.com/qianniancn/FlowUI/internal/theme"
+import "github.com/qianniancn/flowui/internal/theme"
 
 func buttonPressedScale(theme *theme.Theme, size ButtonSize) float32 {
 	switch size {

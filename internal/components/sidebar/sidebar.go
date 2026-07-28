@@ -5,10 +5,10 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // Item describes one destination in a Sidebar.

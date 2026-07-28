@@ -16,14 +16,14 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	inputui "github.com/qianniancn/FlowUI/internal/components/input"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/components/nav"
-	selectui "github.com/qianniancn/FlowUI/internal/components/select"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	inputui "github.com/qianniancn/flowui/internal/components/input"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/nav"
+	selectui "github.com/qianniancn/flowui/internal/components/select"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type tableProbe struct {

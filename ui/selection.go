@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/checkbox"
-	"github.com/qianniancn/FlowUI/internal/components/radiogroup"
-	"github.com/qianniancn/FlowUI/internal/components/switches"
+	"github.com/qianniancn/flowui/internal/components/checkbox"
+	"github.com/qianniancn/flowui/internal/components/radiogroup"
+	"github.com/qianniancn/flowui/internal/components/switches"
 )
 
 type CheckboxWidget = checkbox.CheckboxWidget

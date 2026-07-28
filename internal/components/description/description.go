@@ -3,12 +3,12 @@ package description
 import (
 	"gioui.org/layout"
 	"gioui.org/text"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	componenttext "github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	componenttext "github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 )
 
 // DescriptionWidget provides supporting text for a form field or control.

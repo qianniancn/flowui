@@ -7,7 +7,7 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // ScopeWidget installs shortcuts for its child subtree.

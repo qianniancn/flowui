@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/components/gantt"
+	"github.com/qianniancn/flowui/internal/components/gantt"
 )
 
 type GanttChartWidget = gantt.Widget

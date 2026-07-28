@@ -8,10 +8,10 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type ProgressBarWidget struct {

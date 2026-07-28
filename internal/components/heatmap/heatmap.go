@@ -16,14 +16,14 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	stateutil "github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type Widget struct {

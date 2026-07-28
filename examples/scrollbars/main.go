@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

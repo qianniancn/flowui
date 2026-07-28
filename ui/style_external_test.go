@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/ui"
-	"github.com/qianniancn/FlowUI/uitest"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/uitest"
 )
 
 func TestResolveStyleSupportsCustomWidgets(t *testing.T) {

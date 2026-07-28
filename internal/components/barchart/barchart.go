@@ -8,11 +8,11 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // Series describes one category-based bar series.

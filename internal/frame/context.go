@@ -11,10 +11,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/state"
-	"github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/locale"
+	"github.com/qianniancn/flowui/internal/state"
+	"github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 // Context holds framework state for a running window.

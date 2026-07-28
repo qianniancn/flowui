@@ -3,7 +3,7 @@ package combobox
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func comboBoxItemTextColor(theme *theme.Theme, disabled bool) color.NRGBA {

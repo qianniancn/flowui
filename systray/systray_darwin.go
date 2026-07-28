@@ -7,7 +7,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/qianniancn/FlowUI/internal/sys/darwin"
+	"github.com/qianniancn/flowui/internal/sys/darwin"
 )
 
 type macosSystemTray struct {

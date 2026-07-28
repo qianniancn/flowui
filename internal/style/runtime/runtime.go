@@ -9,10 +9,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 const stateSlot = "style-runtime"

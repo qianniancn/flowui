@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/overlay"
 )
 
 type TooltipWidget = tooltip.TooltipWidget

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type ToggleButtonVariant uint8

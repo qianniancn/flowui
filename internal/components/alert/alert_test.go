@@ -12,11 +12,11 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/button"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

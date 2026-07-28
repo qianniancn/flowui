@@ -14,14 +14,14 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/components/checkbox"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/components/spinner"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/components/checkbox"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/spinner"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/state"
 )
 
 type tableColumns struct {

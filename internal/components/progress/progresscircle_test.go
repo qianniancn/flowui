@@ -10,9 +10,9 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestProgressCircleRatioAndSemantics(t *testing.T) {

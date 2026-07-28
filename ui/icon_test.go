@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

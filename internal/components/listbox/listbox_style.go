@@ -3,8 +3,8 @@ package listbox
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type listBoxItemStyle struct {

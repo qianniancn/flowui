@@ -10,10 +10,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 const menuSubmenuOpenDelay = 100 * time.Millisecond

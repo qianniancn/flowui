@@ -8,10 +8,10 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestButtonGroupInheritsOptionsAndPreservesButtonOverrides(t *testing.T) {

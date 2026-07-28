@@ -3,10 +3,10 @@ package dropdown
 import (
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type SelectionMode = menu.SelectionMode

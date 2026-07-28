@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func TestMeterDelegatesToProgressBar(t *testing.T) {

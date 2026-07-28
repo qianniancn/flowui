@@ -9,13 +9,13 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/interact"
-	flowlayout "github.com/qianniancn/FlowUI/internal/layout"
-	"github.com/qianniancn/FlowUI/internal/render"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
+	flowlayout "github.com/qianniancn/flowui/internal/layout"
+	"github.com/qianniancn/flowui/internal/render"
+	stateutil "github.com/qianniancn/flowui/internal/state"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 )
 
 type Align = flowlayout.Align

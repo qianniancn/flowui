@@ -9,10 +9,10 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 )
 
 const stateSlotPieChart = "pie-chart"

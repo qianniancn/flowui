@@ -10,8 +10,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/icon"
+	"github.com/qianniancn/flowui/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

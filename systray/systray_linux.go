@@ -19,8 +19,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
-	"github.com/qianniancn/FlowUI/internal/sys/linux/dbus/menu"
-	"github.com/qianniancn/FlowUI/internal/sys/linux/dbus/notifier"
+	"github.com/qianniancn/flowui/internal/sys/linux/dbus/menu"
+	"github.com/qianniancn/flowui/internal/sys/linux/dbus/notifier"
 )
 
 const (

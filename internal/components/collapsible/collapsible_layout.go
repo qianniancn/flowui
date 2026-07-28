@@ -11,11 +11,11 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
-	"github.com/qianniancn/FlowUI/internal/animation"
-	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/animation"
+	"github.com/qianniancn/flowui/internal/components/button"
+	"github.com/qianniancn/flowui/internal/components/icon"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

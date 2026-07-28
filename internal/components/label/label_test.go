@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestStyleStates(t *testing.T) {

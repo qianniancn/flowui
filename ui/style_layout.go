@@ -2,7 +2,7 @@ package ui
 
 import (
 	"gioui.org/layout"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 )
 
 // LayoutResolvedStyle renders a Style returned by ResolveStyle or

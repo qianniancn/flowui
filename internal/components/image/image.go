@@ -4,8 +4,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowlayout "github.com/qianniancn/FlowUI/internal/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowlayout "github.com/qianniancn/flowui/internal/layout"
 )
 
 // Fit controls how an image is scaled inside its layout bounds.

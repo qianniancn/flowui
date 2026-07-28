@@ -12,8 +12,8 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/ui"
-	"github.com/qianniancn/FlowUI/uitest"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/uitest"
 )
 
 func TestHarnessRoutesPointerAndKeyboardClicks(t *testing.T) {

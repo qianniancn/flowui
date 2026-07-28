@@ -1,6 +1,6 @@
 package ui_test
 
-import "github.com/qianniancn/FlowUI/ui"
+import "github.com/qianniancn/flowui/ui"
 
 func ExampleLinearGradient() {
 	gradient := ui.LinearGradient(

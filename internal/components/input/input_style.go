@@ -2,9 +2,9 @@ package input
 
 import (
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/field"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/field"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type inputStyle = field.Colors

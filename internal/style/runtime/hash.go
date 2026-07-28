@@ -3,8 +3,8 @@ package runtime
 import (
 	"hash/fnv"
 
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/style"
 )
 
 func hashStyleLayers(

@@ -5,8 +5,8 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/components/optionrow"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/optionrow"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 const dropdownPressDuration = 250 * time.Millisecond

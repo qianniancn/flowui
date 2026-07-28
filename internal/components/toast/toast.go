@@ -6,9 +6,9 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/button"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/button"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type ToastVariant uint8

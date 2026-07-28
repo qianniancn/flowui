@@ -8,7 +8,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/flowui/internal/render"
 )
 
 type ShadowShapeKind = render.ShadowShapeKind

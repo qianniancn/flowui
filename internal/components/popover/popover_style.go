@@ -3,7 +3,7 @@ package popover
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type popoverStyle struct {

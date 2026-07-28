@@ -3,7 +3,7 @@ package runtime
 import (
 	"sync"
 
-	"github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/style"
 )
 
 // cascadeCache provides LRU caching for resolved style cascade results.

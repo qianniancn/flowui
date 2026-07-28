@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/qianniancn/FlowUI/examples/modules/counter"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/examples/modules/counter"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {

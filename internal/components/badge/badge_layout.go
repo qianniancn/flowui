@@ -6,9 +6,9 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	textui "github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	textui "github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type recordedBadgeChild struct {

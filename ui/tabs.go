@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/tabs"
+import "github.com/qianniancn/flowui/internal/components/tabs"
 
 type TabItem = tabs.TabItem
 type TabsVariant = tabs.TabsVariant

@@ -2,7 +2,7 @@
 
 package locale
 
-import "github.com/qianniancn/FlowUI/internal/sys/windows"
+import "github.com/qianniancn/flowui/internal/sys/windows"
 
 func systemLocaleName() string {
 	return windows.SystemLocaleName()

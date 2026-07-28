@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/statusbar"
+import "github.com/qianniancn/flowui/internal/components/statusbar"
 
 type StatusBarWidget = statusbar.Widget
 

@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/dropdown"
+	"github.com/qianniancn/flowui/internal/components/dropdown"
 )
 
 type DropdownWidget = dropdown.Widget

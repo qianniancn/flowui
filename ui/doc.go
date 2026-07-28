@@ -6,5 +6,5 @@
 //
 // Import this package as:
 //
-//	import "github.com/qianniancn/FlowUI/ui"
+//	import "github.com/qianniancn/flowui/ui"
 package ui

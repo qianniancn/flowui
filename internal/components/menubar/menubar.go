@@ -4,11 +4,11 @@ import (
 	"unicode"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/components/nav"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/nav"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type Orientation uint8

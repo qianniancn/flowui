@@ -1,6 +1,6 @@
 package host
 
-import "github.com/qianniancn/FlowUI/internal/frame"
+import "github.com/qianniancn/flowui/internal/frame"
 
 // AssociationPreparer walks composite children to register field semantics.
 // layout package registers the full walker at init to avoid import cycles.

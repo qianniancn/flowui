@@ -9,9 +9,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
 )
 
 func (d Widget) registerRootOverlay(ctx *frame.Context, state *dropdownState, open bool, progress float32, disabled bool) {

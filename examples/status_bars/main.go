@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 	lucide "github.com/qianniancn/flowui-icons-lucide"
 )
 

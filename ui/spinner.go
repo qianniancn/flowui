@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/spinner"
+import "github.com/qianniancn/flowui/internal/components/spinner"
 
 type SpinnerWidget = spinner.SpinnerWidget
 type SpinnerColor = spinner.SpinnerColor

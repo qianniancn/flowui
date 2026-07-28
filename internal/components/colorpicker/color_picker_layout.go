@@ -13,12 +13,12 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/components/input"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/components/input"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
+	"github.com/qianniancn/flowui/internal/overlay"
+	"github.com/qianniancn/flowui/internal/state"
 )
 
 func (picker ColorPickerWidget) layoutTrigger(ctx *frame.Context, gtx layout.Context, pickerState *colorPickerState, enabled bool) layout.Dimensions {

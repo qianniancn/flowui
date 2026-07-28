@@ -5,8 +5,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 )
 
 const stateSlotSidebar = "sidebar"

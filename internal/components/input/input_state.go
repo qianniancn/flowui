@@ -1,9 +1,9 @@
 package input
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/disclosure"
-	"github.com/qianniancn/FlowUI/internal/field"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/components/disclosure"
+	"github.com/qianniancn/flowui/internal/field"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type inputState struct {

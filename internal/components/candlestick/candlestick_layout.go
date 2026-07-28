@@ -9,8 +9,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type axisTick struct {

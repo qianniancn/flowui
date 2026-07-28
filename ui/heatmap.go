@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/components/heatmap"
+	"github.com/qianniancn/flowui/internal/components/heatmap"
 )
 
 type HeatmapWidget = heatmap.Widget

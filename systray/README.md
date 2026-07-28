@@ -27,7 +27,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/qianniancn/FlowUI/systray"
+	"github.com/qianniancn/flowui/systray"
 )
 
 func main() {

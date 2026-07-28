@@ -2,7 +2,7 @@ package main
 
 import (
 	"gioui.org/font"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func View(_ *ui.Context, _ struct{}, _ ui.Send[struct{}]) ui.Widget {

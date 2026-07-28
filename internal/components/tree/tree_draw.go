@@ -11,9 +11,9 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/components/icon"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/theme"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

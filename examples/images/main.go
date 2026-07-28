@@ -6,8 +6,8 @@ import (
 	"image/jpeg"
 
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/assets/images"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/assets/images"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {

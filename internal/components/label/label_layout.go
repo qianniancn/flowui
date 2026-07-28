@@ -4,9 +4,9 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func (l LabelWidget) layoutContent(ctx *frame.Context, gtx layout.Context, resolved flowstyle.ResolvedStyle, required color.NRGBA) layout.Dimensions {

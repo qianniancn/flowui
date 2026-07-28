@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/avatar"
+import "github.com/qianniancn/flowui/internal/components/avatar"
 
 type AvatarWidget = avatar.Widget
 type AvatarColor = avatar.Color

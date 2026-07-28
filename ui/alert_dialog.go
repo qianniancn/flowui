@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/alertdialog"
+import "github.com/qianniancn/flowui/internal/components/alertdialog"
 
 type AlertDialogWidget = alertdialog.Widget
 type AlertDialogStatus = alertdialog.Status

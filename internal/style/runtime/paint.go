@@ -3,8 +3,8 @@ package runtime
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/style"
 )
 
 func Brush(source style.PaintSource) (render.Brush, bool) {

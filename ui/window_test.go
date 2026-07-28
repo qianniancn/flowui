@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/app"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func TestWindowSpecUsesIndependentIdentity(t *testing.T) {

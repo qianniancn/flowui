@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/style"
 )
 
 func TestTokenCache(t *testing.T) {

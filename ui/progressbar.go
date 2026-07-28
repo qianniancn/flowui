@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/progress"
+import "github.com/qianniancn/flowui/internal/components/progress"
 
 type ProgressBarWidget = progress.ProgressBarWidget
 type ProgressBarColor = progress.ProgressBarColor

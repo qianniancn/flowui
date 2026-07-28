@@ -5,12 +5,12 @@ import (
 
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
-	imageview "github.com/qianniancn/FlowUI/internal/components/image"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	textui "github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/icon"
+	imageview "github.com/qianniancn/flowui/internal/components/image"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	textui "github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	"gioui.org/io/key"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // ShortcutModifier describes modifiers required by a keyboard shortcut.

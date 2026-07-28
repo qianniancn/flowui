@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"github.com/qianniancn/FlowUI/internal/components/modal"
-	"github.com/qianniancn/FlowUI/internal/components/popover"
-	"github.com/qianniancn/FlowUI/internal/overlay"
+	"github.com/qianniancn/flowui/internal/components/modal"
+	"github.com/qianniancn/flowui/internal/components/popover"
+	"github.com/qianniancn/flowui/internal/overlay"
 )
 
 type PopoverPlacement = overlay.PopoverPlacement

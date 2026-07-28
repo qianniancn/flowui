@@ -11,7 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func drawPieSlices(gtx layout.Context, slices []resolvedSlice, geometry chartGeometry, hoveredKey string, emphasis float32) {

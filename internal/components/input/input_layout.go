@@ -2,10 +2,10 @@ package input
 
 import (
 	"gioui.org/layout"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/field"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/field"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func (i InputWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *inputState, resolved flowstyle.ResolvedStyle, enabled bool, child layout.Widget) layout.Dimensions {

@@ -6,7 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func drawMenubarTrigger(gtx layout.Context, tokens theme.MenubarTheme, size image.Point, style menubarTriggerStyle, focusOpacity float32) {

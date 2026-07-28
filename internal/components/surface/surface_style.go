@@ -4,8 +4,8 @@ import (
 	"image/color"
 
 	"gioui.org/unit"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type surfaceStyle struct {

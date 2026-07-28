@@ -3,7 +3,7 @@ package progress
 import (
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/flowui/internal/render"
 )
 
 func progressBarIndeterminateOffset(now time.Time, fillWidth int, period time.Duration) int {

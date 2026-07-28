@@ -7,12 +7,12 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/components/description"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
+	"github.com/qianniancn/flowui/internal/components/description"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 )
 
 func (s SwitchWidget) layoutContent(ctx *frame.Context, gtx layout.Context, style switchStyle, size switchSizeStyle, checked bool) layout.Dimensions {

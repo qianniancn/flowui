@@ -3,7 +3,7 @@ package layoutui
 import (
 	"reflect"
 
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type fieldAssociationPreparer interface {

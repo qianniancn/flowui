@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func TestMoveTreeItemAcrossLevels(t *testing.T) {

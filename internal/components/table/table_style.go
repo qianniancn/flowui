@@ -3,8 +3,8 @@ package table
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/render"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/render"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type tableStyle struct {

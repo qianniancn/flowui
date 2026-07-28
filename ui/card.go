@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/card"
+import "github.com/qianniancn/flowui/internal/components/card"
 
 type CardVariant = card.CardVariant
 type CardWidget = card.CardWidget

@@ -7,9 +7,9 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/surface"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/surface"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 const (

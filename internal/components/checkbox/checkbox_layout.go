@@ -2,11 +2,11 @@ package checkbox
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/description"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/description"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func (c CheckboxWidget) layoutContent(ctx *frame.Context, gtx layout.Context, options ControlOptions, indicatorState IndicatorState, style checkboxResolvedStyle) layout.Dimensions {

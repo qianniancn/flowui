@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"gioui.org/io/input"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestTweenSpringApproachesTarget(t *testing.T) {

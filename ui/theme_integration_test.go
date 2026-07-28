@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func TestThemeControlsButtonHeight(t *testing.T) {

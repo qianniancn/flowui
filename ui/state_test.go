@@ -3,8 +3,8 @@ package ui
 import (
 	"testing"
 
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
 )
 
 type customFrameState struct {

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianniancn/FlowUI/examples/modules/counter"
-	"github.com/qianniancn/FlowUI/uitest"
+	"github.com/qianniancn/flowui/examples/modules/counter"
+	"github.com/qianniancn/flowui/uitest"
 )
 
 func TestChildCommandReturnsThroughParentUpdate(t *testing.T) {

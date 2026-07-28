@@ -5,7 +5,7 @@ import (
 
 	"gioui.org/font"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type tabsListStyle struct {

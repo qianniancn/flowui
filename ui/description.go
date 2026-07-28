@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/description"
+import "github.com/qianniancn/flowui/internal/components/description"
 
 type DescriptionWidget = description.DescriptionWidget
 

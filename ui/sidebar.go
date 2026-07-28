@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/sidebar"
+import "github.com/qianniancn/flowui/internal/components/sidebar"
 
 type SidebarWidget = sidebar.Widget
 type SidebarItem = sidebar.Item

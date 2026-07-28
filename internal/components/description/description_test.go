@@ -3,7 +3,7 @@ package description
 import (
 	"testing"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestStyleUsesMutedForeground(t *testing.T) {

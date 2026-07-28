@@ -9,8 +9,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
 )
 
 func TestImageFitModesMapToGio(t *testing.T) {

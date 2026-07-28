@@ -2,7 +2,7 @@ package ui
 
 import (
 	giotext "gioui.org/text"
-	textui "github.com/qianniancn/FlowUI/internal/components/text"
+	textui "github.com/qianniancn/flowui/internal/components/text"
 )
 
 type TextWidget = textui.Widget

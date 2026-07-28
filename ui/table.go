@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/table"
+import "github.com/qianniancn/flowui/internal/components/table"
 
 type TableWidget = table.Widget
 type TableColumn = table.Column

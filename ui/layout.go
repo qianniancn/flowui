@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/layout"
+import "github.com/qianniancn/flowui/internal/components/layout"
 
 type AspectRatioWidget = layoutui.AspectRatioWidget
 type BoxWidget = layoutui.BoxWidget

@@ -3,11 +3,11 @@ package ui
 import (
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/components/combobox"
-	"github.com/qianniancn/FlowUI/internal/components/datepicker"
-	"github.com/qianniancn/FlowUI/internal/components/input"
-	"github.com/qianniancn/FlowUI/internal/components/listbox"
-	"github.com/qianniancn/FlowUI/internal/components/select"
+	"github.com/qianniancn/flowui/internal/components/combobox"
+	"github.com/qianniancn/flowui/internal/components/datepicker"
+	"github.com/qianniancn/flowui/internal/components/input"
+	"github.com/qianniancn/flowui/internal/components/listbox"
+	"github.com/qianniancn/flowui/internal/components/select"
 )
 
 type InputWidget = input.InputWidget

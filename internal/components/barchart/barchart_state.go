@@ -6,10 +6,10 @@ import (
 	"gioui.org/f32"
 	"gioui.org/gesture"
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/components/chart"
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	stateutil "github.com/qianniancn/FlowUI/internal/state"
+	"github.com/qianniancn/flowui/internal/components/chart"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 )
 
 const stateSlotBarChart = "bar-chart"

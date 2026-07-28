@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/style"
+import "github.com/qianniancn/flowui/internal/style"
 
 func LinearGradient(stops ...GradientStop) Gradient {
 	return style.LinearGradient(stops...)

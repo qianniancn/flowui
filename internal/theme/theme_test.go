@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestDefaultMotionTheme(t *testing.T) {

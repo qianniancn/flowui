@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/toast"
+import "github.com/qianniancn/flowui/internal/components/toast"
 
 type ToastItem = toast.ToastItem
 type ToastProviderWidget = toast.ToastProviderWidget

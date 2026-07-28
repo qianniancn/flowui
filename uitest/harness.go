@@ -13,10 +13,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	internalocale "github.com/qianniancn/FlowUI/internal/locale"
-	internaltheme "github.com/qianniancn/FlowUI/internal/theme"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/internal/frame"
+	internalocale "github.com/qianniancn/flowui/internal/locale"
+	internaltheme "github.com/qianniancn/flowui/internal/theme"
+	"github.com/qianniancn/flowui/ui"
 )
 
 // Config controls a Harness. Size must be positive. A nil Theme uses the

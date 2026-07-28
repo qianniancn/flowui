@@ -5,7 +5,7 @@ package systray
 import (
 	"syscall"
 
-	"github.com/qianniancn/FlowUI/internal/sys/windows"
+	"github.com/qianniancn/flowui/internal/sys/windows"
 )
 
 type windowsMenu struct {

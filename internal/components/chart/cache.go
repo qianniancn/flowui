@@ -2,7 +2,7 @@ package chart
 
 import (
 	"gioui.org/unit"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 // DataCache caches resolved chart data by widget version, theme, and metric.

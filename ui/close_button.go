@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/closebutton"
+import "github.com/qianniancn/flowui/internal/components/closebutton"
 
 type CloseButtonWidget = closebutton.CloseButtonWidget
 

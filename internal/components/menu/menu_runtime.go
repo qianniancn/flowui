@@ -2,7 +2,7 @@ package menu
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 // Runtime binds a Menu widget to one owner-specific state instance.

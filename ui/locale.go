@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/locale"
+import "github.com/qianniancn/flowui/internal/locale"
 
 // Language identifies the language used by localized FlowUI widgets.
 type Language = locale.Language

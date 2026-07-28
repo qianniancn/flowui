@@ -1,6 +1,6 @@
 package main
 
-import "github.com/qianniancn/FlowUI/ui"
+import "github.com/qianniancn/flowui/ui"
 
 type Model struct {
 	Email     string

@@ -4,7 +4,7 @@ import (
 	"image"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func layoutTrackedInset(ctx *frame.Context, gtx layout.Context, inset layout.Inset, child layout.Widget) layout.Dimensions {

@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/chart"
+import "github.com/qianniancn/flowui/internal/components/chart"
 
 // ChartDatum describes one visible value in a chart selection.
 type ChartDatum = chart.Datum

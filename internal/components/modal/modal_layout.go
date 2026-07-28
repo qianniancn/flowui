@@ -11,14 +11,14 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/internal/components/closebutton"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/components/text"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/overlay"
-	"github.com/qianniancn/FlowUI/internal/render"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
-	styleruntime "github.com/qianniancn/FlowUI/internal/style/runtime"
+	"github.com/qianniancn/flowui/internal/components/closebutton"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/components/text"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/overlay"
+	"github.com/qianniancn/flowui/internal/render"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 )
 
 func (m ModalWidget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *modalState, progress float32, contentEnabled bool) layout.Dimensions {

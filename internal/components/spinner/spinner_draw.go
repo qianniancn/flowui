@@ -9,7 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
-	"github.com/qianniancn/FlowUI/internal/render"
+	"github.com/qianniancn/flowui/internal/render"
 )
 
 type spinnerGeometry struct {

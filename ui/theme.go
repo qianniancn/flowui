@@ -2,7 +2,7 @@ package ui
 
 import (
 	"gioui.org/widget/material"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type Theme = theme.Theme

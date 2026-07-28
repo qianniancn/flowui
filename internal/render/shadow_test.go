@@ -9,7 +9,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/theme"
+	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestThemeShadowResolvesConfiguredLayers(t *testing.T) {

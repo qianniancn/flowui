@@ -4,8 +4,8 @@ package host
 
 import (
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 // LayoutBox lays out a pre-resolved non-interactive box.

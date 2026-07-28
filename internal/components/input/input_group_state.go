@@ -1,6 +1,6 @@
 package input
 
-import "github.com/qianniancn/FlowUI/internal/frame"
+import "github.com/qianniancn/flowui/internal/frame"
 
 type inputGroupState struct {
 	inputState

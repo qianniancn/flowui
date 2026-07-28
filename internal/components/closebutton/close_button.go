@@ -5,12 +5,12 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/qianniancn/FlowUI/internal/components/icon"
-	layoutui "github.com/qianniancn/FlowUI/internal/components/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/interact"
-	"github.com/qianniancn/FlowUI/internal/locale"
-	flowstyle "github.com/qianniancn/FlowUI/internal/style"
+	"github.com/qianniancn/flowui/internal/components/icon"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
+	"github.com/qianniancn/flowui/internal/locale"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

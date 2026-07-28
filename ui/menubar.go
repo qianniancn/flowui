@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/menubar"
+import "github.com/qianniancn/flowui/internal/components/menubar"
 
 type MenubarWidget = menubar.Widget
 type MenubarItem = menubar.Item

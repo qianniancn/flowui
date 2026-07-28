@@ -10,13 +10,13 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/FlowUI/internal/components/button"
-	inputui "github.com/qianniancn/FlowUI/internal/components/input"
-	"github.com/qianniancn/FlowUI/internal/components/menu"
-	"github.com/qianniancn/FlowUI/internal/components/togglebutton"
-	"github.com/qianniancn/FlowUI/internal/components/tooltip"
-	"github.com/qianniancn/FlowUI/internal/frame"
-	"github.com/qianniancn/FlowUI/internal/locale"
+	"github.com/qianniancn/flowui/internal/components/button"
+	inputui "github.com/qianniancn/flowui/internal/components/input"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/togglebutton"
+	"github.com/qianniancn/flowui/internal/components/tooltip"
+	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/locale"
 )
 
 func TestKeyShortcutNormalizesNamesAndModifiers(t *testing.T) {

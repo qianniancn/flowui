@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 type AspectRatioWidget struct {

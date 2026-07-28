@@ -13,7 +13,7 @@ import (
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
 )
 

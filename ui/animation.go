@@ -5,7 +5,7 @@ import (
 	"image/color"
 
 	"gioui.org/f32"
-	"github.com/qianniancn/FlowUI/internal/animation"
+	"github.com/qianniancn/flowui/internal/animation"
 )
 
 // Easing maps normalized time to animation progress.

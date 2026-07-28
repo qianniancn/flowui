@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/badge"
+import "github.com/qianniancn/flowui/internal/components/badge"
 
 type BadgeWidget = badge.Widget
 type BadgeColor = badge.Color

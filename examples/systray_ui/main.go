@@ -9,8 +9,8 @@ import (
 	"image/png"
 	"sync"
 
-	"github.com/qianniancn/FlowUI/systray"
-	"github.com/qianniancn/FlowUI/ui"
+	"github.com/qianniancn/flowui/systray"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Controller struct {

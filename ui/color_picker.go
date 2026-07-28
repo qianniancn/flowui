@@ -3,7 +3,7 @@ package ui
 import (
 	"image/color"
 
-	"github.com/qianniancn/FlowUI/internal/components/colorpicker"
+	"github.com/qianniancn/flowui/internal/components/colorpicker"
 )
 
 type ColorPickerWidget = colorpicker.ColorPickerWidget

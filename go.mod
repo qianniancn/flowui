@@ -1,4 +1,4 @@
-module github.com/qianniancn/FlowUI
+module github.com/qianniancn/flowui
 
 go 1.26.2
 

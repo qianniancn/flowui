@@ -3,7 +3,7 @@ package input
 import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"github.com/qianniancn/FlowUI/internal/frame"
+	"github.com/qianniancn/flowui/internal/frame"
 )
 
 func (i InputWidget) withSemantics(ctx *frame.Context, key string, enabled bool, child layout.Widget) layout.Widget {

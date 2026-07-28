@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/qianniancn/FlowUI/internal/components/command"
+import "github.com/qianniancn/flowui/internal/components/command"
 
 type Command = command.Command
 type Shortcut = command.Shortcut

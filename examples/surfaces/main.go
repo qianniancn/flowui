@@ -1,10 +1,6 @@
 package main
 
-import (
-	"image/color"
-
-	"github.com/qianniancn/flowui/ui"
-)
+import "github.com/qianniancn/flowui/ui"
 
 type Model struct{}
 type Msg struct{}
@@ -73,8 +69,5 @@ func main() {
 	ui.Run(Model{}, Update, View,
 		ui.Title("FlowUI Surface"),
 		ui.Size(900, 620),
-		ui.CustomizeTheme(func(t *ui.Theme) {
-			t.Palette.Background = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
-		}),
 	)
 }

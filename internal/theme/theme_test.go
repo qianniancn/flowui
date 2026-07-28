@@ -88,6 +88,13 @@ func TestDefaultThemeSyncsMaterialBridge(t *testing.T) {
 	}
 }
 
+func TestDefaultThemeUsesWhiteWindowBackground(t *testing.T) {
+	want := color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+	if got := theme.DefaultTheme().Palette.Background; got != want {
+		t.Fatalf("default window background = %#v, want %#v", got, want)
+	}
+}
+
 func TestDetachMaterialSeparatesBridge(t *testing.T) {
 	source := theme.DefaultTheme()
 	copy := source

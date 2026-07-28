@@ -1142,7 +1142,7 @@ type ColorSwatchPickerTheme struct {
 func DefaultTheme() Theme {
 	theme := Theme{
 		Palette: Palette{
-			Background:                 color.NRGBA{R: 0xf5, G: 0xf5, B: 0xf5, A: 0xff},
+			Background:                 color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 			Surface:                    color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 			SurfaceForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
 			SurfaceSecondary:           color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},

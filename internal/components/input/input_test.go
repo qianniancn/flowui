@@ -147,8 +147,8 @@ func TestInputHeroUIDefaultTheme(t *testing.T) {
 		darkTheme.Palette.DefaultColor() != (color.NRGBA{R: 0x27, G: 0x27, B: 0x2a, A: 0xff}) {
 		t.Fatalf("dark input backgrounds = page %#v primary %#v secondary %#v", darkTheme.Palette.Background, darkTheme.Palette.Surface, darkTheme.Palette.DefaultColor())
 	}
-	if activeTheme.Palette.Background != (color.NRGBA{R: 0xf5, G: 0xf5, B: 0xf5, A: 0xff}) {
-		t.Fatalf("light background = %#v, want HeroUI neutral background", activeTheme.Palette.Background)
+	if activeTheme.Palette.Background != (color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}) {
+		t.Fatalf("light background = %#v, want white window background", activeTheme.Palette.Background)
 	}
 	if activeTheme.Palette.Focus != activeTheme.Palette.Accent {
 		t.Fatalf("focus = %#v, want accent %#v", activeTheme.Palette.Focus, activeTheme.Palette.Accent)

@@ -198,3 +198,50 @@ func LerpRect(from, to image.Rectangle, progress float32) image.Rectangle {
 func Tween(key string, target float32) TweenValue {
 	return animation.Tween(key, target)
 }
+
+// SpringConfig configures a damped spring animation.
+type SpringConfig = animation.SpringConfig
+
+// DefaultSpring returns a balanced desktop spring.
+func DefaultSpring() SpringConfig {
+	return animation.DefaultSpring()
+}
+
+// SpringSnappy is a quick, low-overshoot spring for small UI motions.
+func SpringSnappy() SpringConfig {
+	return animation.SpringSnappy()
+}
+
+// SpringGentle is a soft spring for larger layout moves.
+func SpringGentle() SpringConfig {
+	return animation.SpringGentle()
+}
+
+// SpringBouncy overshoots noticeably before settling.
+func SpringBouncy() SpringConfig {
+	return animation.SpringBouncy()
+}
+
+// TimelineValue is a keyed multi-keyframe animation.
+type TimelineValue = animation.TimelineValue
+
+// Timeline creates a keyed multi-keyframe animation.
+func Timeline(key string) TimelineValue {
+	return animation.Timeline(key)
+}
+
+// AnimateLayoutWidget animates layout dimension changes.
+type AnimateLayoutWidget = animation.AnimateLayoutWidget
+
+// AnimateLayout wraps child and animates reported size changes.
+func AnimateLayout(key string, child Widget) AnimateLayoutWidget {
+	return animation.AnimateLayout(key, child)
+}
+
+// RectValue animates rectangle edges.
+type RectValue = animation.RectValue
+
+// AnimateRect starts a keyed rectangle animation toward target.
+func AnimateRect(key string, target image.Rectangle) RectValue {
+	return animation.AnimateRect(key, target)
+}

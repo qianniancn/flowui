@@ -134,7 +134,7 @@ func colorLuminance(value color.NRGBA) float64 {
 	return (.2126*float64(value.R) + .7152*float64(value.G) + .0722*float64(value.B)) / 255
 }
 
-func drawColorArea(gtx layout.Context, size image.Point, value hsvColor, radius, thumbSize, thumbBorder int, focus float32, focusColor color.NRGBA, showDots bool, dotSize, dotGap int) {
+func drawColorArea(gtx layout.Context, size image.Point, value hsvColor, radius, thumbSize, thumbBorder, focusWidth int, focus float32, focusColor color.NRGBA, showDots bool, dotSize, dotGap int) {
 	rect := image.Rectangle{Max: size}
 	hue := hsvToNRGBA(hsvColor{h: value.h, s: 1, v: 1, a: 1})
 	clipped := clip.UniformRRect(rect, radius).Push(gtx.Ops)
@@ -164,7 +164,7 @@ func drawColorArea(gtx layout.Context, size image.Point, value hsvColor, radius,
 		int(float64(max(size.Y-1, 0))*(1-value.v)+0.5),
 	)
 	thumbColor := hsvToNRGBA(hsvColor{h: value.h, s: value.s, v: value.v, a: 1})
-	drawColorThumb(gtx, center, thumbSize, thumbBorder, thumbColor, focus, focusColor)
+	drawColorThumb(gtx, center, thumbSize, thumbBorder, focusWidth, thumbColor, focus, focusColor)
 }
 
 func drawColorAreaDots(gtx layout.Context, rect image.Rectangle, radius, size, gap int) {
@@ -181,13 +181,13 @@ func drawColorAreaDots(gtx layout.Context, rect image.Rectangle, radius, size, g
 	}
 }
 
-func drawHueSlider(gtx layout.Context, size image.Point, value hsvColor, thumbSize, thumbBorder int, focus float32, focusColor color.NRGBA) {
+func drawHueSlider(gtx layout.Context, size image.Point, value hsvColor, thumbSize, thumbBorder, focusWidth int, focus float32, focusColor color.NRGBA) {
 	rect := image.Rectangle{Max: size}
 	drawHueSliderTrack(gtx, rect, min(size.X, size.Y)/2)
 	drawRoundedStroke(gtx, rect, min(size.X, size.Y)/2, 1, color.NRGBA{A: 26})
 	center := colorSliderCenter(size, value.h)
 	thumbColor := hsvToNRGBA(hsvColor{h: value.h, s: 1, v: 1, a: 1})
-	drawColorThumb(gtx, center, thumbSize, thumbBorder, thumbColor, focus, focusColor)
+	drawColorThumb(gtx, center, thumbSize, thumbBorder, focusWidth, thumbColor, focus, focusColor)
 }
 
 func newHueSliderImage() paint.ImageOp {
@@ -214,7 +214,7 @@ func drawHueSliderTrack(gtx layout.Context, rect image.Rectangle, radius int) {
 	clipped.Pop()
 }
 
-func drawAlphaSlider(gtx layout.Context, size image.Point, value color.NRGBA, thumbSize, thumbBorder int, focus float32, focusColor color.NRGBA) {
+func drawAlphaSlider(gtx layout.Context, size image.Point, value color.NRGBA, thumbSize, thumbBorder, focusWidth int, focus float32, focusColor color.NRGBA) {
 	rect := image.Rectangle{Max: size}
 	radius := min(size.X, size.Y) / 2
 	drawCheckerboard(gtx, rect, radius)
@@ -233,7 +233,7 @@ func drawAlphaSlider(gtx layout.Context, size image.Point, value color.NRGBA, th
 	clipped.Pop()
 	drawRoundedStroke(gtx, rect, radius, 1, color.NRGBA{A: 26})
 	center := colorSliderCenter(size, float64(value.A)/255)
-	drawColorThumb(gtx, center, thumbSize, thumbBorder, value, focus, focusColor)
+	drawColorThumb(gtx, center, thumbSize, thumbBorder, focusWidth, value, focus, focusColor)
 }
 
 func colorSliderCenter(size image.Point, value float64) image.Point {
@@ -242,15 +242,15 @@ func colorSliderCenter(size image.Point, value float64) image.Point {
 	return image.Pt(int(edge+clampUnit(value)*length+0.5), size.Y/2)
 }
 
-func drawColorThumb(gtx layout.Context, center image.Point, size, border int, value color.NRGBA, focus float32, focusColor color.NRGBA) {
+func drawColorThumb(gtx layout.Context, center image.Point, size, border, focusWidth int, value color.NRGBA, focus float32, focusColor color.NRGBA) {
 	if size <= 0 {
 		return
 	}
 	if focus > 0 {
 		col := focusColor
 		col.A = byte(float32(col.A)*focus + .5)
-		drawCircle(gtx, center, size+8, col)
-		drawCircle(gtx, center, size+4, color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+		drawCircle(gtx, center, size+focusWidth*4, col)
+		drawCircle(gtx, center, size+focusWidth*2, color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 	}
 	drawCircle(gtx, center, size+2, color.NRGBA{A: 38})
 	drawCircle(gtx, center, size, color.NRGBA{R: 255, G: 255, B: 255, A: 255})

@@ -216,6 +216,7 @@ type ComponentsTheme struct {
 	ComboBox          ComboBoxTheme
 	DatePicker        DatePickerTheme
 	ColorPicker       ColorPickerTheme
+	ColorWheel        ColorWheelTheme
 	ColorArea         ColorAreaTheme
 	ColorField        ColorFieldTheme
 	ColorSlider       ColorSliderTheme
@@ -1085,6 +1086,13 @@ type ColorPickerTheme struct {
 	PanelMaxHeight    unit.Dp
 	ContentGap        unit.Dp
 	CompactContentGap unit.Dp
+}
+
+type ColorWheelTheme struct {
+	Size             unit.Dp
+	ThumbSize        unit.Dp
+	ThumbBorderWidth unit.Dp
+	FocusRingWidth   unit.Dp
 }
 
 type ColorAreaTheme struct {
@@ -2032,6 +2040,12 @@ func DefaultTheme() Theme {
 				PanelMaxHeight:    520,
 				ContentGap:        12,
 				CompactContentGap: 8,
+			},
+			ColorWheel: ColorWheelTheme{
+				Size:             190,
+				ThumbSize:        20,
+				ThumbBorderWidth: 3,
+				FocusRingWidth:   2,
 			},
 			ColorArea: ColorAreaTheme{
 				Size:              224,

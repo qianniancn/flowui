@@ -7,6 +7,7 @@ import (
 )
 
 type ColorPickerWidget = colorpicker.ColorPickerWidget
+type ColorWheelWidget = colorpicker.ColorWheelWidget
 type ColorAreaWidget = colorpicker.ColorAreaWidget
 type ColorFieldWidget = colorpicker.ColorFieldWidget
 type ColorSliderWidget = colorpicker.ColorSliderWidget
@@ -36,6 +37,12 @@ const (
 
 func ColorPicker(key string, value color.NRGBA) ColorPickerWidget {
 	return colorpicker.ColorPicker(key, value)
+}
+
+// ColorWheel creates a controlled hue and saturation picker. Brightness and
+// alpha are preserved from value when the wheel changes.
+func ColorWheel(key string, value color.NRGBA) ColorWheelWidget {
+	return colorpicker.ColorWheel(key, value)
 }
 
 func ColorArea(key string, value color.NRGBA) ColorAreaWidget {

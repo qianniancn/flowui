@@ -165,6 +165,7 @@ func (slider ColorSliderWidget) layoutTrack(ctx *frame.Context, gtx layout.Conte
 	focus := sliderState.control.focusOpacity(ctx, gtx)
 	thumbSize := max(gtx.Dp(tokens.ThumbSize), 1)
 	thumbBorder := max(gtx.Dp(tokens.ThumbBorderWidth), 1)
+	focusWidth := max(gtx.Dp(tokens.FocusRingWidth), 1)
 
 	switch slider.channel {
 	case ColorChannelAlpha:
@@ -179,7 +180,7 @@ func (slider ColorSliderWidget) layoutTrack(ctx *frame.Context, gtx layout.Conte
 		}
 		value := currentColor
 		value.A = uint8(current*255 + .5)
-		drawAlphaSlider(gtx, size, value, thumbSize, thumbBorder, focus, frame.ActiveTheme(ctx).Palette.Focus)
+		drawAlphaSlider(gtx, size, value, thumbSize, thumbBorder, focusWidth, focus, frame.ActiveTheme(ctx).Palette.Focus)
 	default:
 		current := valueState.hsv()
 		if next, changed := sliderState.control.updateAxis(ctx, trackGtx, size, current.h, 1.0/360, enabled); changed {
@@ -188,7 +189,7 @@ func (slider ColorSliderWidget) layoutTrack(ctx *frame.Context, gtx layout.Conte
 			valueState.accept(value, next)
 			slider.dispatch(value)
 		}
-		drawHueSlider(gtx, size, current, thumbSize, thumbBorder, focus, frame.ActiveTheme(ctx).Palette.Focus)
+		drawHueSlider(gtx, size, current, thumbSize, thumbBorder, focusWidth, focus, frame.ActiveTheme(ctx).Palette.Focus)
 	}
 	addColorControlInput(gtx, &sliderState.control, size, enabled, false, slider.resolvedLabel(ctx), slider.output(valueState))
 	return layout.Dimensions{Size: size}

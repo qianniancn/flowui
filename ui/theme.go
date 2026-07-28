@@ -65,6 +65,7 @@ type ModalTheme = theme.ModalTheme
 type ComboBoxTheme = theme.ComboBoxTheme
 type DatePickerTheme = theme.DatePickerTheme
 type ColorPickerTheme = theme.ColorPickerTheme
+type ColorWheelTheme = theme.ColorWheelTheme
 type ColorAreaTheme = theme.ColorAreaTheme
 type ColorFieldTheme = theme.ColorFieldTheme
 type ColorSliderTheme = theme.ColorSliderTheme

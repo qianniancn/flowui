@@ -13,8 +13,8 @@ import (
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
-	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type facadeModel struct {
@@ -43,6 +43,7 @@ func TestStyleBackedWidgetsExposeStyleMethod(t *testing.T) {
 		"Checkbox":          reflect.TypeFor[ui.CheckboxWidget](),
 		"Chip":              reflect.TypeFor[ui.ChipWidget](),
 		"ColorArea":         reflect.TypeFor[ui.ColorAreaWidget](),
+		"ColorWheel":        reflect.TypeFor[ui.ColorWheelWidget](),
 		"ColorField":        reflect.TypeFor[ui.ColorFieldWidget](),
 		"ColorPicker":       reflect.TypeFor[ui.ColorPickerWidget](),
 		"ColorSlider":       reflect.TypeFor[ui.ColorSliderWidget](),
@@ -917,6 +918,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.DateFieldWidget = ui.DateField("date", time.Time{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
 	var _ ui.DateRangePickerWidget = ui.DateRangePicker("range", ui.DateRange{}).Required(true).FullWidth().MinDate(time.Time{}).MaxDate(time.Time{})
 	var _ ui.ColorPickerTheme
+	var _ ui.ColorWheelTheme
 	var _ ui.ButtonGroupTheme
 	var _ ui.ColorAreaTheme
 	var _ ui.ColorFieldTheme
@@ -929,6 +931,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.ShadowsTheme
 	var _ ui.ShadowsTheme = ui.DefaultShadows()
 	var _ = ui.ThemeShadow(ui.ShadowTheme{}, color.NRGBA{}, 1)
+	var _ ui.ColorWheelWidget = ui.ColorWheel("wheel", color.NRGBA{}).Size(180).Label("Color wheel").Disabled(false).OnChange(func(color.NRGBA) {})
 	var _ ui.ColorAreaWidget = ui.ColorArea("area", color.NRGBA{}).ShowDots(true).Disabled(false).OnChange(func(color.NRGBA) {})
 	var _ ui.ColorFieldWidget = ui.ColorField("field", color.NRGBA{}).Swatch(true).Alpha(true).Variant(ui.InputSecondary).FullWidth().OnChange(func(color.NRGBA) {})
 	var _ ui.ColorSliderWidget = ui.ColorSlider("hue", color.NRGBA{}, ui.ColorChannelHue).HideLabel().ShowOutput(false).OnChange(func(color.NRGBA) {})

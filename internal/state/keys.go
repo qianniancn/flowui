@@ -58,6 +58,7 @@ const (
 
 const (
 	KindColorPicker       Kind = "color-picker"
+	KindColorWheel        Kind = "color-wheel"
 	KindColorArea         Kind = "color-area"
 	KindColorField        Kind = "color-field"
 	KindColorSlider       Kind = "color-slider"

@@ -5,8 +5,8 @@ import (
 	"image/color"
 
 	"gioui.org/op/paint"
-	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {

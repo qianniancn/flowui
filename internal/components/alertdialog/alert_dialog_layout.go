@@ -8,10 +8,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	"github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/frame"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type dialogHeader struct {

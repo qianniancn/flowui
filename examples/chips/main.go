@@ -7,8 +7,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct{}

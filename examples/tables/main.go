@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qianniancn/flowui/ui"
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type member struct {

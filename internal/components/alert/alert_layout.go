@@ -7,12 +7,12 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	textui "github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/frame"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func (a Widget) layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {

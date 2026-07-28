@@ -5,13 +5,13 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/locale"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 const (

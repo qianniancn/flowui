@@ -10,9 +10,9 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	"github.com/qianniancn/flowui/internal/theme"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawTableRoot(gtx layout.Context, size image.Point, radius int, col color.NRGBA) {

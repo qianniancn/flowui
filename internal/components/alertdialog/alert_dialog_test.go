@@ -13,11 +13,11 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/modal"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/theme"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 type probeWidget struct {

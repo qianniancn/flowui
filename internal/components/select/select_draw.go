@@ -8,9 +8,9 @@ import (
 	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	"github.com/qianniancn/flowui/internal/theme"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawSelectIndicator(gtx layout.Context, theme *theme.Theme, size image.Point, progress float32, col color.NRGBA) {

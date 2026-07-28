@@ -8,11 +8,11 @@ import (
 	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	"github.com/qianniancn/flowui/internal/components/optionrow"
 	"github.com/qianniancn/flowui/internal/render"
 	"github.com/qianniancn/flowui/internal/theme"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func drawComboBoxPanel(gtx layout.Context, theme *theme.Theme, rect image.Rectangle, radius int) {

@@ -11,6 +11,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/text"
@@ -20,7 +21,6 @@ import (
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 	"github.com/qianniancn/flowui/internal/theme"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 const stateSlotTitleBar = "title-bar"

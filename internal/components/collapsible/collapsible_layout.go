@@ -11,12 +11,12 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/button"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func layoutItem(ctx *frame.Context, gtx layout.Context, state *collapsibleItemState, item Item, expanded, disabled bool) layout.Dimensions {

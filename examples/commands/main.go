@@ -2,8 +2,8 @@ package main
 
 import (
 	"gioui.org/font"
-	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 type Model struct {

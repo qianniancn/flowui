@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
 )
 
 func TestNewIconDataRejectsInvalidIconVG(t *testing.T) {

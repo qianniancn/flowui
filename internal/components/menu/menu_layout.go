@@ -8,6 +8,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/text"
@@ -15,7 +16,6 @@ import (
 	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
-	"github.com/qianniancn/flowui-icons-lucide"
 )
 
 func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuState, interactive bool) layout.Dimensions {

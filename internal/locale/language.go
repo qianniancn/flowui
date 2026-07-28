@@ -1,9 +1,8 @@
 package locale
 
 import (
+	"os"
 	"strings"
-
-	"github.com/qianniancn/FlowUI/internal/platform"
 )
 
 // Language identifies the language used by localized FlowUI widgets.
@@ -24,9 +23,21 @@ func Resolve(language Language) Language {
 	return Detect()
 }
 
+var localeEnvKeys = [...]string{"FLOWUI_LANG", "LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"}
+
 // Detect returns the supported host language or English as a fallback.
 func Detect() Language {
-	language := FromTag(platform.SystemLanguageTag())
+	// Check environment variables first
+	for _, key := range localeEnvKeys {
+		if value := os.Getenv(key); value != "" {
+			language := FromTag(value)
+			if language != LanguageAuto {
+				return language
+			}
+		}
+	}
+	// Fall back to system locale
+	language := FromTag(systemLocaleName())
 	if language != LanguageAuto {
 		return language
 	}

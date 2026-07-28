@@ -20,12 +20,12 @@ func (i InputWidget) styleDeclarations(activeTheme *theme.Theme) (defaults, vari
 	}
 }
 
-func (t TextAreaWidget) styleDeclarations(activeTheme *theme.Theme, minHeight unit.Dp) (defaults, variant, size flowstyle.Style) {
+func (t TextAreaWidget) styleDeclarations(activeTheme *theme.Theme, height unit.Dp) (defaults, variant, size flowstyle.Style) {
 	switch t.variant {
 	case TextAreaSecondary:
-		return flowstyle.Style{}, textAreaDefaultDeclaration(activeTheme, TextAreaSecondary, t.fullWidth, minHeight), flowstyle.Style{}
+		return flowstyle.Style{}, textAreaDefaultDeclaration(activeTheme, TextAreaSecondary, t.fullWidth, height), flowstyle.Style{}
 	default:
-		return textAreaDefaultDeclaration(activeTheme, TextAreaPrimary, t.fullWidth, minHeight), flowstyle.Style{}, flowstyle.Style{}
+		return textAreaDefaultDeclaration(activeTheme, TextAreaPrimary, t.fullWidth, height), flowstyle.Style{}, flowstyle.Style{}
 	}
 }
 
@@ -49,10 +49,10 @@ func inputDefaultDeclaration(activeTheme *theme.Theme, variant InputVariant, ful
 	})
 }
 
-func textAreaDefaultDeclaration(activeTheme *theme.Theme, variant TextAreaVariant, fullWidth bool, minHeight unit.Dp) flowstyle.Style {
+func textAreaDefaultDeclaration(activeTheme *theme.Theme, variant TextAreaVariant, fullWidth bool, height unit.Dp) flowstyle.Style {
 	tokens := activeTheme.Components.TextArea
 	return field.DefaultDeclaration(activeTheme, variant, field.DeclarationOptions{
-		MinHeight: max(tokens.MinHeight, minHeight), Radius: tokens.Radius,
+		Height: max(tokens.MinHeight, height), Radius: tokens.Radius,
 		PaddingX: tokens.PaddingX, PaddingY: tokens.PaddingY,
 		TextSize: tokens.TextSize, LineHeight: tokens.LineHeight,
 		FocusRingWidth: tokens.FocusRingWidth, InvalidOutlineWidth: tokens.InvalidOutlineWidth,

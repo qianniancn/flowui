@@ -3,6 +3,7 @@ package input
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	"gioui.org/io/key"
@@ -82,6 +83,15 @@ func TestTextAreaRowsControlHeight(t *testing.T) {
 	}
 }
 
+func TestTextAreaRowsLimitLongContentHeight(t *testing.T) {
+	dims := TextArea("notes", strings.Repeat("A line of text\n", 100)).
+		Rows(6).
+		Layout(newContext(nil), testLayoutContext())
+	if dims.Size.Y != 136 {
+		t.Fatalf("textarea height = %d, want 136", dims.Size.Y)
+	}
+}
+
 func TestTextAreaFullWidth(t *testing.T) {
 	dims := TextArea("notes", "").FullWidth().Layout(newContext(nil), testLayoutContext())
 	if dims.Size.X != 300 {
@@ -89,7 +99,7 @@ func TestTextAreaFullWidth(t *testing.T) {
 	}
 }
 
-func TestTextAreaFrameKeepsInnerGeometry(t *testing.T) {
+func TestTextAreaFrameConstrainsInnerGeometryToRows(t *testing.T) {
 	var got layout.Constraints
 	child := func(gtx layout.Context) layout.Dimensions {
 		got = gtx.Constraints
@@ -100,8 +110,8 @@ func TestTextAreaFrameKeepsInnerGeometry(t *testing.T) {
 	resolved := resolveInputTestStyle(&activeTheme, textAreaDefaultDeclaration(&activeTheme, TextAreaPrimary, true, 76), flowstyle.StyleState{})
 	state := &textAreaState{}
 	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), state, resolved, true, child)
-	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 184) {
-		t.Fatalf("inner constraints = %#v, want min 276x60 max 276x184", got)
+	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 60) {
+		t.Fatalf("inner constraints = %#v, want fixed 276x60", got)
 	}
 }
 

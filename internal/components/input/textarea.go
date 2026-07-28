@@ -143,8 +143,8 @@ func (t TextAreaWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Di
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.TextArea
 	contentHeight := gtx.Sp(tokens.LineHeight)*t.resolvedRows() + gtx.Dp(tokens.PaddingY)*2
-	minHeight := gtx.Metric.PxToDp(contentHeight)
-	defaults, variant, size := t.styleDeclarations(activeTheme, minHeight)
+	height := gtx.Metric.PxToDp(contentHeight)
+	defaults, variant, size := t.styleDeclarations(activeTheme, height)
 	root := styleruntime.Resolve(ctx, gtx, key, styleState, defaults, variant, size, t.customStyle)
 	placeholder := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, variant, size, t.customStyle)
 	selection := styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, variant, size, t.customStyle)

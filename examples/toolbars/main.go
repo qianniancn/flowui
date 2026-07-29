@@ -19,7 +19,7 @@ type Format struct {
 	Selected bool
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Action:
 		model.Last = string(msg)
@@ -33,6 +33,7 @@ func Update(model *Model, msg Msg) {
 			model.Underline = msg.Selected
 		}
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -119,5 +120,6 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View, ui.Title("FlowUI Toolbar"), ui.Size(860, 620))
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Toolbar"), ui.Size(860, 620))
 }

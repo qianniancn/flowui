@@ -16,11 +16,12 @@ type NameChanged struct {
 	Name string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case NameChanged:
 		m.Name = msg.Name
 	}
+	return nil
 }
 
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -47,8 +48,8 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Form"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Form"),
 		ui.Size(900, 600),
 	)
 }

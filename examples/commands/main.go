@@ -16,7 +16,7 @@ type NewDocument struct{}
 type SaveDocument struct{}
 type ToggleBold struct{}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case NewDocument:
 		model.Bold = false
@@ -31,6 +31,7 @@ func Update(model *Model, msg Msg) {
 			model.Last = "Bold disabled"
 		}
 	}
+	return nil
 }
 
 type applicationCommands struct {
@@ -126,5 +127,6 @@ func applicationMenubar(commands applicationCommands) ui.MenubarWidget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View, ui.Title("FlowUI Commands"), ui.Size(820, 520))
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Commands"), ui.Size(820, 520))
 }

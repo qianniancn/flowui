@@ -10,10 +10,11 @@ type Msg struct {
 	Page int
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Page > 0 {
 		model.Page = msg.Page
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -47,8 +48,8 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{Page: 6}, Update, View,
-		ui.Title("FlowUI Pagination"),
+	ui.Run(ui.NewProgram(Model{Page: 6},
+		Update, View), ui.Title("FlowUI Pagination"),
 		ui.Size(900, 620),
 	)
 }

@@ -17,13 +17,14 @@ type Msg any
 type Navigate string
 type ToggleSidebar struct{}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Navigate:
 		model.selected = string(msg)
 	case ToggleSidebar:
 		model.collapsed = !model.collapsed
 	}
+	return nil
 }
 
 func View(ctx *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -177,11 +178,8 @@ func milestone(name, date string, muted color.NRGBA) ui.Widget {
 }
 
 func main() {
-	ui.Run(
-		Model{selected: "overview"},
-		Update,
-		View,
-		ui.Title("FlowUI Sidebar"),
+	ui.Run(ui.NewProgram(Model{selected: "overview"},
+		Update, View), ui.Title("FlowUI Sidebar"),
 		ui.Size(1080, 700),
 	)
 }

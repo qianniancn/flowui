@@ -35,12 +35,12 @@ type Msg struct {
 	Checked bool
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Field == fieldAll {
 		model.Email = msg.Checked
 		model.Reports = msg.Checked
 		model.Security = msg.Checked
-		return
+		return nil
 	}
 	switch msg.Field {
 	case fieldPrimary:
@@ -60,6 +60,7 @@ func Update(model *Model, msg Msg) {
 	case fieldPlus:
 		model.Plus = msg.Checked
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -148,11 +149,8 @@ func customIndicator(data lucide.Data) func(ui.CheckboxIndicatorState) ui.Widget
 }
 
 func main() {
-	ui.Run(
-		Model{Primary: true, Email: true, Heart: true, Plus: true},
-		Update,
-		View,
-		ui.Title("FlowUI Checkbox"),
+	ui.Run(ui.NewProgram(Model{Primary: true, Email: true, Heart: true, Plus: true},
+		Update, View), ui.Title("FlowUI Checkbox"),
 		ui.Size(900, 760),
 	)
 }

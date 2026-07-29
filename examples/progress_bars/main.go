@@ -203,8 +203,12 @@ func taskColor(progress float64, running bool) ui.ProgressBarColor {
 }
 
 func main() {
-	ui.RunWithSubscriptions(Model{Status: "Ready"}, Update, Subscriptions, View,
-		ui.Title("FlowUI ProgressBar"),
+	ui.Run(ui.Program[Model, Msg]{
+		Init:          func() (Model, ui.Cmd[Msg]) { return Model{Status: "Ready"}, nil },
+		Update:        Update,
+		Subscriptions: Subscriptions,
+		View:          View,
+	}, ui.Title("FlowUI ProgressBar"),
 		ui.Size(900, 720),
 	)
 }

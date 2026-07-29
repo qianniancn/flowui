@@ -10,7 +10,10 @@ import (
 )
 
 func TestWindowSpecUsesIndependentIdentity(t *testing.T) {
-	spec := NewWindow("details", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return Text("Details") }, Title("Details"))
+	spec := NewWindow("details", NewProgram(0,
+		func(*int, int) Cmd[int] { return nil },
+		func(*Context, int, Send[int]) Widget { return Text("Details") },
+	), Title("Details"))
 	if spec.Key() != "details" || spec.run == nil || len(spec.options) != 1 {
 		t.Fatalf("window spec = key %q run %v options %d", spec.Key(), spec.run != nil, len(spec.options))
 	}
@@ -25,7 +28,7 @@ func TestProgramWindowSpec(t *testing.T) {
 			return state.Size.X
 		},
 	}
-	spec := NewProgramWindow("program", program, Title("Program"))
+	spec := NewWindow("program", program, Title("Program"))
 	if spec.Key() != "program" || spec.run == nil || len(spec.options) != 1 {
 		t.Fatalf("program window = key %q run %v options %d", spec.Key(), spec.run != nil, len(spec.options))
 	}
@@ -34,9 +37,10 @@ func TestProgramWindowSpec(t *testing.T) {
 func TestWindowSpecStoresCloseRequestHandler(t *testing.T) {
 	spec := NewWindow(
 		"closable",
-		func() int { return 0 },
-		func(*int, int) {},
-		func(*Context, int, Send[int]) Widget { return nil },
+		NewProgram(0,
+			func(*int, int) Cmd[int] { return nil },
+			func(*Context, int, Send[int]) Widget { return nil },
+		),
 		OnWindowCloseRequest(func() WindowCloseDecision { return WindowCloseCancel }),
 	)
 	if spec.closeRequestHandler == nil || spec.closeRequestHandler() != WindowCloseCancel {
@@ -72,26 +76,16 @@ func TestWindowSpecRejectsInvalidDefinitions(t *testing.T) {
 		make func()
 	}{
 		{"empty key", func() {
-			NewWindow("", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })
+			NewWindow("", NewProgram(0, func(*int, int) Cmd[int] { return nil }, func(*Context, int, Send[int]) Widget { return nil }))
 		}},
-		{"nil initializer", func() {
-			NewWindow[int, int]("main", nil, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })
-		}},
-		{"nil subscription initializer", func() {
-			NewWindowWithSubscriptions[int, int]("main", nil, func(*int, int) Cmd[int] { return nil }, nil, func(*Context, int, Send[int]) Widget { return nil })
+		{"nil program init", func() {
+			NewWindow("main", Program[int, int]{Update: func(*int, int) Cmd[int] { return nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
 		}},
 		{"nil update", func() {
-			NewWindow[int, int]("main", func() int { return 0 }, nil, func(*Context, int, Send[int]) Widget { return nil })
+			NewWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
 		}},
-		{"nil view", func() { NewWindow[int, int]("main", func() int { return 0 }, func(*int, int) {}, nil) }},
-		{"nil program init", func() {
-			NewProgramWindow("main", Program[int, int]{Update: func(*int, int) Cmd[int] { return nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
-		}},
-		{"nil program update", func() {
-			NewProgramWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, View: func(*Context, int, Send[int]) Widget { return nil }})
-		}},
-		{"nil program view", func() {
-			NewProgramWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, Update: func(*int, int) Cmd[int] { return nil }})
+		{"nil view", func() {
+			NewWindow("main", Program[int, int]{Init: func() (int, Cmd[int]) { return 0, nil }, Update: func(*int, int) Cmd[int] { return nil }})
 		}},
 	}
 	for _, test := range tests {
@@ -325,7 +319,10 @@ func TestApplicationQuitCannotBeReversedByCloseKeepAlive(t *testing.T) {
 	if keepAlive || !quitting {
 		t.Fatalf("shutdown state = keepAlive %v quitting %v", keepAlive, quitting)
 	}
-	if application.Open(NewWindow("other", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })) {
+	if application.Open(NewWindow("other", NewProgram(0,
+		func(*int, int) Cmd[int] { return nil },
+		func(*Context, int, Send[int]) Widget { return nil },
+	))) {
 		t.Fatal("opened a window after application quit")
 	}
 

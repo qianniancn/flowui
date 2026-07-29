@@ -26,7 +26,7 @@ type SetRequiredChoice string
 type SetControlled string
 type SetControlledOpen bool
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case SetState:
 		model.State = string(msg)
@@ -43,6 +43,7 @@ func Update(model *Model, msg Msg) {
 	case SetControlledOpen:
 		model.ControlledOpen = bool(msg)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -170,8 +171,8 @@ func frameworkSections() []ui.SelectSection {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Select"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Select"),
 		ui.Size(920, 760),
 	)
 }

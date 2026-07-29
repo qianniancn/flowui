@@ -30,7 +30,7 @@ type Msg struct {
 	Keys  []string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Keys != nil {
 		switch msg.Field {
 		case fieldRoles:
@@ -38,10 +38,10 @@ func Update(m *Model, msg Msg) {
 		}
 		if len(msg.Keys) == 0 {
 			m.Last = fmt.Sprintf("%s cleared", msg.Field)
-			return
+			return nil
 		}
 		m.Last = fmt.Sprintf("%s selected %s", msg.Field, strings.Join(msg.Keys, ", "))
-		return
+		return nil
 	}
 
 	switch msg.Field {
@@ -54,9 +54,10 @@ func Update(m *Model, msg Msg) {
 	}
 	if msg.Key == "" {
 		m.Last = fmt.Sprintf("%s cleared", msg.Field)
-		return
+		return nil
 	}
 	m.Last = fmt.Sprintf("%s selected %s", msg.Field, msg.Key)
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -238,13 +239,13 @@ var cities = []ui.ListBoxItem{
 }
 
 func main() {
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		Member: "fred",
 		Tool:   "brush",
 		City:   "shanghai",
 		Roles:  []string{"read", "comment"},
-	}, Update, View,
-		ui.Title("FlowUI ListBox"),
+	},
+		Update, View), ui.Title("FlowUI ListBox"),
 		ui.Size(900, 720),
 	)
 }

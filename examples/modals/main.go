@@ -29,7 +29,7 @@ type ChangeField struct {
 	Value string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Open:
 		m.Active = msg.Key
@@ -49,6 +49,7 @@ func Update(m *Model, msg Msg) {
 			m.Message = msg.Value
 		}
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -269,8 +270,8 @@ func animationBody(animation string) string {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Modal"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Modal"),
 		ui.Size(900, 720),
 	)
 }

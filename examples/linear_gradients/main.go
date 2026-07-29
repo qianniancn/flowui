@@ -9,7 +9,7 @@ import (
 type Model struct{}
 type Msg any
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -66,8 +66,8 @@ func hex(value uint32) color.NRGBA {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Linear Gradients"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Linear Gradients"),
 		ui.Size(820, 500),
 	)
 }

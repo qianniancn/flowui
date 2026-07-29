@@ -34,7 +34,7 @@ func (RestartTimeline) animationMsg() {}
 func (ToggleLayout) animationMsg()    {}
 func (ToggleRect) animationMsg()      {}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case ToggleDirection:
 		model.forward = !model.forward
@@ -47,6 +47,7 @@ func Update(model *Model, msg Msg) {
 	case ToggleRect:
 		model.rectAlternate = !model.rectAlternate
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -225,11 +226,8 @@ func boolFloat(value bool) float32 {
 }
 
 func main() {
-	ui.Run(
-		Model{forward: true, timelinePlaying: true},
-		Update,
-		View,
-		ui.Title("FlowUI Motion"),
+	ui.Run(ui.NewProgram(Model{forward: true, timelinePlaying: true},
+		Update, View), ui.Title("FlowUI Motion"),
 		ui.Size(1100, 760),
 	)
 }

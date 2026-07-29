@@ -16,7 +16,7 @@ type Msg any
 type ShowNotification struct{}
 type CloseNotification string
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case ShowNotification:
 		model.Next++
@@ -27,6 +27,7 @@ func Update(model *Model, msg Msg) {
 	case CloseNotification:
 		model.Toasts = removeToast(model.Toasts, string(msg))
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -140,11 +141,8 @@ func removeToast(items []ui.ToastItem, key string) []ui.ToastItem {
 }
 
 func main() {
-	ui.Run(
-		Model{},
-		Update,
-		View,
-		ui.Title("FlowUI StatusBar"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI StatusBar"),
 		ui.Size(960, 640),
 	)
 }

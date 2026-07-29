@@ -16,12 +16,13 @@ type SetSelected struct {
 	selected bool
 }
 
-func Update(model *Model, msg SetSelected) {
+func Update(model *Model, msg SetSelected) ui.Cmd[SetSelected] {
 	if model.selected == nil {
 		model.selected = make(map[string]bool)
 	}
 	model.selected[msg.key] = msg.selected
 	model.last = fmt.Sprintf("%s: %t", msg.key, msg.selected)
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[SetSelected]) ui.Widget {
@@ -96,11 +97,8 @@ func buttonRow(buttons ...ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(
-		Model{selected: map[string]bool{"selected": true}},
-		Update,
-		View,
-		ui.Title("FlowUI Toggle Buttons"),
+	ui.Run(ui.NewProgram(Model{selected: map[string]bool{"selected": true}},
+		Update, View), ui.Title("FlowUI Toggle Buttons"),
 		ui.Size(820, 640),
 	)
 }

@@ -50,5 +50,6 @@ func section(title string, content ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(struct{}{}, func(*struct{}, struct{}) {}, View, ui.Title("FlowUI Text"), ui.Size(820, 680))
+	ui.Run(ui.NewProgram(struct{}{},
+		func(*struct{}, struct{}) ui.Cmd[struct{}] { return nil }, View), ui.Title("FlowUI Text"), ui.Size(820, 680))
 }

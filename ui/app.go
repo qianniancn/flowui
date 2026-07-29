@@ -17,36 +17,13 @@ import (
 	"github.com/qianniancn/flowui/internal/runtime"
 )
 
-// Run opens a Gio window and runs an MVU application in it.
-func Run[M any, Msg any](initial M, update Update[M, Msg], view View[M, Msg], opts ...Option) {
-	RunWindows(NewWindow("main", func() M { return initial }, update, view, opts...))
-}
-
-// RunCmd opens a Gio window and runs an MVU application with commands. Update
-// runs serially on the event loop, while each returned Cmd runs concurrently;
-// see Cmd for the required capture and message-passing rules.
-func RunCmd[M any, Msg any](initial M, update UpdateCmd[M, Msg], view View[M, Msg], opts ...Option) {
-	RunWindows(NewWindowCmd("main", func() M { return initial }, update, view, opts...))
-}
-
-// RunWithSubscriptions opens a Gio window and runs an MVU application with
-// commands and a model-derived set of long-lived subscriptions.
-func RunWithSubscriptions[M any, Msg any](
-	initial M,
-	update UpdateCmd[M, Msg],
-	subscriptions Subscriptions[M, Msg],
-	view View[M, Msg],
-	opts ...Option,
-) {
-	RunWindows(NewWindowWithSubscriptions("main", func() M { return initial }, update, subscriptions, view, opts...))
-}
-
 // Program describes a complete MVU application. Init runs once for each
-// native window instance and may return a startup command. RetainModelOnClose
-// keeps the model and skips Init when the same WindowSpec is reopened.
+// native window instance and may return a startup command. Add the
+// RetainModelOnClose option to a WindowSpec to keep its model and skip Init
+// when the same spec is reopened.
 type Program[M any, Msg any] struct {
 	Init          func() (M, Cmd[Msg])
-	Update        UpdateCmd[M, Msg]
+	Update        Update[M, Msg]
 	Subscriptions Subscriptions[M, Msg]
 	View          View[M, Msg]
 	// WindowStateMessage maps native configuration changes to messages that
@@ -54,9 +31,20 @@ type Program[M any, Msg any] struct {
 	WindowStateMessage func(WindowState) Msg
 }
 
-// RunProgram opens a Gio window and runs a complete MVU Program.
-func RunProgram[M any, Msg any](program Program[M, Msg], opts ...Option) {
-	RunWindows(NewProgramWindow("main", program, opts...))
+// NewProgram creates a Program with a fixed initial model. Use a Program
+// literal when initialization must return a startup command or create fresh
+// reference-backed model data each time a window opens.
+func NewProgram[M any, Msg any](initial M, update Update[M, Msg], view View[M, Msg]) Program[M, Msg] {
+	return Program[M, Msg]{
+		Init:   func() (M, Cmd[Msg]) { return initial, nil },
+		Update: update,
+		View:   view,
+	}
+}
+
+// Run opens a window and runs a complete MVU Program.
+func Run[M any, Msg any](program Program[M, Msg], opts ...Option) {
+	NewApplication().Run(NewWindow("main", program, opts...))
 }
 
 func runWindowCmd[M any, Msg any](
@@ -66,7 +54,7 @@ func runWindowCmd[M any, Msg any](
 	language Language,
 	initial M,
 	initialCmd Cmd[Msg],
-	update UpdateCmd[M, Msg],
+	update Update[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
 	windowStateMessage func(WindowState) Msg,

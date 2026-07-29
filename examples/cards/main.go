@@ -10,8 +10,9 @@ type Msg struct {
 	Action string
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	model.LastAction = msg.Action
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -72,8 +73,8 @@ func cardHeader(title, description string) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Cards"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Cards"),
 		ui.Size(900, 680),
 	)
 }

@@ -27,7 +27,7 @@ type ToastAction struct{ key string }
 type SetPlacement struct{ placement ui.ToastPlacement }
 type ClearToasts struct{}
 
-func Update(model *Model, msg any) {
+func Update(model *Model, msg any) ui.Cmd[any] {
 	switch msg := msg.(type) {
 	case ShowToast:
 		model.next++
@@ -55,6 +55,7 @@ func Update(model *Model, msg any) {
 		model.toasts = nil
 		model.lastEvent = "Cleared all toasts"
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[any]) ui.Widget {
@@ -129,8 +130,8 @@ func removeToast(items []ui.ToastItem, key string) []ui.ToastItem {
 }
 
 func main() {
-	ui.Run(Model{placement: ui.ToastBottom}, Update, View,
-		ui.Title("FlowUI Toasts"),
+	ui.Run(ui.NewProgram(Model{placement: ui.ToastBottom},
+		Update, View), ui.Title("FlowUI Toasts"),
 		ui.Size(940, 680),
 		ui.OnError(func(err error) { fmt.Println(err) }),
 	)

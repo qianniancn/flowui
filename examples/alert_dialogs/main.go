@@ -22,7 +22,7 @@ type Close struct {
 	Action string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Open:
 		m.Active = msg.Key
@@ -33,6 +33,7 @@ func Update(m *Model, msg Msg) {
 		}
 		m.Active = ""
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -177,8 +178,8 @@ func sizeDescription(size string) string {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI AlertDialog"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI AlertDialog"),
 		ui.Size(900, 720),
 	)
 }

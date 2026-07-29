@@ -15,13 +15,14 @@ type Msg any
 type Inc struct{}
 type Dec struct{}
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case Inc:
 		m.Count++
 	case Dec:
 		m.Count--
 	}
+	return nil
 }
 
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -48,8 +49,8 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Counter"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Counter"),
 		ui.Size(900, 600),
 	)
 }

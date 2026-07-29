@@ -29,7 +29,7 @@ type Msg struct {
 	Text  string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Field {
 	case fieldLanguage:
 		m.Language = msg.Key
@@ -42,11 +42,12 @@ func Update(m *Model, msg Msg) {
 	}
 	if msg.Key != "" {
 		m.Last = fmt.Sprintf("%s selected %s", msg.Field, msg.Key)
-		return
+		return nil
 	}
 	if msg.Text != "" {
 		m.Last = fmt.Sprintf("%s search %q", msg.Field, msg.Text)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -153,8 +154,8 @@ var animals = []ui.ComboBoxItem{
 }
 
 func main() {
-	ui.Run(Model{Animal: "dog"}, Update, View,
-		ui.Title("FlowUI ComboBox"),
+	ui.Run(ui.NewProgram(Model{Animal: "dog"},
+		Update, View), ui.Title("FlowUI ComboBox"),
 		ui.Size(900, 680),
 	)
 }

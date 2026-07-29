@@ -20,7 +20,7 @@ type SetAction string
 type SetSort string
 type SetVisible []string
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case SetAction:
 		model.LastAction = string(msg)
@@ -29,6 +29,7 @@ func Update(model *Model, msg Msg) {
 	case SetVisible:
 		model.Visible = append([]string(nil), msg...)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -158,11 +159,8 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(
-		Model{Sort: "modified", Visible: []string{"name", "modified"}},
-		Update,
-		View,
-		ui.Title("FlowUI Dropdown"),
+	ui.Run(ui.NewProgram(Model{Sort: "modified", Visible: []string{"name", "modified"}},
+		Update, View), ui.Title("FlowUI Dropdown"),
 		ui.Size(900, 620),
 	)
 }

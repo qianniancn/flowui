@@ -10,7 +10,7 @@ type Model struct{}
 
 type Msg any
 
-func Update(_ *Model, _ Msg) {}
+func Update(_ *Model, _ Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	cards := []ui.Widget{
@@ -76,8 +76,8 @@ func statCard(label, value string) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Layout"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Layout"),
 		ui.Size(900, 600),
 	)
 }

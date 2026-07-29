@@ -37,8 +37,8 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.RunCmd(Model{}, Update, View,
-		ui.Title("FlowUI MVU Modules"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI MVU Modules"),
 		ui.Size(640, 420),
 	)
 }

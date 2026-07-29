@@ -499,19 +499,16 @@ func packageItems() []ui.TreeItem {
 }
 
 func main() {
-	ui.RunCmd(
-		Model{
-			Items:           fileItems(),
-			Selected:        "tree",
-			MultiSelected:   []string{"button", "tree"},
-			Expanded:        []string{"flowui", "components"},
-			AsyncItems:      asyncItems(),
-			SurfaceSelected: "main",
-			SurfaceExpanded: []string{"app", "source"},
-		},
-		Update,
-		View,
-		ui.Title("FlowUI Tree"),
+	ui.Run(ui.NewProgram(Model{
+		Items:           fileItems(),
+		Selected:        "tree",
+		MultiSelected:   []string{"button", "tree"},
+		Expanded:        []string{"flowui", "components"},
+		AsyncItems:      asyncItems(),
+		SurfaceSelected: "main",
+		SurfaceExpanded: []string{"app", "source"},
+	},
+		Update, View), ui.Title("FlowUI Tree"),
 		ui.Size(900, 820),
 	)
 }

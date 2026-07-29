@@ -16,7 +16,7 @@ type SetAction string
 type SetToolbar bool
 type SetLayout string
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case SetAction:
 		model.LastAction = string(msg)
@@ -25,6 +25,7 @@ func Update(model *Model, msg Msg) {
 	case SetLayout:
 		model.Layout = string(msg)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -96,11 +97,8 @@ func applicationMenubar(model Model, send ui.Send[Msg]) ui.MenubarWidget {
 }
 
 func main() {
-	ui.Run(
-		Model{Toolbar: true, Layout: "single"},
-		Update,
-		View,
-		ui.Title("FlowUI Menubar"),
+	ui.Run(ui.NewProgram(Model{Toolbar: true, Layout: "single"},
+		Update, View), ui.Title("FlowUI Menubar"),
 		ui.Size(820, 480),
 	)
 }

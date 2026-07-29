@@ -20,7 +20,7 @@ type colorChanged color.NRGBA
 type brightnessChanged float64
 type alphaChanged float64
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case colorChanged:
 		model.WheelColor = color.NRGBA(msg)
@@ -29,6 +29,7 @@ func Update(model *Model, msg Msg) {
 	case alphaChanged:
 		model.Alpha = float64(msg)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -120,12 +121,12 @@ func formatPercent(value float64) string {
 }
 
 func main() {
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		WheelColor: color.NRGBA{R: 71, G: 194, B: 255, A: 255},
 		Brightness: .62,
 		Alpha:      .7,
-	}, Update, View,
-		ui.Title("FlowUI Shadows"),
+	},
+		Update, View), ui.Title("FlowUI Shadows"),
 		ui.Size(920, 560),
 	)
 }

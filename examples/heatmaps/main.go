@@ -10,7 +10,10 @@ import (
 type Model struct{ selected string }
 type Msg struct{ Selection ui.ChartSelection }
 
-func Update(model *Model, msg Msg) { model.selected = msg.Selection.Label }
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
+	model.selected = msg.Selection.Label
+	return nil
+}
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	selected := "Click a cell"
 	if model.selected != "" {
@@ -66,4 +69,7 @@ func calendarSection(title string, chart ui.HeatmapWidget) ui.Widget {
 		ui.Surface(ui.Box(chart).Style(ui.Padding(16))).Style(ui.Radius(8)),
 	).Gap(8)
 }
-func main() { ui.Run(Model{}, Update, View, ui.Title("FlowUI Heatmaps"), ui.Size(980, 700)) }
+func main() {
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Heatmaps"), ui.Size(980, 700))
+}

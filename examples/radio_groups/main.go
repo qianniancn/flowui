@@ -28,7 +28,7 @@ type Msg struct {
 	Key   string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Field {
 	case fieldPlan:
 		m.Plan = msg.Key
@@ -40,6 +40,7 @@ func Update(m *Model, msg Msg) {
 		m.Support = msg.Key
 	}
 	m.Last = fmt.Sprintf("%s selected %s", msg.Field, msg.Key)
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -126,8 +127,8 @@ var support = []ui.RadioItem{
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI RadioGroup"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI RadioGroup"),
 		ui.Size(900, 720),
 	)
 }

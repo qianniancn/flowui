@@ -16,7 +16,7 @@ type SetLanguage string
 type SetState string
 type SetMarketing bool
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case SetEmail:
 		model.Email = string(msg)
@@ -27,6 +27,7 @@ func Update(model *Model, msg Msg) {
 	case SetMarketing:
 		model.Marketing = bool(msg)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -121,8 +122,8 @@ func states() []ui.SelectItem {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Descriptions"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Descriptions"),
 		ui.Size(900, 680),
 	)
 }

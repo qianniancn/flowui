@@ -35,7 +35,7 @@ type ColorChanged struct {
 	Value color.NRGBA
 }
 
-func Update(model *Model, message ColorChanged) {
+func Update(model *Model, message ColorChanged) ui.Cmd[ColorChanged] {
 	switch message.Field {
 	case fieldBasic:
 		model.Basic = message.Value
@@ -53,6 +53,7 @@ func Update(model *Model, message ColorChanged) {
 		model.Swatches = message.Value
 	}
 	model.Last = fmt.Sprintf("%s: %s", message.Field, formatColor(message.Value))
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[ColorChanged]) ui.Widget {
@@ -186,19 +187,16 @@ func formatColor(value color.NRGBA) string {
 }
 
 func main() {
-	ui.Run(
-		Model{
-			Basic:      color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255},
-			Brand:      color.NRGBA{R: 0xf4, G: 0x3f, B: 0x5e, A: 255},
-			Alpha:      color.NRGBA{R: 0x32, G: 0x55, B: 0x78, A: 0xcc},
-			Area:       color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255},
-			FieldColor: color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 255},
-			Slider:     color.NRGBA{R: 0xf4, G: 0x3f, B: 0x5e, A: 0xcc},
-			Swatches:   color.NRGBA{R: 0x8b, G: 0x5c, B: 0xf6, A: 255},
-		},
-		Update,
-		View,
-		ui.Title("FlowUI ColorPicker"),
+	ui.Run(ui.NewProgram(Model{
+		Basic:      color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255},
+		Brand:      color.NRGBA{R: 0xf4, G: 0x3f, B: 0x5e, A: 255},
+		Alpha:      color.NRGBA{R: 0x32, G: 0x55, B: 0x78, A: 0xcc},
+		Area:       color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 255},
+		FieldColor: color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 255},
+		Slider:     color.NRGBA{R: 0xf4, G: 0x3f, B: 0x5e, A: 0xcc},
+		Swatches:   color.NRGBA{R: 0x8b, G: 0x5c, B: 0xf6, A: 255},
+	},
+		Update, View), ui.Title("FlowUI ColorPicker"),
 		ui.Size(900, 700),
 	)
 }

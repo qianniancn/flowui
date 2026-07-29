@@ -14,8 +14,9 @@ type CounterModel struct {
 
 type CounterMsg int
 
-func counterUpdate(model *CounterModel, msg CounterMsg) {
+func counterUpdate(model *CounterModel, msg CounterMsg) ui.Cmd[CounterMsg] {
 	model.Value += int(msg)
+	return nil
 }
 
 func counterView(application *ui.Application) ui.View[CounterModel, CounterMsg] {
@@ -55,7 +56,7 @@ type MainMsg struct {
 }
 
 func mainUpdate(application *ui.Application) ui.Update[MainModel, MainMsg] {
-	return func(model *MainModel, msg MainMsg) {
+	return func(model *MainModel, msg MainMsg) ui.Cmd[MainMsg] {
 		switch msg.kind {
 		case setDark:
 			model.Dark = msg.enabled
@@ -74,6 +75,7 @@ func mainUpdate(application *ui.Application) ui.Update[MainModel, MainMsg] {
 		case setDate:
 			model.Date = msg.date
 		}
+		return nil
 	}
 }
 
@@ -141,19 +143,11 @@ func windowAction(application *ui.Application, key, label string, action ui.Wind
 func main() {
 	application := ui.NewApplication()
 	counter := ui.NewWindow(
-		"counter",
-		func() CounterModel { return CounterModel{} },
-		counterUpdate,
-		counterView(application),
-		ui.Title("Counter"),
+		"counter", ui.NewProgram(CounterModel{}, counterUpdate, counterView(application)), ui.Title("Counter"),
 		ui.Size(420, 260),
 	)
 	mainWindow := ui.NewWindow(
-		"main",
-		func() MainModel { return MainModel{} },
-		mainUpdate(application),
-		mainView(application, counter),
-		ui.Title("Multi-window"),
+		"main", ui.NewProgram(MainModel{}, mainUpdate(application), mainView(application, counter)), ui.Title("Multi-window"),
 		ui.Size(760, 520),
 		ui.MinSize(520, 360),
 		ui.MaxSize(1400, 1000),

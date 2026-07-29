@@ -11,7 +11,7 @@ import (
 type Model struct{}
 type Msg struct{}
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(ctx *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	muted := ctx.Theme().Palette.MutedForeground
@@ -93,11 +93,8 @@ func horizontalPanel(muted color.NRGBA) ui.Widget {
 }
 
 func main() {
-	ui.Run(
-		Model{},
-		Update,
-		View,
-		ui.Title("FlowUI Scrollbars"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Scrollbars"),
 		ui.Size(920, 680),
 	)
 }

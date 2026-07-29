@@ -36,7 +36,7 @@ type Msg struct {
 	Range ui.DateRange
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Field {
 	case fieldDate:
 		m.FieldDate = msg.Date
@@ -58,6 +58,7 @@ func Update(m *Model, msg Msg) {
 	} else {
 		m.Last = fmt.Sprintf("%s selected %s", msg.Field, formatDate(msg.Date))
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -178,14 +179,14 @@ func dateOnly(date time.Time) time.Time {
 
 func main() {
 	today := dateOnly(time.Now())
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		FieldDate: today,
 		Trip: ui.DateRange{
 			Start: today,
 			End:   today.AddDate(0, 0, 4),
 		},
-	}, Update, View,
-		ui.Title("FlowUI date components"),
+	},
+		Update, View), ui.Title("FlowUI date components"),
 		ui.Size(900, 760),
 	)
 }

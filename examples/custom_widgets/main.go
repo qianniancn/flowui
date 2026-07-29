@@ -30,13 +30,14 @@ type Message struct {
 	value bool
 }
 
-func Update(model *Model, msg Message) {
+func Update(model *Model, msg Message) ui.Cmd[Message] {
 	switch msg.kind {
 	case setOpen:
 		model.Open = msg.value
 	case setTransformed:
 		model.Transformed = msg.value
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Message]) ui.Widget {
@@ -228,5 +229,6 @@ func activePresses(history []widget.Press) int {
 }
 
 func main() {
-	ui.Run(Model{Transformed: true}, Update, View, ui.Title("FlowUI Custom Widgets"), ui.Size(760, 480))
+	ui.Run(ui.NewProgram(Model{Transformed: true},
+		Update, View), ui.Title("FlowUI Custom Widgets"), ui.Size(760, 480))
 }

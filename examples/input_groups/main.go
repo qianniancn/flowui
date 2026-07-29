@@ -25,18 +25,18 @@ type Msg struct {
 	Submit bool
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Copy {
 		m.Last = fmt.Sprintf("Copied %s", m.Token)
-		return
+		return nil
 	}
 	if msg.Submit {
 		if strings.TrimSpace(m.Prompt) == "" {
-			return
+			return nil
 		}
 		m.Last = fmt.Sprintf("Submitted prompt: %s", m.Prompt)
 		m.Prompt = ""
-		return
+		return nil
 	}
 	switch msg.Field {
 	case "email":
@@ -52,6 +52,7 @@ func Update(m *Model, msg Msg) {
 	case "prompt":
 		m.Prompt = msg.Value
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -188,11 +189,8 @@ func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) ui.TextAre
 }
 
 func main() {
-	ui.Run(
-		Model{Website: "flowui", Price: "10", Token: "flow_live_7Q4M2"},
-		Update,
-		View,
-		ui.Title("FlowUI InputGroup"),
+	ui.Run(ui.NewProgram(Model{Website: "flowui", Price: "10", Token: "flow_live_7Q4M2"},
+		Update, View), ui.Title("FlowUI InputGroup"),
 		ui.Size(900, 760),
 	)
 }

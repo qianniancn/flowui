@@ -151,18 +151,14 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.RunProgram(ui.Program[Model, Msg]{
-		Init: func() (Model, ui.Cmd[Msg]) {
-			return Model{
-				Title:  "FlowUI",
-				Body:   "Native notifications are available.",
-				Status: "Ready",
-			}, nil
-		},
-		Update: Update,
-		View:   View,
+	ui.Run(ui.NewProgram(Model{
+		Title:  "FlowUI",
+		Body:   "Native notifications are available.",
+		Status: "Ready",
 	},
-		ui.Title("FlowUI Notifications"),
+
+		Update,
+		View), ui.Title("FlowUI Notifications"),
 		ui.Size(700, 560),
 	)
 }

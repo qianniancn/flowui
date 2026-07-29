@@ -40,10 +40,10 @@ type Msg struct {
 	Text  string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Kind == submitted {
 		m.Last = fmt.Sprintf("Submitted %s: %s", msg.Field, msg.Text)
-		return
+		return nil
 	}
 	switch msg.Field {
 	case fieldName:
@@ -59,6 +59,7 @@ func Update(m *Model, msg Msg) {
 	case fieldFull:
 		m.Full = msg.Text
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -170,8 +171,8 @@ func containsAt(text string) bool {
 }
 
 func main() {
-	ui.Run(Model{Password: "heroui"}, Update, View,
-		ui.Title("FlowUI Inputs"),
+	ui.Run(ui.NewProgram(Model{Password: "heroui"},
+		Update, View), ui.Title("FlowUI Inputs"),
 		ui.Size(900, 760),
 	)
 }

@@ -29,7 +29,7 @@ type DataWindowChanged ui.ChartDataWindow
 type DataClicked ui.ChartSelection
 type ResetView struct{}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case DataWindowChanged:
 		model.window = ui.ChartDataWindow(msg)
@@ -40,6 +40,7 @@ func Update(model *Model, msg Msg) {
 	case ResetView:
 		model.window = ui.ChartDataWindow{End: 1}
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -140,11 +141,8 @@ func signalMarkers(lows, highs []float64) []ui.ChartMarkPoint {
 }
 
 func main() {
-	ui.Run(
-		Model{window: ui.ChartDataWindow{Start: .5, End: 1}},
-		Update,
-		View,
-		ui.Title("FlowUI Candlestick Chart"),
+	ui.Run(ui.NewProgram(Model{window: ui.ChartDataWindow{Start: .5, End: 1}},
+		Update, View), ui.Title("FlowUI Candlestick Chart"),
 		ui.Size(1160, 720),
 	)
 }

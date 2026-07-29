@@ -17,8 +17,9 @@ type Model struct {
 
 type Increment struct{}
 
-func Update(model *Model, msg Increment) {
+func Update(model *Model, msg Increment) ui.Cmd[Increment] {
 	model.clicks++
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Increment]) ui.Widget {
@@ -81,8 +82,8 @@ func (circleCloseIcon) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimens
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Close Buttons"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Close Buttons"),
 		ui.Size(720, 460),
 	)
 }

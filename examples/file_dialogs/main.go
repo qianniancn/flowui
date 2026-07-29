@@ -150,17 +150,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.RunProgram(ui.Program[Model, Msg]{
-		Init: func() (Model, ui.Cmd[Msg]) {
-			return Model{
-				Content: "FlowUI native file dialogs are bound to this window.",
-				Status:  "Ready",
-			}, nil
-		},
-		Update: Update,
-		View:   View,
-	},
-		ui.Title("FlowUI Explorer"),
+	ui.Run(ui.NewProgram(Model{
+		Content: "FlowUI native file dialogs are bound to this window.",
+		Status:  "Ready",
+	}, Update,
+		View), ui.Title("FlowUI Explorer"),
 		ui.Size(760, 620),
 	)
 }

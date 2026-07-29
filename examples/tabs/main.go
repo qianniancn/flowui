@@ -27,7 +27,7 @@ type SelectTab struct {
 	Key   string
 }
 
-func Update(model *Model, msg SelectTab) {
+func Update(model *Model, msg SelectTab) ui.Cmd[SelectTab] {
 	switch msg.Group {
 	case primaryTabs:
 		model.Primary = msg.Key
@@ -42,6 +42,7 @@ func Update(model *Model, msg SelectTab) {
 	case overflowTabs:
 		model.Overflow = msg.Key
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
@@ -167,15 +168,15 @@ func panel(title, body string) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		Primary:           "overview",
 		Secondary:         "analytics",
 		Vertical:          "account",
 		SecondaryVertical: "security",
 		Custom:            "weekly",
 		Overflow:          "overview",
-	}, Update, View,
-		ui.Title("FlowUI Tabs"),
+	},
+		Update, View), ui.Title("FlowUI Tabs"),
 		ui.Size(940, 860),
 	)
 }

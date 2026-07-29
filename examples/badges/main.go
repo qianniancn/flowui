@@ -8,7 +8,7 @@ import (
 type Model struct{}
 type Msg any
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -76,5 +76,6 @@ func section(title string, content ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View, ui.Title("FlowUI Badge"), ui.Size(760, 680))
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Badge"), ui.Size(760, 680))
 }

@@ -14,7 +14,7 @@ import (
 type Model struct{}
 type Msg struct{}
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -110,8 +110,8 @@ func (d statusDot) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Chip"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Chip"),
 		ui.Size(980, 760),
 	)
 }

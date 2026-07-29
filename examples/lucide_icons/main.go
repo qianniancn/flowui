@@ -13,8 +13,9 @@ type Model struct {
 
 type ToggleFavorite struct{}
 
-func Update(model *Model, _ ToggleFavorite) {
+func Update(model *Model, _ ToggleFavorite) ui.Cmd[ToggleFavorite] {
 	model.favorite = !model.favorite
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[ToggleFavorite]) ui.Widget {
@@ -75,8 +76,8 @@ func labeled(label string, value ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Lucide Icons"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Lucide Icons"),
 		ui.Size(720, 680),
 	)
 }

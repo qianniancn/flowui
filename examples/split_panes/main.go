@@ -15,13 +15,14 @@ type Msg any
 type SelectFile string
 type ExpandFiles []string
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case SelectFile:
 		model.Selected = string(msg)
 	case ExpandFiles:
 		model.Expanded = append([]string(nil), msg...)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -165,11 +166,8 @@ func projectFiles() []ui.TreeItem {
 }
 
 func main() {
-	ui.Run(
-		Model{Selected: "main.go", Expanded: []string{"cmd", "internal"}},
-		Update,
-		View,
-		ui.Title("FlowUI SplitPane"),
+	ui.Run(ui.NewProgram(Model{Selected: "main.go", Expanded: []string{"cmd", "internal"}},
+		Update, View), ui.Title("FlowUI SplitPane"),
 		ui.Size(1080, 720),
 	)
 }

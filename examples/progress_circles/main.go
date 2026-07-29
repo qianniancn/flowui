@@ -15,12 +15,13 @@ type Msg struct {
 	Reset bool
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Reset {
 		model.Value = 0
-		return
+		return nil
 	}
 	model.Value = min(max(model.Value+msg.Delta, 0), 100)
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -85,8 +86,8 @@ func labeledCircle(key, label string, value float64, size ui.ProgressCircleSize,
 }
 
 func main() {
-	ui.Run(Model{Value: 60}, Update, View,
-		ui.Title("FlowUI ProgressCircle"),
+	ui.Run(ui.NewProgram(Model{Value: 60},
+		Update, View), ui.Title("FlowUI ProgressCircle"),
 		ui.Size(860, 680),
 	)
 }

@@ -24,12 +24,12 @@ type Pick struct {
 	Value string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case Toggle:
 		if m.Active == msg.Key {
 			m.Active = ""
-			return
+			return nil
 		}
 		m.Active = msg.Key
 	case Close:
@@ -39,6 +39,7 @@ func Update(m *Model, msg Msg) {
 		m.Last = fmt.Sprintf("Selected %s", msg.Value)
 		m.Active = ""
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -155,8 +156,8 @@ func choicesContent(m Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Popover"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Popover"),
 		ui.Size(900, 640),
 	)
 }

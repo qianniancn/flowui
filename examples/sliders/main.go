@@ -22,7 +22,7 @@ type PriceChanged struct {
 }
 type IntensityChanged float64
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case VolumeChanged:
 		model.Volume = float64(msg)
@@ -32,6 +32,7 @@ func Update(model *Model, msg Msg) {
 	case IntensityChanged:
 		model.Intensity = float64(msg)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -99,13 +100,13 @@ func cardHeader(title, description string) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		Volume:     30,
 		PriceStart: 100,
 		PriceEnd:   500,
 		Intensity:  45,
-	}, Update, View,
-		ui.Title("FlowUI Sliders"),
+	},
+		Update, View), ui.Title("FlowUI Sliders"),
 		ui.Size(900, 620),
 	)
 }

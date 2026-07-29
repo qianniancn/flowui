@@ -82,7 +82,7 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.RunProgram(ui.Program[Model, Msg]{
+	ui.Run(ui.Program[Model, Msg]{
 		Init:   Init,
 		Update: Update,
 		View:   View,

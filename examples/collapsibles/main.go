@@ -18,7 +18,7 @@ type Msg struct {
 	Keys     []string
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Target {
 	case "standalone":
 		model.Standalone = msg.Expanded
@@ -29,6 +29,7 @@ func Update(model *Model, msg Msg) {
 	case "panels":
 		model.Panels = append([]string(nil), msg.Keys...)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -140,16 +141,13 @@ func desktopPanelItems() []ui.CollapsibleItem {
 }
 
 func main() {
-	ui.Run(
-		Model{
-			Standalone: true,
-			Single:     []string{"security"},
-			Multiple:   []string{"email", "push"},
-			Panels:     []string{"explorer"},
-		},
-		Update,
-		View,
-		ui.Title("FlowUI Collapsible"),
+	ui.Run(ui.NewProgram(Model{
+		Standalone: true,
+		Single:     []string{"security"},
+		Multiple:   []string{"email", "push"},
+		Panels:     []string{"explorer"},
+	},
+		Update, View), ui.Title("FlowUI Collapsible"),
 		ui.Size(860, 820),
 	)
 }

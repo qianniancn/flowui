@@ -5,7 +5,7 @@ import "github.com/qianniancn/flowui/ui"
 type Model struct{}
 type Msg struct{}
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -66,8 +66,8 @@ func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Surface"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Surface"),
 		ui.Size(900, 620),
 	)
 }

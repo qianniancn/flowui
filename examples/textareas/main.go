@@ -13,7 +13,7 @@ type Msg struct {
 	Value string
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Field {
 	case "feedback":
 		model.Feedback = msg.Value
@@ -22,6 +22,7 @@ func Update(model *Model, msg Msg) {
 	case "details":
 		model.Details = msg.Value
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -100,11 +101,8 @@ func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) ui.TextAre
 }
 
 func main() {
-	ui.Run(
-		Model{Feedback: "FlowUI keeps desktop interfaces predictable."},
-		Update,
-		View,
-		ui.Title("FlowUI TextArea"),
+	ui.Run(ui.NewProgram(Model{Feedback: "FlowUI keeps desktop interfaces predictable."},
+		Update, View), ui.Title("FlowUI TextArea"),
 		ui.Size(920, 800),
 	)
 }

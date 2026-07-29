@@ -29,7 +29,7 @@ type DataWindowChanged struct {
 
 type ResetView struct{}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case LegendChanged:
 		if model.hidden == nil {
@@ -47,6 +47,7 @@ func Update(model *Model, msg Msg) {
 	case ResetView:
 		clear(model.windows)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -147,11 +148,8 @@ func chartTooltip(selection ui.ChartSelection) ui.Widget {
 }
 
 func main() {
-	ui.Run(
-		Model{hidden: make(map[string]bool), windows: make(map[string]ui.ChartDataWindow)},
-		Update,
-		View,
-		ui.Title("FlowUI Line Charts"),
+	ui.Run(ui.NewProgram(Model{hidden: make(map[string]bool), windows: make(map[string]ui.ChartDataWindow)},
+		Update, View), ui.Title("FlowUI Line Charts"),
 		ui.Size(1040, 820),
 	)
 }

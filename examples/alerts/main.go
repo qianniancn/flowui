@@ -11,11 +11,12 @@ type Msg struct {
 	Action string
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	m.Last = msg.Action
 	if msg.Action == "Dismissed profile update" {
 		m.ShowProfile = false
 	}
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -99,11 +100,8 @@ func alertButton(key, label string, variant ui.ButtonVariant, send ui.Send[Msg])
 }
 
 func main() {
-	ui.Run(
-		Model{ShowProfile: true},
-		Update,
-		View,
-		ui.Title("FlowUI Alerts"),
+	ui.Run(ui.NewProgram(Model{ShowProfile: true},
+		Update, View), ui.Title("FlowUI Alerts"),
 		ui.Size(860, 820),
 	)
 }

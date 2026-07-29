@@ -192,8 +192,8 @@ func demoButton(label string, variant ui.ButtonVariant, send ui.Send[Msg]) ui.Wi
 }
 
 func main() {
-	ui.RunCmd(Model{}, Update, View,
-		ui.Title("FlowUI Buttons"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Buttons"),
 		ui.Size(900, 640),
 	)
 }

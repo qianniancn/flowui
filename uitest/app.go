@@ -18,7 +18,7 @@ import (
 type AppConfig[M any, Msg any] struct {
 	Initial M
 	Init    ui.Cmd[Msg]
-	Update  ui.UpdateCmd[M, Msg]
+	Update  ui.Update[M, Msg]
 }
 
 // AppHarness drives FlowUI's production MVU runtime without opening a window.
@@ -35,21 +35,18 @@ type AppHarness[M any, Msg any] struct {
 	close   sync.Once
 }
 
-// NewApp creates a harness for a synchronous Update function.
+// NewApp creates a harness for an Update function.
 func NewApp[M any, Msg any](initial M, update ui.Update[M, Msg]) *AppHarness[M, Msg] {
 	if update == nil {
 		panic("flowui/uitest: nil app update")
 	}
 	return NewAppWithConfig(AppConfig[M, Msg]{
 		Initial: initial,
-		Update: func(model *M, msg Msg) ui.Cmd[Msg] {
-			update(model, msg)
-			return nil
-		},
+		Update:  update,
 	})
 }
 
-// NewAppWithConfig creates a harness for updates that may return commands.
+// NewAppWithConfig creates a configured application harness.
 func NewAppWithConfig[M any, Msg any](config AppConfig[M, Msg]) *AppHarness[M, Msg] {
 	if config.Update == nil {
 		panic("flowui/uitest: nil app update")

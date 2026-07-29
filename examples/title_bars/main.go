@@ -31,13 +31,14 @@ type searchChanged string
 func (actionMsg) titleBarMsg()     {}
 func (searchChanged) titleBarMsg() {}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case searchChanged:
 		model.Search = string(msg)
 	case actionMsg:
 		model.LastAction = string(msg)
 	}
+	return nil
 }
 
 func applicationView(application *ui.Application) ui.View[Model, Msg] {
@@ -188,11 +189,7 @@ func main() {
 	}
 	application := ui.NewApplication()
 	window := ui.NewWindow(
-		"main",
-		func() Model { return Model{} },
-		Update,
-		applicationView(application),
-		options...,
+		"main", ui.NewProgram(Model{}, Update, applicationView(application)), options...,
 	)
 	application.Run(window)
 }

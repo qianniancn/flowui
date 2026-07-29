@@ -183,7 +183,7 @@ func (externalWidget) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensi
 	return layout.Dimensions{}
 }
 
-func facadeUpdate(model *facadeModel, msg facadeMsg) {
+func facadeUpdate(model *facadeModel, msg facadeMsg) ui.Cmd[facadeMsg] {
 	if msg.selected != "" {
 		model.selected = msg.selected
 	}
@@ -199,6 +199,7 @@ func facadeUpdate(model *facadeModel, msg facadeMsg) {
 	if msg.open != nil {
 		model.open = *msg.open
 	}
+	return nil
 }
 
 func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.Widget {
@@ -857,7 +858,6 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 
 func TestPublicFacadeImportContract(t *testing.T) {
 	_ = ui.WindowTitleBarSupported()
-	_ = ui.RunWithSubscriptions[facadeModel, facadeMsg]
 	program := ui.Program[facadeModel, facadeMsg]{
 		Init:   func() (facadeModel, ui.Cmd[facadeMsg]) { return facadeModel{}, nil },
 		Update: func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil },
@@ -866,11 +866,10 @@ func TestPublicFacadeImportContract(t *testing.T) {
 			return facadeMsg{}
 		},
 	}
-	var _ func(ui.Program[facadeModel, facadeMsg], ...ui.Option) = ui.RunProgram[facadeModel, facadeMsg]
-	_ = ui.NewProgramWindow("program", program)
-	window := ui.NewWindow("secondary", func() facadeModel { return facadeModel{} }, facadeUpdate, facadeView, ui.Title("Secondary"))
-	_ = ui.NewWindowCmd("commands", func() facadeModel { return facadeModel{} }, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, facadeView)
-	_ = ui.NewWindowWithSubscriptions("subscriptions", func() facadeModel { return facadeModel{} }, func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil }, nil, facadeView)
+	var _ func(ui.Program[facadeModel, facadeMsg], ...ui.Option) = ui.Run[facadeModel, facadeMsg]
+	_ = ui.NewProgram(facadeModel{}, facadeUpdate, facadeView)
+	_ = ui.NewWindow("program", program)
+	window := ui.NewWindow("secondary", ui.NewProgram(facadeModel{}, facadeUpdate, facadeView), ui.Title("Secondary"))
 	application := ui.NewApplication()
 	_ = application.Open
 	_ = application.Close
@@ -884,7 +883,6 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	_ = application.SetLanguage
 	_ = application.Perform
 	_ = application.WindowState
-	var _ func(...ui.WindowSpec) = ui.RunWindows
 	if window.Key() != "secondary" {
 		t.Fatalf("window key = %q", window.Key())
 	}

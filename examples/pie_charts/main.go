@@ -21,7 +21,7 @@ type LegendChanged struct {
 
 type DataClicked ui.ChartSelection
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case LegendChanged:
 		if model.hidden == nil {
@@ -32,6 +32,7 @@ func Update(model *Model, msg Msg) {
 		selection := ui.ChartSelection(msg)
 		model.selected = fmt.Sprintf("Selected: %s (%.2f%%)", selection.Label, selection.Items[0].Percent)
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -113,11 +114,8 @@ func trafficData(model Model, chart string) []ui.PieChartData {
 }
 
 func main() {
-	ui.Run(
-		Model{hidden: make(map[string]bool)},
-		Update,
-		View,
-		ui.Title("FlowUI Pie Charts"),
+	ui.Run(ui.NewProgram(Model{hidden: make(map[string]bool)},
+		Update, View), ui.Title("FlowUI Pie Charts"),
 		ui.Size(980, 820),
 	)
 }

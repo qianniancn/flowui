@@ -11,8 +11,9 @@ type Model struct {
 
 type Selected string
 
-func Update(model *Model, msg Selected) {
+func Update(model *Model, msg Selected) ui.Cmd[Selected] {
 	model.Last = string(msg)
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Selected]) ui.Widget {
@@ -106,5 +107,6 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View, ui.Title("FlowUI ButtonGroup"), ui.Size(860, 720))
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI ButtonGroup"), ui.Size(860, 720))
 }

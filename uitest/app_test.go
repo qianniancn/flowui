@@ -111,7 +111,10 @@ func TestAppHarnessReportsEffectErrorsAndCancelsOnClose(t *testing.T) {
 }
 
 func TestAppHarnessDrivesSynchronousUpdate(t *testing.T) {
-	harness := uitest.NewApp(1, func(model *int, msg int) { *model += msg })
+	harness := uitest.NewApp(1, func(model *int, msg int) ui.Cmd[int] {
+		*model += msg
+		return nil
+	})
 	defer harness.Close()
 	harness.Send(2)
 	if got := harness.Frame(); got != 3 {

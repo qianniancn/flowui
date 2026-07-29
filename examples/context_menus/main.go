@@ -28,7 +28,7 @@ type Msg struct {
 	Density   string
 }
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	if msg.Action != "" {
 		model.Last = msg.Action
 	}
@@ -38,6 +38,7 @@ func Update(model *Model, msg Msg) {
 	if msg.Density != "" {
 		model.Density = msg.Density
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -155,11 +156,8 @@ var members = []member{
 }
 
 func main() {
-	ui.Run(
-		Model{ShowEmail: true, Density: "comfortable"},
-		Update,
-		View,
-		ui.Title("FlowUI Context Menu"),
+	ui.Run(ui.NewProgram(Model{ShowEmail: true, Density: "comfortable"},
+		Update, View), ui.Title("FlowUI Context Menu"),
 		ui.Size(1000, 620),
 	)
 }

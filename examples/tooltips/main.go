@@ -5,7 +5,7 @@ import "github.com/qianniancn/flowui/ui"
 type Model struct{}
 type Msg any
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -66,8 +66,8 @@ func section(title string, child ui.Widget) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
-		ui.Title("FlowUI Tooltips"),
+	ui.Run(ui.NewProgram(Model{},
+		Update, View), ui.Title("FlowUI Tooltips"),
 		ui.Size(860, 560),
 	)
 }

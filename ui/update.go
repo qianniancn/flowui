@@ -10,15 +10,12 @@ import (
 // call Send; the messages are queued for a later frame.
 type Send[Msg any] func(Msg)
 
-// Update applies a message to the model.
-type Update[M any, Msg any] func(*M, Msg)
-
-// A Cmd returned by UpdateCmd runs in its own goroutine after UpdateCmd returns
+// A Cmd returned by Update runs in its own goroutine after Update returns
 // and may send messages back later. Its context is canceled when the window
 // closes.
 //
 // A command may overlap later frames. It must capture only immutable value
-// snapshots prepared by UpdateCmd, must not retain or access the model pointer
+// snapshots prepared by Update, must not retain or access the model pointer
 // or a Context, and must report model-facing results through Send. Copy slices,
 // maps, and other reference-backed model data before capturing them.
 type Cmd[Msg any] func(context.Context, Send[Msg]) error
@@ -47,10 +44,10 @@ func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
 	}
 }
 
-// UpdateCmd applies a message and may return a command to run. It must finish
+// Update applies a message and may return a command to run. It must finish
 // all model mutation before returning; a returned Cmd must follow the Cmd
 // capture rules.
-type UpdateCmd[M any, Msg any] func(*M, Msg) Cmd[Msg]
+type Update[M any, Msg any] func(*M, Msg) Cmd[Msg]
 
 // Do turns a context-free function into a command. Use DoContext for work that
 // blocks, can fail, or must respond promptly to application shutdown.

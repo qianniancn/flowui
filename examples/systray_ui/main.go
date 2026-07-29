@@ -412,7 +412,7 @@ func main() {
 		Subscriptions: Subscriptions,
 		View:          View,
 	}
-	controller.window = ui.NewProgramWindow("main", program,
+	controller.window = ui.NewWindow("main", program,
 		ui.Title("FlowUI System Tray"),
 		ui.Size(760, 500),
 		ui.OnWindowCloseRequest(controller.closeDecision),

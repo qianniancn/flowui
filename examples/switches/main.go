@@ -40,7 +40,7 @@ type Msg struct {
 	Checked bool
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.Field {
 	case fieldNotifications:
 		m.Notifications = msg.Checked
@@ -64,6 +64,7 @@ func Update(m *Model, msg Msg) {
 		m.Large = msg.Checked
 	}
 	m.Last = fmt.Sprintf("%s is %s", msg.Field, switchStateText(msg.Checked))
+	return nil
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -157,14 +158,14 @@ func switchStateText(checked bool) string {
 }
 
 func main() {
-	ui.Run(Model{
+	ui.Run(ui.NewProgram(Model{
 		Notifications: true,
 		Newsletter:    true,
 		Marketing:     true,
 		Medium:        true,
 		Power:         true,
-	}, Update, View,
-		ui.Title("FlowUI Switch"),
+	},
+		Update, View), ui.Title("FlowUI Switch"),
 		ui.Size(900, 720),
 	)
 }

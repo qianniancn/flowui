@@ -364,18 +364,15 @@ var members = []member{
 }
 
 func main() {
-	ui.RunCmd(
-		Model{
-			Selected:     []string{"kate", "sara"},
-			Sort:         ui.TableSortDescriptor{Column: "name", Direction: ui.TableSortAscending},
-			Page:         1,
-			Loaded:       asyncBatchSize,
-			EditableName: "Ada Lovelace",
-			EditableRole: "engineer",
-		},
-		Update,
-		View,
-		ui.Title("FlowUI Table"),
+	ui.Run(ui.NewProgram(Model{
+		Selected:     []string{"kate", "sara"},
+		Sort:         ui.TableSortDescriptor{Column: "name", Direction: ui.TableSortAscending},
+		Page:         1,
+		Loaded:       asyncBatchSize,
+		EditableName: "Ada Lovelace",
+		EditableRole: "engineer",
+	},
+		Update, View), ui.Title("FlowUI Table"),
 		ui.Size(1100, 820),
 	)
 }

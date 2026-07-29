@@ -37,14 +37,14 @@ type Delete struct {
 	ID int
 }
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case DraftChanged:
 		m.Draft = msg.Text
 	case Add:
 		text := strings.TrimSpace(m.Draft)
 		if text == "" {
-			return
+			return nil
 		}
 		m.Items = append(m.Items, Item{
 			ID:   m.NextID,
@@ -56,7 +56,7 @@ func Update(m *Model, msg Msg) {
 		for i := range m.Items {
 			if m.Items[i].ID == msg.ID {
 				m.Items[i].Done = msg.Done
-				return
+				return nil
 			}
 		}
 	case Delete:
@@ -64,6 +64,7 @@ func Update(m *Model, msg Msg) {
 			return item.ID == msg.ID
 		})
 	}
+	return nil
 }
 
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
@@ -139,8 +140,8 @@ func todoRow(item Item, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{NextID: 1}, Update, View,
-		ui.Title("FlowUI Todo"),
+	ui.Run(ui.NewProgram(Model{NextID: 1},
+		Update, View), ui.Title("FlowUI Todo"),
 		ui.Size(900, 600),
 	)
 }

@@ -16,7 +16,7 @@ type Model struct {
 
 type Msg any
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, model Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -65,11 +65,8 @@ func loadImage(data []byte) image.Image {
 }
 
 func main() {
-	ui.Run(
-		Model{Landscape: paint.NewImageOp(loadImage(images.BGDesertJPG))},
-		Update,
-		View,
-		ui.Title("FlowUI Image"),
+	ui.Run(ui.NewProgram(Model{Landscape: paint.NewImageOp(loadImage(images.BGDesertJPG))},
+		Update, View), ui.Title("FlowUI Image"),
 		ui.Size(760, 620),
 	)
 }

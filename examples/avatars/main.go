@@ -15,7 +15,7 @@ type Model struct {
 
 type Msg any
 
-func Update(*Model, Msg) {}
+func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, model Model, _ ui.Send[Msg]) ui.Widget {
 	return ui.Center(
@@ -95,5 +95,6 @@ func drawEllipse(img *image.NRGBA, centerX, centerY, radiusX, radiusY int, value
 }
 
 func main() {
-	ui.Run(Model{Photo: paint.NewImageOp(samplePortrait())}, Update, View, ui.Title("FlowUI Avatar"), ui.Size(720, 560))
+	ui.Run(ui.NewProgram(Model{Photo: paint.NewImageOp(samplePortrait())},
+		Update, View), ui.Title("FlowUI Avatar"), ui.Size(720, 560))
 }

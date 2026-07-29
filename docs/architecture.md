@@ -2,7 +2,7 @@
 
 Implementation notes for the current tree: dependency direction, style cascade,
 interaction host, state ownership, overlay host, and effects. For application
-usage, see the [project Wiki](https://github.com/qianniancn/flowui/wiki) and the public `ui` package docs.
+usage, see the [project documentation](https://qianniancn.github.io/flowui/) and the public `ui` package docs.
 
 FlowUI exposes one primary application-facing package:
 
@@ -117,7 +117,7 @@ layers -> ExpandTokens -> Cascade(state) -> ResolveColors -> Transitions(key)
 
 Animation is dual-track: Style `Transition` (property whitelist under a stable
 key) and imperative `Tween` for floats. Both share `Ease*` curves and honor
-`Theme.Motion`. Application-facing animation notes: [动画](https://github.com/qianniancn/flowui/wiki/12-动画).
+`Theme.Motion`. Application-facing animation notes: [动画](guide/12-动画.md).
 
 ## Interaction Core
 
@@ -226,7 +226,7 @@ above the modal that registered it but below any pending nested modal. Panel
 content is still laid out before `EndFrame`, so keyed state, focus requests,
 animations, and MVU callbacks retain normal same-frame semantics.
 
-For application-facing overlay behavior, see [浮层与弹出](https://github.com/qianniancn/flowui/wiki/09-浮层与弹出).
+For application-facing overlay behavior, see [浮层与弹出](guide/09-浮层与弹出.md).
 
 Input ownership for overlay *policy* events (dismiss, Escape, exclusive
 open/close) is owned by at most one non-passive overlay:

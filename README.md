@@ -107,7 +107,7 @@ go run .
 ```
 
 The same application is available at [`examples/counter`](examples/counter).
-For a guided walkthrough, read [Quick Start](https://github.com/qianniancn/flowui/wiki/01-快速开始).
+For a guided walkthrough, read [Quick Start](https://qianniancn.github.io/flowui/guide/01-快速开始/).
 
 ## Core Model
 
@@ -130,8 +130,8 @@ Choose the application entry point that matches the required lifecycle:
 
 Commands run outside the event loop and return results through `ui.Send`.
 Subscriptions represent long-lived inputs such as timers or external event
-streams. The [MVU guide](https://github.com/qianniancn/flowui/wiki/03-MVU与消息)
-and [effects guide](https://github.com/qianniancn/flowui/wiki/08-命令与订阅)
+streams. The [MVU guide](https://qianniancn.github.io/flowui/guide/03-MVU与消息/)
+and [effects guide](https://qianniancn.github.io/flowui/guide/08-命令与订阅/)
 cover the complete contracts.
 
 ## Components
@@ -146,7 +146,7 @@ cover the complete contracts.
 | Data and feedback | `Table`, `ProgressBar`, `ProgressCircle`, `Meter`, `Spinner`, `Slider`, charts, `Heatmap`, `GanttChart` |
 | Layout | `Box`, `Surface`, `Card`, `Row`, `Column`, `Grid`, `Scroll`, `SplitPane`, `Stack`, `Overlay` |
 
-See the [component guide](https://github.com/qianniancn/flowui/wiki/06-组件一览)
+See the [component guide](https://qianniancn.github.io/flowui/guide/06-组件一览/)
 or run the component gallery:
 
 ```bash
@@ -176,7 +176,7 @@ focused changes. Compound controls expose named parts such as `PartContent`,
 includes English and Chinese component strings; `ui.LanguageAuto` follows the
 host language.
 
-The [style and theme guide](https://github.com/qianniancn/flowui/wiki/05-样式与主题)
+The [style and theme guide](https://qianniancn.github.io/flowui/guide/05-样式与主题/)
 documents precedence, parts, colors, geometry, and transitions.
 
 ## Examples
@@ -202,7 +202,7 @@ animations, menus, overlays, layout, window chrome, and individual controls.
 
 | Resource | Purpose |
 | --- | --- |
-| [User tutorial](https://github.com/qianniancn/flowui/wiki) | Task-oriented guide from first app through advanced features (Chinese) |
+| [Documentation](https://qianniancn.github.io/flowui/) | Task-oriented guide from first app through advanced features (Chinese) |
 | [Package reference](https://pkg.go.dev/github.com/qianniancn/flowui/ui) | Public Go API |
 | [`docs/architecture.md`](docs/architecture.md) | Dependency direction, state ownership, overlays, and effects |
 | [`explorer/README.md`](explorer/README.md) | Per-window native open and save dialogs |
@@ -225,7 +225,7 @@ go vet ./...
 ```
 
 `uitest` is intended for component and application tests; it is not required
-by applications at runtime. See the [testing guide](https://github.com/qianniancn/flowui/wiki/13-测试).
+by applications at runtime. See the [testing guide](https://qianniancn.github.io/flowui/guide/13-测试/).
 
 ## Contributing
 

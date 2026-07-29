@@ -100,7 +100,7 @@ go run .
 ```
 
 仓库内的同款应用位于 [`examples/counter`](examples/counter)。
-需要分步讲解时，请阅读[快速开始](https://github.com/qianniancn/flowui/wiki/01-快速开始)。
+需要分步讲解时，请阅读[快速开始](https://qianniancn.github.io/flowui/guide/01-快速开始/)。
 
 ## 核心模型
 
@@ -120,8 +120,8 @@ FlowUI 遵循三条状态与布局归属规则：
 | `ui.Application` / `ui.RunWindows` | 多窗口和由应用管理的窗口生命周期 |
 
 Command 在事件循环外执行，并通过 `ui.Send` 返回结果。订阅用于计时器、外部事件流等
-长期输入。完整契约见 [MVU 与消息](https://github.com/qianniancn/flowui/wiki/03-MVU与消息)
-和[命令与订阅](https://github.com/qianniancn/flowui/wiki/08-命令与订阅)。
+长期输入。完整契约见 [MVU 与消息](https://qianniancn.github.io/flowui/guide/03-MVU与消息/)
+和[命令与订阅](https://qianniancn.github.io/flowui/guide/08-命令与订阅/)。
 
 ## 组件
 
@@ -135,7 +135,7 @@ Command 在事件循环外执行，并通过 `ui.Send` 返回结果。订阅用�
 | 数据与反馈 | `Table`、`ProgressBar`、`ProgressCircle`、`Meter`、`Spinner`、`Slider`、图表、`Heatmap`、`GanttChart` |
 | 布局 | `Box`、`Surface`、`Card`、`Row`、`Column`、`Grid`、`Scroll`、`SplitPane`、`Stack`、`Overlay` |
 
-可以阅读[组件一览](https://github.com/qianniancn/flowui/wiki/06-组件一览)，
+可以阅读[组件一览](https://qianniancn.github.io/flowui/guide/06-组件一览/)，
 或直接运行组件总览：
 
 ```bash
@@ -163,7 +163,7 @@ save := ui.Button("save", ui.Text("Save")).Style(primary)
 `PartIndicator`、`PartPanel` 等命名部件提供精确样式入口。FlowUI 内置中英文组件
 文案，`ui.LanguageAuto` 会跟随系统语言。
 
-[样式与主题](https://github.com/qianniancn/flowui/wiki/05-样式与主题)介绍了优先级、
+[样式与主题](https://qianniancn.github.io/flowui/guide/05-样式与主题/)介绍了优先级、
 命名部件、颜色、几何和过渡动画。
 
 ## 示例
@@ -189,7 +189,7 @@ save := ui.Button("save", ui.Text("Save")).Style(primary)
 
 | 资源 | 用途 |
 | --- | --- |
-| [使用教程](https://github.com/qianniancn/flowui/wiki) | 从第一个应用到高级功能的任务式教程 |
+| [使用教程](https://qianniancn.github.io/flowui/) | 从第一个应用到高级功能的任务式教程 |
 | [Package Reference](https://pkg.go.dev/github.com/qianniancn/flowui/ui) | 公开 Go API |
 | [`docs/architecture.md`](docs/architecture.md) | 依赖方向、状态归属、浮层和副作用 |
 | [`explorer/README.md`](explorer/README.md) | 每窗口原生打开和保存对话框 |
@@ -211,7 +211,7 @@ go vet ./...
 ```
 
 `uitest` 用于组件和应用测试，普通应用运行时不需要依赖它。详见
-[测试教程](https://github.com/qianniancn/flowui/wiki/13-测试)。
+[测试教程](https://qianniancn.github.io/flowui/guide/13-测试/)。
 
 ## 参与贡献
 

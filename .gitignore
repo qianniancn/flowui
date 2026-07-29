@@ -1,4 +1,5 @@
 *.exe
 *.test
+/site/
 /examples/components
 /examples/systray_ui/*_windows_*.syso

@@ -180,14 +180,33 @@ func (b BoxWidget) layoutInteractiveResolved(
 	host func(layout.Context, layout.Widget) layout.Dimensions,
 ) layout.Dimensions {
 	runAssociationPreparer(ctx, b.child)
+	transformStyle := resolved.Trans
+	visualStyle := resolved
+	visualStyle.Trans = nil
 	visual := func(gtx layout.Context) layout.Dimensions {
-		return b.layoutVisual(ctx, gtx, resolved)
+		return b.layoutVisual(ctx, gtx, visualStyle)
 	}
 	layoutHost := func(gtx layout.Context) layout.Dimensions {
 		if host == nil {
 			return visual(gtx)
 		}
 		return host(gtx, visual)
+	}
+	if !boxTransformIsIdentity(transformStyle) {
+		untransformedHost := layoutHost
+		layoutHost = func(gtx layout.Context) layout.Dimensions {
+			macro := op.Record(gtx.Ops)
+			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+				return untransformedHost(gtx)
+			})
+			call := macro.Stop()
+			transform := boxTransform(gtx, transformStyle, dims.Size)
+			placement.PlaceTransform(transform)
+			stack := op.Affine(transform).Push(gtx.Ops)
+			call.Add(gtx.Ops)
+			stack.Pop()
+			return dims
+		}
 	}
 	margin := boxInsets(resolved.Box, false)
 	if hasInset(margin) {
@@ -434,6 +453,17 @@ func boxTransform(gtx layout.Context, style *flowstyle.TransformStyle, size imag
 		transform = transform.Rotate(center, *style.Rotate)
 	}
 	return transform
+}
+
+func boxTransformIsIdentity(style *flowstyle.TransformStyle) bool {
+	if style == nil {
+		return true
+	}
+	return (style.TranslateX == nil || *style.TranslateX == 0) &&
+		(style.TranslateY == nil || *style.TranslateY == 0) &&
+		(style.ScaleX == nil || *style.ScaleX == 1) &&
+		(style.ScaleY == nil || *style.ScaleY == 1) &&
+		(style.Rotate == nil || *style.Rotate == 0)
 }
 
 func boxOpacity(style *flowstyle.PaintStyle) float32 {

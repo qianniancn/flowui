@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/pointer"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui/uitest"
@@ -130,6 +134,41 @@ func TestPublicThemeMetricTokens(t *testing.T) {
 	}
 }
 
+func TestInteractiveStyleTransformMovesVisualBounds(t *testing.T) {
+	harness := uitest.New(image.Pt(200, 100))
+	button := ui.Button("lift", ui.Text("Lift")).
+		Label("Lift").
+		Style(
+			ui.Width(92).Height(36).
+				Transition(ui.PropTransform, time.Millisecond).
+				When(ui.Hovered, ui.Translate(0, -3).Scale(1.04, 1.04)),
+		)
+	root := ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min = image.Point{}
+			return button.Layout(ctx, gtx)
+		})
+	})
+
+	harness.Frame(root)
+	before, ok := semanticBounds(harness.Router().AppendSemantics(nil), semantic.Button, "Lift")
+	if !ok {
+		t.Fatal("missing button semantics before transform")
+	}
+
+	harness.Router().Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(100, 50)})
+	harness.Frame(root)
+	harness.Advance(2 * time.Millisecond)
+	harness.Frame(root)
+	after, ok := semanticBounds(harness.Router().AppendSemantics(nil), semantic.Button, "Lift")
+	if !ok {
+		t.Fatal("missing button semantics after transform")
+	}
+	if after.Min.Y >= before.Min.Y || after.Dx() <= before.Dx() || after.Dy() <= before.Dy() {
+		t.Fatalf("transformed bounds = %v, want above and larger than %v", after, before)
+	}
+}
+
 func TestPublicStyleFluentIsImmutable(t *testing.T) {
 	base := ui.Padding(4).Background(ui.TokenSurface)
 	changed := base.
@@ -169,4 +208,16 @@ func ExampleStyleScope() {
 		ui.Radius(6),
 		ui.Button("save", ui.Text("Save")).Style(primary),
 	)
+}
+
+func semanticBounds(nodes []input.SemanticNode, class semantic.ClassOp, label string) (image.Rectangle, bool) {
+	for _, node := range nodes {
+		if node.Desc.Class == class && node.Desc.Label == label {
+			return node.Desc.Bounds, true
+		}
+		if bounds, ok := semanticBounds(node.Children, class, label); ok {
+			return bounds, true
+		}
+	}
+	return image.Rectangle{}, false
 }

@@ -11,29 +11,44 @@ use_directory_urls: true
 theme:
   name: material
   language: zh
-  font: false
   features:
-    - navigation.instant
-    - navigation.sections
-    - navigation.top
-    - search.highlight
-    - search.suggest
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
     - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
   palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: 切换到浅色模式
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue grey
-      accent: blue
+      primary: indigo
+      accent: indigo
       toggle:
-        icon: material/weather-night
+        icon: material/toggle-switch
         name: 切换到深色模式
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue grey
-      accent: light blue
+      primary: black
+      accent: indigo
       toggle:
-        icon: material/weather-sunny
-        name: 切换到浅色模式
+        icon: material/toggle-switch-off
+        name: 跟随系统主题
+  font:
+    text: Roboto
+    code: Roboto Mono
 
 nav:
   - 首页: index.md
@@ -62,6 +77,7 @@ plugins:
       lang:
         - en
         - zh
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
 
 markdown_extensions:
   - admonition
@@ -78,3 +94,8 @@ markdown_extensions:
       alternate_style: true
 
 copyright: Copyright &copy; FlowUI contributors
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/qianniancn/flowui

@@ -6,7 +6,7 @@
 |------|--------------|------|
 | Model | 任意 struct | 业务状态 |
 | Msg | 封闭类型集 | 发生了什么 |
-| Update | `func(*M, Msg)` 或 `func(*M, Msg) Cmd[Msg]` | 改 Model，可选副作用 |
+| Update | `func(*M, Msg) Cmd[Msg]` | 改 Model，可选副作用 |
 | View | `func(*Context, M, Send[Msg]) Widget` | 只读渲染 |
 
 ## 推荐：封闭消息集
@@ -20,13 +20,14 @@ type Submitted struct{}
 func (NameChanged) msg() {}
 func (Submitted) msg() {}
 
-func Update(m *Model, msg Msg) {
+func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
 	case NameChanged:
 		m.Name = msg.Name
 	case Submitted:
 		// ...
 	}
+	return nil
 }
 ```
 
@@ -62,21 +63,21 @@ ui.Button("save", ui.Text("保存")).OnClick(func() {
 })
 ```
 
-## 同步 Update：`ui.Run`
+## 单窗口：`ui.Run(Program)`
 
 ```go
-ui.Run(Model{}, Update, View,
+ui.Run(ui.NewProgram(Model{}, Update, View),
 	ui.Title("App"),
 	ui.Size(800, 600),
 )
 ```
 
-适合没有异步副作用的界面。
+`NewProgram` 适合固定初始 Model。`Update` 始终返回 `Cmd`；没有副作用时返回 `nil`。
 
-## 完整 Program：`ui.RunProgram`
+## 完整 Program
 
 ```go
-ui.RunProgram(ui.Program[Model, Msg]{
+ui.Run(ui.Program[Model, Msg]{
 	Init: func() (Model, ui.Cmd[Msg]) {
 		return Model{}, loadInitial()
 	},
@@ -99,7 +100,7 @@ ui.RunProgram(ui.Program[Model, Msg]{
 | 字段 | 说明 |
 |------|------|
 | `Init` | 每窗口实例一次；可带初始 Cmd |
-| `Update` | `UpdateCmd`：改 Model 后返回 Cmd |
+| `Update` | 改 Model 后返回 Cmd |
 | `Subscriptions` | 按当前 Model 声明订阅集合 |
 | `View` | 渲染 |
 | `WindowStateMessage` | 原生窗口状态 → Msg |
@@ -147,7 +148,7 @@ ui.Key("counter", counter.View(model.Counter, func(msg counter.Msg) {
 ## 常见选项
 
 ```go
-ui.Run(Model{}, Update, View,
+ui.Run(ui.NewProgram(Model{}, Update, View),
 	ui.Title("标题"),
 	ui.Size(960, 640),
 	ui.MinSize(400, 300),

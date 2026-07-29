@@ -59,13 +59,14 @@ type Dec struct{}
 func (Inc) msg() {}
 func (Dec) msg() {}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case Inc:
 		model.Count++
 	case Dec:
 		model.Count--
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -86,7 +87,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
+	ui.Run(ui.NewProgram(Model{}, Update, View),
 		ui.Title("FlowUI Counter"),
 		ui.Size(640, 480),
 	)
@@ -111,13 +112,13 @@ FlowUI 遵循三条状态与布局归属规则：
 2. **Style 管理组件自身的盒子和外观。** 布局容器负责测量和排列子项。
 3. **Key 提供跨帧身份。** 稳定的 Key 会为重复或移动的组件保留交互与动画状态。
 
-根据应用需要的生命周期选择入口：
+根据应用需要的生命周期选择 API：
 
 | API | 适用场景 |
 | --- | --- |
-| `ui.Run` | 同步 `Update` 循环，大多数应用从这里开始 |
-| `ui.RunCmd` / `ui.RunProgram` | 异步 Command、初始化、订阅或运行时错误处理 |
-| `ui.Application` / `ui.RunWindows` | 多窗口和由应用管理的窗口生命周期 |
+| `ui.Run(ui.Program)` | 所有单窗口 MVU 应用的启动入口 |
+| `ui.NewProgram` | 为固定初始 Model 快速构造 Program |
+| `ui.Application` | 多窗口、托盘和由应用管理的生命周期 |
 
 Command 在事件循环外执行，并通过 `ui.Send` 返回结果。订阅用于计时器、外部事件流等
 长期输入。完整契约见 [MVU 与消息](https://qianniancn.github.io/flowui/guide/03-MVU与消息/)

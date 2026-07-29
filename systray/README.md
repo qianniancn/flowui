@@ -113,7 +113,7 @@ application.SetKeepAlive(false)
 窗口关闭后可用 `application.Open(windowSpec)` 重新创建窗口。需要保留 MVU Model 时，在创建窗口时添加 `ui.RetainModelOnClose()`：
 
 ```go
-window := ui.NewProgramWindow("main", program,
+window := ui.NewWindow("main", program,
 	ui.RetainModelOnClose(),
 )
 ```
@@ -123,7 +123,7 @@ window := ui.NewProgramWindow("main", program,
 需要让 FlowUI 发起的关闭请求支持“取消”或“关闭到托盘”时，可以为窗口配置关闭决策：
 
 ```go
-window := ui.NewProgramWindow("main", program,
+window := ui.NewWindow("main", program,
 	ui.OnWindowCloseRequest(func() ui.WindowCloseDecision {
 		if hasUnsavedChanges {
 			return ui.WindowCloseCancel

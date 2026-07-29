@@ -21,7 +21,7 @@ and clock. Its `Harness.Frame` method follows the same main layout, root
 overlay, focus-command, state-cleanup, and router order as a real window.
 Applications do not depend on `uitest` at runtime.
 
-`uitest.AppHarness` drives the production message queue, `UpdateCmd`, command
+`uitest.AppHarness` drives the production message queue, `Update`, command
 execution, error delivery, and shutdown cancellation without opening a window.
 It complements the widget Harness rather than maintaining a second MVU runtime.
 
@@ -284,12 +284,12 @@ tracked child returns, including when the final transform is the identity.
 `ui.Program` groups `Init`, `Update`, `Subscriptions`, and `View` when an
 application needs the complete lifecycle. `Init` runs once per window instance
 and its optional command is managed by the same effect group as commands
-returned by `UpdateCmd`. `WindowStateMessage`, when present, maps Gio
+returned by `Update`. `WindowStateMessage`, when present, maps Gio
 configuration changes into queued messages for the next update.
 
-`UpdateCmd` is serialized on the event loop and is the only place a command
+`Update` is serialized on the event loop and is the only place a command
 workflow may mutate the model. Each returned `Cmd` starts in its own goroutine
-after `UpdateCmd` returns, so it can overlap later updates and views. Every
+after `Update` returns, so it can overlap later updates and views. Every
 command receives a root `context.Context` that is canceled when the window is
 destroyed. Blocking and fallible work should use `ui.DoContext`; `ui.Do` remains
 a convenience for short context-free work. `ui.LatestCmd` cancels an older
@@ -300,10 +300,10 @@ window lifetime so delayed older closures remain rejectable; use bounded,
 stable workflow keys rather than request-specific values.
 
 A command must capture only immutable value snapshots prepared during
-`UpdateCmd`. It must not retain or access the model pointer or a `ui.Context`.
+`Update`. It must not retain or access the model pointer or a `ui.Context`.
 Reference-backed values such as slices and maps need an explicit copy before
 capture. A command returns data to the application only by calling its `Send`
-argument; concurrent sends are queued safely and applied by `UpdateCmd` in a
+argument; concurrent sends are queued safely and applied by `Update` in a
 later frame. The runtime bounds the message queue to 256 entries. Ordinary
 messages beyond the bound are dropped and reported as `QueueOverflowError`; if
 a subscription stream is full, a queued value from the same generation is
@@ -315,7 +315,7 @@ child message to the parent message type. It preserves the command context and
 error unchanged; it does not introduce another goroutine or effect lifecycle.
 
 `Subscription` represents long-lived asynchronous input such as a timer,
-filesystem watcher, or server event stream. `RunProgram` with
+filesystem watcher, or server event stream. `Run` with
 `Program.Subscriptions` derives the
 desired subscription set on the initial frame and after an updated model;
 stable desired data is reused on animation-only frames. Keys are
@@ -328,7 +328,7 @@ When keys change, FlowUI cancels removed runners and waits asynchronously for
 them to stop before starting replacements. A 250ms grace bound prevents an
 uncooperative runner from blocking replacement indefinitely. Messages carry a
 subscription generation and are validated on the event thread, so messages
-queued by a stopped generation cannot reach `UpdateCmd`.
+queued by a stopped generation cannot reach `Update`.
 
 Commands and subscriptions may return errors. The runtime recovers their
 panics, attaches a stack trace, and reports both failures as `EffectError`
@@ -336,8 +336,8 @@ values to the `OnError` handler on the application event thread. Cancellation
 errors are ignored. Without an `OnError` option, FlowUI writes the error and any
 panic stack to standard error. The handler is for logging and unexpected
 infrastructure failures; expected domain failures should normally be converted
-into typed messages so `UpdateCmd` can represent them in the model.
-Panics from `UpdateCmd`, `Subscriptions`, or `View` are recovered as
+into typed messages so `Update` can represent them in the model.
+Panics from `Update`, `Subscriptions`, or `View` are recovered as
 `RuntimePanicError` values with a phase and stack trace; the window loop stops
 rather than continuing with a potentially partially-mutated model. When the
 window can request a native close, FlowUI cancels effects, issues that close,
@@ -350,7 +350,7 @@ mutations applied, discards later messages in that batch, and does not start
 commands for the panicking or later messages. Commands already started from
 earlier messages are canceled when the window session ends.
 
-`ui.Batch` starts several independent commands from one `UpdateCmd` return.
+`ui.Batch` starts several independent commands from one `Update` return.
 Each command runs concurrently under the same effect context and capture rules
 as a single command.
 

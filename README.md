@@ -66,13 +66,14 @@ type Dec struct{}
 func (Inc) msg() {}
 func (Dec) msg() {}
 
-func Update(model *Model, msg Msg) {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case Inc:
 		model.Count++
 	case Dec:
 		model.Count--
 	}
+	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
@@ -93,7 +94,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 }
 
 func main() {
-	ui.Run(Model{}, Update, View,
+	ui.Run(ui.NewProgram(Model{}, Update, View),
 		ui.Title("FlowUI Counter"),
 		ui.Size(640, 480),
 	)
@@ -120,13 +121,13 @@ FlowUI follows three ownership rules:
 3. **Keys provide identity across frames.** Stable keys retain interaction and
    animation state for repeated or moving widgets.
 
-Choose the application entry point that matches the required lifecycle:
+Choose the application API that matches the required lifecycle:
 
 | API | Use it for |
 | --- | --- |
-| `ui.Run` | A synchronous `Update` loop; the usual starting point |
-| `ui.RunCmd` / `ui.RunProgram` | Asynchronous commands, initialization, subscriptions, or runtime error handling |
-| `ui.Application` / `ui.RunWindows` | Multiple windows and application-owned window lifecycles |
+| `ui.Run(ui.Program)` | The single-window entry point for every MVU program |
+| `ui.NewProgram` | A compact program declaration for a fixed initial model |
+| `ui.Application` | Multiple windows, tray integration, and application-owned lifecycles |
 
 Commands run outside the event loop and return results through `ui.Send`.
 Subscriptions represent long-lived inputs such as timers or external event

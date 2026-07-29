@@ -482,7 +482,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			ui.Menubar("workspace-title-menu", []ui.MenubarItem{
 				ui.MenubarMenu("workspace-file", "File", []ui.MenuItem{{Key: "open", Label: "Open"}}),
 			}),
-		),
+		).
+			Leading(ui.Icon(lucide.AppWindow).Size(16)).
+			Menu(ui.Text("Menu")).
+			Center(ui.Input("title-search", "").Placeholder("Search")).
+			Trailing(ui.Button("title-settings", ui.Icon(lucide.Settings).Size(16))).
+			ShowMinimize(true).
+			ShowMaximize(true).
+			ShowClose(true).
+			OnClose(func() {}),
 		ui.Toolbar(
 			ui.Button("save", ui.Icon(lucide.Save).Size(16)).
 				Style(ui.Radius(8).
@@ -848,6 +856,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 }
 
 func TestPublicFacadeImportContract(t *testing.T) {
+	_ = ui.WindowTitleBarSupported()
 	_ = ui.RunWithSubscriptions[facadeModel, facadeMsg]
 	program := ui.Program[facadeModel, facadeMsg]{
 		Init:   func() (facadeModel, ui.Cmd[facadeMsg]) { return facadeModel{}, nil },
@@ -865,6 +874,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	application := ui.NewApplication()
 	_ = application.Open
 	_ = application.Close
+	_ = application.RequestClose
 	_ = application.CloseAll
 	_ = application.Quit
 	_ = application.SetKeepAlive
@@ -906,6 +916,10 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.WindowMode = ui.WindowModeFullscreen
 	var _ ui.WindowState
 	var _ ui.Option = ui.OnError(func(error) {})
+	var _ ui.WindowCloseDecision = ui.WindowCloseProceed
+	var _ ui.WindowCloseDecision = ui.WindowCloseCancel
+	var _ ui.WindowCloseDecision = ui.WindowCloseKeepAlive
+	var _ ui.Option = ui.OnWindowCloseRequest(func() ui.WindowCloseDecision { return ui.WindowCloseCancel })
 	var _ ui.Option = ui.RetainModelOnClose()
 	var _ error = ui.ErrEffectShutdownTimeout
 	var _ ui.Option = ui.Locale(ui.LanguageEnglish)

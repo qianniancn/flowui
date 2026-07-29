@@ -595,16 +595,18 @@ type SplitPaneTheme struct {
 }
 
 type TitleBarTheme struct {
-	Height         unit.Dp
-	PaddingX       unit.Dp
-	ControlWidth   unit.Dp
-	IconSize       unit.Dp
-	TitleTextSize  unit.Sp
-	BorderWidth    unit.Dp
-	FocusRingWidth unit.Dp
-	ControlPressed color.NRGBA
-	CloseHover     color.NRGBA
-	ClosePressed   color.NRGBA
+	Height          unit.Dp
+	PaddingX        unit.Dp
+	LeadingGap      unit.Dp
+	ControlWidth    unit.Dp
+	IconSize        unit.Dp
+	IconStrokeWidth unit.Dp
+	TitleTextSize   unit.Sp
+	BorderWidth     unit.Dp
+	FocusRingWidth  unit.Dp
+	ControlPressed  color.NRGBA
+	CloseHover      color.NRGBA
+	ClosePressed    color.NRGBA
 }
 
 type ToolbarTheme struct {
@@ -1568,16 +1570,18 @@ func DefaultTheme() Theme {
 				HandleLength: 32,
 			},
 			TitleBar: TitleBarTheme{
-				Height:         35,
-				PaddingX:       4,
-				ControlWidth:   46,
-				IconSize:       12,
-				TitleTextSize:  12,
-				BorderWidth:    1,
-				FocusRingWidth: 2,
-				ControlPressed: color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff},
-				CloseHover:     color.NRGBA{R: 0xc4, G: 0x2b, B: 0x1c, A: 0xff},
-				ClosePressed:   color.NRGBA{R: 0xa3, G: 0x21, B: 0x16, A: 0xff},
+				Height:          35,
+				PaddingX:        8,
+				LeadingGap:      8,
+				ControlWidth:    46,
+				IconSize:        12,
+				IconStrokeWidth: 1.25,
+				TitleTextSize:   12,
+				BorderWidth:     1,
+				FocusRingWidth:  2,
+				ControlPressed:  color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff},
+				CloseHover:      color.NRGBA{R: 0xc4, G: 0x2b, B: 0x1c, A: 0xff},
+				ClosePressed:    color.NRGBA{R: 0xa3, G: 0x21, B: 0x16, A: 0xff},
 			},
 			Toolbar: ToolbarTheme{
 				Gap:             8,

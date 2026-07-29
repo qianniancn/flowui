@@ -54,10 +54,11 @@ type TrayEvent struct {
 type Increment struct{}
 
 const (
-	TrayClicked  TrayAction = "Tray icon clicked"
-	WindowShown  TrayAction = "Window shown"
-	WindowButton TrayAction = "Show window button clicked"
-	TrayButton   TrayAction = "Tray button clicked"
+	TrayClicked       TrayAction = "Tray icon clicked"
+	WindowShown       TrayAction = "Window shown"
+	WindowButton      TrayAction = "Show window button clicked"
+	WindowCloseButton TrayAction = "Close window button clicked"
+	TrayButton        TrayAction = "Tray button clicked"
 )
 
 func NewController(app *ui.Application) *Controller {
@@ -272,6 +273,17 @@ func (controller *Controller) showWindow(action TrayAction) {
 	}
 }
 
+func (controller *Controller) closeDecision() ui.WindowCloseDecision {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.tray != nil {
+		controller.lastAction = "Window closed to tray"
+		return ui.WindowCloseKeepAlive
+	}
+	controller.lastAction = "Window close requested"
+	return ui.WindowCloseProceed
+}
+
 func (controller *Controller) quit() {
 	controller.lifecycleMu.Lock()
 	defer controller.lifecycleMu.Unlock()
@@ -311,6 +323,10 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 		case WindowButton:
 			return ui.Do(func(ui.Send[Msg]) {
 				controller.showWindow(WindowButton)
+			})
+		case WindowCloseButton:
+			return ui.Do(func(ui.Send[Msg]) {
+				controller.app.RequestClose("main")
 			})
 		case TrayButton:
 			return ui.Do(func(ui.Send[Msg]) {
@@ -355,6 +371,9 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				ui.Row(
 					ui.Button("show-window", ui.Text("Show window")).
 						OnClick(func() { send(TrayEvent{Action: WindowButton}) }),
+					ui.Button("close-window", ui.Text("Close window")).
+						Variant(ui.ButtonSecondary).
+						OnClick(func() { send(TrayEvent{Action: WindowCloseButton}) }),
 					ui.Button("toggle-tray", ui.Text(trayButton)).
 						Variant(ui.ButtonSecondary).
 						OnClick(func() { send(TrayEvent{Action: TrayButton}) }),
@@ -396,6 +415,7 @@ func main() {
 	controller.window = ui.NewProgramWindow("main", program,
 		ui.Title("FlowUI System Tray"),
 		ui.Size(760, 500),
+		ui.OnWindowCloseRequest(controller.closeDecision),
 		ui.RetainModelOnClose(),
 	)
 	app.Run(controller.window)

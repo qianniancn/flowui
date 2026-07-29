@@ -120,6 +120,32 @@ window := ui.NewProgramWindow("main", program,
 
 该选项通过赋值保留 Model，不会进行深拷贝。窗口重开时不会再次执行 `Init` 和初始命令，但会根据保留的 Model 重新建立订阅。组件内部的临时交互状态仍随原生窗口销毁；应保存的业务状态需要放在 Model 中。完整的控制器写法见上述示例。
 
+需要让 FlowUI 发起的关闭请求支持“取消”或“关闭到托盘”时，可以为窗口配置关闭决策：
+
+```go
+window := ui.NewProgramWindow("main", program,
+	ui.OnWindowCloseRequest(func() ui.WindowCloseDecision {
+		if hasUnsavedChanges {
+			return ui.WindowCloseCancel
+		}
+		if trayEnabled {
+			return ui.WindowCloseKeepAlive
+		}
+		return ui.WindowCloseProceed
+	}),
+	ui.RetainModelOnClose(),
+)
+
+// 应用内的关闭命令。
+application.RequestClose("main")
+```
+
+`WindowCloseKeepAlive` 会销毁当前原生窗口并自动开启应用保活；它不是隐藏并保留同一个原生窗口句柄。之后用 `application.Open(window)` 重建窗口，用 `application.Quit()` 从托盘彻底退出。`WindowTitleBar` 的默认关闭按钮会调用这个生命周期入口；组件显式设置 `OnClose` 后则由该回调自行处理。
+
+`application.Close`、`CloseAll` 和 `Quit` 是强制关闭路径，不会调用关闭决策，因此托盘的“退出”不会被取消。
+
+Gio `v0.10.1` 没有公开可取消的原生关闭请求事件。系统标题栏关闭按钮、`Alt+F4` 和窗口管理器关闭命令可能直接销毁窗口，`OnWindowCloseRequest` 无法拦截它们。使用原生标题栏的托盘应用应在托盘启用期间调用 `SetKeepAlive(true)`；这样原生窗口关闭后进程仍会保留，但不能取消该次关闭。
+
 ## 菜单
 
 ```go

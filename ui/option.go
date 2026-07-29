@@ -36,11 +36,12 @@ func (option windowOption) appOption() app.Option {
 }
 
 type runOptions struct {
-	window       []app.Option
-	themeOps     []func(*Theme)
-	language     Language
-	errorHandler func(error)
-	retainModel  bool
+	window              []app.Option
+	themeOps            []func(*Theme)
+	language            Language
+	errorHandler        func(error)
+	closeRequestHandler func() WindowCloseDecision
+	retainModel         bool
 }
 
 func newRunOptions(opts []Option) runOptions {
@@ -147,6 +148,20 @@ func Locale(language Language) Option {
 func OnError(handler func(error)) Option {
 	return optionFunc(func(cfg *runOptions) {
 		cfg.errorHandler = handler
+	})
+}
+
+// OnWindowCloseRequest handles FlowUI close requests for this window. The
+// handler is used by Application.RequestClose and by WindowTitleBar's default
+// close button. Application.Close and Application.Quit remain force-close
+// operations and do not call it.
+//
+// Gio does not expose a cancellable native close-request event. Native title
+// bar close buttons, Alt+F4, and window-manager close commands may therefore
+// destroy the window without calling this handler.
+func OnWindowCloseRequest(handler func() WindowCloseDecision) Option {
+	return optionFunc(func(cfg *runOptions) {
+		cfg.closeRequestHandler = handler
 	})
 }
 

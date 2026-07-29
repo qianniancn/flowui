@@ -23,6 +23,7 @@ import (
 // state that must survive from frame to frame.
 type Context struct {
 	window                       *app.Window
+	requestWindowClose           func()
 	theme                        *theme.Theme
 	themeGeneration              uint64
 	language                     locale.Language
@@ -198,6 +199,24 @@ func PerformWindowActions(ctx *Context, actions system.Action) {
 	if ctx != nil && ctx.window != nil && actions != 0 {
 		ctx.window.Perform(actions)
 	}
+}
+
+// SetWindowCloseRequest installs the application lifecycle callback used by
+// client-side window decorations.
+func SetWindowCloseRequest(ctx *Context, request func()) {
+	if ctx != nil {
+		ctx.requestWindowClose = request
+	}
+}
+
+// RequestWindowClose routes a client-side close control through the
+// application lifecycle. It reports whether a callback was installed.
+func RequestWindowClose(ctx *Context) bool {
+	if ctx == nil || ctx.requestWindowClose == nil {
+		return false
+	}
+	ctx.requestWindowClose()
+	return true
 }
 
 func BeginFrame(ctx *Context) {

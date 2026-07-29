@@ -121,3 +121,11 @@ func TestRetainModelOnCloseOption(t *testing.T) {
 		t.Fatal("model retention was not configured")
 	}
 }
+
+func TestWindowCloseRequestOption(t *testing.T) {
+	handler := func() WindowCloseDecision { return WindowCloseCancel }
+	cfg := newRunOptions([]Option{OnWindowCloseRequest(handler)})
+	if cfg.closeRequestHandler == nil || cfg.closeRequestHandler() != WindowCloseCancel {
+		t.Fatal("window close-request handler was not configured")
+	}
+}

@@ -180,6 +180,19 @@ func TestContextTracksWindowState(t *testing.T) {
 	}
 }
 
+func TestContextRoutesWindowCloseRequests(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	if RequestWindowClose(ctx) {
+		t.Fatal("close request succeeded without a lifecycle callback")
+	}
+
+	requests := 0
+	SetWindowCloseRequest(ctx, func() { requests++ })
+	if !RequestWindowClose(ctx) || requests != 1 {
+		t.Fatalf("close requests = %d, want 1", requests)
+	}
+}
+
 func TestWindowModeString(t *testing.T) {
 	for mode, want := range map[WindowMode]string{
 		Windowed: "windowed", Fullscreen: "fullscreen", Minimized: "minimized", Maximized: "maximized", WindowMode(255): "unknown",

@@ -73,9 +73,11 @@ func runWindowCmd[M any, Msg any](
 	onError func(error),
 	onDestroy func(),
 	onWindowState func(WindowState),
+	requestClose func(),
 	onExit func(M),
 ) error {
 	ctx := frame.New(w, theme, language)
+	frame.SetWindowCloseRequest(ctx, requestClose)
 	explorerService := internalexplorer.New(w)
 	eventWindow := &platformEventWindow{Window: w, explorer: explorerService}
 	if onError == nil {

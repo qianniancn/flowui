@@ -31,6 +31,19 @@ func TestProgramWindowSpec(t *testing.T) {
 	}
 }
 
+func TestWindowSpecStoresCloseRequestHandler(t *testing.T) {
+	spec := NewWindow(
+		"closable",
+		func() int { return 0 },
+		func(*int, int) {},
+		func(*Context, int, Send[int]) Widget { return nil },
+		OnWindowCloseRequest(func() WindowCloseDecision { return WindowCloseCancel }),
+	)
+	if spec.closeRequestHandler == nil || spec.closeRequestHandler() != WindowCloseCancel {
+		t.Fatal("window spec did not retain its close-request handler")
+	}
+}
+
 func TestRetainedWindowModelInitializesOnceAndResumes(t *testing.T) {
 	var retained retainedWindowModel[int, string]
 	initializations := 0
@@ -208,6 +221,116 @@ func TestApplicationQuitStopsKeepAliveWithoutWindows(t *testing.T) {
 	application.windows.finishStarting()
 
 	application.Quit()
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationRequestCloseCanCancel(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	calls := 0
+	_, _ = application.windows.addWithCloseRequest("main", window, new(windowAppearance), func() WindowCloseDecision {
+		calls++
+		return WindowCloseCancel
+	})
+	application.windows.finishStarting()
+
+	if application.RequestClose("missing") {
+		t.Fatal("requested close for a missing window")
+	}
+	if !application.RequestClose("main") || calls != 1 || !application.IsOpen("main") {
+		t.Fatalf("cancelled close = calls %d open %v", calls, application.IsOpen("main"))
+	}
+
+	application.windows.deactivate("main", window)
+	application.windows.complete(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationRequestCloseCanEnableKeepAlive(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	_, _ = application.windows.addWithCloseRequest("main", window, new(windowAppearance), func() WindowCloseDecision {
+		return WindowCloseKeepAlive
+	})
+	application.windows.finishStarting()
+
+	if !application.RequestClose("main") {
+		t.Fatal("active window rejected close request")
+	}
+	application.windows.mu.Lock()
+	keepAlive := application.windows.keepAlive
+	application.windows.mu.Unlock()
+	if !keepAlive {
+		t.Fatal("keep-alive close decision did not keep the application running")
+	}
+
+	application.windows.deactivate("main", window)
+	application.windows.complete(false)
+	select {
+	case code := <-done:
+		t.Fatalf("keep-alive application exited: %d", code)
+	default:
+	}
+	application.Quit()
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationForceCloseBypassesCloseRequestHandler(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	calls := 0
+	_, _ = application.windows.addWithCloseRequest("main", window, new(windowAppearance), func() WindowCloseDecision {
+		calls++
+		return WindowCloseCancel
+	})
+	application.windows.finishStarting()
+
+	if !application.Close("main") || calls != 0 {
+		t.Fatalf("force close called request handler %d times", calls)
+	}
+
+	application.windows.deactivate("main", window)
+	application.windows.complete(false)
+	if code := <-done; code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+}
+
+func TestApplicationQuitCannotBeReversedByCloseKeepAlive(t *testing.T) {
+	application := NewApplication()
+	done := application.windows.begin()
+	window := new(app.Window)
+	_, _ = application.windows.addWithCloseRequest("main", window, new(windowAppearance), func() WindowCloseDecision {
+		return WindowCloseKeepAlive
+	})
+	application.windows.finishStarting()
+
+	application.Quit()
+	if application.RequestClose("main") {
+		t.Fatal("application accepted a close request during shutdown")
+	}
+	application.windows.mu.Lock()
+	keepAlive := application.windows.keepAlive
+	quitting := application.windows.quitting
+	application.windows.mu.Unlock()
+	if keepAlive || !quitting {
+		t.Fatalf("shutdown state = keepAlive %v quitting %v", keepAlive, quitting)
+	}
+	if application.Open(NewWindow("other", func() int { return 0 }, func(*int, int) {}, func(*Context, int, Send[int]) Widget { return nil })) {
+		t.Fatal("opened a window after application quit")
+	}
+
+	application.windows.deactivate("main", window)
+	application.windows.complete(false)
 	if code := <-done; code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}

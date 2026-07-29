@@ -13,16 +13,43 @@ import (
 )
 
 type Model struct {
-	forward bool
+	forward         bool
+	timelinePlaying bool
+	timelineRun     uint64
+	layoutExpanded  bool
+	rectAlternate   bool
 }
+
+type Msg interface{ animationMsg() }
 
 type ToggleDirection struct{}
+type ToggleTimeline struct{}
+type RestartTimeline struct{}
+type ToggleLayout struct{}
+type ToggleRect struct{}
 
-func Update(model *Model, _ ToggleDirection) {
-	model.forward = !model.forward
+func (ToggleDirection) animationMsg() {}
+func (ToggleTimeline) animationMsg()  {}
+func (RestartTimeline) animationMsg() {}
+func (ToggleLayout) animationMsg()    {}
+func (ToggleRect) animationMsg()      {}
+
+func Update(model *Model, msg Msg) {
+	switch msg.(type) {
+	case ToggleDirection:
+		model.forward = !model.forward
+	case ToggleTimeline:
+		model.timelinePlaying = !model.timelinePlaying
+	case RestartTimeline:
+		model.timelineRun++
+	case ToggleLayout:
+		model.layoutExpanded = !model.layoutExpanded
+	case ToggleRect:
+		model.rectAlternate = !model.rectAlternate
+	}
 }
 
-func View(_ *ui.Context, model Model, send ui.Send[ToggleDirection]) ui.Widget {
+func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	action := "Reverse"
 	if !model.forward {
 		action = "Forward"
@@ -31,13 +58,17 @@ func View(_ *ui.Context, model Model, send ui.Send[ToggleDirection]) ui.Widget {
 		ui.Box(
 			ui.Column(
 				ui.Row(
-					ui.Expanded(ui.Text("Easing curves").Size(24)),
+					ui.Expanded(ui.Text("Motion").Size(24)),
 					ui.Button("toggle-direction", ui.Text(action)).OnClick(func() { send(ToggleDirection{}) }),
 				).AlignMiddle(),
 				ui.Divider(),
+				ui.Text("Animation primitives").Size(18),
+				ui.AutoGrid(300, motionDemoCards(model, send)...).ColumnGap(16).RowGap(16),
+				ui.Divider(),
+				ui.Text("Easing curves").Size(18),
 				ui.AutoGrid(200, easingCurveCards(model.forward)...).ColumnGap(16).RowGap(12),
 			).Gap(16),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(920)).Style(ui.Padding(24)),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(1040)).Style(ui.Padding(24)),
 	).Vertical()
 }
 
@@ -195,10 +226,10 @@ func boolFloat(value bool) float32 {
 
 func main() {
 	ui.Run(
-		Model{forward: true},
+		Model{forward: true, timelinePlaying: true},
 		Update,
 		View,
 		ui.Title("FlowUI Motion"),
-		ui.Size(980, 700),
+		ui.Size(1100, 760),
 	)
 }

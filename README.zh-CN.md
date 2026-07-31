@@ -14,6 +14,8 @@ FlowUI 是一个基于 [Gio](https://gioui.org/) 构建的 Go 桌面 UI 框架�
 import "github.com/qianniancn/flowui/ui"
 ```
 
+![FlowUI 组件总览](docs/assets/components-gallery.png)
+
 ## 核心能力
 
 - **类型化 MVU：** 业务状态放在 Model 中，用消息描述变化，View 只负责读取和渲染。

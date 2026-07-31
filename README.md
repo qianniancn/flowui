@@ -15,6 +15,8 @@ UI testing behind a focused public API.
 import "github.com/qianniancn/flowui/ui"
 ```
 
+![FlowUI component gallery](docs/assets/components-gallery.png)
+
 ## Highlights
 
 - **Typed MVU:** keep business state in a model, describe changes with messages,

@@ -52,6 +52,30 @@ func (i Widget) applyConstraints(gtx *layout.Context) {
 		gtx.Constraints.Min.Y = height
 		gtx.Constraints.Max.Y = height
 	}
+
+	// Cover and Fill use both maximum constraints as their target bounds. When
+	// only one axis is explicit, deriving the other from the source prevents an
+	// unbounded parent axis from expanding the image to an arbitrary size.
+	sourceSize := i.source.Size()
+	if sourceSize.X <= 0 || sourceSize.Y <= 0 || i.fit == FitUnscaled {
+		return
+	}
+	if i.hasWidth && !i.hasHeight {
+		height := aspectSize(gtx.Constraints.Max.X, sourceSize.X, sourceSize.Y)
+		height = min(max(height, gtx.Constraints.Min.Y), gtx.Constraints.Max.Y)
+		gtx.Constraints.Min.Y = height
+		gtx.Constraints.Max.Y = height
+	}
+	if i.hasHeight && !i.hasWidth {
+		width := aspectSize(gtx.Constraints.Max.Y, sourceSize.Y, sourceSize.X)
+		width = min(max(width, gtx.Constraints.Min.X), gtx.Constraints.Max.X)
+		gtx.Constraints.Min.X = width
+		gtx.Constraints.Max.X = width
+	}
+}
+
+func aspectSize(fixed, sourceFixed, sourceDerived int) int {
+	return int(int64(fixed) * int64(sourceDerived) / int64(sourceFixed))
 }
 
 func (i Widget) gioFit() widget.Fit {

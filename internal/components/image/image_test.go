@@ -48,6 +48,18 @@ func TestImageFixedBoundsSupportContainAndCover(t *testing.T) {
 	}
 }
 
+func TestImageSingleAxisBoundsPreserveAspectRatio(t *testing.T) {
+	ctx := imageTestFrameContext()
+	for _, fit := range []Fit{FitScaleDown, FitContain, FitCover, FitFill} {
+		if dims := New(imageSource(120, 80)).Fit(fit).Width(60).Layout(ctx, imageTestLayoutContext(image.Pt(300, 300))); dims.Size != image.Pt(60, 40) {
+			t.Fatalf("width-only Image fit %d size = %v", fit, dims.Size)
+		}
+		if dims := New(imageSource(120, 80)).Fit(fit).Height(40).Layout(ctx, imageTestLayoutContext(image.Pt(300, 300))); dims.Size != image.Pt(60, 40) {
+			t.Fatalf("height-only Image fit %d size = %v", fit, dims.Size)
+		}
+	}
+}
+
 func TestImageFixedBoundsRespectParentMinimums(t *testing.T) {
 	ctx := imageTestFrameContext()
 	gtx := imageTestLayoutContext(image.Pt(200, 200))

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
@@ -37,6 +38,7 @@ func (option windowOption) appOption() app.Option {
 
 type runOptions struct {
 	window              []app.Option
+	initialActions      system.Action
 	themeOps            []func(*Theme)
 	language            Language
 	errorHandler        func(error)
@@ -94,6 +96,16 @@ func TopMost(enabled bool) WindowOption {
 // Decorated controls native or Gio-provided window decorations.
 func Decorated(enabled bool) WindowOption {
 	return windowOption{value: app.Decorated(enabled)}
+}
+
+// CenterOnStart centers the native window once after it is created.
+//
+// Gio supports this action on Windows, macOS, and X11. Wayland compositors
+// decide top-level window placement and may ignore it.
+func CenterOnStart() Option {
+	return optionFunc(func(cfg *runOptions) {
+		cfg.initialActions |= system.ActionCenter
+	})
 }
 
 // WithTheme replaces the FlowUI theme used by widgets.

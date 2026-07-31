@@ -14,6 +14,7 @@ import (
 type WindowSpec struct {
 	key                 string
 	options             []app.Option
+	initialActions      system.Action
 	run                 func(*app.Window, *windowAppearance, func(), func(WindowState), func()) error
 	onError             func(error)
 	closeRequestHandler func() WindowCloseDecision
@@ -91,12 +92,18 @@ func (appearance *windowAppearance) apply(ctx *Context) {
 type WindowAction system.Action
 
 const (
-	WindowActionMinimize   WindowAction = WindowAction(system.ActionMinimize)
-	WindowActionMaximize   WindowAction = WindowAction(system.ActionMaximize)
-	WindowActionRestore    WindowAction = WindowAction(system.ActionUnmaximize)
+	// WindowActionMinimize minimizes the native window.
+	WindowActionMinimize WindowAction = WindowAction(system.ActionMinimize)
+	// WindowActionMaximize maximizes the native window.
+	WindowActionMaximize WindowAction = WindowAction(system.ActionMaximize)
+	// WindowActionRestore restores a maximized window.
+	WindowActionRestore WindowAction = WindowAction(system.ActionUnmaximize)
+	// WindowActionFullscreen toggles fullscreen mode.
 	WindowActionFullscreen WindowAction = WindowAction(system.ActionFullscreen)
-	WindowActionRaise      WindowAction = WindowAction(system.ActionRaise)
-	WindowActionCenter     WindowAction = WindowAction(system.ActionCenter)
+	// WindowActionRaise brings the window to the foreground.
+	WindowActionRaise WindowAction = WindowAction(system.ActionRaise)
+	// WindowActionCenter requests native window centering.
+	WindowActionCenter WindowAction = WindowAction(system.ActionCenter)
 )
 
 // WindowCloseDecision controls a close request initiated through FlowUI.
@@ -161,6 +168,7 @@ func newWindowSpec[M any, Msg any](
 	return WindowSpec{
 		key:                 key,
 		options:             append([]app.Option(nil), cfg.window...),
+		initialActions:      cfg.initialActions,
 		onError:             cfg.errorHandler,
 		closeRequestHandler: cfg.closeRequestHandler,
 		run: func(window *app.Window, appearance *windowAppearance, onDestroy func(), onWindowState func(WindowState), requestClose func()) error {
@@ -198,7 +206,7 @@ func (w WindowSpec) report(err error) {
 	writeEffectError(os.Stderr, err)
 }
 
-// Application owns the windows in one desktop process.
+// Application owns the windows and process lifecycle for one desktop process.
 type Application struct {
 	windows windowSet
 	exit    func(int)
@@ -272,6 +280,9 @@ func (a *Application) Open(spec WindowSpec) bool {
 	}
 	if !added {
 		return false
+	}
+	if spec.initialActions != 0 {
+		window.Perform(spec.initialActions)
 	}
 	go func() {
 		deactivated := false

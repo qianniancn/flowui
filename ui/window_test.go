@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"github.com/qianniancn/flowui/internal/frame"
 )
 
@@ -45,6 +46,20 @@ func TestWindowSpecStoresCloseRequestHandler(t *testing.T) {
 	)
 	if spec.closeRequestHandler == nil || spec.closeRequestHandler() != WindowCloseCancel {
 		t.Fatal("window spec did not retain its close-request handler")
+	}
+}
+
+func TestWindowSpecStoresInitialActions(t *testing.T) {
+	spec := NewWindow(
+		"centered",
+		NewProgram(0,
+			func(*int, int) Cmd[int] { return nil },
+			func(*Context, int, Send[int]) Widget { return nil },
+		),
+		CenterOnStart(),
+	)
+	if spec.initialActions != system.ActionCenter {
+		t.Fatalf("initial actions = %v, want %v", spec.initialActions, system.ActionCenter)
 	}
 }
 

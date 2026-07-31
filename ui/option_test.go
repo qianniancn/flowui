@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
@@ -127,5 +128,12 @@ func TestWindowCloseRequestOption(t *testing.T) {
 	cfg := newRunOptions([]Option{OnWindowCloseRequest(handler)})
 	if cfg.closeRequestHandler == nil || cfg.closeRequestHandler() != WindowCloseCancel {
 		t.Fatal("window close-request handler was not configured")
+	}
+}
+
+func TestCenterOnStartOption(t *testing.T) {
+	cfg := newRunOptions([]Option{CenterOnStart()})
+	if cfg.initialActions != system.ActionCenter {
+		t.Fatalf("initial actions = %v, want %v", cfg.initialActions, system.ActionCenter)
 	}
 }

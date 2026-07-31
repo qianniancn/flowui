@@ -37,5 +37,6 @@ FlowUI 是一个基于 Gio 构建的 Go 桌面 UI 框架和组件库。本教程
 
 ## 版本说明
 
-教程对应当前 API（单窗口入口为 `Run(Program)`，高级生命周期使用 `Application`）。
-API 若有变更，以 `go doc github.com/qianniancn/flowui/ui` 与仓库 README 为准。
+教程对应仓库当前 API：Go 1.26.2、Gio v0.10.1；单窗口入口为 `Run(Program)`，
+高级生命周期使用 `Application`。如果本地代码与教程不一致，以 `go.mod`、
+`go doc github.com/qianniancn/flowui/ui` 和仓库 README 为准。

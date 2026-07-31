@@ -34,14 +34,7 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 优点：
 
 - `switch` 穷尽、可重构
-- 不把 `any` 泄漏进应用核心
 - 子模块消息可嵌套（见下文）
-
-不推荐：
-
-```go
-type Msg any // 能跑，但难维护
-```
 
 ## View 规则
 

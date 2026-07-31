@@ -3,9 +3,17 @@ package ui
 import "github.com/qianniancn/flowui/internal/components/alertdialog"
 
 type AlertDialogWidget = alertdialog.Widget
+
+// AlertDialogStatus selects the visual tone of an alert dialog.
 type AlertDialogStatus = alertdialog.Status
+
+// AlertDialogSize controls the dialog width.
 type AlertDialogSize = alertdialog.Size
+
+// AlertDialogPlacement controls where the dialog is placed in the window.
 type AlertDialogPlacement = alertdialog.Placement
+
+// AlertDialogBackdropVariant controls how the area behind the dialog is drawn.
 type AlertDialogBackdropVariant = alertdialog.BackdropVariant
 
 const (
@@ -31,6 +39,7 @@ const (
 	AlertDialogBackdropTransparent = alertdialog.BackdropTransparent
 )
 
+// AlertDialog creates a modal alert dialog whose visibility is controlled by open.
 func AlertDialog(key string, open bool, title, description string) AlertDialogWidget {
 	return alertdialog.New(key, open, title, description)
 }

@@ -6,7 +6,11 @@ import (
 )
 
 type TooltipWidget = tooltip.TooltipWidget
+
+// TooltipTrigger controls which interaction reveals a tooltip.
 type TooltipTrigger = tooltip.TooltipTrigger
+
+// TooltipPlacement identifies the side and alignment used for a tooltip.
 type TooltipPlacement = overlay.PopoverPlacement
 
 const (
@@ -27,6 +31,7 @@ const (
 	TooltipRightEnd    = overlay.PopoverRightEnd
 )
 
+// Tooltip decorates trigger with content shown on hover or focus.
 func Tooltip(key string, trigger Widget, content Widget) TooltipWidget {
 	return tooltip.Tooltip(key, trigger, content)
 }

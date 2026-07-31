@@ -6,6 +6,8 @@ import (
 )
 
 type ImageWidget = imageview.Widget
+
+// ImageFit controls how an image is fitted inside its bounds.
 type ImageFit = imageview.Fit
 
 const (
@@ -16,6 +18,7 @@ const (
 	ImageUnscaled  = imageview.FitUnscaled
 )
 
+// Image creates an image widget from a Gio image operation.
 func Image(source paint.ImageOp) ImageWidget {
 	return imageview.New(source)
 }

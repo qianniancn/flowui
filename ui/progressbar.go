@@ -3,7 +3,11 @@ package ui
 import "github.com/qianniancn/flowui/internal/components/progress"
 
 type ProgressBarWidget = progress.ProgressBarWidget
+
+// ProgressBarColor selects the bar's semantic color.
 type ProgressBarColor = progress.ProgressBarColor
+
+// ProgressBarSize selects the bar's height.
 type ProgressBarSize = progress.ProgressBarSize
 
 const (
@@ -18,6 +22,7 @@ const (
 	ProgressBarLarge  = progress.ProgressBarLarge
 )
 
+// ProgressBar creates a linear progress indicator for value.
 func ProgressBar(key string, value float64) ProgressBarWidget {
 	return progress.ProgressBar(key, value)
 }

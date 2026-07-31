@@ -3,7 +3,11 @@ package ui
 import "github.com/qianniancn/flowui/internal/components/spinner"
 
 type SpinnerWidget = spinner.SpinnerWidget
+
+// SpinnerColor selects the spinner's semantic color.
 type SpinnerColor = spinner.SpinnerColor
+
+// SpinnerSize selects the spinner's diameter.
 type SpinnerSize = spinner.SpinnerSize
 
 const (
@@ -19,6 +23,7 @@ const (
 	SpinnerExtraLarge = spinner.SpinnerExtraLarge
 )
 
+// Spinner creates an indeterminate progress spinner.
 func Spinner() SpinnerWidget {
 	return spinner.Spinner()
 }

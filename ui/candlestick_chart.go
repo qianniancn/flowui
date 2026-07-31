@@ -3,8 +3,11 @@ package ui
 import "github.com/qianniancn/flowui/internal/components/candlestick"
 
 type CandlestickChartWidget = candlestick.Widget
+
+// CandlestickChartData stores one open, close, low, and high value.
 type CandlestickChartData = candlestick.Candle
 
+// CandlestickChart creates an OHLC candlestick chart.
 func CandlestickChart(key string, data []CandlestickChartData) CandlestickChartWidget {
 	return candlestick.New(key, data)
 }

@@ -9,7 +9,11 @@ import (
 )
 
 type PortalWidget = portal.Widget
+
+// PortalLayer selects the interaction layer used by a Portal.
 type PortalLayer = portal.Layer
+
+// OverlayPlacement describes a tracked overlay transform.
 type OverlayPlacement = frame.OverlayPlacement
 
 // PortalContent creates root-level content from its resolved viewport anchor.

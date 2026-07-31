@@ -6,13 +6,26 @@ import (
 	"github.com/qianniancn/flowui/internal/overlay"
 )
 
+// PopoverPlacement identifies the side and alignment used for a popover.
 type PopoverPlacement = overlay.PopoverPlacement
+
 type PopoverWidget = popover.PopoverWidget
+
 type ModalWidget = modal.ModalWidget
+
+// ModalSize controls the width of a modal.
 type ModalSize = modal.ModalSize
+
+// ModalPlacement controls where a modal is placed in the window.
 type ModalPlacement = modal.ModalPlacement
+
+// ModalBackdropVariant controls how the area behind a modal is drawn.
 type ModalBackdropVariant = modal.ModalBackdropVariant
+
+// ModalScroll controls where modal overflow is handled.
 type ModalScroll = modal.ModalScroll
+
+// ModalAnimation selects the modal enter and exit animation.
 type ModalAnimation = modal.ModalAnimation
 
 const (
@@ -58,10 +71,12 @@ const (
 	ModalAnimationPop         = modal.ModalAnimationPop
 )
 
+// Popover creates a positioned popup attached to trigger.
 func Popover(key string, open bool, trigger Widget, content Widget) PopoverWidget {
 	return popover.Popover(key, open, trigger, content)
 }
 
+// Modal creates a modal surface whose visibility is controlled by open.
 func Modal(key string, open bool, title string, body Widget) ModalWidget {
 	return modal.Modal(key, open, title, body)
 }

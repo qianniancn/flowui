@@ -3,7 +3,11 @@ package ui
 import "github.com/qianniancn/flowui/internal/components/progress"
 
 type MeterWidget = progress.MeterWidget
+
+// MeterColor selects the meter's semantic color.
 type MeterColor = progress.MeterColor
+
+// MeterSize selects the meter's size.
 type MeterSize = progress.MeterSize
 
 const (
@@ -18,6 +22,7 @@ const (
 	MeterLarge  = progress.MeterLarge
 )
 
+// Meter creates a compact meter indicator for value.
 func Meter(key string, value float64) MeterWidget {
 	return progress.Meter(key, value)
 }

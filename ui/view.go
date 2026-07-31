@@ -11,6 +11,7 @@ type Widget = frame.Widget
 // WidgetFunc adapts a layout function to Widget.
 type WidgetFunc func(ctx *Context, gtx layout.Context) layout.Dimensions
 
+// Layout invokes f to lay out the widget for the current frame.
 func (f WidgetFunc) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	return f(ctx, gtx)
 }

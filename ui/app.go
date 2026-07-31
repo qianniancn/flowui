@@ -22,10 +22,18 @@ import (
 // RetainModelOnClose option to a WindowSpec to keep its model and skip Init
 // when the same spec is reopened.
 type Program[M any, Msg any] struct {
-	Init          func() (M, Cmd[Msg])
-	Update        Update[M, Msg]
+	// Init creates the model for a newly opened native window and may return
+	// the command that starts its initial asynchronous work.
+	Init func() (M, Cmd[Msg])
+	// Update applies one message to the model and may return a command to run
+	// after the update completes.
+	Update Update[M, Msg]
+	// Subscriptions derives the long-lived asynchronous work for the current
+	// model. A nil function means that the program has no subscriptions.
 	Subscriptions Subscriptions[M, Msg]
-	View          View[M, Msg]
+	// View renders the current model and receives a Send function for user
+	// interactions.
+	View View[M, Msg]
 	// WindowStateMessage maps native configuration changes to messages that
 	// Update receives before the following view.
 	WindowStateMessage func(WindowState) Msg
@@ -42,7 +50,9 @@ func NewProgram[M any, Msg any](initial M, update Update[M, Msg], view View[M, M
 	}
 }
 
-// Run opens a window and runs a complete MVU Program.
+// Run opens a single window for program and blocks until the application exits.
+// Use Application when the process needs multiple windows or explicit
+// lifecycle control.
 func Run[M any, Msg any](program Program[M, Msg], opts ...Option) {
 	NewApplication().Run(NewWindow("main", program, opts...))
 }
@@ -122,6 +132,7 @@ type platformEventWindow struct {
 	explorer *internalexplorer.Service
 }
 
+// Event forwards native events while allowing the explorer service to observe them.
 func (w *platformEventWindow) Event() event.Event {
 	value := w.Window.Event()
 	w.explorer.ListenEvents(value)

@@ -83,25 +83,35 @@ func MapCmd[ChildMsg any, ParentMsg any](cmd Cmd[ChildMsg], mapMsg func(ChildMsg
 	}
 }
 
-// EffectKind identifies asynchronous work managed by FlowUI.
+// EffectKind identifies the source of asynchronous work managed by FlowUI.
 type EffectKind = runtime.EffectKind
 
 const (
-	EffectCommand      = runtime.EffectCommand
+	// EffectCommand identifies work started by a Cmd.
+	EffectCommand = runtime.EffectCommand
+	// EffectSubscription identifies work started by a Subscription.
 	EffectSubscription = runtime.EffectSubscription
 )
 
 // EffectError describes an error or panic from a command or subscription.
 type EffectError = runtime.EffectError
 
+// RuntimePhase identifies the runtime phase in which a failure occurred.
 type RuntimePhase = runtime.RuntimePhase
+
+// RuntimePanicError describes a panic recovered from a synchronous callback.
 type RuntimePanicError = runtime.RuntimePanicError
+
+// QueueOverflowError reports that the runtime message queue exceeded its bound.
 type QueueOverflowError = runtime.QueueOverflowError
 
 const (
-	RuntimePhaseUpdate        = runtime.RuntimePhaseUpdate
+	// RuntimePhaseUpdate identifies Update execution.
+	RuntimePhaseUpdate = runtime.RuntimePhaseUpdate
+	// RuntimePhaseSubscriptions identifies subscription reconciliation.
 	RuntimePhaseSubscriptions = runtime.RuntimePhaseSubscriptions
-	RuntimePhaseView          = runtime.RuntimePhaseView
+	// RuntimePhaseView identifies View execution.
+	RuntimePhaseView = runtime.RuntimePhaseView
 )
 
 // ErrEffectShutdownTimeout is reported when asynchronous work does not stop

@@ -6,8 +6,13 @@ import (
 )
 
 type TextWidget = textui.Widget
+
 type SelectableTextWidget = textui.Widget
+
+// TextAlignment controls text alignment within its layout width.
 type TextAlignment = giotext.Alignment
+
+// TextWrapPolicy controls where text may wrap.
 type TextWrapPolicy = giotext.WrapPolicy
 
 const (
@@ -20,10 +25,12 @@ const (
 	TextWrapGraphemes     = giotext.WrapGraphemes
 )
 
+// Text creates a non-interactive text widget.
 func Text(value string) TextWidget {
 	return textui.New(value)
 }
 
+// SelectableText creates text that can be selected and copied.
 func SelectableText(key, value string) SelectableTextWidget {
 	return textui.Selectable(key, value)
 }

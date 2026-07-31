@@ -667,7 +667,10 @@ type PaginationTheme struct {
 }
 
 type MenuTheme struct {
-	BackgroundColor            color.NRGBA
+	BackgroundColor color.NRGBA
+	// HoverColor overrides the default item hover fill. An alpha of zero
+	// falls back to Palette.DefaultHover.
+	HoverColor                 color.NRGBA
 	ForegroundColor            color.NRGBA
 	MutedColor                 color.NRGBA
 	IndicatorColor             color.NRGBA
@@ -2123,9 +2126,9 @@ func DefaultShadows() ShadowsTheme {
 			{OffsetY: 8, Blur: 22, Spread: 4, Opacity: .56},
 		}},
 		Menu: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
-			{OffsetY: 2, Blur: 8, Opacity: .06},
-			{OffsetY: -6, Blur: 12, Opacity: .03},
-			{OffsetY: 14, Blur: 28, Opacity: .08},
+			{Blur: 6, Spread: 1, Opacity: .20},
+			{OffsetY: 4, Blur: 12, Opacity: .10},
+			{OffsetY: 12, Blur: 28, Spread: 2, Opacity: .10},
 		}},
 		Control: ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{
 			{Blur: 1, Opacity: 15.0 / 104.0},

@@ -342,6 +342,7 @@ func computeThemeHash(t *theme.Theme) uint64 {
 			mixMetric(layer.Opacity)
 		}
 	}
+	mixMetric(t.Components.Menu.ShadowOpacity)
 	mixColor(t.Components.Menu.ShadowColor)
 	return hash
 }
@@ -374,9 +375,13 @@ func resolveShadows(shadows []style.Shadow, activeTheme *theme.Theme) []style.Sh
 			continue
 		}
 		profile, col := themeShadow(*shadow.Profile, activeTheme)
+		profileOpacity := float32(1)
+		if *shadow.Profile == style.ShadowMenu && activeTheme != nil {
+			profileOpacity = clampShadowOpacity(activeTheme.Components.Menu.ShadowOpacity)
+		}
 		for _, layer := range profile.Layers {
 			layerColor := col
-			layerColor.A = scaledAlpha(layerColor.A, layer.Opacity)
+			layerColor.A = scaledAlpha(layerColor.A, layer.Opacity*profileOpacity)
 			if layer.Blur < 0 || layerColor.A == 0 {
 				continue
 			}
@@ -390,6 +395,13 @@ func resolveShadows(shadows []style.Shadow, activeTheme *theme.Theme) []style.Sh
 		}
 	}
 	return result
+}
+
+func clampShadowOpacity(value float32) float32 {
+	if value <= 0 || math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
+		return 0
+	}
+	return min(value, 1)
 }
 
 func themeShadow(profile style.ShadowProfile, activeTheme *theme.Theme) (theme.ShadowTheme, color.NRGBA) {

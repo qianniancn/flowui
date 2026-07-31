@@ -75,6 +75,12 @@ func (c ContextMenuWidget) Style(value flowstyle.Style) ContextMenuWidget {
 	return c
 }
 
+// MenuStyle customizes the popup menu without changing the trigger surface.
+func (c ContextMenuWidget) MenuStyle(value flowstyle.Style) ContextMenuWidget {
+	c.menu = c.menu.Style(value)
+	return c
+}
+
 func (c ContextMenuWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := contextMenuStateFor(ctx, c.key)
 	state.bind(c)

@@ -22,13 +22,17 @@ func (d Widget) registerRootOverlay(ctx *frame.Context, state *dropdownState, op
 		HasAnchor: true,
 		Disabled:  disabled,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
-			overlayOpen := d.handleOverlayEvents(ctx, gtx, state, open, interactive)
+			overlayOpen, dismissed := d.handleOverlayEvents(ctx, gtx, state, open, interactive)
+			if dismissed {
+				frame.DismissActiveOverlay(ctx)
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
 			return d.layoutRootOverlay(ctx, gtx, state, anchor, overlayOpen, progress, interactive && gtx.Enabled())
 		},
 	})
 }
 
-func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *dropdownState, open, interactive bool) bool {
+func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *dropdownState, open, interactive bool) (bool, bool) {
 	for state.dialog.Clicked(gtx) {
 	}
 	if state.dialog.TakePressed() {
@@ -39,14 +43,20 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 		for state.dismiss[index].Clicked(gtx) {
 			dismissed = true
 		}
-		dismissed = state.dismiss[index].TakePressed() || dismissed
+		if state.dismiss[index].TakePressed() {
+			// Menus dismiss on the outside press. Finish the exit transition in
+			// the same frame so a held pointer cannot leave a faded panel visible.
+			dismissed = true
+			frame.PreserveFocus(ctx)
+		}
 	}
 	if dismissed && open {
 		state.skipRestore = true
 		open = state.requestOpen(ctx, d, false)
+		state.transition.Set(0, 0, gtx.Now)
 	}
 	if !interactive || !open {
-		return open
+		return open, dismissed
 	}
 	for {
 		e, ok := gtx.Event(key.Filter{Name: key.NameEscape})
@@ -60,7 +70,7 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 			open = state.requestOpen(ctx, d, false)
 		}
 	}
-	return open
+	return open, dismissed
 }
 
 func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state *dropdownState, anchor image.Rectangle, open bool, progress float32, interactive bool) layout.Dimensions {

@@ -199,6 +199,12 @@ func (d Widget) Style(value flowstyle.Style) Widget {
 	return d
 }
 
+// MenuStyle customizes the popup menu without changing the dropdown trigger.
+func (d Widget) MenuStyle(value flowstyle.Style) Widget {
+	d.menu = d.menu.Style(value)
+	return d
+}
+
 func (d Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	return d.layoutRoot(ctx, gtx)
 }

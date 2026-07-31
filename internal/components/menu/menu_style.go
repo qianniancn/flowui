@@ -54,11 +54,15 @@ func menuItemDefaultDeclaration(activeTheme *theme.Theme, tokens theme.MenuTheme
 		Transition(flowstyle.PropBackgroundColor, menuItemColorDuration).
 		Transition(flowstyle.PropBorderColor, menuItemFocusDuration).
 		Transition(flowstyle.PropTransform, menuItemPressDuration).
-		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.TokenDefaultHover)).
+		When(flowstyle.Hovered, flowstyle.Style{}.Background(flowstyle.SolidColor{Color: menuHoverColor(activeTheme, tokens)})).
 		When(flowstyle.Pressed, flowstyle.Style{}.Scale(pressedScale, pressedScale)).
 		When(flowstyle.FocusVisible, flowstyle.Style{}.BorderColor(flowstyle.SolidColor{Color: menuFocusColor(activeTheme)})).
 		When(flowstyle.Disabled, flowstyle.Style{}.Opacity(activeTheme.DisabledOpacityValue()))
 	return flowstyle.Style{}.Part(flowstyle.PartItem, item)
+}
+
+func menuHoverColor(activeTheme *theme.Theme, tokens theme.MenuTheme) color.NRGBA {
+	return theme.ColorOr(tokens.HoverColor, activeTheme.Palette.DefaultHoverColor())
 }
 
 func menuItemVariantDeclaration(activeTheme *theme.Theme, variant ItemVariant) flowstyle.Style {

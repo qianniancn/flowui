@@ -2,6 +2,7 @@ package dropdown
 
 import (
 	"image"
+	"reflect"
 	"testing"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/flowui/internal/components/button"
+	menupkg "github.com/qianniancn/flowui/internal/components/menu"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/overlay"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
@@ -67,6 +70,22 @@ func TestDropdownOptionsUseValueSemantics(t *testing.T) {
 	}
 	if !configured.hasOffset || configured.offset != 8 || !configured.hasShouldFlip || configured.shouldFlip || !configured.hasAvoidOverflow || configured.avoidOverflow {
 		t.Fatal("dropdown overlay options were not retained")
+	}
+}
+
+func TestDropdownMenuStyleTargetsPopupOnly(t *testing.T) {
+	style := flowstyle.RGBA(0x12345680)
+	base := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}})
+	configured := base.MenuStyle(flowstyle.Style{}.Background(style))
+	expectedMenu := menupkg.Menu("actions:menu", []Item{{Key: "open", Label: "Open"}}).Style(flowstyle.Style{}.Background(style))
+	if reflect.DeepEqual(base.menu, expectedMenu) {
+		t.Fatal("base dropdown menu unexpectedly has the configured style")
+	}
+	if !reflect.DeepEqual(configured.menu, expectedMenu) {
+		t.Fatal("MenuStyle did not configure the dropdown popup menu")
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil {
+		t.Fatal("MenuStyle changed dropdown trigger style")
 	}
 }
 
@@ -260,6 +279,12 @@ func TestDropdownOutsidePressClosesImmediately(t *testing.T) {
 	layoutDropdownFrame(ctx, router, widget, start.Add(time.Millisecond))
 	if state.open {
 		t.Fatal("outside press did not close Dropdown")
+	}
+	if frame.HasTopOverlay(ctx) {
+		t.Fatal("outside press left Dropdown overlay visible")
+	}
+	if got := state.transition.Current(); got != 0 {
+		t.Fatalf("outside press left Dropdown exit progress at %v", got)
 	}
 }
 

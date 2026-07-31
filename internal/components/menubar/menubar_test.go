@@ -347,6 +347,12 @@ func TestMenubarOutsidePressClosesImmediately(t *testing.T) {
 	if state.openKey != "" {
 		t.Fatalf("outside press did not close Menubar: %q", state.openKey)
 	}
+	if frame.HasTopOverlay(ctx) {
+		t.Fatal("outside press left Menubar overlay visible")
+	}
+	if got := state.transition.Current(); got != 0 {
+		t.Fatalf("outside press left Menubar exit progress at %v", got)
+	}
 }
 
 func TestMenubarThemeAndSemantics(t *testing.T) {

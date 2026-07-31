@@ -261,14 +261,16 @@ func TestSubmenuItemFocusRingUsesRequestedOrigin(t *testing.T) {
 	}
 }
 
-func TestMenuHeroUIOverlayShadow(t *testing.T) {
+func TestMenuUsesBalancedElevationShadow(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	style := menuPanelStyle(&activeTheme)
 	layers := render.ThemeShadow(activeTheme.Shadows.Menu, style.shadow, style.shadowOpacity).EffectiveLayers()
 	if len(layers) != 3 {
 		t.Fatalf("menu shadow layers = %d, want 3", len(layers))
 	}
-	if layers[0].OffsetY != 2 || layers[0].Blur != 8 || layers[1].OffsetY != -6 || layers[1].Blur != 12 || layers[2].OffsetY != 14 || layers[2].Blur != 28 {
+	if layers[0].OffsetY != 0 || layers[0].Blur != 6 || layers[0].Spread != 1 ||
+		layers[1].OffsetY != 4 || layers[1].Blur != 12 ||
+		layers[2].OffsetY != 12 || layers[2].Blur != 28 || layers[2].Spread != 2 {
 		t.Fatalf("menu shadow layers = %#v", layers)
 	}
 }
@@ -276,7 +278,7 @@ func TestMenuHeroUIOverlayShadow(t *testing.T) {
 func TestMenuShadowHonorsThemeColorAlpha(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	shadow := render.ThemeShadow(activeTheme.Shadows.Menu, color.NRGBA{A: 0x80}, 1)
-	if len(shadow.Layers) != 3 || shadow.Layers[0].Color.A != 8 || shadow.Layers[1].Color.A != 4 || shadow.Layers[2].Color.A != 10 {
+	if len(shadow.Layers) != 3 || shadow.Layers[0].Color.A != 26 || shadow.Layers[1].Color.A != 13 || shadow.Layers[2].Color.A != 13 {
 		t.Fatalf("alpha-aware Menu shadow = %#v", shadow)
 	}
 }
@@ -290,6 +292,24 @@ func TestMenuPartItemUsesPressedScale(t *testing.T) {
 	)
 	if resolved.Trans == nil || resolved.Trans.ScaleX == nil || *resolved.Trans.ScaleX != activeTheme.Components.Menu.PressedScale {
 		t.Fatalf("pressed menu item style = %#v", resolved.Trans)
+	}
+}
+
+func TestMenuItemHoverUsesConfiguredThemeColor(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	want := color.NRGBA{R: 0x12, G: 0x34, B: 0x56, A: 0x80}
+	activeTheme.Components.Menu.HoverColor = want
+	resolved := flowstyle.CascadePart(
+		flowstyle.StyleState{Hovered: true},
+		flowstyle.PartItem,
+		menuItemDefaultDeclaration(&activeTheme, activeTheme.Components.Menu),
+	)
+	if resolved.Paint == nil {
+		t.Fatal("hovered menu item has no paint")
+	}
+	background, ok := resolved.Paint.Background.(flowstyle.SolidColor)
+	if !ok || background.Color != want {
+		t.Fatalf("menu item hover background = %#v, want %#v", resolved.Paint.Background, want)
 	}
 }
 

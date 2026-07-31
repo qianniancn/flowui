@@ -216,6 +216,33 @@ func TestResolveThemeShadowProfile(t *testing.T) {
 	}
 }
 
+func TestResolveMenuShadowOpacity(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	activeTheme.Components.Menu.ShadowOpacity = 0.25
+	activeTheme.Components.Menu.ShadowColor = color.NRGBA{R: 1, A: 0xff}
+	activeTheme.Shadows.Menu = theme.ShadowTheme{Layers: [theme.ShadowLayerCount]theme.ShadowLayerTheme{
+		{OffsetY: 2, Blur: 4, Opacity: 1},
+	}}
+	ctx := frame.New(nil, &activeTheme, locale.LanguageAuto)
+	declaration := style.Style{}.Shadow(style.ShadowMenu)
+
+	resolved := ResolveStatic(ctx, style.StyleState{}, declaration, style.Style{}, style.Style{}, style.Style{})
+	if len(resolved.Paint.Shadows) != 1 {
+		t.Fatalf("menu shadows = %#v", resolved.Paint.Shadows)
+	}
+	shadow, ok := resolved.Paint.Shadows[0].Color.(style.SolidColor)
+	if !ok || shadow.Color != (color.NRGBA{R: 1, A: 64}) {
+		t.Fatalf("menu shadow color = %#v, want alpha 64", resolved.Paint.Shadows[0].Color)
+	}
+
+	activeTheme.Components.Menu.ShadowOpacity = 0
+	ctx = frame.New(nil, &activeTheme, locale.LanguageAuto)
+	resolved = ResolveStatic(ctx, style.StyleState{}, declaration, style.Style{}, style.Style{}, style.Style{})
+	if len(resolved.Paint.Shadows) != 0 {
+		t.Fatalf("disabled menu shadows = %#v, want none", resolved.Paint.Shadows)
+	}
+}
+
 func TestResolveThemeMetricTokensAndExplicitOverride(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	activeTheme.Typography.ControlSize = 17

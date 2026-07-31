@@ -17,6 +17,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 type contextMenuFixedWidget struct {
@@ -67,6 +68,22 @@ func contextMenuTestWidget(items []Item) ContextMenuWidget {
 		contextMenuFixedWidget{size: image.Pt(160, 100)},
 		Menu("actions", items),
 	)
+}
+
+func TestContextMenuMenuStyleTargetsPopupOnly(t *testing.T) {
+	style := flowstyle.RGBA(0x12345680)
+	base := contextMenuTestWidget([]Item{{Key: "copy", Label: "Copy"}})
+	configured := base.MenuStyle(flowstyle.Style{}.Background(style))
+	if base.menu.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil {
+		t.Fatal("base context menu style was mutated")
+	}
+	resolved := flowstyle.Cascade(flowstyle.StyleState{}, configured.menu.customStyle)
+	if resolved.Paint == nil || resolved.Paint.Background != style {
+		t.Fatalf("popup menu style = %#v, want %#v", resolved.Paint, style)
+	}
+	if configured.customStyle.Resolve(flowstyle.StyleState{}).Paint != nil {
+		t.Fatal("MenuStyle changed context menu trigger style")
+	}
 }
 
 func TestContextMenuOpensAtSecondaryClickPosition(t *testing.T) {

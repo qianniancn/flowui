@@ -23,13 +23,17 @@ func (m Widget) registerOverlay(ctx *frame.Context, state *menubarState, item It
 		Disabled:  m.disabled,
 		Layout: func(gtx layout.Context, resolvedBar image.Rectangle, interactive bool) layout.Dimensions {
 			resolvedTrigger := menubarResolvedChildRect(bar, resolvedBar, trigger)
-			overlayOpen := m.handleOverlayEvents(ctx, gtx, state, item.key, open, interactive)
+			overlayOpen, dismissed := m.handleOverlayEvents(ctx, gtx, state, item.key, open, interactive)
+			if dismissed {
+				frame.DismissActiveOverlay(ctx)
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
 			return m.layoutOverlay(ctx, gtx, state, item, resolvedBar, resolvedTrigger, overlayOpen, progress, interactive && gtx.Enabled())
 		},
 	})
 }
 
-func (m Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *menubarState, itemKey string, open, interactive bool) bool {
+func (m Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, state *menubarState, itemKey string, open, interactive bool) (bool, bool) {
 	for state.dialog.Clicked(gtx) {
 	}
 	if state.dialog.TakePressed() {
@@ -40,15 +44,21 @@ func (m Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 		for state.dismiss[index].Clicked(gtx) {
 			dismissed = true
 		}
-		dismissed = state.dismiss[index].TakePressed() || dismissed
+		if state.dismiss[index].TakePressed() {
+			// Menus dismiss on the outside press. Finish the exit transition in
+			// the same frame so a held pointer cannot leave a faded panel visible.
+			dismissed = true
+			frame.PreserveFocus(ctx)
+		}
 	}
 	if dismissed && open {
 		state.requestOpen(ctx, m, "")
 		state.focusPanelKey = ""
+		state.transition.Set(0, 0, gtx.Now)
 		open = false
 	}
 	if !interactive || !open {
-		return open
+		return open, dismissed
 	}
 	for {
 		e, ok := gtx.Event(key.Filter{Name: key.NameEscape})
@@ -63,7 +73,7 @@ func (m Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 			open = false
 		}
 	}
-	return open
+	return open, dismissed
 }
 
 func (m Widget) layoutOverlay(ctx *frame.Context, gtx layout.Context, state *menubarState, item Item, bar, trigger image.Rectangle, open bool, progress float32, interactive bool) layout.Dimensions {

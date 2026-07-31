@@ -160,31 +160,31 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 }
 
 func (w Widget) layoutContent(ctx *frame.Context, gtx layout.Context, key string, state *titleBarState, resolved titleBarResolvedStyle) layout.Dimensions {
-	children := make([]layout.FlexChild, 0, 6)
+	children := make([]frame.Widget, 0, 6)
 	if w.leading != nil {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return layoutSlot(ctx, gtx, w.leading, resolved.leading)
 		}))
 	}
 	if w.menu != nil {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return w.menu.Layout(ctx, gtx)
 		}))
 	}
-	children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+	children = append(children, layoutui.Expanded(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return w.layoutCenterRegion(ctx, gtx, state, resolved)
-	}))
+	})))
 	if w.trailing != nil {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return layoutSlot(ctx, gtx, w.trailing, resolved.trailing)
 		}))
 	}
 	if w.clientDecorations && w.visibleActions() != 0 {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return w.layoutControls(ctx, gtx, key, state)
 		}))
 	}
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+	return layoutui.LayoutTrackedFlex(ctx, gtx, layout.Horizontal, 0, layout.Middle, children...)
 }
 
 func (w Widget) layoutCenterRegion(ctx *frame.Context, gtx layout.Context, state *titleBarState, resolved titleBarResolvedStyle) layout.Dimensions {
@@ -194,16 +194,16 @@ func (w Widget) layoutCenterRegion(ctx *frame.Context, gtx layout.Context, state
 	if w.center == nil && w.title == "" {
 		return w.layoutCenterSpacer(gtx, state)
 	}
-	children := make([]layout.FlexChild, 0, 3)
-	children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+	children := make([]frame.Widget, 0, 3)
+	children = append(children, layoutui.Expanded(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return w.layoutCenterSpacer(gtx, state)
-	}))
+	})))
 	if w.center != nil {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return layoutSlot(ctx, gtx, w.center, resolved.center)
 		}))
 	} else {
-		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		children = append(children, frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 			return state.decorations.LayoutMove(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					return layoutTitle(ctx, gtx, w.title, resolved.title)
@@ -211,10 +211,10 @@ func (w Widget) layoutCenterRegion(ctx *frame.Context, gtx layout.Context, state
 			})
 		}))
 	}
-	children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+	children = append(children, layoutui.Expanded(frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 		return w.layoutCenterSpacer(gtx, state)
-	}))
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+	})))
+	return layoutui.LayoutTrackedFlex(ctx, gtx, layout.Horizontal, 0, layout.Middle, children...)
 }
 
 func (w Widget) layoutCenterSpacer(gtx layout.Context, state *titleBarState) layout.Dimensions {

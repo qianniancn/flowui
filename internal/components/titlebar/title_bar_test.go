@@ -16,6 +16,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"github.com/qianniancn/flowui/internal/components/menu"
+	"github.com/qianniancn/flowui/internal/components/menubar"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -301,6 +303,54 @@ func TestTitleBarCenterKeepsItsOwnHeight(t *testing.T) {
 	}
 }
 
+func TestTitleBarTracksMenubarPopupAfterLeadingContent(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
+	router := new(input.Router)
+	action := ""
+	applicationMenu := menubar.New("application-menu", []menubar.Item{
+		menubar.NewMenu("file", "File", []menu.Item{{Key: "open", Label: "Open"}}).
+			Width(180).
+			OnAction(func(key string) { action = key }),
+	}).Compact(true)
+	bar := New("workspace", "FlowUI", applicationMenu).
+		Leading(fixedMenu{size: image.Pt(100, 32)}).
+		ShowMinimize(false).
+		ShowMaximize(false).
+		ShowClose(false)
+
+	now := time.Unix(7, 0)
+	layoutTitleBarOverlayFrame(ctx, router, bar, now, image.Pt(640, 44))
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonPrimary, Position: f32.Pt(120, 20),
+	})
+	layoutTitleBarOverlayFrame(ctx, router, bar, now.Add(time.Millisecond), image.Pt(640, 44))
+	router.Queue(pointer.Event{
+		Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1,
+		Position: f32.Pt(120, 20),
+	})
+	layoutTitleBarOverlayFrame(ctx, router, bar, now.Add(2*time.Millisecond), image.Pt(640, 44))
+	menuOpenDuration := 150 * time.Millisecond
+	layoutTitleBarOverlayFrame(ctx, router, bar, now.Add(menuOpenDuration+time.Millisecond), image.Pt(640, 44))
+
+	// The leading slot moves the menu to roughly x=116. This point is inside
+	// the correctly anchored popup but outside a popup incorrectly left at x=8.
+	router.Queue(pointer.Event{
+		Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1,
+		Buttons: pointer.ButtonPrimary, Position: f32.Pt(190, 60),
+	})
+	layoutTitleBarOverlayFrame(ctx, router, bar, now.Add(menuOpenDuration+2*time.Millisecond), image.Pt(640, 44))
+	router.Queue(pointer.Event{
+		Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1,
+		Position: f32.Pt(190, 60),
+	})
+	layoutTitleBarOverlayFrame(ctx, router, bar, now.Add(menuOpenDuration+3*time.Millisecond), image.Pt(640, 44))
+	if action != "open" {
+		t.Fatalf("menu action at leading-adjusted popup position = %q, want open", action)
+	}
+}
+
 func TestTitleBarThemeAndLabels(t *testing.T) {
 	tokens := theme.DefaultTheme().Components.TitleBar
 	if tokens.Height != 35 || tokens.PaddingX != 8 || tokens.LeadingGap != 8 || tokens.ControlWidth != 46 || tokens.IconSize != 12 || tokens.IconStrokeWidth != 1.25 || tokens.ControlPressed != (color.NRGBA{R: 0xda, G: 0xda, B: 0xdc, A: 0xff}) || tokens.CloseHover.A == 0 {
@@ -438,6 +488,25 @@ func layoutTitleBarFrame(ctx *frame.Context, router *input.Router, bar Widget, n
 
 func layoutTitleBarFlexibleFrame(ctx *frame.Context, router *input.Router, bar Widget, now time.Time, size image.Point) layout.Dimensions {
 	return layoutTitleBarWithConstraints(ctx, router, bar, now, layout.Constraints{Max: size})
+}
+
+func layoutTitleBarOverlayFrame(ctx *frame.Context, router *input.Router, bar Widget, now time.Time, size image.Point) {
+	var ops op.Ops
+	viewport := image.Pt(size.X, 360)
+	gtx := layout.Context{
+		Constraints: layout.Exact(viewport),
+		Source:      router.Source(),
+		Ops:         &ops,
+		Now:         now,
+	}
+	barGtx := gtx
+	barGtx.Constraints = layout.Exact(size)
+	frame.BeginFrameWithViewport(ctx, viewport)
+	bar.Layout(ctx, barGtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
 }
 
 func layoutTitleBarWithConstraints(ctx *frame.Context, router *input.Router, bar Widget, now time.Time, constraints layout.Constraints) layout.Dimensions {

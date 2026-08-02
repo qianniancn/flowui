@@ -11,8 +11,11 @@ type Theme = theme.Theme
 // Palette contains semantic colors used by FlowUI components.
 type Palette = theme.Palette
 
-// Typography contains the default text sizes for the theme.
+// Typography contains the default text families and sizes for the theme.
 type Typography = theme.Typography
+
+// FontConfig controls bundled and system font sources for a theme.
+type FontConfig = theme.FontConfig
 
 // Shape contains shared corner-radius values.
 type Shape = theme.Shape

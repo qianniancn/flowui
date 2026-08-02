@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/system"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
@@ -23,6 +24,28 @@ func TestMaterialThemeOption(t *testing.T) {
 	got := MaterialOf(theme).Palette.ContrastBg
 	if got != want {
 		t.Fatalf("contrast background = %#v, want %#v", got, want)
+	}
+}
+
+func TestMaterialThemeFontOverridesSurviveThemeSync(t *testing.T) {
+	customShaper := text.NewShaper(text.NoSystemFonts())
+	cfg := newRunOptions([]Option{
+		MaterialTheme(func(th *material.Theme) {
+			th.Shaper = customShaper
+			th.Face = "Custom Face"
+		}),
+		CustomizeTheme(func(theme *Theme) {
+			theme.Typography.Typeface = "FlowUI Face"
+		}),
+	})
+
+	active := cfg.newTheme()
+	bridge := MaterialOf(active)
+	if bridge.Shaper != customShaper {
+		t.Fatal("theme synchronization replaced the custom material shaper")
+	}
+	if bridge.Face != "Custom Face" {
+		t.Fatalf("material face = %q, want Custom Face", bridge.Face)
 	}
 }
 

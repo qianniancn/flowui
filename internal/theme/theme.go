@@ -5,6 +5,8 @@ import (
 	"math"
 	"time"
 
+	"gioui.org/font"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
@@ -13,10 +15,11 @@ import (
 //
 // The Gio material theme is an unexported substrate bridge for text/editor
 // helpers. Applications theme through Palette, Typography, Shape, Spacing,
-// Motion, and Components — never through material.Theme.
+// Motion, Components, and Fonts — never through material.Theme.
 type Theme struct {
 	Palette         Palette
 	Typography      Typography
+	Fonts           FontConfig
 	Shape           Shape
 	Spacing         Spacing
 	Shadows         ShadowsTheme
@@ -24,6 +27,8 @@ type Theme struct {
 	Components      ComponentsTheme
 	DisabledOpacity float32
 	material        *material.Theme
+	managedShaper   *text.Shaper
+	managedFace     font.Typeface
 }
 
 type MotionTheme struct {
@@ -110,9 +115,21 @@ type Palette struct {
 }
 
 type Typography struct {
-	BodySize    unit.Sp
-	ControlSize unit.Sp
-	SmallSize   unit.Sp
+	// Typeface is the default family list used by framework text.
+	Typeface font.Typeface
+	// MonoTypeface is the recommended family list for code and tabular text.
+	MonoTypeface font.Typeface
+	BodySize     unit.Sp
+	ControlSize  unit.Sp
+	SmallSize    unit.Sp
+}
+
+// FontConfig controls the font faces available to each window's text shaper.
+// Collection can contain faces parsed from TTF, OTF, or TTC data. SystemFonts
+// keeps the platform font fallback enabled when true.
+type FontConfig struct {
+	Collection  []font.FontFace
+	SystemFonts bool
 }
 
 type Shape struct {
@@ -1209,9 +1226,14 @@ func DefaultTheme() Theme {
 			OverlayShadow:              color.NRGBA{R: 0x0f, G: 0x17, B: 0x29, A: 0x68},
 		},
 		Typography: Typography{
-			BodySize:    14,
-			ControlSize: 14,
-			SmallSize:   12,
+			Typeface:     "sans-serif",
+			MonoTypeface: "monospace",
+			BodySize:     14,
+			ControlSize:  14,
+			SmallSize:    12,
+		},
+		Fonts: FontConfig{
+			SystemFonts: true,
 		},
 		Shape: Shape{
 			ControlRadius:  12,
@@ -2241,6 +2263,14 @@ func DetachMaterial(theme *Theme) {
 		return
 	}
 	clone := *theme.material
+	if clone.Shaper == theme.managedShaper {
+		clone.Shaper = newTextShaper(theme.Fonts)
+		theme.managedShaper = clone.Shaper
+	}
+	if clone.Face == theme.managedFace {
+		clone.Face = theme.Typography.Typeface
+		theme.managedFace = clone.Face
+	}
 	theme.material = &clone
 }
 
@@ -2252,11 +2282,36 @@ func SyncMaterialTheme(theme *Theme) {
 	if theme.material == nil {
 		theme.material = material.NewTheme()
 	}
+	if theme.material.Shaper == nil || theme.managedShaper == nil || theme.material.Shaper == theme.managedShaper {
+		theme.material.Shaper = newTextShaper(theme.Fonts)
+		theme.managedShaper = theme.material.Shaper
+	}
+	if theme.material.Face == theme.managedFace {
+		theme.material.Face = theme.Typography.Typeface
+		theme.managedFace = theme.material.Face
+	}
 	theme.material.TextSize = theme.Typography.BodySize
 	theme.material.Palette.Fg = theme.Palette.Foreground
 	theme.material.Palette.Bg = theme.Palette.Background
 	theme.material.Palette.ContrastBg = theme.Palette.Accent
 	theme.material.Palette.ContrastFg = theme.Palette.AccentForeground
+}
+
+func newTextShaper(fonts FontConfig) *text.Shaper {
+	// Keep the common system-only path lazy. Gio's zero-value Shaper loads the
+	// platform font map on first use; eagerly scanning every installed font for
+	// every temporary theme copy can otherwise cause a large startup spike.
+	if fonts.SystemFonts && len(fonts.Collection) == 0 {
+		return new(text.Shaper)
+	}
+	options := make([]text.ShaperOption, 0, 2)
+	if !fonts.SystemFonts {
+		options = append(options, text.NoSystemFonts())
+	}
+	if len(fonts.Collection) > 0 {
+		options = append(options, text.WithCollection(fonts.Collection))
+	}
+	return text.NewShaper(options...)
 }
 
 func (theme *Theme) DisabledColor(c color.NRGBA) color.NRGBA {

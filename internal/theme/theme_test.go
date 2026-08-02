@@ -86,6 +86,42 @@ func TestDefaultThemeSyncsMaterialBridge(t *testing.T) {
 	if bridge.Palette.Fg != active.Palette.Foreground {
 		t.Fatalf("material foreground = %#v, want %#v", bridge.Palette.Fg, active.Palette.Foreground)
 	}
+	if bridge.Face != active.Typography.Typeface {
+		t.Fatalf("material face = %q, want %q", bridge.Face, active.Typography.Typeface)
+	}
+	if bridge.Shaper == nil {
+		t.Fatal("missing material text shaper")
+	}
+}
+
+func TestThemesUseIndependentTextShapers(t *testing.T) {
+	first := theme.DefaultTheme()
+	second := theme.DefaultTheme()
+	if theme.MaterialOf(&first).Shaper == theme.MaterialOf(&second).Shaper {
+		t.Fatal("default themes share a text shaper")
+	}
+
+	copy := first
+	theme.DetachMaterial(&copy)
+	if theme.MaterialOf(&first).Shaper == theme.MaterialOf(&copy).Shaper {
+		t.Fatal("detached themes share a text shaper")
+	}
+	theme.SyncMaterialTheme(&copy)
+}
+
+func TestSyncMaterialThemeUsesFontConfig(t *testing.T) {
+	active := theme.DefaultTheme()
+	active.Typography.Typeface = "FlowUI Sans"
+	active.Fonts.SystemFonts = false
+	theme.SyncMaterialTheme(&active)
+
+	bridge := theme.MaterialOf(&active)
+	if bridge.Face != "FlowUI Sans" {
+		t.Fatalf("material face = %q, want FlowUI Sans", bridge.Face)
+	}
+	if bridge.Shaper == nil {
+		t.Fatal("font configuration removed the text shaper")
+	}
 }
 
 func TestDefaultThemeUsesWhiteWindowBackground(t *testing.T) {

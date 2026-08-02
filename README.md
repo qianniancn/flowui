@@ -180,7 +180,11 @@ includes English and Chinese component strings; `ui.LanguageAuto` follows the
 host language.
 
 The [style and theme guide](https://qianniancn.github.io/flowui/guide/05-样式与主题/)
-documents precedence, parts, colors, geometry, and transitions.
+documents precedence, parts, colors, geometry, transitions, and bundled font setup.
+
+FlowUI uses system font fallback by default. For reproducible rendering, parse an
+embedded TTF, OTF, or TTC with `ui.ParseFontCollection`, assign the faces to
+`theme.Fonts.Collection`, and set `theme.Fonts.SystemFonts = false`.
 
 ## Examples
 
@@ -192,6 +196,8 @@ Every directory below is a runnable program:
 | [`examples/form`](examples/form) | Form controls and validation |
 | [`examples/async`](examples/async) | Commands and asynchronous results |
 | [`examples/components`](examples/components) | Component gallery |
+| [`examples/grid_layout`](examples/grid_layout) | Fixed and responsive grid layouts |
+| [`examples/fonts`](examples/fonts) | System and bundled font configuration |
 | [`examples/custom_widgets`](examples/custom_widgets) | Custom composites and canvas widgets |
 | [`examples/multi_windows`](examples/multi_windows) | Application-owned multiple windows |
 | [`examples/file_dialogs`](examples/file_dialogs) | Native open and save file dialogs |

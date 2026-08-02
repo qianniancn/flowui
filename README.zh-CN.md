@@ -167,7 +167,11 @@ save := ui.Button("save", ui.Text("Save")).Style(primary)
 文案，`ui.LanguageAuto` 会跟随系统语言。
 
 [样式与主题](https://qianniancn.github.io/flowui/guide/05-样式与主题/)介绍了优先级、
-命名部件、颜色、几何和过渡动画。
+命名部件、颜色、几何、过渡动画和字体配置。
+
+FlowUI 默认使用系统字体回退。需要固定渲染结果时，可以用
+`ui.ParseFontCollection` 解析随程序打包的 TTF、OTF 或 TTC，再放入
+`theme.Fonts.Collection`，并将 `theme.Fonts.SystemFonts` 设为 `false`。
 
 ## 示例
 
@@ -179,6 +183,8 @@ save := ui.Button("save", ui.Text("Save")).Style(primary)
 | [`examples/form`](examples/form) | 表单控件与验证 |
 | [`examples/async`](examples/async) | Command 和异步结果 |
 | [`examples/components`](examples/components) | 组件总览 |
+| [`examples/grid_layout`](examples/grid_layout) | 固定列数和响应式网格布局 |
+| [`examples/fonts`](examples/fonts) | 系统字体、自定义字体与字重 |
 | [`examples/custom_widgets`](examples/custom_widgets) | 自定义复合组件和画布组件 |
 | [`examples/multi_windows`](examples/multi_windows) | 由应用管理的多窗口 |
 | [`examples/file_dialogs`](examples/file_dialogs) | 原生打开和保存文件对话框 |

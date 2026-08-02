@@ -279,6 +279,27 @@ type softShadowCacheKey struct {
 	color      color.NRGBA
 }
 
+type softShadowStyleKey struct {
+	version    int
+	shape      shadowShape
+	blur       int
+	spread     int
+	offX, offY int
+	color      color.NRGBA
+}
+
+func (k softShadowCacheKey) style() softShadowStyleKey {
+	return softShadowStyleKey{
+		version: k.version,
+		shape:   k.shape,
+		blur:    k.blur,
+		spread:  k.spread,
+		offX:    k.offX,
+		offY:    k.offY,
+		color:   k.color,
+	}
+}
+
 type softShadowCacheEntry struct {
 	op         paint.ImageOp
 	padX, padY int
@@ -297,6 +318,7 @@ const (
 	softShadowRendererVersion = 2
 	softShadowCacheLimit      = 256
 	softShadowCacheMaxBytes   = 32 << 20
+	softShadowVariantLimit    = 4
 	maxShadowRasterPixels     = 256 * 1024
 	maxShadowRasterScale      = 8
 )
@@ -357,6 +379,7 @@ func softShadowEntry(size image.Point, shape shadowShape, blur, spread, offX, of
 
 	softShadowCache.Lock()
 	softShadowCache.tick++
+	styleKey := key.style()
 	if entry, ok := softShadowCache.entries[key]; ok {
 		entry.lastUsed = softShadowCache.tick
 		softShadowCache.entries[key] = entry
@@ -395,11 +418,48 @@ func softShadowEntry(size image.Point, shape shadowShape, blur, spread, offX, of
 	}
 	softShadowCache.entries[key] = entry
 	softShadowCache.bytes += entry.bytes
+	trimShadowVariantsLocked(styleKey)
 	delete(softShadowCache.builds, key)
 	build.entry = entry
 	close(build.done)
 	softShadowCache.Unlock()
 	return entry
+}
+
+func trimShadowVariantsLocked(style softShadowStyleKey) {
+	for {
+		count := 0
+		var oldestKey softShadowCacheKey
+		var oldestTick uint64
+		first := true
+		for key, entry := range softShadowCache.entries {
+			if key.style() != style {
+				continue
+			}
+			count++
+			if first || entry.lastUsed < oldestTick {
+				oldestKey = key
+				oldestTick = entry.lastUsed
+				first = false
+			}
+		}
+		if count <= softShadowVariantLimit || first {
+			return
+		}
+		removeShadowEntryLocked(oldestKey)
+	}
+}
+
+func removeShadowEntryLocked(key softShadowCacheKey) {
+	entry, ok := softShadowCache.entries[key]
+	if !ok {
+		return
+	}
+	softShadowCache.bytes -= entry.bytes
+	if softShadowCache.bytes < 0 {
+		softShadowCache.bytes = 0
+	}
+	delete(softShadowCache.entries, key)
 }
 
 func evictOldestShadowEntryLocked() {
@@ -414,11 +474,7 @@ func evictOldestShadowEntryLocked() {
 		}
 	}
 	if !first {
-		softShadowCache.bytes -= softShadowCache.entries[oldestKey].bytes
-		if softShadowCache.bytes < 0 {
-			softShadowCache.bytes = 0
-		}
-		delete(softShadowCache.entries, oldestKey)
+		removeShadowEntryLocked(oldestKey)
 	}
 }
 

@@ -130,6 +130,85 @@ func TestSoftShadowCacheEvictsOldEntries(t *testing.T) {
 	}
 }
 
+func TestSoftShadowCacheBuildsLargeResizeImmediately(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	shape := shadowShape{Kind: ShadowEllipse}
+	col := color.NRGBA{R: 20, G: 80, B: 180, A: 120}
+	first := softShadowEntry(image.Pt(640, 480), shape, 22, 4, 0, 8, col)
+	if first.op.Size() == (image.Point{}) {
+		t.Fatal("initial shadow entry is empty")
+	}
+	transient := softShadowEntry(image.Pt(641, 480), shape, 22, 4, 0, 8, col)
+	if transient.op.Size() == (image.Point{}) {
+		t.Fatal("resized shadow entry is empty")
+	}
+	softShadowCache.Lock()
+	if got := len(softShadowCache.entries); got != 2 {
+		softShadowCache.Unlock()
+		t.Fatalf("cache entries after resize = %d, want 2", got)
+	}
+	softShadowCache.Unlock()
+}
+
+func TestSoftShadowCacheBuildsDistinctGridSizeVariants(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 24, NE: 24, SE: 24, SW: 24}}
+	col := color.NRGBA{R: 20, G: 80, B: 180, A: 120}
+	sizes := []image.Point{
+		image.Pt(320, 128),
+		image.Pt(320, 144),
+		image.Pt(320, 160),
+		image.Pt(196, 128),
+		image.Pt(196, 144),
+		image.Pt(196, 160),
+	}
+	for _, size := range sizes {
+		entry := softShadowEntry(size, shape, 4, 0, 0, 2, col)
+		if entry.op.Size() == (image.Point{}) {
+			t.Fatalf("shadow entry for %v is empty", size)
+		}
+	}
+
+	softShadowCache.Lock()
+	defer softShadowCache.Unlock()
+	if got := len(softShadowCache.entries); got > softShadowVariantLimit {
+		t.Fatalf("cached size variants = %d, want <= %d", got, softShadowVariantLimit)
+	}
+}
+
+func TestSoftShadowCacheNeverDropsShadowDuringVariantChurn(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 24, NE: 24, SE: 24, SW: 24}}
+	col := color.NRGBA{R: 20, G: 80, B: 180, A: 120}
+	sizes := []image.Point{
+		image.Pt(320, 128),
+		image.Pt(320, 144),
+		image.Pt(320, 160),
+		image.Pt(196, 128),
+		image.Pt(196, 144),
+		image.Pt(196, 160),
+	}
+	for frame := 0; frame < 3; frame++ {
+		for _, size := range sizes {
+			entry := softShadowEntry(size, shape, 22, 4, 0, 8, col)
+			if entry.op.Size() == (image.Point{}) {
+				t.Fatalf("frame %d: shadow entry for %v is empty", frame, size)
+			}
+		}
+	}
+}
+
+func TestSoftShadowCacheDoesNotDeferSmallResize(t *testing.T) {
+	resetSoftShadowCacheForTest()
+	shape := shadowShape{Kind: ShadowEllipse}
+	col := color.NRGBA{R: 20, G: 80, B: 180, A: 120}
+	_ = softShadowEntry(image.Pt(40, 32), shape, 8, 1, 0, 3, col)
+	resized := softShadowEntry(image.Pt(41, 32), shape, 8, 1, 0, 3, col)
+	if resized.op.Size() == (image.Point{}) {
+		t.Fatal("small resize entry is empty")
+	}
+}
+
 func TestCutRoundedRectMaskRemovesSurfaceInterior(t *testing.T) {
 	w, h := 32, 24
 	alpha := make([]uint8, w*h)

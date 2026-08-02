@@ -4,9 +4,9 @@ FlowUI is a Go desktop UI framework and component library built on Gio. It
 combines a typed MVU application model with reusable components, declarative
 styles, window management, asynchronous effects, and deterministic UI tests.
 
-[简体中文](../index.md)
+[简体中文](https://qianniancn.github.io/flowui/)
 
-![FlowUI component gallery](../assets/components-gallery.png)
+![FlowUI component gallery](https://qianniancn.github.io/flowui/assets/components-gallery.png)
 
 [Get started](guide/01-quick-start.md){ .md-button .md-button--primary }
 [View the source](https://github.com/qianniancn/flowui){ .md-button }
@@ -38,7 +38,6 @@ styles, window management, asynchronous effects, and deterministic UI tests.
 | --- | --- |
 | Public package | `github.com/qianniancn/flowui/ui` |
 | Runnable examples | `examples/` |
-| Architecture notes | [architecture.md](../architecture.md) |
 | Go API reference | [pkg.go.dev](https://pkg.go.dev/github.com/qianniancn/flowui/ui) |
 
 The guide targets application developers and uses only the public `ui` package.

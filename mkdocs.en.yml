@@ -1,16 +1,16 @@
 site_name: FlowUI
 site_description: A Go UI framework and component library for cross-platform desktop applications, built on Gio.
-site_url: https://qianniancn.github.io/flowui/
+site_url: https://qianniancn.github.io/flowui/en/
 repo_name: qianniancn/flowui
 repo_url: https://github.com/qianniancn/flowui
-edit_uri: edit/main/docs/
-docs_dir: docs
-site_dir: site
+edit_uri: edit/main/docs/en/
+docs_dir: docs/en
+site_dir: site/en
 use_directory_urls: true
 
 theme:
   name: material
-  language: zh
+  language: en
   features:
     - content.action.edit
     - content.action.view
@@ -31,56 +31,51 @@ theme:
     - media: "(prefers-color-scheme)"
       toggle:
         icon: material/brightness-auto
-        name: 跟随系统主题
+        name: Follow system theme
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
       accent: indigo
       toggle:
         icon: material/brightness-7
-        name: 切换到深色模式
+        name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
       accent: indigo
       toggle:
         icon: material/brightness-4
-        name: 切换到浅色模式
+        name: Switch to light mode
   font:
     text: Roboto
     code: Roboto Mono
 
 nav:
-  - 首页: index.md
-  - 入门:
-      - 快速开始: guide/01-快速开始.md
-      - 核心概念: guide/02-核心概念.md
-      - MVU 与消息: guide/03-MVU与消息.md
-  - 界面开发:
-      - 布局: guide/04-布局.md
-      - 样式与主题: guide/05-样式与主题.md
-      - 组件一览: guide/06-组件一览.md
-      - 组件截图: guide/16-组件截图.md
-      - 表单与受控状态: guide/07-表单与受控状态.md
-      - 浮层与弹出: guide/09-浮层与弹出.md
-      - 甘特图: guide/15-甘特图.md
-  - 应用能力:
-      - 命令与订阅: guide/08-命令与订阅.md
-      - 自定义组件: guide/10-自定义组件.md
-      - 多窗口: guide/11-多窗口.md
-      - 动画: guide/12-动画.md
-      - 测试: guide/13-测试.md
-  - 常见问题: guide/14-常见问题.md
-  - 架构说明: architecture.md
-
-exclude_docs: |
-  /en/**
+  - Home: index.md
+  - Getting started:
+      - Getting started: guide/01-quick-start.md
+      - Core concepts: guide/02-core-concepts.md
+      - MVU and messages: guide/03-mvu-and-messages.md
+  - Building interfaces:
+      - Layout: guide/04-layout.md
+      - Styling and themes: guide/05-styling-and-themes.md
+      - Components: guide/06-components.md
+      - Component screenshots: guide/16-component-screenshots.md
+      - Forms and controlled state: guide/07-forms-and-controlled-state.md
+      - Overlays and popups: guide/09-overlays-and-popups.md
+      - Gantt chart: guide/15-gantt.md
+  - Application capabilities:
+      - Commands and subscriptions: guide/08-commands-and-subscriptions.md
+      - Custom components: guide/10-custom-components.md
+      - Multiple windows: guide/11-multiple-windows.md
+      - Animation: guide/12-animation.md
+      - Testing: guide/13-testing.md
+  - FAQ: guide/14-faq.md
 
 plugins:
   - search:
       lang:
         - en
-        - zh
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
 
 markdown_extensions:

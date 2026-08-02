@@ -6,56 +6,56 @@ contracts and interaction details.
 
 ## Gallery
 
-![FlowUI component gallery](../../assets/components-gallery.png)
+![FlowUI component gallery](https://qianniancn.github.io/flowui/assets/components-gallery.png)
 
 ## Actions and surfaces
 
 ### Buttons
 
-![Buttons](../../assets/buttons.png)
+![Buttons](https://qianniancn.github.io/flowui/assets/buttons.png)
 
 ### Cards
 
-![Cards](../../assets/cards.png)
+![Cards](https://qianniancn.github.io/flowui/assets/cards.png)
 
 ## Forms and selection
 
-![Inputs](../../assets/inputs.png)
+![Inputs](https://qianniancn.github.io/flowui/assets/inputs.png)
 
-![Selects](../../assets/selects.png)
+![Selects](https://qianniancn.github.io/flowui/assets/selects.png)
 
-![Date pickers](../../assets/datepickers.png)
+![Date pickers](https://qianniancn.github.io/flowui/assets/datepickers.png)
 
-![Color pickers](../../assets/color_pickers.png)
+![Color pickers](https://qianniancn.github.io/flowui/assets/color_pickers.png)
 
-![Radio groups](../../assets/radio_groups.png)
+![Radio groups](https://qianniancn.github.io/flowui/assets/radio_groups.png)
 
 ## Navigation and menus
 
-![Tabs](../../assets/tabs.png)
+![Tabs](https://qianniancn.github.io/flowui/assets/tabs.png)
 
-![Sidebars](../../assets/sidebars.png)
+![Sidebars](https://qianniancn.github.io/flowui/assets/sidebars.png)
 
-![Trees](../../assets/trees.png)
+![Trees](https://qianniancn.github.io/flowui/assets/trees.png)
 
-![Menubars](../../assets/menubars.png)
+![Menubars](https://qianniancn.github.io/flowui/assets/menubars.png)
 
-![Dropdowns](../../assets/dropdowns.png)
+![Dropdowns](https://qianniancn.github.io/flowui/assets/dropdowns.png)
 
-![Context menus](../../assets/context_menus.png)
+![Context menus](https://qianniancn.github.io/flowui/assets/context_menus.png)
 
 ## Feedback and data
 
-![Modals](../../assets/modals.png)
+![Modals](https://qianniancn.github.io/flowui/assets/modals.png)
 
-![Alerts](../../assets/alert_dialogs.png)
+![Alerts](https://qianniancn.github.io/flowui/assets/alert_dialogs.png)
 
-![Toasts](../../assets/toasts.png)
+![Toasts](https://qianniancn.github.io/flowui/assets/toasts.png)
 
-![Progress](../../assets/progress_bars.png)
+![Progress](https://qianniancn.github.io/flowui/assets/progress_bars.png)
 
-![Tables](../../assets/tables.png)
+![Tables](https://qianniancn.github.io/flowui/assets/tables.png)
 
-![Charts](../../assets/line_charts.png)
+![Charts](https://qianniancn.github.io/flowui/assets/line_charts.png)
 
-![Gantt charts](../../assets/gantt_charts.png)
+![Gantt charts](https://qianniancn.github.io/flowui/assets/gantt_charts.png)

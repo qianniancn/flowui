@@ -2,6 +2,8 @@
 
 [English](README.md)
 
+[English documentation](https://qianniancn.github.io/flowui/en/) · [中文文档](https://qianniancn.github.io/flowui/)
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/qianniancn/flowui/ui.svg)](https://pkg.go.dev/github.com/qianniancn/flowui/ui)
 [![Go version](https://img.shields.io/github/go-mod/go-version/qianniancn/flowui)](go.mod)
 [![License](https://img.shields.io/github/license/qianniancn/flowui)](LICENSE)

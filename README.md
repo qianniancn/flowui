@@ -6,6 +6,8 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/qianniancn/flowui)](go.mod)
 [![License](https://img.shields.io/github/license/qianniancn/flowui)](LICENSE)
 
+[English documentation](https://qianniancn.github.io/flowui/en/) · [中文文档](https://qianniancn.github.io/flowui/)
+
 FlowUI is a desktop UI framework for Go, built on [Gio](https://gioui.org/).
 It combines a typed MVU application model with a broad component set,
 declarative styling, window management, asynchronous effects, and deterministic
@@ -110,7 +112,7 @@ go run .
 ```
 
 The same application is available at [`examples/counter`](examples/counter).
-For a guided walkthrough, read [Quick Start](https://qianniancn.github.io/flowui/guide/01-快速开始/).
+For a guided walkthrough, read the [English Quick Start](https://qianniancn.github.io/flowui/en/guide/01-quick-start/).
 
 ## Core Model
 
@@ -133,8 +135,8 @@ Choose the application API that matches the required lifecycle:
 
 Commands run outside the event loop and return results through `ui.Send`.
 Subscriptions represent long-lived inputs such as timers or external event
-streams. The [MVU guide](https://qianniancn.github.io/flowui/guide/03-MVU与消息/)
-and [effects guide](https://qianniancn.github.io/flowui/guide/08-命令与订阅/)
+streams. The [MVU guide](https://qianniancn.github.io/flowui/en/guide/03-mvu-and-messages/)
+and [effects guide](https://qianniancn.github.io/flowui/en/guide/08-commands-and-subscriptions/)
 cover the complete contracts.
 
 ## Components
@@ -149,7 +151,7 @@ cover the complete contracts.
 | Data and feedback | `Table`, `ProgressBar`, `ProgressCircle`, `Meter`, `Spinner`, `Slider`, charts, `Heatmap`, `GanttChart` |
 | Layout | `Box`, `Surface`, `Card`, `Row`, `Column`, `Grid`, `Scroll`, `SplitPane`, `Stack`, `Overlay` |
 
-See the [component guide](https://qianniancn.github.io/flowui/guide/06-组件一览/)
+See the [component guide](https://qianniancn.github.io/flowui/en/guide/06-components/)
 or run the component gallery:
 
 ```bash
@@ -179,7 +181,7 @@ focused changes. Compound controls expose named parts such as `PartContent`,
 includes English and Chinese component strings; `ui.LanguageAuto` follows the
 host language.
 
-The [style and theme guide](https://qianniancn.github.io/flowui/guide/05-样式与主题/)
+The [style and theme guide](https://qianniancn.github.io/flowui/en/guide/05-styling-and-themes/)
 documents precedence, parts, colors, geometry, transitions, and bundled font setup.
 
 FlowUI uses system font fallback by default. For reproducible rendering, parse an
@@ -211,7 +213,8 @@ animations, menus, overlays, layout, window chrome, and individual controls.
 
 | Resource | Purpose |
 | --- | --- |
-| [Documentation](https://qianniancn.github.io/flowui/) | Task-oriented guide from first app through advanced features (Chinese) |
+| [Documentation](https://qianniancn.github.io/flowui/en/) | English task-oriented guide from first app through advanced features |
+| [中文文档](https://qianniancn.github.io/flowui/) | 中文教程和组件说明 |
 | [Package reference](https://pkg.go.dev/github.com/qianniancn/flowui/ui) | Public Go API |
 | [`docs/architecture.md`](docs/architecture.md) | Dependency direction, state ownership, overlays, and effects |
 | [`explorer/README.md`](explorer/README.md) | Per-window native open and save dialogs |
@@ -234,7 +237,7 @@ go vet ./...
 ```
 
 `uitest` is intended for component and application tests; it is not required
-by applications at runtime. See the [testing guide](https://qianniancn.github.io/flowui/guide/13-测试/).
+by applications at runtime. See the [testing guide](https://qianniancn.github.io/flowui/en/guide/13-testing/).
 
 ## Contributing
 

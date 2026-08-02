@@ -72,6 +72,25 @@ nav:
       - 测试: guide/13-测试.md
   - 常见问题: guide/14-常见问题.md
   - 架构说明: architecture.md
+  - English:
+      - Home: en/index.md
+      - Getting started: en/guide/01-quick-start.md
+      - Core concepts: en/guide/02-core-concepts.md
+      - MVU and messages: en/guide/03-mvu-and-messages.md
+      - Layout: en/guide/04-layout.md
+      - Styling and themes: en/guide/05-styling-and-themes.md
+      - Components: en/guide/06-components.md
+      - Forms and controlled state: en/guide/07-forms-and-controlled-state.md
+      - Commands and subscriptions: en/guide/08-commands-and-subscriptions.md
+      - Overlays and popups: en/guide/09-overlays-and-popups.md
+      - Custom components: en/guide/10-custom-components.md
+      - Multiple windows: en/guide/11-multiple-windows.md
+      - Animation: en/guide/12-animation.md
+      - Testing: en/guide/13-testing.md
+      - FAQ: en/guide/14-faq.md
+      - Gantt chart: en/guide/15-gantt.md
+      - Component screenshots: en/guide/16-component-screenshots.md
+      - Architecture: architecture.md
 
 plugins:
   - search:
@@ -97,6 +116,13 @@ markdown_extensions:
 copyright: Copyright &copy; FlowUI contributors
 
 extra:
+  alternate:
+    - name: 简体中文
+      link: https://qianniancn.github.io/flowui/
+      lang: zh
+    - name: English
+      link: https://qianniancn.github.io/flowui/en/
+      lang: en
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/qianniancn/flowui

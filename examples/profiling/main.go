@@ -25,6 +25,7 @@ import (
 
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile = flag.String("memprofile", "", "write heap profile to file")
 	duration   = flag.Int("duration", 10, "profiling duration in seconds")
 	frames     = flag.Int("frames", 0, "number of frames to render (0 = time-based)")
 )
@@ -43,6 +44,9 @@ func main() {
 		if stopProfile != nil {
 			stopProfile()
 		}
+		if *memprofile != "" {
+			writeHeapProfile(*memprofile)
+		}
 		if err != nil {
 			log.Print(err)
 			os.Exit(1)
@@ -50,6 +54,21 @@ func main() {
 		os.Exit(0)
 	}()
 	app.Main()
+}
+
+func writeHeapProfile(path string) {
+	runtime.GC()
+	f, err := os.Create(path)
+	if err != nil {
+		log.Fatal("could not create heap profile: ", err)
+	}
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		_ = f.Close()
+		log.Fatal("could not write heap profile: ", err)
+	}
+	if err := f.Close(); err != nil {
+		log.Fatal("could not close heap profile: ", err)
+	}
 }
 
 func startCPUProfile(path string) func() {

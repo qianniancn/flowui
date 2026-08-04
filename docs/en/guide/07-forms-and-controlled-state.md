@@ -41,6 +41,27 @@ ui.Checkbox("agree", m.Agree).
 	OnChange(func(value bool) { send(AgreeChanged{Value: value}) })
 ```
 
+### InputGroup actions
+
+Use `Prefix` and `Suffix` for static content. Use `PrefixAction` and
+`SuffixAction` for clickable affixes. `InputGroupAction` provides a stable
+24dp target, pointer cursor, and accessible label:
+
+```go
+ui.InputGroup(ui.Input("website", m.Website)).
+	SuffixAction(
+		ui.InputGroupAction("clear-website", "Clear website", ui.Icon(lucide.X).Size(16)).
+			OnClick(func() { send(ClearWebsite{}) }),
+	)
+```
+
+Action slots do not focus the editor by default. Call
+`.FocusOnActionPress(true)` when the editor should regain focus after an
+action. Override the default slot spacing with `PrefixPadding` or
+`SuffixPadding` when a custom layout needs it. The editor face is
+`PartContent`; use `ui.Part(ui.PartContent, ...)` to customize its cursor,
+text, or typography without changing the outer group shell.
+
 Selection controls use model keys:
 
 ```go

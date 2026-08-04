@@ -28,9 +28,10 @@ ui.Button("save", ui.Text("Save")).
 
 ## Forms
 
-The form family includes `Input`, `TextArea`, `InputGroup`, `Checkbox`,
-`Switch`, `RadioGroup`, `Select`, `ComboBox`, date pickers, color pickers, and
-sliders. Form values are controlled by the model; callbacks send messages.
+The form family includes `Input`, `TextArea`, `InputGroup`, `InputGroupAction`,
+`Checkbox`, `Switch`, `RadioGroup`, `Select`, `ComboBox`, date pickers, color
+pickers, and sliders. Form values are controlled by the model; callbacks send
+messages.
 
 ## Navigation and overlays
 

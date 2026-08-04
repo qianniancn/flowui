@@ -353,6 +353,9 @@ func resolveThemeColors(resolved *style.ResolvedStyle, activeTheme *theme.Theme)
 		if resolved.Paint.Border != nil && resolved.Paint.Border.Color != nil {
 			resolved.Paint.Border.Color = resolveColor(resolved.Paint.Border.Color, activeTheme)
 		}
+		if resolved.Paint.BorderBottom != nil && resolved.Paint.BorderBottom.Color != nil {
+			resolved.Paint.BorderBottom.Color = resolveColor(resolved.Paint.BorderBottom.Color, activeTheme)
+		}
 		resolved.Paint.Shadows = resolveShadows(resolved.Paint.Shadows, activeTheme)
 		if resolved.Paint.Outline != nil {
 			resolved.Paint.Outline.Color = resolveColor(resolved.Paint.Outline.Color, activeTheme)
@@ -604,21 +607,22 @@ func tokenColor(activeTheme *theme.Theme, token style.ColorToken) color.NRGBA {
 }
 
 type runtimeState struct {
-	background colorAnimation
-	text       colorAnimation
-	border     colorAnimation
-	outline    colorAnimation
-	opacity    floatAnimation
-	radius     floatAnimation
-	radiusNW   floatAnimation
-	radiusNE   floatAnimation
-	radiusSE   floatAnimation
-	radiusSW   floatAnimation
-	translateX floatAnimation
-	translateY floatAnimation
-	scaleX     floatAnimation
-	scaleY     floatAnimation
-	rotate     floatAnimation
+	background   colorAnimation
+	text         colorAnimation
+	border       colorAnimation
+	borderBottom colorAnimation
+	outline      colorAnimation
+	opacity      floatAnimation
+	radius       floatAnimation
+	radiusNW     floatAnimation
+	radiusNE     floatAnimation
+	radiusSE     floatAnimation
+	radiusSW     floatAnimation
+	translateX   floatAnimation
+	translateY   floatAnimation
+	scaleX       floatAnimation
+	scaleY       floatAnimation
+	rotate       floatAnimation
 }
 
 func animate(ctx *frame.Context, gtx layout.Context, key string, resolved *style.ResolvedStyle) {
@@ -634,6 +638,12 @@ func animate(ctx *frame.Context, gtx layout.Context, key string, resolved *style
 			if value, ok := solidColor(resolved.Paint.Border.Color); ok {
 				value = state.border.value(gtx, value, transitionFor(*resolved, style.PropBorderColor), motion)
 				resolved.Paint.Border.Color = style.SolidColor{Color: value}
+			}
+		}
+		if resolved.Paint.BorderBottom != nil {
+			if value, ok := solidColor(resolved.Paint.BorderBottom.Color); ok {
+				value = state.borderBottom.value(gtx, value, transitionFor(*resolved, style.PropBorderColor), motion)
+				resolved.Paint.BorderBottom.Color = style.SolidColor{Color: value}
 			}
 		}
 		if resolved.Paint.Outline != nil {

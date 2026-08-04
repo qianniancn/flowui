@@ -364,6 +364,27 @@ func TestColorSourceWorksAcrossPaintAndText(t *testing.T) {
 	}
 }
 
+func TestBottomBorderFluentStyle(t *testing.T) {
+	accent := RGB(0x1677ff)
+	declaration := Style{}.BorderBottomColor(accent).BorderBottomWidth(1)
+	resolved := declaration.Resolve(StyleState{})
+	if resolved.Paint == nil || resolved.Paint.BorderBottom == nil {
+		t.Fatalf("bottom border = %#v", resolved.Paint)
+	}
+	if resolved.Paint.BorderBottom.Color != accent || resolved.Paint.BorderBottom.Width == nil || *resolved.Paint.BorderBottom.Width != 1 {
+		t.Fatalf("bottom border = %#v", resolved.Paint.BorderBottom)
+	}
+
+	changed := declaration.BorderBottomColor(RGB(0xff4d4f)).BorderBottomWidth(2)
+	base := declaration.Resolve(StyleState{})
+	if base.Paint.BorderBottom.Color != accent || *base.Paint.BorderBottom.Width != 1 {
+		t.Fatalf("source bottom border changed: %#v", base.Paint.BorderBottom)
+	}
+	if changed.Hash64() == declaration.Hash64() {
+		t.Fatal("bottom border changes were not included in style hash")
+	}
+}
+
 func TestResolveDeepCopiesPointerSources(t *testing.T) {
 	background := &SolidColor{Color: color.NRGBA{R: 1, A: 0xff}}
 	source := Style{

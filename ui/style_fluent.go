@@ -159,6 +159,18 @@ func BorderWidth(value unit.Dp) Style {
 	return styleStart().BorderWidth(value)
 }
 
+// BorderBottomColor sets the bottom border color without changing the other
+// sides.
+func BorderBottomColor(value ColorSource) Style {
+	return styleStart().BorderBottomColor(value)
+}
+
+// BorderBottomWidth sets the bottom border width without changing the other
+// sides.
+func BorderBottomWidth(value unit.Dp) Style {
+	return styleStart().BorderBottomWidth(value)
+}
+
 // Radius sets equal corner radii on all four corners.
 func Radius(value unit.Dp) Style {
 	return styleStart().Radius(value)

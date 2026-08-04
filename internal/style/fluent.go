@@ -36,6 +36,10 @@ func (s Style) editPaint(edit func(*PaintStyle)) Style {
 			border := *paint.Border
 			paint.Border = &border
 		}
+		if paint.BorderBottom != nil {
+			border := *paint.BorderBottom
+			paint.BorderBottom = &border
+		}
 		paint.Shadows = append([]Shadow(nil), paint.Shadows...)
 	}
 	s.paint = &paint
@@ -294,6 +298,31 @@ func (s Style) BorderWidth(value unit.Dp) Style {
 			paint.Border = &BorderStyle{}
 		}
 		paint.Border.Width = new(value)
+	})
+}
+
+// BorderBottomColor sets the bottom border color without changing the other
+// sides.
+func (s Style) BorderBottomColor(value ColorSource) Style {
+	return s.editPaint(func(paint *PaintStyle) {
+		if paint.BorderBottom == nil {
+			paint.BorderBottom = &BorderStyle{}
+		}
+		paint.BorderBottom.Color = cloneColorSource(value)
+	})
+}
+
+// BorderBottomWidth sets the bottom border width without changing the other
+// sides.
+func (s Style) BorderBottomWidth(value unit.Dp) Style {
+	if !finite(float32(value)) {
+		return s
+	}
+	return s.editPaint(func(paint *PaintStyle) {
+		if paint.BorderBottom == nil {
+			paint.BorderBottom = &BorderStyle{}
+		}
+		paint.BorderBottom.Width = new(value)
 	})
 }
 

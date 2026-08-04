@@ -358,6 +358,15 @@ func cloneResolvedStyle(src style.ResolvedStyle) style.ResolvedStyle {
 			borderCopy.Color = cloneColorSource(borderCopy.Color)
 			paintCopy.Border = &borderCopy
 		}
+		if paintCopy.BorderBottom != nil {
+			borderCopy := *paintCopy.BorderBottom
+			borderCopy.Color = cloneColorSource(borderCopy.Color)
+			if borderCopy.Width != nil {
+				widthCopy := *borderCopy.Width
+				borderCopy.Width = &widthCopy
+			}
+			paintCopy.BorderBottom = &borderCopy
+		}
 		if paintCopy.Outline != nil {
 			outlineCopy := *paintCopy.Outline
 			outlineCopy.Color = cloneColorSource(outlineCopy.Color)

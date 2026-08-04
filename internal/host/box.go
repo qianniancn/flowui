@@ -534,15 +534,24 @@ func boxShadows(gtx layout.Context, rect image.Rectangle, style *flowstyle.Paint
 }
 
 func boxBorder(gtx layout.Context, shape clip.RRect, style *flowstyle.PaintStyle) {
-	if style == nil || style.Border == nil || style.Border.Width == nil {
+	if style == nil {
 		return
 	}
-	color, ok := styleruntime.Color(style.Border.Color)
-	if !ok {
-		return
+	if style.Border != nil && style.Border.Width != nil {
+		color, ok := styleruntime.Color(style.Border.Color)
+		if ok {
+			width := max(gtx.Dp(*style.Border.Width), 0)
+			render.DrawRRectBorder(gtx, shape, width, color)
+		}
 	}
-	width := max(gtx.Dp(*style.Border.Width), 0)
-	render.DrawRRectBorder(gtx, shape, width, color)
+	if style.BorderBottom != nil && style.BorderBottom.Width != nil {
+		color, ok := styleruntime.Color(style.BorderBottom.Color)
+		if ok {
+			clipStack := shape.Push(gtx.Ops)
+			render.DrawBottomBorder(gtx, shape.Rect, max(gtx.Dp(*style.BorderBottom.Width), 0), color)
+			clipStack.Pop()
+		}
+	}
 }
 
 func boxOutline(gtx layout.Context, shape clip.RRect, style *flowstyle.PaintStyle) {

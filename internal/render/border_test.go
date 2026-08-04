@@ -39,3 +39,27 @@ func TestDrawRoundedBorderLeavesCenterOpen(t *testing.T) {
 		t.Fatalf("border center alpha = %d, want 0", got)
 	}
 }
+
+func TestDrawBottomBorderPaintsBottomEdge(t *testing.T) {
+	window, err := headless.NewWindow(20, 20)
+	if err != nil {
+		t.Skipf("headless renderer unavailable: %v", err)
+	}
+	defer window.Release()
+
+	var ops op.Ops
+	DrawBottomBorder(layout.Context{Ops: &ops}, image.Rect(0, 0, 20, 20), 2, color.NRGBA{R: 147, B: 234, A: 255})
+	if err := window.Frame(&ops); err != nil {
+		t.Fatal(err)
+	}
+	pixels := image.NewRGBA(image.Rect(0, 0, 20, 20))
+	if err := window.Screenshot(pixels); err != nil {
+		t.Fatal(err)
+	}
+	if got := pixels.RGBAAt(10, 19).A; got == 0 {
+		t.Fatal("bottom border pixel was not drawn")
+	}
+	if got := pixels.RGBAAt(10, 0).A; got != 0 {
+		t.Fatalf("top pixel alpha = %d, want 0", got)
+	}
+}

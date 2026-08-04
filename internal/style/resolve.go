@@ -233,6 +233,15 @@ func mergePaint(dst, src *PaintStyle) {
 		}
 		dst.Border.Width = pick(dst.Border.Width, src.Border.Width)
 	}
+	if src.BorderBottom != nil {
+		if dst.BorderBottom == nil {
+			dst.BorderBottom = &BorderStyle{}
+		}
+		if src.BorderBottom.Color != nil {
+			dst.BorderBottom.Color = cloneColorSource(src.BorderBottom.Color)
+		}
+		dst.BorderBottom.Width = pick(dst.BorderBottom.Width, src.BorderBottom.Width)
+	}
 	if src.Radius != nil {
 		dst.Radius = clonePtr(src.Radius)
 		dst.Radii = nil
@@ -420,6 +429,12 @@ func clonePaint(source *PaintStyle) *PaintStyle {
 		border.Color = cloneColorSource(source.Border.Color)
 		border.Width = clonePtr(source.Border.Width)
 		result.Border = &border
+	}
+	if source.BorderBottom != nil {
+		border := *source.BorderBottom
+		border.Color = cloneColorSource(source.BorderBottom.Color)
+		border.Width = clonePtr(source.BorderBottom.Width)
+		result.BorderBottom = &border
 	}
 	result.Radius = clonePtr(source.Radius)
 	result.Radii = clonePtr(source.Radii)

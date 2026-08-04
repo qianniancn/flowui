@@ -42,6 +42,19 @@ func DrawRRectBorder(gtx layout.Context, shape clip.RRect, width int, col color.
 	paint.FillShape(gtx.Ops, col, clip.Outline{Path: path.End()}.Op())
 }
 
+// DrawBottomBorder paints a straight border along the bottom edge of rect.
+// The border is drawn inside the rectangle, matching DrawRRectBorder.
+func DrawBottomBorder(gtx layout.Context, rect image.Rectangle, width int, col color.NRGBA) {
+	if rect.Empty() || width <= 0 || col.A == 0 {
+		return
+	}
+	width = min(width, rect.Dy())
+	paint.FillShape(gtx.Ops, col, clip.Rect{
+		Min: image.Point{X: rect.Min.X, Y: rect.Max.Y - width},
+		Max: rect.Max,
+	}.Op())
+}
+
 func appendRoundedRect(path *clip.Path, rect image.Rectangle, radius int, clockwise bool) {
 	appendRoundedRectCorners(path, rect, radius, radius, radius, radius, clockwise)
 }

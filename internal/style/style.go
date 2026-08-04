@@ -278,11 +278,15 @@ func (StyleGradient) isPaintSource() {}
 type PaintStyle struct {
 	Background PaintSource
 	Border     *BorderStyle
-	Radius     *unit.Dp
-	Radii      *CornerRadii
-	Shadows    []Shadow
-	Outline    *OutlineStyle
-	Opacity    *float32
+	// BorderBottom is an optional bottom-only border. It is kept separate from
+	// Border so a component can underline a control without painting the other
+	// three sides.
+	BorderBottom *BorderStyle
+	Radius       *unit.Dp
+	Radii        *CornerRadii
+	Shadows      []Shadow
+	Outline      *OutlineStyle
+	Opacity      *float32
 
 	radiusMask    uint8
 	backgroundSet bool
@@ -681,6 +685,14 @@ func hashPaintStyle(h hash.Hash, p *PaintStyle) {
 		if p.Border.Width != nil {
 			writeUint8(h, 1)
 			writeFloat32(h, float32(*p.Border.Width))
+		}
+	}
+	if p.BorderBottom != nil {
+		writeUint8(h, 11)
+		hashColorSource(h, p.BorderBottom.Color)
+		if p.BorderBottom.Width != nil {
+			writeUint8(h, 1)
+			writeFloat32(h, float32(*p.BorderBottom.Width))
 		}
 	}
 	if p.Radius != nil {

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"gioui.org/layout"
 	giotext "gioui.org/text"
 	textui "github.com/qianniancn/flowui/internal/components/text"
 )
@@ -33,4 +34,9 @@ func Text(value string) TextWidget {
 // SelectableText creates text that can be selected and copied.
 func SelectableText(key, value string) SelectableTextWidget {
 	return textui.Selectable(key, value)
+}
+
+// MeasureText measures value under gtx constraints without painting it.
+func MeasureText(ctx *Context, gtx layout.Context, value TextWidget) layout.Dimensions {
+	return textui.Measure(ctx, gtx, value)
 }

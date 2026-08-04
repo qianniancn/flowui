@@ -11,7 +11,9 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/font"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/ui"
@@ -152,6 +154,25 @@ type facadeMsg struct {
 type externalWidget struct{}
 
 func (externalWidget) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+	if col, ok := ui.ResolveColor(ctx, ui.WithAlpha(ui.TokenAccent, .5)); ok {
+		_ = col
+	}
+	if brush, ok := ui.ResolveBrush(ctx, ui.LinearGradient(
+		ui.ColorStop(0, ui.TokenAccent),
+		ui.ColorStop(1, ui.TokenDanger),
+	)); ok {
+		bounds := image.Rectangle{Max: image.Pt(20, 20)}
+		ui.DrawBrush(gtx, bounds, 4, brush)
+		ui.DrawBrushRRect(gtx, clip.UniformRRect(bounds, 4), brush)
+	}
+	_ = ui.MeasureText(ctx, gtx, ui.Text("Measure me").Size(14).MaxLines(1))
+	var pointerTag struct{}
+	ui.AddPointerArea(gtx, &pointerTag, image.Rectangle{Max: image.Pt(20, 20)}, pointer.CursorPointer)
+	if eventValue, ok := ui.NextPointerEvent(gtx, &pointerTag, pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel); ok {
+		if ui.IsPrimaryPointerPress(eventValue) {
+			ui.GrabPointer(gtx, &pointerTag, eventValue)
+		}
+	}
 	progress, _ := ui.Tween("external-tween", 1).
 		Initial(0).
 		Revision(1).
@@ -888,6 +909,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	}
 	var _ ui.Widget = externalWidget{}
 	var _ ui.Widget = ui.WidgetFunc(func(*ui.Context, layout.Context) layout.Dimensions { return layout.Dimensions{} })
+	_ = ui.LayoutVisualOverflow(nil, layout.Context{}, nil, func(*ui.Context, layout.Context, image.Rectangle) {})
 	var _ ui.Widget = ui.Box(ui.Text("Save")).Key("save").Label("Save").Disabled(false).OnClick(func() {})
 	var _ func(*ui.Context, string) *int = ui.UseState[int]
 	var _ func(*ui.Context, string, func() *int) *int = ui.UseStateWith[int]

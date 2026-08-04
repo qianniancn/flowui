@@ -8,6 +8,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	giotext "gioui.org/text"
 	"gioui.org/unit"
@@ -15,6 +16,7 @@ import (
 	"gioui.org/widget/material"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
@@ -176,6 +178,14 @@ func (t Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	}))
 }
 
+// Measure lays out text without adding paint or input operations to gtx.
+func Measure(ctx *frame.Context, gtx layout.Context, value Widget) layout.Dimensions {
+	measureGtx := gtx
+	measureGtx.Ops = new(op.Ops)
+	resolved := value.resolveStyleStatic(ctx, flowstyle.StyleState{})
+	return value.labelStyle(ctx, resolved).Layout(measureGtx)
+}
+
 func (t Widget) resolveLayoutStyle(ctx *frame.Context, gtx layout.Context) flowstyle.ResolvedStyle {
 	resolved := t.resolveStyleStatic(ctx, flowstyle.StyleState{})
 	if len(resolved.Transitions) == 0 {
@@ -187,13 +197,11 @@ func (t Widget) resolveLayoutStyle(ctx *frame.Context, gtx layout.Context) flows
 
 func preserveSelectableFocus(ctx *frame.Context, gtx layout.Context, tag event.Tag) {
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: tag, Kinds: pointer.Press})
+		_, ok := interact.NextPointerEvent(gtx, tag, pointer.Press)
 		if !ok {
 			return
 		}
-		if _, ok := value.(pointer.Event); ok {
-			frame.PreserveFocus(ctx)
-		}
+		frame.PreserveFocus(ctx)
 	}
 }
 

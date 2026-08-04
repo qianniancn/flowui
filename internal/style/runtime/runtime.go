@@ -433,6 +433,7 @@ func resolvePaint(source style.PaintSource, activeTheme *theme.Theme) style.Pain
 	case style.ColorSource:
 		return resolveColor(value, activeTheme)
 	case style.StyleGradient:
+		value.Stops = append([]style.StyleGradientStop(nil), value.Stops...)
 		for index := range value.Stops {
 			value.Stops[index].Color = resolveColor(value.Stops[index].Color, activeTheme)
 		}

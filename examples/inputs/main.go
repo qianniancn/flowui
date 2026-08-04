@@ -41,7 +41,8 @@ type Msg struct {
 }
 
 func Update(m *Model, msg Msg) ui.Cmd[Msg] {
-	if msg.Kind == submitted {
+	switch msg.Kind {
+	case submitted:
 		m.Last = fmt.Sprintf("Submitted %s: %s", msg.Field, msg.Text)
 		return nil
 	}
@@ -71,7 +72,7 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 
 	return ui.Center(
 		ui.Box(
-			ui.Column(
+			ui.Scroll("inputs", ui.Column(
 				ui.Text("FlowUI Input").Size(24),
 				ui.Text(status).Size(16),
 				ui.Divider(),
@@ -123,8 +124,8 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 						),
 					).Gap(18),
 				).Gap(32).LineGap(24).AlignStart(),
-			).Gap(18),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
+			).Gap(18)).Vertical(),
+		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
 	)
 }
 
@@ -171,7 +172,9 @@ func containsAt(text string) bool {
 }
 
 func main() {
-	ui.Run(ui.NewProgram(Model{Password: "heroui"},
+	ui.Run(ui.NewProgram(Model{
+		Password: "heroui",
+	},
 		Update, View), ui.Title("FlowUI Inputs"),
 		ui.Size(900, 760),
 	)

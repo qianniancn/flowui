@@ -180,7 +180,7 @@ func buttonRow(buttons ...ui.Widget) ui.Widget {
 	for _, button := range buttons {
 		items = append(items, ui.Box(button))
 	}
-	return ui.Wrap(items...).Gap(8).AlignMiddle()
+	return ui.Wrap(items...).Gap(8).AlignStart()
 }
 
 func demoButton(label string, variant ui.ButtonVariant, send ui.Send[Msg]) ui.Widget {

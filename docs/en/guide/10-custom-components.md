@@ -25,6 +25,17 @@ For a new interactive control, retain state with a stable key, resolve a style,
 and use the public layout helpers. Keep the widget's event host around the
 whole interactive area and leave painting to a small child widget.
 
+The public sequence is:
+
+```text
+UseState -> ResolveStyle / ResolveStylePart ->
+LayoutInteractiveResolvedStyle (or LayoutResolvedStyle)
+```
+
+`examples/custom_widgets` contains a complete implementation. Do not use
+internal component packages or old names such as `BeginInteract`, `Resolve`,
+or `LayoutInteractiveBox`; those are not part of the public API.
+
 The [`examples/custom_widgets`](https://github.com/qianniancn/flowui/tree/main/examples/custom_widgets) program shows a
 custom control and a canvas-backed widget. `ui.WidgetFunc` is useful when only a
 small layout callback is needed.
@@ -34,6 +45,27 @@ small layout callback is needed.
 Use Gio operations for the content of a chart or illustration, but keep the
 outer box, hit target, focus behavior, and theme tokens in FlowUI components.
 Canvas code should not duplicate button or field semantics.
+
+For common drawing and measurement tasks, reuse the public helpers instead of
+duplicating theme resolution or Gio event boilerplate:
+
+```go
+brush, ok := ui.ResolveBrush(ctx, ui.LinearGradient(
+	ui.ColorStop(0, ui.TokenAccent),
+	ui.ColorStop(1, ui.TokenDanger),
+))
+if ok {
+	ui.DrawBrush(gtx, image.Rect(0, 0, 160, 32), 6, brush)
+}
+
+size := ui.MeasureText(ctx, gtx, ui.Text("Preview").Size(14).MaxLines(1))
+_ = size
+```
+
+Low-level pointer widgets can use `AddPointerArea`, `NextPointerEvent`,
+`IsPrimaryPointerPress`, and `GrabPointer`. Use `LayoutVisualOverflow` for a
+local ripple or focus decoration that must cross the child's own clip. It is
+not a replacement for `Popover`, `Portal`, or another overlay host.
 
 ## Rules of thumb
 

@@ -28,6 +28,7 @@ FlowUI 是一个基于 Gio 构建的 Go 桌面 UI 框架和组件库。本教程
 | 13 | [测试](guide/13-测试.md) | uitest Harness / AppHarness |
 | 14 | [常见问题](guide/14-常见问题.md) | FAQ 与排错 |
 | 15 | [甘特图](guide/15-甘特图.md) | 任务排程、依赖、层级与编辑 |
+| 16 | [组件截图](guide/16-组件截图.md) | 示例组件的视觉参考 |
 
 ## 仓库对照
 

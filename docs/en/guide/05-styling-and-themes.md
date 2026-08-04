@@ -68,6 +68,25 @@ ui.RGBA(0x00000030)       // 0xRRGGBBAA
 ui.WithAlpha(ui.TokenFocus, 0.5)
 ```
 
+## Gradients and custom drawing
+
+When a custom widget needs a gradient, resolve it against the active theme and
+reuse the public drawing helpers:
+
+```go
+brush, ok := ui.ResolveBrush(ctx, ui.LinearGradient(
+	ui.ColorStop(0, ui.TokenAccent),
+	ui.ColorStop(1, ui.TokenDanger),
+))
+if ok {
+	ui.DrawBrush(gtx, image.Rect(0, 0, 160, 32), 6, brush)
+}
+```
+
+Use `ResolveColor` for a single theme-resolved color and `DrawBrushRRect` when
+you already have a `clip.RRect`. This keeps theme resolution in one place and
+does not turn custom drawing into an overlay system.
+
 ## Themes
 
 Choose a theme at startup or customize a copy of the default tokens:
@@ -100,7 +119,8 @@ faces, err := ui.ParseFontCollection(interRegular)
 if err != nil {
 	panic(err)
 }
-	theme := ui.DefaultTheme()
+
+theme := ui.DefaultTheme()
 	theme.Typography.Typeface = "Inter"
 	theme.Fonts.Collection = faces
 	theme.Fonts.SystemFonts = false

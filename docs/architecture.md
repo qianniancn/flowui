@@ -40,6 +40,7 @@ application
     |      +--> internal/components/*
     |               |
     |               +--> internal/frame
+    |               +--> internal/interact
     |               +--> internal/overlay
     |               +--> internal/state
     |               +--> internal/theme
@@ -144,13 +145,21 @@ adapter for these properties. They retain only domain-specific geometry such as
 progress ratios, slider thumb positions, or chart paths.
 
 Components use the same runtime for root layout and interaction state. A custom
-widget calls `ui.BeginInteract`, then `ui.Resolve` for its root and
-`ui.ResolvePart` for internals, then renders with `ui.LayoutBox` or
-`ui.LayoutInteractiveBox`. The latter keeps margin outside the input
-host while making padding and the remaining visual box part of the hit area.
-`Interact.Clickable` is the focus tag for `RequestFocus` / `FocusVisible`.
-`ui.StyleScope` styles descendants. Component-level theme mutation is
-intentionally not part of the API.
+widget owns a stable key and transient interaction state with `ui.UseState`,
+resolves its root and parts with `ui.ResolveStyle` and `ui.ResolveStylePart`,
+then renders with `ui.LayoutResolvedStyle` or
+`ui.LayoutInteractiveResolvedStyle`. The interactive helper keeps margin
+outside the input host while making padding and the remaining visual box part
+of the hit area. `ui.StyleScope` styles descendants. Component-level theme
+mutation is intentionally not part of the API.
+
+Custom drawing can reuse the public helpers `ui.ResolveColor`,
+`ui.ResolveBrush`, `ui.DrawBrush`, and `ui.MeasureText`. Low-level pointer
+controls can use `ui.AddPointerArea`, `ui.NextPointerEvent`,
+`ui.IsPrimaryPointerPress`, and `ui.GrabPointer`. `ui.LayoutVisualOverflow`
+is for local decorations such as a ripple or focus ring; it is not a popup or
+overlay replacement. The internal components use the corresponding shared
+implementations below the public facade.
 
 Transition state needs stable widget identity. Stateful components claim their
 component key; each non-interactive transitioning sibling uses a distinct

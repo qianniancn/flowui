@@ -64,3 +64,7 @@ provide a visual index.
 
 The [Forms and controlled state](07-forms-and-controlled-state.md) guide covers
 the value and open-state contracts shared by many components.
+
+For custom controls and domain drawing, see [Custom components](10-custom-components.md)
+for the public style, text measurement, brush, pointer, and visual-overflow
+helpers.

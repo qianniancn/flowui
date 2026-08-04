@@ -32,6 +32,15 @@ cannot reflect its close request.
 An instance style or variant may override a token. Check the cascade order and
 avoid hard-coded colors when a semantic token is available.
 
+## How should a custom widget handle drawing and pointer input?
+
+Use `ResolveColor` or `ResolveBrush` for theme-backed values, `DrawBrush` for
+gradient fills, and `MeasureText` for a measurement pass. Low-level pointer
+controls can use `AddPointerArea`, `NextPointerEvent`,
+`IsPrimaryPointerPress`, and `GrabPointer`. `LayoutVisualOverflow` is for a
+local ripple or focus decoration; use `Popover`, `Portal`, or another overlay
+component for content that is not part of the local layout.
+
 ## Minimum Go version
 
 FlowUI currently requires Go 1.26.2 or newer, as declared by `go.mod`.

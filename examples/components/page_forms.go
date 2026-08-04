@@ -30,7 +30,13 @@ func textFieldsPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			ui.Box(ui.InputGroup(
 				ui.Input("catalog-search", model.InputValue).
 					OnChange(func(value string) { send(func(model *Model) { model.InputValue = value }) }),
-			).Prefix(ui.Icon(lucide.Search).Size(16)).Suffix(ui.Text("Ctrl+K")).FullWidth()).Style(ui.Width(420)),
+			).Prefix(ui.Icon(lucide.Search).Size(16)).
+				SuffixAction(ui.InputGroupAction(
+					"catalog-search-action", "Submit search", ui.Icon(lucide.ArrowRight).Size(15),
+				).OnClick(func() {
+					send(func(model *Model) { model.LastAction = "Search submitted" })
+				})).FullWidth()).Style(ui.Width(420)),
+			ui.Text(model.LastAction).Size(12),
 			ui.Box(ui.InputGroupTextArea(
 				ui.TextArea("catalog-prompt", model.TextAreaValue).Rows(3).
 					OnChange(func(value string) { send(func(model *Model) { model.TextAreaValue = value }) }),

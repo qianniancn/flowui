@@ -13,9 +13,9 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"github.com/qianniancn/flowui/internal/components/button"
 	"github.com/qianniancn/flowui/internal/frame"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
@@ -241,6 +241,99 @@ func TestInputGroupSlotsUseMutedForeground(t *testing.T) {
 	}
 }
 
+func TestInputGroupActionUsesStableSize(t *testing.T) {
+	action := InputGroupAction("clear", "Clear value", inputGroupFixedWidget{size: image.Pt(16, 16)})
+	if got := action.Layout(newContext(nil), testLayoutContext()).Size; got != image.Pt(24, 24) {
+		t.Fatalf("action size = %v, want 24x24", got)
+	}
+}
+
+func TestInputGroupActionHasKeyboardFocusStyle(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	base := resolveInputTestStyle(&activeTheme, inputGroupActionStyle(), flowstyle.StyleState{})
+	focused := resolveInputTestStyle(&activeTheme, inputGroupActionStyle(), flowstyle.StyleState{FocusVisible: true})
+	if base.Paint == nil || base.Paint.Outline == nil || base.Paint.Outline.Width != 2 {
+		t.Fatalf("action base outline = %#v, want a 2dp transparent ring", base.Paint)
+	}
+	baseColor, ok := styleruntime.Color(base.Paint.Outline.Color)
+	if !ok || baseColor.A != 0 {
+		t.Fatalf("action base outline color = %#v, want transparent", base.Paint.Outline.Color)
+	}
+	if focused.Paint == nil || focused.Paint.Outline == nil || focused.Paint.Outline.Width != 2 {
+		t.Fatalf("action focus outline = %#v, want a 2dp ring", focused.Paint)
+	}
+	focusColor, ok := styleruntime.Color(focused.Paint.Outline.Color)
+	if !ok || focusColor != activeTheme.Palette.Focus {
+		t.Fatalf("action focus outline color = %#v, want %#v", focused.Paint.Outline.Color, activeTheme.Palette.Focus)
+	}
+}
+
+func TestInputGroupContentPartControlsEditorCursor(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(gioinput.Router)
+	group := InputGroup(Input("query", "flowui")).
+		Style(flowstyle.Style{}.
+			Part(flowstyle.PartContent, flowstyle.Style{}.Cursor(pointer.CursorCrosshair))).
+		FullWidth()
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(120, 18)})
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	if got := router.Cursor(); got != pointer.CursorCrosshair {
+		t.Fatalf("content cursor = %v, want %v", got, pointer.CursorCrosshair)
+	}
+}
+
+func TestInputGroupDisabledUsesDefaultCursor(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(gioinput.Router)
+	group := InputGroup(Input("query", "flowui")).Disabled(true).FullWidth()
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(120, 18)})
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	if got := router.Cursor(); got != pointer.CursorNotAllowed {
+		t.Fatalf("disabled editor cursor = %v, want %v", got, pointer.CursorNotAllowed)
+	}
+}
+
+func TestInputGroupActionCanFocusEditorWhenEnabled(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(gioinput.Router)
+	clicked := false
+	action := InputGroupAction("copy", "Copy value", inputGroupFixedWidget{size: image.Pt(16, 16)}).
+		OnClick(func() { clicked = true })
+	group := InputGroup(Input("token", "flow_live_123")).
+		SuffixAction(action).
+		FocusOnActionPress(true).
+		FullWidth()
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	router.Queue(
+		pointer.Event{
+			Kind:      pointer.Press,
+			Source:    pointer.Mouse,
+			PointerID: 1,
+			Buttons:   pointer.ButtonPrimary,
+			Position:  f32.Pt(284, 18),
+		},
+		pointer.Event{
+			Kind:      pointer.Release,
+			Source:    pointer.Mouse,
+			PointerID: 1,
+			Position:  f32.Pt(284, 18),
+		},
+	)
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	editor := testComponentState[widget.Editor](ctx, "token", stateSlotEditor)
+	if editor == nil {
+		t.Fatal("missing input group editor")
+	}
+	if !clicked {
+		t.Fatal("action press did not reach the action")
+	}
+	if !router.Source().Focused(editor) {
+		t.Fatal("action press did not focus the input when enabled")
+	}
+}
+
 func TestInputGroupPrefixPressFocusesInput(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(gioinput.Router)
@@ -263,6 +356,33 @@ func TestInputGroupPrefixPressFocusesInput(t *testing.T) {
 	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
 	if !router.Source().Focused(editor) {
 		t.Fatal("pressing the prefix did not focus the input")
+	}
+}
+
+func TestInputGroupPrefixActionRemainsInteractive(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(gioinput.Router)
+	clicked := false
+	action := InputGroupAction("filter", "Filter values", inputGroupFixedWidget{size: image.Pt(16, 16)}).
+		OnClick(func() { clicked = true })
+	group := InputGroup(Input("query", "flowui")).
+		PrefixAction(action).
+		FullWidth()
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(12, 18)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(12, 18)},
+	)
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	if !clicked {
+		t.Fatal("prefix action did not receive the pointer click")
+	}
+	editor := testComponentState[widget.Editor](ctx, "query", stateSlotEditor)
+	if editor == nil {
+		t.Fatal("missing input group editor")
+	}
+	if router.Source().Focused(editor) {
+		t.Fatal("pressing the prefix action focused the input")
 	}
 }
 
@@ -295,23 +415,37 @@ func TestInputGroupSuffixButtonRemainsInteractive(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(gioinput.Router)
 	clicked := false
-	suffix := button.Button("copy", inputGroupFixedWidget{size: image.Pt(16, 16)}).
-		Variant(button.ButtonGhost).
-		Size(button.ButtonSmall).
-		IconOnly().
+	suffix := InputGroupAction("copy", "Copy value", inputGroupFixedWidget{size: image.Pt(16, 16)}).
 		OnClick(func() { clicked = true })
 	group := InputGroup(Input("token", "flow_live_123")).
-		Suffix(suffix).
+		SuffixAction(suffix).
 		SuffixPadding(12, 0).
 		FullWidth()
 	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 0))
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(120, 18)})
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	if got := router.Cursor(); got != pointer.CursorText {
+		t.Fatalf("editor cursor = %v, want %v", got, pointer.CursorText)
+	}
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(284, 18)})
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 2*int64(time.Millisecond)))
+	if got := router.Cursor(); got != pointer.CursorPointer {
+		t.Fatalf("suffix cursor = %v, want %v", got, pointer.CursorPointer)
+	}
 	router.Queue(
 		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(284, 18)},
 		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(284, 18)},
 	)
-	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, int64(time.Millisecond)))
+	layoutInputGroupTestFrame(ctx, router, group, time.Unix(1, 2*int64(time.Millisecond)))
 	if !clicked {
 		t.Fatal("suffix button did not receive the pointer click")
+	}
+	editor := testComponentState[widget.Editor](ctx, "token", stateSlotEditor)
+	if editor == nil {
+		t.Fatal("missing input group editor")
+	}
+	if router.Source().Focused(editor) {
+		t.Fatal("pressing the suffix button focused the input")
 	}
 }
 

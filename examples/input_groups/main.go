@@ -109,11 +109,8 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 										boundTextArea("prompt", m.Prompt, "Assign tasks or ask anything", send).Rows(5),
 									).
 										Prefix(ui.Icon(lucide.MessageSquare).Size(16)).
-										Suffix(
-											ui.Button("send-prompt", ui.Icon(lucide.SendHorizontal).Size(16)).
-												Variant(ui.ButtonGhost).
-												Size(ui.ButtonSmall).
-												IconOnly().
+										SuffixAction(
+											ui.InputGroupAction("send-prompt", "Send prompt", ui.Icon(lucide.SendHorizontal).Size(16)).
 												Disabled(strings.TrimSpace(m.Prompt) == "").
 												OnClick(func() { send(Msg{Submit: true}) }),
 										).
@@ -124,11 +121,8 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 							section("Action suffix",
 								labeledGroup("API token", "token",
 									ui.InputGroup(boundInput("token", m.Token, "flow_live_...", send)).
-										Suffix(
-											ui.Button("copy-token", ui.Icon(lucide.Copy).Size(16)).
-												Variant(ui.ButtonGhost).
-												Size(ui.ButtonSmall).
-												IconOnly().
+										SuffixAction(
+											ui.InputGroupAction("copy-token", "Copy token", ui.Icon(lucide.Copy).Size(16)).
 												OnClick(func() { send(Msg{Copy: true}) }),
 										).
 										SuffixPadding(12, 0).

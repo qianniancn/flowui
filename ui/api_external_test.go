@@ -808,6 +808,16 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Invalid(false).
 			Disabled(false).
 			FullWidth(),
+		ui.InputGroup(
+			ui.Input("search-action", "flowui"),
+		).
+			Style(ui.Part(ui.PartContent, ui.Cursor(ui.CursorText))).
+			SuffixAction(
+				ui.InputGroupAction("clear-search-action", "Clear search", ui.Icon(lucide.X).Size(16)).
+					OnClick(func() {}),
+			).
+			FocusOnActionPress(false).
+			FullWidth(),
 		ui.ProgressBar("progress", 50).ShowValue(),
 		ui.ProgressCircle("progress-circle", 60).
 			Label("Upload").

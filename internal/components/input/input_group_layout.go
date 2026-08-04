@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
@@ -18,7 +19,7 @@ type recordedInputGroupChild struct {
 
 func (g InputGroupWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, state *inputGroupState, style inputGroupResolvedStyle, enabled bool, editor layout.Widget) layout.Dimensions {
 	content := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
-		return g.layoutContent(ctx, gtx, style, editor)
+		return g.layoutContent(ctx, gtx, state, style, editor)
 	})
 	return layoutui.LayoutInteractiveResolved(ctx, gtx, style.root, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
 		dims := visual(gtx)
@@ -27,7 +28,7 @@ func (g InputGroupWidget) layoutFrame(ctx *frame.Context, gtx layout.Context, st
 	})
 }
 
-func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, style inputGroupResolvedStyle, editor layout.Widget) layout.Dimensions {
+func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, state *inputGroupState, style inputGroupResolvedStyle, editor layout.Widget) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.InputGroup
 	constraints := gtx.Constraints
 	minHeight := constraints.Min.Y
@@ -38,12 +39,20 @@ func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, 
 	}
 	verticalPadding := gtx.Dp(verticalPaddingDp)
 	prefixLeftDp, prefixRightDp := paddingDp, paddingDp
+	if g.prefixAction {
+		prefixLeftDp = inputGroupActionPadding
+		prefixRightDp = inputGroupActionPadding
+	}
 	if g.hasPrefixPadding {
 		prefixLeftDp = g.prefixLeftPadding
 		prefixRightDp = g.prefixRightPadding
 	}
 	prefixLeft, prefixRight := gtx.Dp(prefixLeftDp), gtx.Dp(prefixRightDp)
 	suffixLeftDp, suffixRightDp := paddingDp, paddingDp
+	if g.suffixAction {
+		suffixLeftDp = inputGroupActionPadding
+		suffixRightDp = inputGroupActionPadding
+	}
 	if g.hasSuffixPadding {
 		suffixLeftDp = g.suffixLeftPadding
 		suffixRightDp = g.suffixRightPadding
@@ -74,6 +83,7 @@ func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, 
 	minEditorWidth := max(constraints.Min.X-outerFixed, 0)
 	minEditorWidth = min(minEditorWidth, maxEditorWidth)
 	editor = insetInputGroupEditor(editor, leftPaddingDp, rightPaddingDp, verticalPaddingDp)
+	editor = inputGroupEditorWithCursor(editor, style.content)
 	minEditorHeight := 0
 	maxEditorHeight := constraints.Max.Y
 	if g.multiline {
@@ -96,8 +106,13 @@ func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, 
 	)
 	size = constraints.Constrain(size)
 	x := 0
+	var prefixActionBounds, suffixActionBounds image.Rectangle
 	if g.prefix != nil {
-		addRecordedInputGroupChild(gtx, prefix, image.Pt(prefixLeft, inputGroupChildY(size.Y, prefix.size.Y, verticalPadding, g.multiline)))
+		prefixOffset := image.Pt(prefixLeft, inputGroupChildY(size.Y, prefix.size.Y, verticalPadding, g.multiline))
+		addRecordedInputGroupChild(gtx, prefix, prefixOffset)
+		if g.prefixAction {
+			prefixActionBounds = image.Rectangle{Min: prefixOffset, Max: prefixOffset.Add(prefix.size)}
+		}
 		layoutInputGroupDivider(ctx, gtx, prefixWidth-divider, size.Y, divider, style.divider)
 		x += prefixWidth
 	}
@@ -105,9 +120,29 @@ func (g InputGroupWidget) layoutContent(ctx *frame.Context, gtx layout.Context, 
 	x += editorChild.size.X
 	if g.suffix != nil {
 		layoutInputGroupDivider(ctx, gtx, x, size.Y, divider, style.divider)
-		addRecordedInputGroupChild(gtx, suffix, image.Pt(x+divider+suffixLeft, inputGroupChildY(size.Y, suffix.size.Y, verticalPadding, g.multiline)))
+		suffixOffset := image.Pt(x+divider+suffixLeft, inputGroupChildY(size.Y, suffix.size.Y, verticalPadding, g.multiline))
+		addRecordedInputGroupChild(gtx, suffix, suffixOffset)
+		if g.suffixAction {
+			suffixActionBounds = image.Rectangle{Min: suffixOffset, Max: suffixOffset.Add(suffix.size)}
+		}
 	}
+	state.setActionBounds(prefixActionBounds, suffixActionBounds)
 	return layout.Dimensions{Size: size}
+}
+
+func inputGroupEditorWithCursor(editor layout.Widget, style flowstyle.ResolvedStyle) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		macro := op.Record(gtx.Ops)
+		dims := editor(gtx)
+		call := macro.Stop()
+		call.Add(gtx.Ops)
+		if style.Box != nil && style.Box.Cursor != nil {
+			area := clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops)
+			style.Box.Cursor.Add(gtx.Ops)
+			area.Pop()
+		}
+		return dims
+	}
 }
 
 func insetInputGroupEditor(editor layout.Widget, left, right, vertical unit.Dp) layout.Widget {

@@ -16,6 +16,9 @@ type TextAreaWidget = input.TextAreaWidget
 
 type InputGroupWidget = input.InputGroupWidget
 
+// InputGroupActionWidget is a compact action for an InputGroup prefix or suffix.
+type InputGroupActionWidget = input.InputGroupActionWidget
+
 // InputVariant selects an input's visual treatment.
 type InputVariant = input.InputVariant
 
@@ -122,6 +125,11 @@ func InputGroup(field InputWidget) InputGroupWidget {
 // InputGroupTextArea wraps a text area with the theme's grouped field layout.
 func InputGroupTextArea(field TextAreaWidget) InputGroupWidget {
 	return input.InputGroupTextArea(field)
+}
+
+// InputGroupAction creates a compact labelled action for an InputGroup slot.
+func InputGroupAction(key, label string, child Widget) InputGroupActionWidget {
+	return input.InputGroupAction(key, label, child)
 }
 
 // ComboBox creates an editable field with a popup list of items.

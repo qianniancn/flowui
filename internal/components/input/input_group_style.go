@@ -1,6 +1,7 @@
 package input
 
 import (
+	"gioui.org/io/pointer"
 	"gioui.org/unit"
 	"github.com/qianniancn/flowui/internal/field"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -9,6 +10,7 @@ import (
 
 type inputGroupResolvedStyle struct {
 	root        flowstyle.ResolvedStyle
+	content     flowstyle.ResolvedStyle
 	prefix      flowstyle.ResolvedStyle
 	suffix      flowstyle.ResolvedStyle
 	divider     flowstyle.ResolvedStyle
@@ -26,6 +28,10 @@ func inputGroupDefaultDeclaration(activeTheme *theme.Theme, variant InputVariant
 		ShadowStrength: tokens.ShadowStrength, FillWidth: fullWidth,
 	})
 	return root.
+		Cursor(pointer.CursorDefault).
+		Part(flowstyle.PartContent, flowstyle.Style{}.
+			Cursor(pointer.CursorText).
+			When(flowstyle.Disabled, flowstyle.Style{}.Cursor(pointer.CursorNotAllowed))).
 		Part(flowstyle.PartPrefix, flowstyle.Style{}.TextColor(flowstyle.TokenMutedForeground)).
 		Part(flowstyle.PartSuffix, flowstyle.Style{}.TextColor(flowstyle.TokenMutedForeground)).
 		Part(flowstyle.PartIndicator, flowstyle.Style{}.Width(tokens.DividerWidth).Background(flowstyle.TokenBorder))

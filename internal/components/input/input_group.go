@@ -1,6 +1,7 @@
 package input
 
 import (
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -11,6 +12,8 @@ import (
 
 const stateSlotInputGroup = "input-group"
 
+const inputGroupActionPadding = unit.Dp(4)
+
 // InputGroupWidget combines an Input or TextArea with optional prefix and suffix content
 // inside one HeroUI-style field shell.
 type InputGroupWidget struct {
@@ -19,6 +22,9 @@ type InputGroupWidget struct {
 	multiline          bool
 	prefix             frame.Widget
 	suffix             frame.Widget
+	prefixAction       bool
+	suffixAction       bool
+	focusOnActionPress bool
 	variant            InputVariant
 	disabled           bool
 	invalid            bool
@@ -55,11 +61,36 @@ func InputGroupTextArea(textArea TextAreaWidget) InputGroupWidget {
 
 func (g InputGroupWidget) Prefix(prefix frame.Widget) InputGroupWidget {
 	g.prefix = prefix
+	g.prefixAction = false
 	return g
 }
 
 func (g InputGroupWidget) Suffix(suffix frame.Widget) InputGroupWidget {
 	g.suffix = suffix
+	g.suffixAction = false
+	return g
+}
+
+// PrefixAction adds a compact interactive control before the editor. Action
+// padding is applied automatically unless PrefixPadding is set explicitly.
+func (g InputGroupWidget) PrefixAction(action InputGroupActionWidget) InputGroupWidget {
+	g.prefix = action
+	g.prefixAction = true
+	return g
+}
+
+// SuffixAction adds a compact interactive control after the editor. Action
+// padding is applied automatically unless SuffixPadding is set explicitly.
+func (g InputGroupWidget) SuffixAction(action InputGroupActionWidget) InputGroupWidget {
+	g.suffix = action
+	g.suffixAction = true
+	return g
+}
+
+// FocusOnActionPress controls whether pressing a prefix or suffix action also
+// focuses the editor. It is disabled by default for action slots.
+func (g InputGroupWidget) FocusOnActionPress(enabled bool) InputGroupWidget {
+	g.focusOnActionPress = enabled
 	return g
 }
 
@@ -124,7 +155,11 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	}
 	disabled := !enabled
 	state = inputGroupStateFor(ctx, key)
-	state.State.Update(ctx, gtx, disabled, editor)
+	var shouldFocus func(pointer.Event) bool
+	if !g.focusOnActionPress && (g.prefixAction || g.suffixAction) {
+		shouldFocus = state.shouldFocusPress
+	}
+	state.State.UpdateWithFocus(ctx, gtx, disabled, editor, shouldFocus)
 
 	focused := gtx.Focused(editor)
 	focusVisible := frame.FocusVisible(ctx, editor, focused)
@@ -142,19 +177,24 @@ func (g InputGroupWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.
 	defaults, variant, size := g.styleDeclarations(activeTheme, minHeight)
 	resolved := inputGroupResolvedStyle{
 		root:        styleruntime.Resolve(ctx, gtx, key, styleState, defaults, variant, size, g.customStyle),
+		content:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartContent, styleState, defaults, variant, size, g.customStyle),
 		prefix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPrefix, styleState, defaults, variant, size, g.customStyle),
 		suffix:      styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSuffix, styleState, defaults, variant, size, g.customStyle),
 		divider:     styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartIndicator, styleState, defaults, variant, size, g.customStyle),
 		placeholder: styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartPlaceholder, styleState, defaults, variant, size, g.customStyle),
 		selection:   styleruntime.ResolvePart(ctx, gtx, key, flowstyle.PartSelection, styleState, defaults, variant, size, g.customStyle),
 	}
-	inputStyle := resolvedInputStyle(resolved.root, resolved.placeholder, resolved.selection, activeTheme)
-	textSize, lineHeight := resolvedTypography(resolved.root, tokens.TextSize, tokens.LineHeight)
+	inputStyle := resolvedInputStyle(resolved.content, resolved.placeholder, resolved.selection, activeTheme)
+	textSize, lineHeight := resolvedTypography(resolved.content, tokens.TextSize, tokens.LineHeight)
 	var editorLayout layout.Widget
 	if g.multiline {
 		editorLayout = g.textArea.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, textSize, lineHeight)
 	} else {
 		editorLayout = g.input.editorLayoutWithTypography(ctx, key, enabled, editor, inputStyle, textSize, lineHeight)
+	}
+	if g.focusOnActionPress {
+		g.prefix = inputGroupActionWithFocus(g.prefix, editor)
+		g.suffix = inputGroupActionWithFocus(g.suffix, editor)
 	}
 	return g.layoutFrame(ctx, gtx, state, resolved, enabled, editorLayout)
 }

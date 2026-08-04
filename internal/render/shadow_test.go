@@ -188,7 +188,7 @@ func TestSoftShadowCacheNeverDropsShadowDuringVariantChurn(t *testing.T) {
 		image.Pt(196, 144),
 		image.Pt(196, 160),
 	}
-	for frame := 0; frame < 3; frame++ {
+	for frame := range 3 {
 		for _, size := range sizes {
 			entry := softShadowEntry(size, shape, 22, 4, 0, 8, col)
 			if entry.op.Size() == (image.Point{}) {

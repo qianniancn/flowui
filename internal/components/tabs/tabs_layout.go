@@ -12,6 +12,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
+	textui "github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/render"
 	"github.com/qianniancn/flowui/internal/state"
@@ -206,13 +207,10 @@ func (t TabsWidget) tabWidths(ctx *frame.Context, gtx layout.Context, padding in
 }
 
 func (t TabsWidget) measureTabWidth(ctx *frame.Context, gtx layout.Context, labelText string, sizeStyle tabsSizeStyle) int {
-	var ops op.Ops
 	measure := gtx
-	measure.Ops = &ops
 	measure.Constraints = layout.Constraints{Max: image.Pt(1e6, max(gtx.Constraints.Max.Y, 1))}
-	label := material.Label(frame.ActiveMaterial(ctx), sizeStyle.textSize, labelText)
-	label.Font.Weight = sizeStyle.weight
-	dims := label.Layout(measure)
+	label := textui.New(labelText).Size(float32(sizeStyle.textSize)).Weight(sizeStyle.weight)
+	dims := textui.Measure(ctx, measure, label)
 	return dims.Size.X + gtx.Dp(sizeStyle.paddingX)*2
 }
 

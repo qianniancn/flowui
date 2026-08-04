@@ -16,6 +16,7 @@ import (
 	"github.com/qianniancn/flowui/internal/components/checkbox"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/state"
 )
 
@@ -467,37 +468,33 @@ func (s *tableColumnResizeState) update(ctx *frame.Context, gtx layout.Context, 
 	next := current
 	changed := false
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: s, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, s, pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
 		}
-		event, ok := e.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch event.Kind {
+		switch eventValue.Kind {
 		case pointer.Press:
-			if event.Source != pointer.Touch && !event.Buttons.Contain(pointer.ButtonPrimary) {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
 			s.dragging = true
-			s.pointerID = event.PointerID
-			s.startX = event.Position.X
+			s.pointerID = eventValue.PointerID
+			s.startX = eventValue.Position.X
 			s.startWidth = current
 			frame.RequestFocusVisible(ctx, s, false)
-			gtx.Execute(pointer.GrabCmd{Tag: s, ID: event.PointerID})
+			interact.GrabPointer(gtx, s, eventValue)
 		case pointer.Drag:
-			if !s.dragging || event.PointerID != s.pointerID {
+			if !s.dragging || eventValue.PointerID != s.pointerID {
 				continue
 			}
-			next = min(max(s.startWidth+int(math.Round(float64(event.Position.X-s.startX))), minimum), maximum)
+			next = min(max(s.startWidth+int(math.Round(float64(eventValue.Position.X-s.startX))), minimum), maximum)
 			changed = next != current
 		case pointer.Release:
-			if event.PointerID == s.pointerID {
+			if eventValue.PointerID == s.pointerID {
 				s.dragging = false
 			}
 		case pointer.Cancel:
-			if event.PointerID == s.pointerID {
+			if eventValue.PointerID == s.pointerID {
 				s.dragging = false
 			}
 		}

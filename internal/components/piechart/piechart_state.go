@@ -12,6 +12,7 @@ import (
 	"github.com/qianniancn/flowui/internal/components/chart"
 	"github.com/qianniancn/flowui/internal/components/tooltip"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 )
 
@@ -66,16 +67,9 @@ func (s *chartState) legendItem(key string) *chart.LegendItem {
 
 func (s *chartState) updatePointer(gtx layout.Context, enabled bool) {
 	for {
-		value, ok := gtx.Event(pointer.Filter{
-			Target: &s.pointerTag,
-			Kinds:  pointer.Enter | pointer.Leave | pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Cancel,
-		})
+		eventValue, ok := interact.NextPointerEvent(gtx, &s.pointerTag, pointer.Enter|pointer.Leave|pointer.Move|pointer.Drag|pointer.Press|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
-		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok {
-			continue
 		}
 		if !enabled {
 			s.hovered = false

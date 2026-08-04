@@ -14,6 +14,7 @@ import (
 	"github.com/qianniancn/flowui/internal/components/button"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/render"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -126,33 +127,29 @@ func (d Widget) handleTriggerKeys(ctx *frame.Context, gtx layout.Context, state 
 
 func (d Widget) handleLongPress(ctx *frame.Context, gtx layout.Context, state *dropdownState, open bool) bool {
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: &state.longPressTag, Kinds: pointer.Press | pointer.Release | pointer.Move | pointer.Drag | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, &state.longPressTag, pointer.Press|pointer.Release|pointer.Move|pointer.Drag|pointer.Cancel)
 		if !ok {
 			break
 		}
-		event, ok := e.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch event.Kind {
+		switch eventValue.Kind {
 		case pointer.Press:
-			if event.Buttons == 0 || event.Buttons.Contain(pointer.ButtonPrimary) {
+			if eventValue.Buttons == 0 || interact.IsPrimaryPointerPress(eventValue) {
 				state.touchTracking = true
 				state.longPressMoved = false
-				state.pointerID = event.PointerID
-				state.pointerStart = event.Position
+				state.pointerID = eventValue.PointerID
+				state.pointerStart = eventValue.Position
 				state.pointerAt = gtx.Now
 			}
 		case pointer.Move, pointer.Drag:
-			if state.touchTracking && event.PointerID == state.pointerID {
+			if state.touchTracking && eventValue.PointerID == state.pointerID {
 				threshold := float32(gtx.Dp(10))
-				if movedBeyond(state.pointerStart, event.Position, threshold) {
+				if movedBeyond(state.pointerStart, eventValue.Position, threshold) {
 					state.touchTracking = false
 					state.longPressMoved = true
 				}
 			}
 		case pointer.Release:
-			if event.PointerID == state.pointerID {
+			if eventValue.PointerID == state.pointerID {
 				state.touchTracking = false
 			}
 		}

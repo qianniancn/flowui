@@ -20,6 +20,7 @@ import (
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/overlay"
 	"github.com/qianniancn/flowui/internal/state"
 )
@@ -463,12 +464,12 @@ type treeDropTarget struct {
 
 func (s *treeItemState) updateDrag(gtx layout.Context, mime string, sourceKeys []string) bool {
 	for {
-		raw, ok := gtx.Event(pointer.Filter{Target: &s.dragTag, Kinds: pointer.Press})
+		eventValue, ok := interact.NextPointerEvent(gtx, &s.dragTag, pointer.Press)
 		if !ok {
 			break
 		}
-		if event, ok := raw.(pointer.Event); ok && (event.Source == pointer.Touch || event.Buttons.Contain(pointer.ButtonPrimary)) {
-			s.dragPress = event.Position
+		if interact.IsPrimaryPointerPress(eventValue) {
+			s.dragPress = eventValue.Position
 		}
 	}
 	s.drag.Type = mime

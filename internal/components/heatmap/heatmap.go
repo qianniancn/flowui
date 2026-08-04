@@ -20,6 +20,7 @@ import (
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/tooltip"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/overlay"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -406,13 +407,9 @@ func interpolate(a, b color.NRGBA, t float32) color.NRGBA {
 }
 func updatePointer(gtx layout.Context, enabled bool, plot image.Rectangle, tag event.Tag, hovered *bool, position *f32.Point) {
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: tag, Kinds: pointer.Enter | pointer.Leave | pointer.Move | pointer.Drag | pointer.Press | pointer.Cancel})
+		e, ok := interact.NextPointerEvent(gtx, tag, pointer.Enter|pointer.Leave|pointer.Move|pointer.Drag|pointer.Press|pointer.Cancel)
 		if !ok {
 			break
-		}
-		e, ok := value.(pointer.Event)
-		if !ok {
-			continue
 		}
 		if !enabled {
 			*hovered = false

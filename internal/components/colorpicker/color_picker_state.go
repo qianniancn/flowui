@@ -13,6 +13,7 @@ import (
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/disclosure"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/overlay"
 	"github.com/qianniancn/flowui/internal/state"
 	"github.com/qianniancn/flowui/internal/theme"
@@ -118,24 +119,23 @@ func (control *colorControlState) updateArea(ctx *frame.Context, gtx layout.Cont
 		control.dragging = false
 	}
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: control, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, control, pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
 		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok || !enabled {
+		if !enabled {
 			continue
 		}
 		switch eventValue.Kind {
 		case pointer.Press:
-			if eventValue.Source != pointer.Touch && !eventValue.Buttons.Contain(pointer.ButtonPrimary) {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
 			frame.PreserveFocus(ctx)
 			control.dragging = true
 			control.pointer = eventValue.PointerID
 			frame.RequestFocusVisible(ctx, control, false)
-			gtx.Execute(pointer.GrabCmd{Tag: control, ID: eventValue.PointerID})
+			interact.GrabPointer(gtx, control, eventValue)
 			next.s, next.v = colorAreaPosition(eventValue.Position, size)
 			changed = true
 		case pointer.Drag:
@@ -198,24 +198,23 @@ func (control *colorControlState) updateAxis(ctx *frame.Context, gtx layout.Cont
 		control.dragging = false
 	}
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: control, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, control, pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
 		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok || !enabled {
+		if !enabled {
 			continue
 		}
 		switch eventValue.Kind {
 		case pointer.Press:
-			if eventValue.Source != pointer.Touch && !eventValue.Buttons.Contain(pointer.ButtonPrimary) {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
 			frame.PreserveFocus(ctx)
 			control.dragging = true
 			control.pointer = eventValue.PointerID
 			frame.RequestFocusVisible(ctx, control, false)
-			gtx.Execute(pointer.GrabCmd{Tag: control, ID: eventValue.PointerID})
+			interact.GrabPointer(gtx, control, eventValue)
 			next = colorAxisPosition(eventValue.Position, size)
 			changed = true
 		case pointer.Drag:

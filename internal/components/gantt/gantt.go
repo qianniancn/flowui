@@ -25,6 +25,7 @@ import (
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/tooltip"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/overlay"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -693,24 +694,20 @@ func (w Widget) updateTaskEditing(gtx layout.Context, state *chartState, geo geo
 	handled := state.editTaskKey != "" || state.editDragging
 	editEdge := float32(max(gtx.Dp(6), 4))
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: &state.editTag, Kinds: pointer.Enter | pointer.Leave | pointer.Move | pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, &state.editTag, pointer.Enter|pointer.Leave|pointer.Move|pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
 		}
-		event, ok := value.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch event.Kind {
+		switch eventValue.Kind {
 		case pointer.Enter, pointer.Move:
 			if state.editDragging {
 				continue
 			}
-			_, state.editMode, _ = taskEditHit(event.Position, geo, editEdge)
+			_, state.editMode, _ = taskEditHit(eventValue.Position, geo, editEdge)
 			if state.editMode == taskEditNone {
 				state.editTaskKey = ""
 			} else {
-				item, _, _ := taskEditHit(event.Position, geo, editEdge)
+				item, _, _ := taskEditHit(eventValue.Position, geo, editEdge)
 				state.editTaskKey = item.task.key
 				handled = true
 			}
@@ -720,37 +717,37 @@ func (w Widget) updateTaskEditing(gtx layout.Context, state *chartState, geo geo
 				state.editTaskKey = ""
 			}
 		case pointer.Press:
-			if !event.Buttons.Contain(pointer.ButtonPrimary) {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
-			item, mode, ok := taskEditHit(event.Position, geo, editEdge)
+			item, mode, ok := taskEditHit(eventValue.Position, geo, editEdge)
 			if !ok || item.task.milestone {
 				continue
 			}
 			state.editMode = mode
 			state.editTaskKey = item.task.key
 			handled = true
-			state.editPointerID = event.PointerID
+			state.editPointerID = eventValue.PointerID
 			state.editOriginStart = item.task.start
 			state.editOriginEnd = item.task.end
 			state.editPreviewStart = item.task.start
 			state.editPreviewEnd = item.task.end
-			state.editAnchorX = event.Position.X
+			state.editAnchorX = eventValue.Position.X
 			state.editDragging = false
-			gtx.Execute(pointer.GrabCmd{Tag: &state.editTag, ID: event.PointerID})
+			interact.GrabPointer(gtx, &state.editTag, eventValue)
 		case pointer.Drag:
-			if event.PointerID != state.editPointerID || state.editTaskKey == "" {
+			if eventValue.PointerID != state.editPointerID || state.editTaskKey == "" {
 				continue
 			}
 			handled = true
 			state.editDragging = true
-			state.editPreviewStart, state.editPreviewEnd = editedInterval(state.editMode, state.editOriginStart, state.editOriginEnd, state.editAnchorX, event.Position.X, geo)
+			state.editPreviewStart, state.editPreviewEnd = editedInterval(state.editMode, state.editOriginStart, state.editOriginEnd, state.editAnchorX, eventValue.Position.X, geo)
 		case pointer.Release, pointer.Cancel:
-			if event.PointerID != state.editPointerID {
+			if eventValue.PointerID != state.editPointerID {
 				continue
 			}
 			handled = true
-			if event.Kind == pointer.Release && state.editDragging {
+			if eventValue.Kind == pointer.Release && state.editDragging {
 				start, end := state.editPreviewStart, state.editPreviewEnd
 				if !start.Equal(state.editOriginStart) || !end.Equal(state.editOriginEnd) {
 					w.onTaskChange(TaskChange{Key: state.editTaskKey, Start: start, End: end, PreviousStart: state.editOriginStart, PreviousEnd: state.editOriginEnd})

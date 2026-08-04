@@ -14,6 +14,7 @@ import (
 	"gioui.org/unit"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -146,24 +147,23 @@ func (control *colorControlState) updateWheel(ctx *frame.Context, gtx layout.Con
 		control.dragging = false
 	}
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: control, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, control, pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			break
 		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok || !enabled {
+		if !enabled {
 			continue
 		}
 		switch eventValue.Kind {
 		case pointer.Press:
-			if eventValue.Source != pointer.Touch && !eventValue.Buttons.Contain(pointer.ButtonPrimary) {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
 			frame.PreserveFocus(ctx)
 			control.dragging = true
 			control.pointer = eventValue.PointerID
 			frame.RequestFocusVisible(ctx, control, false)
-			gtx.Execute(pointer.GrabCmd{Tag: control, ID: eventValue.PointerID})
+			interact.GrabPointer(gtx, control, eventValue)
 			next = colorWheelPosition(eventValue.Position, size, next)
 			changed = true
 		case pointer.Drag:

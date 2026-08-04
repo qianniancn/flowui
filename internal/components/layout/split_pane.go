@@ -15,6 +15,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
@@ -263,8 +264,7 @@ func (s SplitPaneWidget) addHandle(gtx layout.Context, value *splitPaneState, en
 	}
 	semantic.EnabledOp(enabled).Add(gtx.Ops)
 	if enabled {
-		cursor.Add(gtx.Ops)
-		event.Op(gtx.Ops, value)
+		interact.AddPointerArea(gtx, value, hit, cursor)
 	}
 	clipped.Pop()
 }
@@ -292,15 +292,11 @@ func (s *splitPaneState) updatePointer(ctx *frame.Context, gtx layout.Context, a
 	next := splitPaneSizeRatio(first, available)
 	changed := false
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: s, Kinds: pointer.Enter | pointer.Leave | pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, s, pointer.Enter|pointer.Leave|pointer.Press|pointer.Drag|pointer.Release|pointer.Cancel)
 		if !ok {
 			return next, changed
 		}
-		event, ok := e.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch event.Kind {
+		switch eventValue.Kind {
 		case pointer.Enter:
 			s.hovered = true
 		case pointer.Leave:
@@ -308,28 +304,28 @@ func (s *splitPaneState) updatePointer(ctx *frame.Context, gtx layout.Context, a
 				s.hovered = false
 			}
 		case pointer.Press:
-			if event.Source != pointer.Touch && event.Buttons&pointer.ButtonPrimary == 0 {
+			if !interact.IsPrimaryPointerPress(eventValue) {
 				continue
 			}
 			s.dragging = true
 			s.hovered = true
-			s.pointerID = event.PointerID
-			s.dragOffset = splitPanePointerPosition(axis, event.Position) - (float32(first) + float32(divider)/2)
+			s.pointerID = eventValue.PointerID
+			s.dragOffset = splitPanePointerPosition(axis, eventValue.Position) - (float32(first) + float32(divider)/2)
 			frame.RequestFocusVisible(ctx, s, false)
-			gtx.Execute(pointer.GrabCmd{Tag: s, ID: event.PointerID})
+			interact.GrabPointer(gtx, s, eventValue)
 		case pointer.Drag:
-			if !s.dragging || event.PointerID != s.pointerID {
+			if !s.dragging || eventValue.PointerID != s.pointerID {
 				continue
 			}
-			position := splitPanePointerPosition(axis, event.Position) - s.dragOffset - float32(divider)/2
+			position := splitPanePointerPosition(axis, eventValue.Position) - s.dragOffset - float32(divider)/2
 			next = position / float32(available)
 			changed = true
 		case pointer.Release:
-			if event.PointerID == s.pointerID {
+			if eventValue.PointerID == s.pointerID {
 				s.dragging = false
 			}
 		case pointer.Cancel:
-			if event.PointerID == s.pointerID {
+			if eventValue.PointerID == s.pointerID {
 				s.dragging = false
 				s.hovered = false
 			}

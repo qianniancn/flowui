@@ -22,6 +22,7 @@ import (
 	"github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/field"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
@@ -718,13 +719,9 @@ func dateSegmentLabel(ctx *frame.Context, index int) string {
 
 func (s *dateInputHoverState) update(gtx layout.Context) {
 	for {
-		value, ok := gtx.Event(pointer.Filter{Target: s, Kinds: pointer.Enter | pointer.Leave | pointer.Cancel})
+		eventValue, ok := interact.NextPointerEvent(gtx, s, pointer.Enter|pointer.Leave|pointer.Cancel)
 		if !ok {
 			return
-		}
-		eventValue, ok := value.(pointer.Event)
-		if !ok {
-			continue
 		}
 		s.hovered = eventValue.Kind == pointer.Enter
 	}

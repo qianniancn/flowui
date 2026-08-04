@@ -11,6 +11,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/interact"
 	"github.com/qianniancn/flowui/internal/state"
 	"github.com/qianniancn/flowui/internal/theme"
 )
@@ -87,20 +88,15 @@ func (s *tooltipState) updateActive(gtx layout.Context, active, disabled bool, d
 
 func (s *tooltipState) updateEvents(gtx layout.Context, trigger TooltipTrigger) {
 	for {
-		e, ok := gtx.Event(pointer.Filter{
-			Target: s,
-			Kinds:  pointer.Enter | pointer.Leave | pointer.Cancel,
-		})
+		eventValue, ok := interact.NextPointerEvent(gtx, s, pointer.Enter|pointer.Leave|pointer.Cancel)
 		if !ok {
 			break
 		}
-		if event, ok := e.(pointer.Event); ok {
-			switch event.Kind {
-			case pointer.Enter:
-				s.hovered = true
-			case pointer.Leave, pointer.Cancel:
-				s.hovered = false
-			}
+		switch eventValue.Kind {
+		case pointer.Enter:
+			s.hovered = true
+		case pointer.Leave, pointer.Cancel:
+			s.hovered = false
 		}
 	}
 	if trigger != TooltipFocus {

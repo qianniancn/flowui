@@ -76,7 +76,7 @@ the error fields in `Update`, usually when the user submits.
 
 ## Open state
 
-Select, dropdown, menu, popover, and modal controls support two modes:
+Select, dropdown, context-menu, popover, and modal controls support two modes:
 
 ```text
 No Open(...)       -> uncontrolled; the widget owns open state
@@ -84,7 +84,7 @@ Open(bool)         -> controlled; the model owns open state
 DefaultOpen(bool)  -> initial value for uncontrolled state
 ```
 
-Controlled usage must update the model from `OnOpenChange`:
+Controlled usage must update the model from the component's open-state callback:
 
 ```go
 ui.Select("city", m.City, items).
@@ -95,6 +95,9 @@ ui.Select("city", m.City, items).
 
 Calling `Open(...)` without handling the callback leaves the panel stuck at the
 value supplied by the model.
+
+`Dropdown` uses `OnOpenChangeEvent` and reads the new state from `event.Open`.
+`Select`, `ContextMenu`, `Popover`, and `Modal` continue to use `OnOpenChange`.
 
 ## Labels and descriptions
 

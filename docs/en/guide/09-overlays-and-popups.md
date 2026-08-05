@@ -67,8 +67,9 @@ ui.Dropdown("actions", trigger, items).
 	HoverCloseDelay(120 * time.Millisecond)
 ```
 
-The context callbacks add the interaction source and the complete selected
-item without removing the original callbacks:
+Dropdown and menu callbacks use event values. `DropdownOpenChangeEvent` carries
+the interaction source, while `MenuActionEvent` and `DropdownActionEvent` carry
+the complete item and submenu path:
 
 ```go
 ui.Dropdown("actions", trigger, items).
@@ -123,6 +124,7 @@ dropdowns, menus, and context menus.
 
 ## Controlled state
 
-All openable surfaces support the same contract described in
-[Forms and controlled state](07-forms-and-controlled-state.md): omit `Open` for
-uncontrolled use, or keep it in the model and handle `OnOpenChange`.
+Openable surfaces support the same controlled/uncontrolled contract described
+in [Forms and controlled state](07-forms-and-controlled-state.md). `Select`,
+`ContextMenu`, `Popover`, and `Modal` report changes through `OnOpenChange`;
+`Dropdown` reports them through `OnOpenChangeEvent`.

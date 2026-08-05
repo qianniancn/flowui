@@ -34,6 +34,69 @@ ui.Popover("help", m.HelpOpen, ui.Button("help", ui.Text("Help")), helpBody).
 	OnOpenChange(func(open bool) { send(SetHelpOpen(open)) })
 ```
 
+`Dropdown` opens on press by default. Use long press or hover when the
+interaction calls for it:
+
+```go
+ui.Dropdown("actions", trigger, items).
+	TriggerMode(ui.DropdownTriggerHover)
+```
+
+Hover mode uses short enter and leave delays so the pointer can move from the
+trigger into the menu without closing the panel.
+
+Dropdowns can also open from a secondary click, draw an anchor arrow, and size
+their panel to its content:
+
+```go
+ui.Dropdown("actions", trigger, items).
+	TriggerMode(ui.DropdownTriggerContextMenu).
+	AutoWidth().
+	MinWidth(160).
+	MaxWidth(320).
+	Arrow(true)
+```
+
+Use `MatchTriggerWidth(true)` when the panel should be at least as wide as the
+trigger. Hover and long-press delays are configurable:
+
+```go
+ui.Dropdown("actions", trigger, items).
+	TriggerMode(ui.DropdownTriggerHover).
+	HoverOpenDelay(200 * time.Millisecond).
+	HoverCloseDelay(120 * time.Millisecond)
+```
+
+The context callbacks add the interaction source and the complete selected
+item without removing the original callbacks:
+
+```go
+ui.Dropdown("actions", trigger, items).
+	OnOpenChangeEvent(func(event ui.DropdownOpenChangeEvent) {
+		// event.Source identifies trigger, context menu, menu, outside, and more.
+	}).
+	OnActionEvent(func(event ui.DropdownActionEvent) {
+		// event.Item is the full item; event.Path contains its submenu keys.
+	})
+```
+
+For a split button, use the reusable `DropdownButton` component:
+
+```go
+ui.DropdownButton("create", ui.Button("create-action", ui.Text("Create")), items).
+	OnClick(func() { send(Create{}) })
+```
+
+`Dropdown` forwards the menu configuration surface as well, including
+`OnCheckedChange`, `OnRadioChange`, `AutoSeparateSections`, `Compact`, and
+`DataVersion`. Increment `DataVersion` when menu content, grouping, or a
+width-affecting child changes so flattened entries and `AutoWidth` measurements
+can be reused safely. Use `BeforeContent` and `AfterContent` for custom content
+around the menu items.
+Use `DropdownItemAction`, `DropdownItemCheckbox`, `DropdownItemRadio`, and
+`DropdownItemSubmenu` for explicit item behavior; `DropdownGroupLabel` adds a
+non-selectable section heading.
+
 Menus use `MenuItem` values, separators, groups, and `OnChange` messages. A
 context menu wraps a trigger area:
 

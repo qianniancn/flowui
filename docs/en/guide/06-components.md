@@ -16,7 +16,7 @@ ui.Icon(lucide.Plus).Size(16)
 
 ## Actions
 
-`Button`, `ButtonGroup`, `ToggleButton`, `CloseButton`, and `Chip` provide
+`Button`, `ButtonGroup`, `DropdownButton`, `ToggleButton`, `CloseButton`, and `Chip` provide
 action-oriented controls. Use variants and sizes instead of copying paint code.
 
 ```go

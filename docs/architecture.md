@@ -473,6 +473,12 @@ Example: `ComboBoxState.visibleItems` caches based on `(query, selectedLabel,
 DataVersion)`. Omitting any of these would cause stale results when that input
 changes.
 
+`Menu.AutoWidth` follows the same rule. Its versioned measurement cache includes
+the menu data version, theme generation, DPI metrics, layout constraints,
+custom style, density and width options. Menus without `DataVersion` bypass the
+cache, and changing section separation or empty-state text invalidates the
+relevant result.
+
 ### Fail Loudly, Not Silently
 
 When invariants are violated, fail immediately with a clear error rather than

@@ -62,6 +62,22 @@ size := ui.MeasureText(ctx, gtx, ui.Text("Preview").Size(14).MaxLines(1))
 _ = size
 ```
 
+For intrinsic sizing of an arbitrary child, implement the optional
+`ui.Measurable` interface or call `ui.MeasureWidget`. The measurement pass
+uses a separate ops list and an empty input source, so it cannot consume
+pointer or keyboard input:
+
+An implementation of `Measure` must only report dimensions; it must not read or
+consume input from the current frame.
+
+```go
+type measuredBadge struct{}
+
+func (measuredBadge) Measure(_ *ui.Context, gtx layout.Context) layout.Dimensions {
+	return layout.Dimensions{Size: image.Pt(gtx.Dp(48), gtx.Dp(20))}
+}
+```
+
 Low-level pointer widgets can use `AddPointerArea`, `NextPointerEvent`,
 `IsPrimaryPointerPress`, and `GrabPointer`. Use `LayoutVisualOverflow` for a
 local ripple or focus decoration that must cross the child's own clip. It is

@@ -128,6 +128,17 @@ func menusPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				},
 			).OnAction(action),
 		)},
+		demoSection{Title: "DropdownButton", Content: demoPanel(
+			ui.DropdownButton("catalog-dropdown-button",
+				ui.Button("catalog-dropdown-button-action", ui.Text("Create")),
+				[]ui.DropdownItem{
+					{Key: "project", Label: "New project", Leading: ui.Icon(lucide.FolderPlus).Size(16)},
+					{Key: "file", Label: "New file", Leading: ui.Icon(lucide.FilePlus).Size(16)},
+				},
+			).Variant(ui.ButtonSecondary).
+				OnClick(func() { action("Create") }).
+				OnAction(action),
+		)},
 		demoSection{Title: "DropdownSections & MenuSections", Content: demoPanel(demoRow(
 			ui.DropdownSections("catalog-dropdown-sections",
 				ui.Button("catalog-dropdown-sections-trigger", ui.Row(

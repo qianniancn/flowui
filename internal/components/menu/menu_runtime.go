@@ -62,12 +62,29 @@ func menuHovered(ctx *frame.Context, widget Widget, state *menuState) bool {
 			continue
 		}
 		child := widget.submenu(state, entry.item)
-		childState := child.stateFor(ctx)
+		childState := child.peekState(ctx)
+		if childState == nil {
+			continue
+		}
 		if childState.dialog.Hovered() || menuHovered(ctx, child, childState) {
 			return true
 		}
 	}
 	return false
+}
+
+// peekState reads an existing menu state without claiming its key for the
+// current layout pass. Hover inspection runs before the menu is laid out and
+// must not make the later layout claim the same derived submenu key twice.
+func (m Widget) peekState(ctx *frame.Context) *menuState {
+	var key string
+	if m.derivedOwner == "" {
+		key = frame.FullKey(ctx, m.key)
+	} else {
+		key = frame.DerivedKey(ctx, m.derivedOwner, m.derivedRole)
+	}
+	state, _ := frame.PeekState[menuState](ctx, key, stateSlotMenu)
+	return state
 }
 
 func (r Runtime) CloseSubmenus() {

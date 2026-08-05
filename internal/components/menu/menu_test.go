@@ -273,6 +273,32 @@ func TestMenuSubmenuInheritsDataAndSectionConfiguration(t *testing.T) {
 	}
 }
 
+func TestMenuRuntimeHoverInspectionDoesNotClaimSubmenuState(t *testing.T) {
+	widget := Menu("runtime-menu", []Item{{
+		Key: "more", Label: "More", Children: []Item{{Key: "copy", Label: "Copy"}},
+	}})
+	ctx := menuTestContext()
+
+	frame.BeginFrame(ctx)
+	runtime := widget.Runtime(ctx, "owner", "menu", nil)
+	child := runtime.widget.submenu(runtime.state, runtime.widget.items[0])
+	child.stateFor(ctx)
+	frame.EndFrame(ctx)
+
+	frame.BeginFrame(ctx)
+	runtime = widget.Runtime(ctx, "owner", "menu", nil)
+	runtime.state.openSubmenu = "more"
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("hover inspection claimed submenu key twice: %v", recovered)
+		}
+		frame.EndFrame(ctx)
+	}()
+	runtime.HoveredWithSubmenus(ctx)
+	child = runtime.widget.submenu(runtime.state, runtime.widget.items[0])
+	child.stateFor(ctx)
+}
+
 func TestMenuHeroUIDefaultTheme(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	tokens := activeTheme.Components.Menu

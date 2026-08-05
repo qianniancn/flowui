@@ -74,8 +74,9 @@ func (i Item) AccessKey(key rune) Item {
 	return i
 }
 
-func (i Item) OnAction(fn func(string)) Item {
-	i.menu = i.menu.OnAction(fn)
+// OnActionEvent reports the complete activated item and its submenu path.
+func (i Item) OnActionEvent(fn func(menu.ActionEvent)) Item {
+	i.menu = i.menu.OnActionEvent(fn)
 	return i
 }
 

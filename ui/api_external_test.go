@@ -481,7 +481,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Disabled(false),
 		ui.Menubar("application-menu", []ui.MenubarItem{
 			ui.MenubarMenu("file", "File", []ui.MenuItem{{Key: "new", Label: "New"}}).
-				OnAction(func(string) {}).
+				OnActionEvent(func(ui.MenuActionEvent) {}).
 				Width(220),
 			ui.MenubarMenuContent(
 				"edit",
@@ -711,7 +711,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 				SelectedKey(model.selected).
 				SelectedKeys(model.tableSelected).
 				DisabledKeys([]string{"delete"}).
-				OnAction(func(string) {}).
+				OnActionEvent(func(ui.MenuActionEvent) {}).
 				OnChange(func(string) {}).
 				OnSelectionChange(func([]string) {}).
 				OnCheckedChange(func(string, bool) {}).
@@ -745,12 +745,12 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			SelectedKey(model.selected).
 			SelectedKeys(model.tableSelected).
 			DisabledKeys([]string{"delete"}).
-			OnAction(func(string) {}).
+			OnActionEvent(func(ui.DropdownActionEvent) {}).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnSelectionChange(func(keys []string) { send(facadeMsg{tableSelected: keys}) }).
 			Open(model.open).
 			DefaultOpen(false).
-			OnOpenChange(func(open bool) { send(facadeMsg{open: &open}) }).
+			OnOpenChangeEvent(func(event ui.DropdownOpenChangeEvent) { send(facadeMsg{open: &event.Open}) }).
 			TriggerMode(ui.DropdownTriggerPress).
 			Placement(ui.PopoverBottomStart).
 			Offset(4).

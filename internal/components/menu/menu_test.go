@@ -75,7 +75,6 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 		SelectedKey("copy").
 		SelectedKeys([]string{"paste"}).
 		DisabledKeys([]string{"delete"}).
-		OnAction(func(string) {}).
 		OnActionEvent(func(ActionEvent) {}).
 		OnChange(func(string) {}).
 		OnSelectionChange(func([]string) {}).
@@ -85,10 +84,10 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 		Disabled(true).
 		Compact(true).
 		Width(260)
-	if configured.emptyText != "Nothing here" || configured.onAction == nil || configured.onActionEvent == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || !configured.compact || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
+	if configured.emptyText != "Nothing here" || configured.onActionEvent == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || !configured.compact || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
 		t.Fatalf("configured menu = %#v", configured)
 	}
-	if base.emptyText != "No actions" || base.onAction != nil || base.disabled || base.compact || base.width != 0 || len(base.sections) != 0 {
+	if base.emptyText != "No actions" || base.onActionEvent != nil || base.disabled || base.compact || base.width != 0 || len(base.sections) != 0 {
 		t.Fatalf("base menu was mutated: %#v", base)
 	}
 	if MenuSeparator().Kind != ItemSeparator || MenuGroupLabel("Edit").Kind != ItemGroupLabel {
@@ -666,7 +665,7 @@ func TestMenuActivatesActionCheckboxAndRadioItems(t *testing.T) {
 		{Key: "favorite", Label: "Favorite", Kind: ItemCheckbox, Checked: false, KeepOpen: true, OnAction: func() { itemActions["favorite"]++ }},
 		{Key: "compact", Label: "Compact", Kind: ItemRadio, RadioGroup: "density", Value: "compact", KeepOpen: true, OnAction: func() { itemActions["compact"]++ }},
 	}).
-		OnAction(func(key string) { action = key }).
+		OnActionEvent(func(event ActionEvent) { action = event.Key }).
 		OnCheckedChange(func(key string, value bool) { checkedKey, checked = key, value }).
 		OnRadioChange(func(group, value string) { radioGroup, radioValue = group, value })
 
@@ -677,7 +676,7 @@ func TestMenuActivatesActionCheckboxAndRadioItems(t *testing.T) {
 	state.item("compact").clickable.Click()
 	widget.layout(ctx, gtx, state, true)
 	frame.EndFrame(ctx)
-	if action != "copy" || checkedKey != "favorite" || !checked || radioGroup != "density" || radioValue != "compact" || itemActions["copy"] != 1 || itemActions["favorite"] != 1 || itemActions["compact"] != 1 {
+	if action != "compact" || checkedKey != "favorite" || !checked || radioGroup != "density" || radioValue != "compact" || itemActions["copy"] != 1 || itemActions["favorite"] != 1 || itemActions["compact"] != 1 {
 		t.Fatalf("callbacks = action %q checkbox %q/%v radio %q/%q item actions %v", action, checkedKey, checked, radioGroup, radioValue, itemActions)
 	}
 }

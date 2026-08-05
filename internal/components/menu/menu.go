@@ -100,7 +100,6 @@ type Widget struct {
 	selectedKeys         []string
 	disabledKeys         []string
 	selectionMode        SelectionMode
-	onAction             func(string)
 	onActionEvent        func(ActionEvent)
 	onChange             func(string)
 	onSelectionChange    func([]string)
@@ -195,11 +194,6 @@ func (m Widget) SelectedKeys(keys []string) Widget {
 
 func (m Widget) DisabledKeys(keys []string) Widget {
 	m.disabledKeys = keys
-	return m
-}
-
-func (m Widget) OnAction(fn func(string)) Widget {
-	m.onAction = fn
 	return m
 }
 
@@ -339,7 +333,6 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.selectedKeys = m.selectedKeys
 	child.disabledKeys = m.disabledKeys
 	child.selectionMode = m.selectionMode
-	child.onAction = m.onAction
 	child.onActionEvent = m.onActionEvent
 	child.onChange = m.onChange
 	child.onSelectionChange = m.onSelectionChange
@@ -533,9 +526,6 @@ func (m Widget) activate(entry entry) bool {
 			m.onRadioChange(item.RadioGroup, value)
 		}
 	default:
-		if m.onAction != nil {
-			m.onAction(item.Key)
-		}
 		mode, selected, onSelectionChange := m.selection(entry)
 		if mode != SelectionNone {
 			next := append([]string(nil), selected...)

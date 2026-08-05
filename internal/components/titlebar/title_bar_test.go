@@ -311,7 +311,7 @@ func TestTitleBarTracksMenubarPopupAfterLeadingContent(t *testing.T) {
 	applicationMenu := menubar.New("application-menu", []menubar.Item{
 		menubar.NewMenu("file", "File", []menu.Item{{Key: "open", Label: "Open"}}).
 			Width(180).
-			OnAction(func(key string) { action = key }),
+			OnActionEvent(func(event menu.ActionEvent) { action = event.Key }),
 	}).Compact(true)
 	bar := New("workspace", "FlowUI", applicationMenu).
 		Leading(fixedMenu{size: image.Pt(100, 32)}).

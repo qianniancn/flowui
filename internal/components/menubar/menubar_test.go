@@ -55,7 +55,7 @@ func TestMenubarItemDelegatesMenuConfiguration(t *testing.T) {
 	base := NewMenu("file", "File", []menu.Item{{Key: "new", Label: "New"}})
 	configured := base.
 		Trigger(fixedMenubarWidget{size: image.Pt(20, 10)}).
-		OnAction(func(string) {}).
+		OnActionEvent(func(menu.ActionEvent) {}).
 		OnCheckedChange(func(string, bool) {}).
 		OnRadioChange(func(string, string) {}).
 		CloseOnSelect(false).
@@ -206,7 +206,7 @@ func TestMenubarSecondPanelUsesItsTriggerAnchorAndActionCloses(t *testing.T) {
 	router := new(input.Router)
 	action := ""
 	widget := menubarTestWidget()
-	widget.items[1] = widget.items[1].OnAction(func(key string) { action = key })
+	widget.items[1] = widget.items[1].OnActionEvent(func(event menu.ActionEvent) { action = event.Key })
 	now := time.Unix(4, 0)
 	layoutMenubarFrame(ctx, router, widget, now)
 	now = clickMenubarPoint(ctx, router, widget, now.Add(time.Millisecond), f32.Pt(90, 16))
@@ -283,7 +283,7 @@ func TestMenubarPreservesConfiguredMenuDisabledState(t *testing.T) {
 	router := new(input.Router)
 	action := ""
 	content := menu.Menu("disabled-content", []menu.Item{{Key: "action", Label: "Action"}}).
-		OnAction(func(key string) { action = key }).
+		OnActionEvent(func(event menu.ActionEvent) { action = event.Key }).
 		Disabled(true).
 		Width(80)
 	widget := New("disabled-content-bar", []Item{

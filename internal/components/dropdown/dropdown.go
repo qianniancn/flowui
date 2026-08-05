@@ -49,7 +49,7 @@ const (
 )
 
 // OpenChangeSource identifies the interaction that requested a Dropdown state
-// change. The legacy OnOpenChange callback remains available for simple cases.
+// change.
 type OpenChangeSource uint8
 
 const (
@@ -72,7 +72,6 @@ type Widget struct {
 	key                string
 	trigger            frame.Widget
 	menu               menu.Widget
-	onOpenChange       func(bool)
 	open               bool
 	hasOpen            bool
 	defaultOpen        bool
@@ -179,11 +178,6 @@ func (d Widget) DisabledKeys(keys []string) Widget {
 	return d
 }
 
-func (d Widget) OnAction(fn func(string)) Widget {
-	d.menu = d.menu.OnAction(fn)
-	return d
-}
-
 // OnActionEvent reports the complete activated item and its submenu path.
 func (d Widget) OnActionEvent(fn func(ActionEvent)) Widget {
 	d.menu = d.menu.OnActionEvent(fn)
@@ -221,11 +215,6 @@ func (d Widget) Open(open bool) Widget {
 func (d Widget) DefaultOpen(open bool) Widget {
 	d.defaultOpen = open
 	d.hasDefaultOpen = true
-	return d
-}
-
-func (d Widget) OnOpenChange(fn func(bool)) Widget {
-	d.onOpenChange = fn
 	return d
 }
 

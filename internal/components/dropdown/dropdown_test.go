@@ -54,7 +54,7 @@ func TestDropdownOptionsUseValueSemantics(t *testing.T) {
 	configured := base.
 		Open(true).
 		DefaultOpen(true).
-		OnOpenChange(func(bool) {}).
+		OnOpenChangeEvent(func(OpenChangeEvent) {}).
 		TriggerMode(TriggerLongPress).
 		Offset(8).
 		ShouldFlip(false).
@@ -170,7 +170,7 @@ func TestDropdownButtonUsesIndependentDropdownState(t *testing.T) {
 		Size(button.ButtonSmall).
 		AutoWidth().
 		Placement(overlay.PopoverBottomEnd).
-		OnAction(func(string) {}).
+		OnActionEvent(func(ActionEvent) {}).
 		OnOpenChangeEvent(func(OpenChangeEvent) {})
 	if configured.key != "split" || configured.dropdown.key != "split:dropdown" || configured.dropdown.placement != overlay.PopoverBottomEnd || reflect.DeepEqual(base.dropdown, configured.dropdown) {
 		t.Fatalf("dropdown button configuration = %#v", configured)
@@ -371,7 +371,7 @@ func TestDropdownControlledAndProgrammaticOpenFocusMenu(t *testing.T) {
 	ctx := dropdownTestContext()
 	router := new(input.Router)
 	requested := false
-	base := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).OnOpenChange(func(open bool) { requested = open })
+	base := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).OnOpenChangeEvent(func(event OpenChangeEvent) { requested = event.Open })
 	widget := base.Open(false)
 	start := time.Unix(1, 0)
 	layoutDropdownFrame(ctx, router, widget, start)
@@ -396,7 +396,7 @@ func TestDropdownMenuActionClosesAndRestoresTriggerFocus(t *testing.T) {
 	ctx := dropdownTestContext()
 	router := new(input.Router)
 	action := ""
-	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).OnAction(func(key string) { action = key })
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).OnActionEvent(func(event ActionEvent) { action = event.Key })
 	start := openDropdownForTest(ctx, router, widget)
 	state, _ := frame.PeekState[dropdownState](ctx, "actions", stateSlotDropdown)
 	clickFirstDropdownItem(ctx, router, widget, start)

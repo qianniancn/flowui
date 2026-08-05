@@ -405,7 +405,7 @@ func TestContextMenuActionClosesAndRestoresTriggerFocus(t *testing.T) {
 	widget := ContextMenu(
 		"row-menu",
 		contextMenuFixedWidget{size: image.Pt(160, 100)},
-		Menu("actions", []Item{{Key: "copy", Label: "Copy"}}).OnAction(func(key string) { action = key }),
+		Menu("actions", []Item{{Key: "copy", Label: "Copy"}}).OnActionEvent(func(event ActionEvent) { action = event.Key }),
 	)
 	start := openContextMenuForTest(ctx, router, widget)
 	contextState, _ := frame.PeekState[contextMenuState](ctx, "row-menu", stateSlotContextMenu)
@@ -461,7 +461,7 @@ func TestContextMenuSubmenuActionClosesRoot(t *testing.T) {
 		Menu("actions", []Item{{
 			Key: "share", Label: "Share", Kind: ItemSubmenu,
 			Children: []Item{{Key: "copy-link", Label: "Copy link"}},
-		}}).OnAction(func(key string) { action = key }),
+		}}).OnActionEvent(func(event ActionEvent) { action = event.Key }),
 	)
 	start := openContextMenuForTest(ctx, router, widget)
 	contextState, _ := frame.PeekState[contextMenuState](ctx, "row-menu", stateSlotContextMenu)

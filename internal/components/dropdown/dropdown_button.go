@@ -85,12 +85,6 @@ func (b ButtonWidget) Style(value flowstyle.Style) ButtonWidget {
 	return b
 }
 
-// OnAction handles dropdown item keys.
-func (b ButtonWidget) OnAction(fn func(string)) ButtonWidget {
-	b.dropdown = b.dropdown.OnAction(fn)
-	return b
-}
-
 // Sections replaces the dropdown's item sections.
 func (b ButtonWidget) Sections(value []Section) ButtonWidget {
 	b.dropdown = b.dropdown.Sections(value)
@@ -185,12 +179,6 @@ func (b ButtonWidget) CloseOnSelect(value bool) ButtonWidget {
 // OnActionEvent reports the complete selected item and submenu path.
 func (b ButtonWidget) OnActionEvent(fn func(ActionEvent)) ButtonWidget {
 	b.dropdown = b.dropdown.OnActionEvent(fn)
-	return b
-}
-
-// OnOpenChange handles legacy open-state requests.
-func (b ButtonWidget) OnOpenChange(fn func(bool)) ButtonWidget {
-	b.dropdown = b.dropdown.OnOpenChange(fn)
 	return b
 }
 

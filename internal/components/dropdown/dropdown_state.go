@@ -60,7 +60,6 @@ type dropdownState struct {
 type dropdownBinding struct {
 	controlled        bool
 	open              bool
-	onOpenChange      func(bool)
 	onOpenChangeEvent func(OpenChangeEvent)
 }
 
@@ -77,7 +76,6 @@ func (s *dropdownState) bind(widget Widget) {
 	s.binding = dropdownBinding{
 		controlled:        widget.hasOpen,
 		open:              widget.open,
-		onOpenChange:      widget.onOpenChange,
 		onOpenChangeEvent: widget.onOpenChangeEvent,
 	}
 }
@@ -113,9 +111,6 @@ func (s *dropdownState) requestOpenFrom(ctx *frame.Context, widget Widget, open 
 		s.openSource = source
 	}
 	if widget.hasOpen {
-		if widget.open != open && widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
 		if widget.open != open && widget.onOpenChangeEvent != nil {
 			widget.onOpenChangeEvent(OpenChangeEvent{Open: open, Source: source})
 		}
@@ -126,9 +121,6 @@ func (s *dropdownState) requestOpenFrom(ctx *frame.Context, widget Widget, open 
 	}
 	if s.open != open {
 		s.open = open
-		if widget.onOpenChange != nil {
-			widget.onOpenChange(open)
-		}
 		if widget.onOpenChangeEvent != nil {
 			widget.onOpenChangeEvent(OpenChangeEvent{Open: open, Source: source})
 		}
@@ -142,9 +134,6 @@ func (s *dropdownState) requestOpenFrom(ctx *frame.Context, widget Widget, open 
 func (s *dropdownState) closeForPeer() {
 	s.skipRestore = true
 	if s.binding.controlled {
-		if s.binding.open && s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
 		if s.binding.open && s.binding.onOpenChangeEvent != nil {
 			s.binding.onOpenChangeEvent(OpenChangeEvent{Open: false, Source: OpenChangePeer})
 		}
@@ -152,9 +141,6 @@ func (s *dropdownState) closeForPeer() {
 	}
 	if s.open {
 		s.open = false
-		if s.binding.onOpenChange != nil {
-			s.binding.onOpenChange(false)
-		}
 		if s.binding.onOpenChangeEvent != nil {
 			s.binding.onOpenChangeEvent(OpenChangeEvent{Open: false, Source: OpenChangePeer})
 		}

@@ -1,8 +1,12 @@
 package menu
 
 import (
+	"image/color"
+
 	"gioui.org/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
+	styleruntime "github.com/qianniancn/flowui/internal/style/runtime"
 )
 
 // Runtime binds a Menu widget to one owner-specific state instance.
@@ -32,10 +36,72 @@ func (r Runtime) HasActiveSubmenu() bool {
 	return r.state != nil && (r.state.openSubmenu != "" || r.state.submenuActive)
 }
 
+// HoveredWithSubmenus includes the visible descendants of a root menu. It is
+// used by hover-triggered owners that need to know whether the pointer remains
+// inside a nested popup, rather than merely whether a submenu is open.
+func (r Runtime) HoveredWithSubmenus(ctx *frame.Context) bool {
+	if r.state == nil {
+		return false
+	}
+	return menuHovered(ctx, r.widget, r.state)
+}
+
+func menuHovered(ctx *frame.Context, widget Widget, state *menuState) bool {
+	entries := state.resolveEntries(widget)
+	actionable := state.actionableEntries(entries)
+	for _, item := range state.items {
+		if item.clickable.Hovered() {
+			return true
+		}
+	}
+	if state.openSubmenu == "" {
+		return false
+	}
+	for _, entry := range actionable {
+		if entry.item.Key != state.openSubmenu || !itemHasSubmenu(entry.item) {
+			continue
+		}
+		child := widget.submenu(state, entry.item)
+		childState := child.stateFor(ctx)
+		if childState.dialog.Hovered() || menuHovered(ctx, child, childState) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r Runtime) CloseSubmenus() {
 	if r.state != nil {
 		r.state.openSubmenu = ""
 	}
+}
+
+// PanelColors returns the resolved popup surface and border colors, including
+// the menu's instance style. Non-solid custom backgrounds fall back to the
+// theme surface because an arrow cannot reproduce an arbitrary brush.
+func (r Runtime) PanelColors(ctx *frame.Context) (background, border color.NRGBA) {
+	if r.state == nil {
+		return color.NRGBA{}, color.NRGBA{}
+	}
+	activeTheme := frame.ActiveTheme(ctx)
+	panel := menuPanelStyle(activeTheme)
+	background = panel.background
+	border = panel.border
+	resolved := styleruntime.ResolveStatic(ctx, flowstyle.StyleState{}, menuRootDeclaration(activeTheme, r.widget.themeTokens(ctx)), flowstyle.Style{}, flowstyle.Style{}, r.widget.customStyle)
+	if resolved.Paint == nil {
+		return background, border
+	}
+	if source, ok := resolved.Paint.Background.(flowstyle.ColorSource); ok {
+		if value, ok := styleruntime.ResolveColor(ctx, source); ok {
+			background = value
+		}
+	}
+	if resolved.Paint.Border != nil {
+		if value, ok := styleruntime.ResolveColor(ctx, resolved.Paint.Border.Color); ok {
+			border = value
+		}
+	}
+	return background, border
 }
 
 func (r Runtime) FocusFirst(ctx *frame.Context, visible bool) bool {

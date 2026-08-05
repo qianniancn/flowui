@@ -8,12 +8,22 @@ import (
 // Widget is a FlowUI node that can lay itself out with Gio.
 type Widget = frame.Widget
 
+// Measurable is an optional side-effect-free measurement contract for custom
+// widgets used in intrinsic sizing passes. Implementations must not inspect
+// or consume frame input.
+type Measurable = frame.Measurable
+
 // WidgetFunc adapts a layout function to Widget.
 type WidgetFunc func(ctx *Context, gtx layout.Context) layout.Dimensions
 
 // Layout invokes f to lay out the widget for the current frame.
 func (f WidgetFunc) Layout(ctx *Context, gtx layout.Context) layout.Dimensions {
 	return f(ctx, gtx)
+}
+
+// MeasureWidget measures a widget without allowing it to consume frame input.
+func MeasureWidget(ctx *Context, gtx layout.Context, value Widget) layout.Dimensions {
+	return frame.MeasureWidget(ctx, gtx, value)
 }
 
 // View renders a model to a widget tree. It must treat the model, including

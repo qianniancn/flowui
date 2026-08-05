@@ -2,6 +2,7 @@ package dropdown
 
 import (
 	"image"
+	"time"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -24,6 +25,9 @@ func (d Widget) layoutRoot(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	state := dropdownStateFor(ctx, d.key)
 	state.bind(d)
 	open := state.isOpen(d)
+	if open && state.openSource != OpenChangeContextMenu {
+		state.hasContextAnchor = false
+	}
 	if d.disabled || !gtx.Enabled() {
 		open = state.requestOpen(ctx, d, false)
 	}
@@ -79,14 +83,66 @@ func (d Widget) handleTrigger(ctx *frame.Context, gtx layout.Context, state *dro
 		state.focusFirst = !open
 		state.focusLast = false
 		state.focusVisible = focusVisible
-		open = state.requestOpen(ctx, d, !open)
+		state.hasContextAnchor = false
+		open = state.requestOpenFrom(ctx, d, !open, OpenChangeTrigger)
 		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
 	}
 	open = d.handleTriggerKeys(ctx, gtx, state, open)
 	if d.triggerMode == TriggerLongPress {
 		open = d.handleLongPress(ctx, gtx, state, open)
+	} else if d.triggerMode == TriggerHover {
+		open = d.handleHover(ctx, gtx, state, open)
+	} else if d.triggerMode == TriggerContextMenu {
+		open = d.handleContextMenu(ctx, gtx, state, open)
 	}
 	return open
+}
+
+func (d Widget) handleHover(ctx *frame.Context, gtx layout.Context, state *dropdownState, open bool) bool {
+	if d.disabled || !gtx.Enabled() {
+		state.hoverOpenAt = time.Time{}
+		state.hoverCloseAt = time.Time{}
+		return false
+	}
+
+	triggerHovered := state.trigger.Hovered()
+	menuHovered := state.menuHovered
+	if open && (triggerHovered || menuHovered) {
+		state.hoverOpenAt = time.Time{}
+		state.hoverCloseAt = time.Time{}
+		return open
+	}
+	if triggerHovered || menuHovered {
+		state.hoverCloseAt = time.Time{}
+	} else if open {
+		if state.hoverCloseAt.IsZero() {
+			state.hoverCloseAt = gtx.Now.Add(d.hoverCloseDuration())
+		}
+		if gtx.Now.Before(state.hoverCloseAt) {
+			gtx.Execute(op.InvalidateCmd{At: state.hoverCloseAt})
+			return open
+		}
+		state.hoverCloseAt = time.Time{}
+		state.hoverOpenAt = time.Time{}
+		return state.requestOpenFrom(ctx, d, false, OpenChangeOutside)
+	}
+
+	if !triggerHovered {
+		state.hoverOpenAt = time.Time{}
+		return open
+	}
+	if state.hoverOpenAt.IsZero() {
+		state.hoverOpenAt = gtx.Now.Add(d.hoverOpenDuration())
+	}
+	if gtx.Now.Before(state.hoverOpenAt) {
+		gtx.Execute(op.InvalidateCmd{At: state.hoverOpenAt})
+		return open
+	}
+	state.hoverOpenAt = time.Time{}
+	state.focusFirst = true
+	state.focusLast = false
+	state.focusVisible = false
+	return state.requestOpenFrom(ctx, d, true, OpenChangeTrigger)
 }
 
 func (d Widget) handleTriggerKeys(ctx *frame.Context, gtx layout.Context, state *dropdownState, open bool) bool {
@@ -97,6 +153,9 @@ func (d Widget) handleTriggerKeys(ctx *frame.Context, gtx layout.Context, state 
 		key.Filter{Focus: &state.trigger, Name: key.NameReturn},
 		key.Filter{Focus: &state.trigger, Name: key.NameSpace},
 		key.Filter{Focus: &state.trigger, Name: key.NameEscape},
+	}
+	if d.triggerMode == TriggerContextMenu {
+		filters = append(filters, key.Filter{Focus: &state.trigger, Name: key.NameF10, Required: key.ModShift})
 	}
 	for {
 		e, ok := gtx.Event(filters...)
@@ -111,8 +170,17 @@ func (d Widget) handleTriggerKeys(ctx *frame.Context, gtx layout.Context, state 
 			if open {
 				state.focusFirst = false
 				state.focusLast = false
-				open = state.requestOpen(ctx, d, false)
+				open = state.requestOpenFrom(ctx, d, false, OpenChangeKeyboard)
 			}
+			continue
+		}
+		if event.Name == key.NameF10 && d.triggerMode == TriggerContextMenu {
+			state.contextAnchor = image.Rect(state.triggerRect.Dx()/2, state.triggerRect.Dy()/2, state.triggerRect.Dx()/2+1, state.triggerRect.Dy()/2+1)
+			state.hasContextAnchor = true
+			state.focusFirst = true
+			state.focusLast = false
+			state.focusVisible = true
+			open = state.requestOpenFrom(ctx, d, true, OpenChangeContextMenu)
 			continue
 		}
 		if open {
@@ -121,7 +189,8 @@ func (d Widget) handleTriggerKeys(ctx *frame.Context, gtx layout.Context, state 
 		state.focusVisible = true
 		state.focusFirst = event.Name != key.NameUpArrow
 		state.focusLast = event.Name == key.NameUpArrow
-		open = state.requestOpen(ctx, d, true)
+		state.hasContextAnchor = false
+		open = state.requestOpenFrom(ctx, d, true, OpenChangeKeyboard)
 	}
 }
 
@@ -169,7 +238,7 @@ func (d Widget) handleLongPress(ctx *frame.Context, gtx layout.Context, state *d
 	if !state.touchTracking {
 		return open
 	}
-	deadline := state.pointerAt.Add(dropdownLongPress)
+	deadline := state.pointerAt.Add(d.longPressDuration())
 	if gtx.Now.Before(deadline) {
 		gtx.Execute(op.InvalidateCmd{At: deadline})
 		return open
@@ -180,7 +249,29 @@ func (d Widget) handleLongPress(ctx *frame.Context, gtx layout.Context, state *d
 	state.focusLast = false
 	state.focusVisible = false
 	frame.RequestFocusVisible(ctx, &state.trigger, false)
-	return state.requestOpen(ctx, d, true)
+	return state.requestOpenFrom(ctx, d, true, OpenChangeTrigger)
+}
+
+func (d Widget) handleContextMenu(ctx *frame.Context, gtx layout.Context, state *dropdownState, open bool) bool {
+	for {
+		eventValue, ok := interact.NextPointerEvent(gtx, &state.contextTag, pointer.Press)
+		if !ok {
+			break
+		}
+		if eventValue.Source != pointer.Mouse || !eventValue.Buttons.Contain(pointer.ButtonSecondary) {
+			continue
+		}
+		x := int(eventValue.Position.X + 0.5)
+		y := int(eventValue.Position.Y + 0.5)
+		state.contextAnchor = image.Rect(x, y, x+1, y+1)
+		state.hasContextAnchor = true
+		state.focusFirst = true
+		state.focusLast = false
+		state.focusVisible = false
+		frame.RequestFocusVisible(ctx, &state.trigger, false)
+		open = state.requestOpenFrom(ctx, d, true, OpenChangeContextMenu)
+	}
+	return open
 }
 
 func movedBeyond(start, current f32.Point, threshold float32) bool {
@@ -230,13 +321,7 @@ func (d Widget) layoutTrigger(ctx *frame.Context, gtx layout.Context, state *dro
 		return layout.Dimensions{Size: size, Baseline: childDims.Baseline}
 	})
 	call := macro.Stop()
-	if d.triggerMode == TriggerLongPress && dims.Size.X > 0 && dims.Size.Y > 0 {
-		area := clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops)
-		pass := pointer.PassOp{}.Push(gtx.Ops)
-		event.Op(gtx.Ops, &state.longPressTag)
-		pass.Pop()
-		area.Pop()
-	}
+	d.registerTriggerPointerEvents(gtx, state, dims.Size)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	pass.Pop()
@@ -251,13 +336,22 @@ func (d Widget) layoutButtonTrigger(ctx *frame.Context, gtx layout.Context, stat
 	macro := op.Record(gtx.Ops)
 	dims := button.LayoutWithClickableNoEvents(trigger, ctx, gtx, &state.trigger)
 	call := macro.Stop()
-	if d.triggerMode == TriggerLongPress && dims.Size.X > 0 && dims.Size.Y > 0 {
-		area := clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops)
-		pass := pointer.PassOp{}.Push(gtx.Ops)
-		event.Op(gtx.Ops, &state.longPressTag)
-		pass.Pop()
-		area.Pop()
-	}
+	d.registerTriggerPointerEvents(gtx, state, dims.Size)
 	call.Add(gtx.Ops)
 	return dims
+}
+
+func (d Widget) registerTriggerPointerEvents(gtx layout.Context, state *dropdownState, size image.Point) {
+	if (d.triggerMode != TriggerLongPress && d.triggerMode != TriggerContextMenu) || size.X <= 0 || size.Y <= 0 {
+		return
+	}
+	area := clip.Rect(image.Rectangle{Max: size}).Push(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	if d.triggerMode == TriggerLongPress {
+		event.Op(gtx.Ops, &state.longPressTag)
+	} else {
+		event.Op(gtx.Ops, &state.contextTag)
+	}
+	pass.Pop()
+	area.Pop()
 }

@@ -28,6 +28,7 @@ type menuState struct {
 	itemIndex             map[string]int
 	keyFilters            []event.Filter
 	dataCache             menuDataCache
+	widthCache            menuWidthCache
 	frameActionable       []entry
 	focusedKey            string
 	pressedKey            key.Name
@@ -48,10 +49,11 @@ type menuState struct {
 }
 
 type menuDataCache struct {
-	ready      bool
-	version    uint64
-	entries    []entry
-	actionable []entry
+	ready                bool
+	version              uint64
+	autoSeparateSections bool
+	entries              []entry
+	actionable           []entry
 }
 
 type menuItemState struct {
@@ -109,13 +111,20 @@ func (s *menuState) resolveEntries(widget Widget) []entry {
 		s.dataCache.ready = false
 		return entries
 	}
-	if s.dataCache.ready && s.dataCache.version == widget.dataVersion {
+	if s.dataCache.ready && s.dataCache.version == widget.dataVersion &&
+		s.dataCache.autoSeparateSections == widget.autoSeparateSections {
 		return s.dataCache.entries
 	}
 	entries := widget.entries()
 	actionable := actionableEntries(entries)
 	s.checkEntries(actionable)
-	s.dataCache = menuDataCache{ready: true, version: widget.dataVersion, entries: entries, actionable: actionable}
+	s.dataCache = menuDataCache{
+		ready:                true,
+		version:              widget.dataVersion,
+		autoSeparateSections: widget.autoSeparateSections,
+		entries:              entries,
+		actionable:           actionable,
+	}
 	return entries
 }
 

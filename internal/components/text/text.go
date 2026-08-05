@@ -186,6 +186,12 @@ func Measure(ctx *frame.Context, gtx layout.Context, value Widget) layout.Dimens
 	return value.labelStyle(ctx, resolved).Layout(measureGtx)
 }
 
+// Measure reports this text widget's bounds without registering paint or
+// pointer operations.
+func (t Widget) Measure(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+	return Measure(ctx, gtx, t)
+}
+
 func (t Widget) resolveLayoutStyle(ctx *frame.Context, gtx layout.Context) flowstyle.ResolvedStyle {
 	resolved := t.resolveStyleStatic(ctx, flowstyle.StyleState{})
 	if len(resolved.Transitions) == 0 {

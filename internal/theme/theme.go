@@ -745,6 +745,7 @@ type DropdownTheme struct {
 	TriggerFocusRadius     unit.Dp
 	TriggerPressedScale    float32
 	PanelGap               unit.Dp
+	ArrowSize              unit.Dp
 }
 
 type MenubarTheme struct {
@@ -1718,6 +1719,7 @@ func DefaultTheme() Theme {
 				TriggerFocusRadius:     12,
 				TriggerPressedScale:    0.97,
 				PanelGap:               4,
+				ArrowSize:              12,
 			},
 			Menubar: MenubarTheme{
 				TriggerHeight:          32,

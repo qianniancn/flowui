@@ -348,7 +348,7 @@ func TestPopoverExitPanelStillBlocksBackground(t *testing.T) {
 }
 
 func TestPopoverAvoidsPositiveOverflow(t *testing.T) {
-	pos := popoverAvoidOverflow(image.Pt(260, 180), image.Pt(80, 40), image.Pt(300, 200))
+	pos := overlay.AvoidOverflow(image.Pt(260, 180), image.Pt(80, 40), image.Pt(300, 200))
 
 	if pos != image.Pt(220, 160) {
 		t.Fatalf("adjusted position = %v, want (220,160)", pos)

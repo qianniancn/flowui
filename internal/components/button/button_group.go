@@ -48,6 +48,20 @@ func ButtonGroup(buttons ...ButtonWidget) ButtonGroupWidget {
 	return ButtonGroupWidget{buttons: append([]ButtonWidget(nil), buttons...)}
 }
 
+// GroupStart applies the leading corner treatment used by ButtonGroup to a
+// button rendered by another composite widget.
+func GroupStart(value ButtonWidget) ButtonWidget {
+	value.group = buttonGroupItemStyle{grouped: true, orientation: ButtonGroupHorizontal, position: buttonGroupStart}
+	return value
+}
+
+// GroupEnd applies the trailing corner treatment used by ButtonGroup to a
+// button rendered by another composite widget.
+func GroupEnd(value ButtonWidget) ButtonWidget {
+	value.group = buttonGroupItemStyle{grouped: true, orientation: ButtonGroupHorizontal, position: buttonGroupEnd}
+	return value
+}
+
 func (g ButtonGroupWidget) Orientation(value ButtonGroupOrientation) ButtonGroupWidget {
 	g.orientation = value
 	return g

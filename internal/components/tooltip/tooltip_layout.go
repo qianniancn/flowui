@@ -116,7 +116,7 @@ func (p Popup) panelAffine(ctx *frame.Context, trigger image.Rectangle, panelPos
 	if !p.transformMotionEnabled() {
 		return f32.AffineId()
 	}
-	origin := tooltipTransformOrigin(trigger, panelPos, panelSize, placement)
+	origin := overlay.PanelTransformOriginAt(trigger, panelPos, panelSize, placement.Placement())
 	theme := frame.ActiveTheme(ctx).Components.Tooltip
 	scale := theme.AnimationScale
 	if p.exiting {
@@ -130,28 +130,6 @@ func (p Popup) panelAffine(ctx *frame.Context, trigger image.Rectangle, panelPos
 	}
 	scale += (1 - scale) * p.progress
 	return f32.AffineId().Scale(origin, f32.Pt(scale, scale))
-}
-
-func tooltipTransformOrigin(trigger image.Rectangle, panelPos, panelSize image.Point, placement overlay.PopoverPlacement) f32.Point {
-	return overlay.PanelTransformOriginAt(trigger, panelPos, panelSize, placement.Placement())
-}
-
-func tooltipArrowAnchor(trigger image.Rectangle, panelPos, panelSize image.Point, placement overlay.PopoverPlacement, radius, arrowSize int) float32 {
-	var anchor float32
-	var crossSize int
-	if placement.Placement().Side == overlay.SideTop || placement.Placement().Side == overlay.SideBottom {
-		anchor = float32(trigger.Min.X + trigger.Dx()/2 - panelPos.X)
-		crossSize = panelSize.X
-	} else {
-		anchor = float32(trigger.Min.Y + trigger.Dy()/2 - panelPos.Y)
-		crossSize = panelSize.Y
-	}
-	halfArrow := float32(max(arrowSize, 0)) / 2
-	margin := float32(max(radius, 0)) + halfArrow
-	if float32(crossSize) < margin*2 {
-		return float32(crossSize) / 2
-	}
-	return min(max(anchor, margin), float32(crossSize)-margin)
 }
 
 func (p Popup) slideOffset(ctx *frame.Context, gtx layout.Context, placement overlay.PopoverPlacement) image.Point {

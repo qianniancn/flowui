@@ -15,10 +15,14 @@ import (
 )
 
 func (d Widget) registerRootOverlay(ctx *frame.Context, state *dropdownState, open bool, progress float32, disabled bool) {
+	anchor := state.triggerRect
+	if state.hasContextAnchor {
+		anchor = state.contextAnchor
+	}
 	frame.RegisterOverlay(ctx, frame.OverlayRequest{
 		Key:       state.key,
 		Layer:     frame.OverlayLayerPopup,
-		Anchor:    state.triggerRect,
+		Anchor:    anchor,
 		HasAnchor: true,
 		Disabled:  disabled,
 		Layout: func(gtx layout.Context, anchor image.Rectangle, interactive bool) layout.Dimensions {
@@ -38,6 +42,13 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 	if state.dialog.TakePressed() {
 		frame.PreserveFocus(ctx)
 	}
+	for state.arrow.Clicked(gtx) {
+	}
+	if state.arrow.TakePressed() {
+		// The arrow is part of the popup surface. Keep the current focus while
+		// the pointer crosses the gap between the trigger and the menu.
+		frame.PreserveFocus(ctx)
+	}
 	dismissed := false
 	for index := range state.dismiss {
 		for state.dismiss[index].Clicked(gtx) {
@@ -52,7 +63,7 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 	}
 	if dismissed && open {
 		state.skipRestore = true
-		open = state.requestOpen(ctx, d, false)
+		open = state.requestOpenFrom(ctx, d, false, OpenChangeOutside)
 		state.transition.Set(0, 0, gtx.Now)
 	}
 	if !interactive || !open {
@@ -67,7 +78,7 @@ func (d Widget) handleOverlayEvents(ctx *frame.Context, gtx layout.Context, stat
 		if ok && event.State == key.Press {
 			frame.RequestFocusVisible(ctx, &state.trigger, true)
 			state.skipRestore = true
-			open = state.requestOpen(ctx, d, false)
+			open = state.requestOpenFrom(ctx, d, false, OpenChangeKeyboard)
 		}
 	}
 	return open, dismissed
@@ -77,16 +88,21 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 	bounds := gtx.Constraints.Max
 	panelGtx := gtx
 	panelGtx.Constraints = layout.Constraints{Max: bounds}
+	menuWidget := d.menu
+	if d.matchTriggerWidth {
+		menuWidget = menu.WithMinimumWidthPx(menuWidget, anchor.Dx())
+	}
 	var runtime menu.Runtime
-	runtime = d.menu.Runtime(ctx, state.key, "menu", func(focusVisible bool) {
+	runtime = menuWidget.Runtime(ctx, state.key, "menu", func(focusVisible bool) {
 		runtime.CloseSubmenus()
 		frame.RequestFocusVisible(ctx, &state.trigger, focusVisible)
 		state.skipRestore = true
-		state.requestOpen(ctx, d, false)
+		state.requestOpenFrom(ctx, d, false, OpenChangeMenu)
 	})
 	if !open {
 		runtime.CloseSubmenus()
 	}
+	state.menuHovered = state.dialog.Hovered() || runtime.HoveredWithSubmenus(ctx) || (d.arrow && state.arrow.Hovered())
 
 	macro := op.Record(gtx.Ops)
 	panelDims, panelPlacement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
@@ -104,6 +120,18 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 		Flip:             d.flipEnabled(),
 		AvoidOverflow:    d.overflowAvoidanceEnabled(),
 	})
+	placement := result.Placement.PopoverPlacement()
+	arrowSize := 0
+	arrowAnchor := float32(0)
+	arrowRect := image.Rectangle{}
+	if d.arrow {
+		tokens := frame.ActiveTheme(ctx).Components.Menu
+		dropdownTokens := frame.ActiveTheme(ctx).Components.Dropdown
+		arrowSize = gtx.Dp(dropdownTokens.ArrowSize)
+		panelRadius := min(max(gtx.Dp(tokens.Radius), 0), min(panelDims.Size.X, panelDims.Size.Y)/2)
+		arrowAnchor = overlay.ArrowAnchor(anchor, result.Position, panelDims.Size, placement, panelRadius, arrowSize)
+		arrowRect = overlay.ArrowRect(panelDims.Size, placement, arrowAnchor, arrowSize)
+	}
 	tokens := frame.ActiveTheme(ctx).Components.Menu
 	baseScale := tokens.EnterScale
 	if !open {
@@ -118,12 +146,19 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 	panelPlacement.PlaceTransform(panelTransform)
 	panelPlacement.SetOpacity(progress)
 	animatedPanel := overlay.AffineRectBounds(image.Rectangle{Max: panelDims.Size}, panelTransform)
-	d.layoutDismissAndBlocker(gtx, state, bounds, animatedPanel, anchor)
+	animatedArrow := overlay.AffineRectBounds(arrowRect, panelTransform)
+	d.layoutDismissAndBlocker(gtx, state, bounds, animatedPanel, anchor, animatedArrow)
 
 	offset := op.Offset(panelOffset).Push(gtx.Ops)
 	transform := op.Affine(panelScale).Push(gtx.Ops)
 	opacity := paint.PushOpacity(gtx.Ops, progress)
 	panelCall.Add(gtx.Ops)
+	if d.arrow {
+		surface, border := runtime.PanelColors(ctx)
+		menuTokens := frame.ActiveTheme(ctx).Components.Menu
+		overlay.DrawArrow(gtx, placement, panelDims.Size, arrowAnchor, arrowSize, gtx.Dp(menuTokens.BorderWidth), surface, border)
+		layoutArrowBlocker(gtx, state, arrowRect)
+	}
 	opacity.Pop()
 	transform.Pop()
 	offset.Pop()
@@ -146,10 +181,16 @@ func (d Widget) layoutRootOverlay(ctx *frame.Context, gtx layout.Context, state 
 }
 
 func (d Widget) panelGapPx(ctx *frame.Context, gtx layout.Context) int {
+	gap := 0
 	if d.hasOffset {
-		return gtx.Dp(d.offset)
+		gap = gtx.Dp(d.offset)
+	} else {
+		gap = gtx.Dp(frame.ActiveTheme(ctx).Components.Dropdown.PanelGap)
 	}
-	return gtx.Dp(frame.ActiveTheme(ctx).Components.Dropdown.PanelGap)
+	if d.arrow {
+		gap += gtx.Dp(frame.ActiveTheme(ctx).Components.Dropdown.ArrowSize * 2 / 3)
+	}
+	return gap
 }
 
 func (d Widget) layoutDismissAndBlocker(gtx layout.Context, state *dropdownState, viewport image.Point, blocker image.Rectangle, excluded ...image.Rectangle) {
@@ -176,6 +217,19 @@ func (d Widget) layoutDismissAndBlocker(gtx layout.Context, state *dropdownState
 	offset := op.Offset(blocker.Min).Push(gtx.Ops)
 	state.dialog.Layout(blockerGtx, func(layout.Context) layout.Dimensions {
 		return layout.Dimensions{Size: blocker.Size()}
+	})
+	offset.Pop()
+}
+
+func layoutArrowBlocker(gtx layout.Context, state *dropdownState, rect image.Rectangle) {
+	if rect.Empty() {
+		return
+	}
+	arrowGtx := gtx
+	arrowGtx.Constraints = layout.Exact(rect.Size())
+	offset := op.Offset(rect.Min).Push(gtx.Ops)
+	state.arrow.Layout(arrowGtx, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: rect.Size()}
 	})
 	offset.Pop()
 }

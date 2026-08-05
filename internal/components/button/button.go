@@ -108,6 +108,12 @@ func (b ButtonWidget) IconOnly() ButtonWidget {
 	return b
 }
 
+// DisabledState reports the resolved instance disabled flag to composite
+// widgets inside the internal component tree.
+func (b ButtonWidget) DisabledState() bool {
+	return b.disabled
+}
+
 // Style applies the instance style layer (final cascade slot after defaults,
 // variant, size, and StyleScope). See styleDeclarations and resolveStyle.
 func (b ButtonWidget) Style(value flowstyle.Style) ButtonWidget {

@@ -21,36 +21,47 @@ const (
 	dropdownEnterDuration = 150 * time.Millisecond
 	dropdownExitDuration  = 100 * time.Millisecond
 	dropdownLongPress     = 500 * time.Millisecond
+	dropdownHoverOpen     = 150 * time.Millisecond
+	dropdownHoverClose    = 100 * time.Millisecond
 )
 
 type dropdownState struct {
-	key            string
-	trigger        widget.Clickable
-	triggerFocus   state.FocusAnimation
-	longPressTag   struct{}
-	touchTracking  bool
-	pointerID      pointer.ID
-	pointerStart   f32.Point
-	pointerAt      time.Time
-	longPressMoved bool
-	dismiss        [16]overlay.ClickArea
-	dialog         overlay.ClickArea
-	open           bool
-	initialized    bool
-	wasOpen        bool
-	triggerRect    image.Rectangle
-	focusFirst     bool
-	focusLast      bool
-	focusVisible   bool
-	skipRestore    bool
-	transition     animation.FloatTransition
-	binding        dropdownBinding
+	key              string
+	trigger          widget.Clickable
+	triggerFocus     state.FocusAnimation
+	longPressTag     struct{}
+	contextTag       struct{}
+	touchTracking    bool
+	pointerID        pointer.ID
+	pointerStart     f32.Point
+	pointerAt        time.Time
+	longPressMoved   bool
+	dismiss          [16]overlay.ClickArea
+	dialog           overlay.ClickArea
+	arrow            overlay.ClickArea
+	open             bool
+	initialized      bool
+	wasOpen          bool
+	triggerRect      image.Rectangle
+	contextAnchor    image.Rectangle
+	hasContextAnchor bool
+	focusFirst       bool
+	focusLast        bool
+	focusVisible     bool
+	skipRestore      bool
+	hoverOpenAt      time.Time
+	hoverCloseAt     time.Time
+	menuHovered      bool
+	openSource       OpenChangeSource
+	transition       animation.FloatTransition
+	binding          dropdownBinding
 }
 
 type dropdownBinding struct {
-	controlled   bool
-	open         bool
-	onOpenChange func(bool)
+	controlled        bool
+	open              bool
+	onOpenChange      func(bool)
+	onOpenChangeEvent func(OpenChangeEvent)
 }
 
 func dropdownStateFor(ctx *frame.Context, key string) *dropdownState {
@@ -63,7 +74,12 @@ func dropdownStateFor(ctx *frame.Context, key string) *dropdownState {
 }
 
 func (s *dropdownState) bind(widget Widget) {
-	s.binding = dropdownBinding{controlled: widget.hasOpen, open: widget.open, onOpenChange: widget.onOpenChange}
+	s.binding = dropdownBinding{
+		controlled:        widget.hasOpen,
+		open:              widget.open,
+		onOpenChange:      widget.onOpenChange,
+		onOpenChangeEvent: widget.onOpenChangeEvent,
+	}
 }
 
 func (s *dropdownState) isOpen(widget Widget) bool {
@@ -80,16 +96,28 @@ func (s *dropdownState) isOpen(widget Widget) bool {
 }
 
 func (s *dropdownState) requestOpen(ctx *frame.Context, widget Widget, open bool) bool {
+	return s.requestOpenFrom(ctx, widget, open, OpenChangeProgrammatic)
+}
+
+func (s *dropdownState) requestOpenFrom(ctx *frame.Context, widget Widget, open bool, source OpenChangeSource) bool {
 	if widget.disabled {
 		open = false
 	}
 	if open {
+		s.openSource = source
 		s.skipRestore = false
 		frame.ActivateExclusive(ctx, dropdownExclusive, s.key)
+	} else if source != OpenChangeContextMenu {
+		// A subsequent open requested by the model or another trigger must not
+		// inherit a pointer anchor from a previously opened context menu.
+		s.openSource = source
 	}
 	if widget.hasOpen {
 		if widget.open != open && widget.onOpenChange != nil {
 			widget.onOpenChange(open)
+		}
+		if widget.open != open && widget.onOpenChangeEvent != nil {
+			widget.onOpenChangeEvent(OpenChangeEvent{Open: open, Source: source})
 		}
 		if !widget.open {
 			frame.ReleaseExclusive(ctx, dropdownExclusive, s.key)
@@ -100,6 +128,9 @@ func (s *dropdownState) requestOpen(ctx *frame.Context, widget Widget, open bool
 		s.open = open
 		if widget.onOpenChange != nil {
 			widget.onOpenChange(open)
+		}
+		if widget.onOpenChangeEvent != nil {
+			widget.onOpenChangeEvent(OpenChangeEvent{Open: open, Source: source})
 		}
 	}
 	if !s.open {
@@ -114,12 +145,18 @@ func (s *dropdownState) closeForPeer() {
 		if s.binding.open && s.binding.onOpenChange != nil {
 			s.binding.onOpenChange(false)
 		}
+		if s.binding.open && s.binding.onOpenChangeEvent != nil {
+			s.binding.onOpenChangeEvent(OpenChangeEvent{Open: false, Source: OpenChangePeer})
+		}
 		return
 	}
 	if s.open {
 		s.open = false
 		if s.binding.onOpenChange != nil {
 			s.binding.onOpenChange(false)
+		}
+		if s.binding.onOpenChangeEvent != nil {
+			s.binding.onOpenChangeEvent(OpenChangeEvent{Open: false, Source: OpenChangePeer})
 		}
 	}
 }
@@ -130,6 +167,9 @@ func (s *dropdownState) observeOpen(open bool) {
 		s.touchTracking = false
 		s.focusFirst = false
 		s.focusLast = false
+		// Keep the last context anchor for the exit animation, but make the
+		// next non-context open use the trigger instead of stale pointer data.
+		s.openSource = OpenChangeProgrammatic
 	}
 	if open && !wasOpen && !s.focusFirst && !s.focusLast {
 		s.focusFirst = true

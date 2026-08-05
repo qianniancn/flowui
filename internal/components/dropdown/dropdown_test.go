@@ -73,6 +73,124 @@ func TestDropdownOptionsUseValueSemantics(t *testing.T) {
 	}
 }
 
+func TestDropdownExtendedOptionsUseValueSemantics(t *testing.T) {
+	base := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}})
+	var event OpenChangeEvent
+	configured := base.
+		AutoWidth().
+		MinWidth(160).
+		MaxWidth(320).
+		MatchTriggerWidth(true).
+		Arrow(true).
+		HoverOpenDelay(20 * time.Millisecond).
+		HoverCloseDelay(30 * time.Millisecond).
+		LongPressDelay(40 * time.Millisecond).
+		TriggerMode(TriggerContextMenu).
+		OnOpenChangeEvent(func(value OpenChangeEvent) { event = value })
+	if !configured.matchTriggerWidth || !configured.arrow || configured.triggerMode != TriggerContextMenu || reflect.DeepEqual(configured.menu, base.menu) {
+		t.Fatalf("extended dropdown options = %#v", configured)
+	}
+	if configured.hoverOpenDelay != 20*time.Millisecond || configured.hoverCloseDelay != 30*time.Millisecond || configured.longPressDelay != 40*time.Millisecond || !configured.hasHoverOpenDelay || !configured.hasHoverCloseDelay || !configured.hasLongPressDelay || configured.onOpenChangeEvent == nil || event.Open {
+		t.Fatalf("extended timing/callback options = %#v", configured)
+	}
+	if base.matchTriggerWidth || base.arrow || base.triggerMode != TriggerPress {
+		t.Fatalf("base dropdown was mutated: %#v", base)
+	}
+}
+
+func TestDropdownForwardsMenuConfiguration(t *testing.T) {
+	checked := func(string, bool) {}
+	radio := func(string, string) {}
+	configured := dropdownTestWidget(nil).
+		AutoSeparateSections(false).
+		DataVersion(3).
+		OnCheckedChange(checked).
+		OnRadioChange(radio).
+		Compact(true)
+	expected := menupkg.Menu("actions:menu", nil).
+		AutoSeparateSections(false).
+		DataVersion(3).
+		Compact(true)
+	actual := configured.menu.OnCheckedChange(nil).OnRadioChange(nil)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("dropdown menu configuration did not forward all options: %#v", configured.menu)
+	}
+	if reflect.ValueOf(checked).Pointer() == 0 || reflect.ValueOf(radio).Pointer() == 0 {
+		t.Fatal("test callbacks were not initialized")
+	}
+}
+
+func TestDropdownContextMenuTriggerUsesPointerAnchor(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	var change OpenChangeEvent
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).
+		TriggerMode(TriggerContextMenu).
+		OnOpenChangeEvent(func(value OpenChangeEvent) { change = value })
+	start := time.Unix(1, 0)
+	layoutDropdownFrame(ctx, router, widget, start)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonSecondary, Position: f32.Pt(32, 18)})
+	layoutDropdownFrame(ctx, router, widget, start.Add(time.Millisecond))
+	state, _ := frame.PeekState[dropdownState](ctx, "actions", stateSlotDropdown)
+	if state == nil || !state.open || !state.hasContextAnchor || state.contextAnchor.Min != image.Pt(32, 18) {
+		t.Fatalf("context trigger state = %#v", state)
+	}
+	if change.Source != OpenChangeContextMenu || !change.Open {
+		t.Fatalf("context open event = %#v", change)
+	}
+}
+
+func TestDropdownContextAnchorIsNotReusedForProgrammaticOpen(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).TriggerMode(TriggerContextMenu)
+	start := time.Unix(1, 0)
+	layoutDropdownFrame(ctx, router, widget, start)
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonSecondary, Position: f32.Pt(32, 18)})
+	layoutDropdownFrame(ctx, router, widget, start.Add(time.Millisecond))
+	layoutDropdownFrame(ctx, router, widget, start.Add(dropdownEnterDuration+2*time.Millisecond))
+	router.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 2, Buttons: pointer.ButtonPrimary, Position: f32.Pt(420, 300)})
+	layoutDropdownFrame(ctx, router, widget, start.Add(dropdownEnterDuration+3*time.Millisecond))
+	state, _ := frame.PeekState[dropdownState](ctx, "actions", stateSlotDropdown)
+	if state == nil || state.open {
+		t.Fatalf("context outside close state = %#v", state)
+	}
+	programmatic := widget.Open(true)
+	layoutDropdownFrame(ctx, router, programmatic, start.Add(3*time.Millisecond))
+	if state.hasContextAnchor {
+		t.Fatal("programmatic open reused the previous context anchor")
+	}
+}
+
+func TestDropdownButtonUsesIndependentDropdownState(t *testing.T) {
+	action := button.Button("create", fixedWidget{size: image.Pt(80, 32)})
+	base := Button("split", action, []Item{{Key: "copy", Label: "Copy"}})
+	configured := base.
+		Variant(button.ButtonDanger).
+		Size(button.ButtonSmall).
+		AutoWidth().
+		Placement(overlay.PopoverBottomEnd).
+		OnAction(func(string) {}).
+		OnOpenChangeEvent(func(OpenChangeEvent) {})
+	if configured.key != "split" || configured.dropdown.key != "split:dropdown" || configured.dropdown.placement != overlay.PopoverBottomEnd || reflect.DeepEqual(base.dropdown, configured.dropdown) {
+		t.Fatalf("dropdown button configuration = %#v", configured)
+	}
+	if base.dropdown.trigger == nil || configured.dropdown.trigger == nil {
+		t.Fatal("dropdown button lost its trigger")
+	}
+}
+
+func TestDropdownButtonDisablesPopupWhenActionIsDisabled(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	widget := Button("split", button.Button("action", fixedWidget{size: image.Pt(80, 32)}).Disabled(true), []Item{{Key: "copy", Label: "Copy"}}).DefaultOpen(true)
+	layoutDropdownFrame(ctx, router, widget, time.Unix(1, 0))
+	state, _ := frame.PeekState[dropdownState](ctx, "split:dropdown", stateSlotDropdown)
+	if state == nil || state.open {
+		t.Fatalf("disabled dropdown button state = %#v", state)
+	}
+}
+
 func TestDropdownMenuStyleTargetsPopupOnly(t *testing.T) {
 	style := flowstyle.RGBA(0x12345680)
 	base := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}})
@@ -222,6 +340,33 @@ func TestDropdownLongPressMovementCancelsOpen(t *testing.T) {
 	}
 }
 
+func TestDropdownHoverTriggerOpensAndClosesAfterPointerLeaves(t *testing.T) {
+	ctx := dropdownTestContext()
+	router := new(input.Router)
+	widget := dropdownTestWidget([]Item{{Key: "open", Label: "Open"}}).TriggerMode(TriggerHover)
+	start := time.Unix(1, 0)
+	layoutDropdownFrame(ctx, router, widget, start)
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(20, 20)})
+	layoutDropdownFrame(ctx, router, widget, start.Add(time.Millisecond))
+	state, _ := frame.PeekState[dropdownState](ctx, "actions", stateSlotDropdown)
+	if state == nil || state.open {
+		t.Fatalf("hover opened before delay: %#v", state)
+	}
+	layoutDropdownFrame(ctx, router, widget, start.Add(dropdownHoverOpen+time.Millisecond))
+	if !state.open {
+		t.Fatal("hover did not open dropdown")
+	}
+	router.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(420, 300)})
+	layoutDropdownFrame(ctx, router, widget, start.Add(dropdownHoverOpen+time.Millisecond+time.Millisecond))
+	if !state.open {
+		t.Fatal("hover closed before leave delay")
+	}
+	layoutDropdownFrame(ctx, router, widget, start.Add(dropdownHoverOpen+dropdownHoverClose+2*time.Millisecond))
+	if state.open {
+		t.Fatal("hover did not close after pointer left")
+	}
+}
+
 func TestDropdownControlledAndProgrammaticOpenFocusMenu(t *testing.T) {
 	ctx := dropdownTestContext()
 	router := new(input.Router)
@@ -347,7 +492,7 @@ func clickFirstDropdownItem(ctx *frame.Context, router *input.Router, widget Wid
 	layoutDropdownFrame(ctx, router, widget, start.Add(2*time.Millisecond))
 }
 
-func layoutDropdownFrame(ctx *frame.Context, router *input.Router, widget Widget, now time.Time) {
+func layoutDropdownFrame(ctx *frame.Context, router *input.Router, widget frame.Widget, now time.Time) {
 	viewport := image.Pt(480, 360)
 	var ops op.Ops
 	gtx := layout.Context{Constraints: layout.Exact(viewport), Source: router.Source(), Ops: &ops, Now: now}

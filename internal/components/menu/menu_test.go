@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/font"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/render"
@@ -25,6 +27,22 @@ type fixedMenuWidget struct {
 }
 
 func (w fixedMenuWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
+}
+
+type measurableMenuWidget struct {
+	size         image.Point
+	layoutCalls  int
+	measureCalls int
+}
+
+func (w *measurableMenuWidget) Layout(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	w.layoutCalls++
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
+}
+
+func (w *measurableMenuWidget) Measure(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	w.measureCalls++
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(w.size)}
 }
 
@@ -58,6 +76,7 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 		SelectedKeys([]string{"paste"}).
 		DisabledKeys([]string{"delete"}).
 		OnAction(func(string) {}).
+		OnActionEvent(func(ActionEvent) {}).
 		OnChange(func(string) {}).
 		OnSelectionChange(func([]string) {}).
 		OnCheckedChange(func(string, bool) {}).
@@ -66,7 +85,7 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 		Disabled(true).
 		Compact(true).
 		Width(260)
-	if configured.emptyText != "Nothing here" || configured.onAction == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || !configured.compact || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
+	if configured.emptyText != "Nothing here" || configured.onAction == nil || configured.onActionEvent == nil || configured.onChange == nil || configured.onSelectionChange == nil || configured.onCheckedChange == nil || configured.onRadioChange == nil || !configured.disabled || !configured.compact || configured.width != 260 || len(configured.sections) != 1 || configured.autoSeparateSections || !configured.hasCloseOnSelect || configured.closeOnSelect {
 		t.Fatalf("configured menu = %#v", configured)
 	}
 	if base.emptyText != "No actions" || base.onAction != nil || base.disabled || base.compact || base.width != 0 || len(base.sections) != 0 {
@@ -74,6 +93,122 @@ func TestMenuOptionsAreImmutable(t *testing.T) {
 	}
 	if MenuSeparator().Kind != ItemSeparator || MenuGroupLabel("Edit").Kind != ItemGroupLabel {
 		t.Fatal("menu structural item constructors returned wrong kinds")
+	}
+}
+
+func TestMenuAutoWidthMeasuresContentAndHonorsBounds(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	short := Menu("short", []Item{{Key: "one", Label: "One"}}).AutoWidth().MinWidth(160)
+	long := Menu("long", []Item{{Key: "one", Label: "A considerably longer menu action"}}).AutoWidth().MinWidth(160).MaxWidth(280)
+	shortWidth := short.preferredWidthPx(ctx, gtx)
+	longWidth := long.preferredWidthPx(ctx, gtx)
+	if longWidth <= shortWidth {
+		t.Fatalf("long auto width = %d, short width = %d", longWidth, shortWidth)
+	}
+	shortGtx := gtx
+	short.applyConstraints(ctx, &shortGtx, nil)
+	if got := shortGtx.Constraints.Max.X; got < gtx.Dp(160) {
+		t.Fatalf("short constrained width = %d, want at least 160dp", got)
+	}
+	long.applyConstraints(ctx, &gtx, nil)
+	if got := gtx.Constraints.Max.X; got > gtx.Dp(280) {
+		t.Fatalf("max width = %d, want <= 280dp", got)
+	}
+}
+
+func TestMenuAutoWidthMeasuresEmptyText(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	widget := Menu("empty", nil).EmptyText("No matching actions").AutoWidth()
+	width := widget.preferredWidthPx(ctx, gtx)
+	if width <= gtx.Dp(widget.themeTokens(ctx).Padding*2) {
+		t.Fatalf("empty menu width = %d, expected the empty text to contribute", width)
+	}
+}
+
+func TestMenuAutoWidthIncludesSectionTitlePadding(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	widget := MenuSections("section-width", []Section{{Title: "A considerably long section title"}}).AutoWidth()
+	tokens := widget.themeTokens(ctx)
+	title := widget.measureTextWidth(ctx, gtx, "A considerably long section title", tokens.SectionTextSize, font.Medium)
+	width := widget.preferredWidthPx(ctx, gtx)
+	minimum := title + 2*gtx.Dp(tokens.SectionPaddingX) + 2*gtx.Dp(tokens.Padding)
+	if width < minimum {
+		t.Fatalf("section title width = %d, want at least %d including padding", width, minimum)
+	}
+}
+
+func TestMenuAutoWidthUsesSideEffectFreeWidgetMeasurement(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	leading := &measurableMenuWidget{size: image.Pt(48, 16)}
+	indicator := &measurableMenuWidget{size: image.Pt(22, 16)}
+	widget := Menu("measurable", []Item{{
+		Key: "more", Label: "More", Leading: leading,
+		Children: []Item{{Key: "copy", Label: "Copy"}}, SubmenuIndicator: indicator,
+	}}).AutoWidth()
+	width := widget.preferredWidthPx(ctx, gtx)
+	if width <= 0 || leading.measureCalls != 1 || indicator.measureCalls != 1 || leading.layoutCalls != 0 || indicator.layoutCalls != 0 {
+		t.Fatalf("measurement width %d leading %#v indicator %#v", width, leading, indicator)
+	}
+}
+
+func TestMenuAutoWidthCachesVersionedMeasurement(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	leading := &measurableMenuWidget{size: image.Pt(48, 16)}
+	widget := Menu("cached-width", []Item{{Key: "more", Label: "More", Leading: leading}}).
+		AutoWidth().DataVersion(1)
+	state := &menuState{}
+	first := widget.preferredWidthPxCached(ctx, gtx, state)
+	second := widget.preferredWidthPxCached(ctx, gtx, state)
+	if first != second || leading.measureCalls != 1 {
+		t.Fatalf("cached width = %d/%d, measurement calls = %d", first, second, leading.measureCalls)
+	}
+	widget = widget.DataVersion(2)
+	widget.preferredWidthPxCached(ctx, gtx, state)
+	if leading.measureCalls != 2 {
+		t.Fatalf("version change reused width measurement, calls = %d", leading.measureCalls)
+	}
+}
+
+func TestMenuAutoWidthCacheInvalidatesLayoutOptions(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	leading := &measurableMenuWidget{size: image.Pt(48, 16)}
+	widget := Menu("cached-options", []Item{{Key: "more", Label: "More", Leading: leading}}).
+		AutoWidth().DataVersion(1)
+	state := &menuState{}
+	widget.preferredWidthPxCached(ctx, gtx, state)
+
+	widget = widget.Compact(true)
+	widget.preferredWidthPxCached(ctx, gtx, state)
+	if leading.measureCalls != 2 {
+		t.Fatalf("compact option reused width measurement, calls = %d", leading.measureCalls)
+	}
+	widget = widget.MinWidth(240)
+	widget.preferredWidthPxCached(ctx, gtx, state)
+	if leading.measureCalls != 3 {
+		t.Fatalf("minimum width option reused width measurement, calls = %d", leading.measureCalls)
+	}
+	widget = widget.MaxWidth(320)
+	widget.preferredWidthPxCached(ctx, gtx, state)
+	if leading.measureCalls != 4 {
+		t.Fatalf("maximum width option reused width measurement, calls = %d", leading.measureCalls)
+	}
+}
+
+func TestMenuActionEventIncludesSubmenuPath(t *testing.T) {
+	var got ActionEvent
+	root := Menu("actions", []Item{{Key: "more", Children: []Item{{Key: "copy", Label: "Copy"}}}}).
+		OnActionEvent(func(event ActionEvent) { got = event })
+	state := &menuState{key: "actions"}
+	child := root.submenu(state, root.items[0])
+	child.activate(entry{item: child.items[0]})
+	if got.Key != "copy" || len(got.Path) != 2 || got.Path[0] != "more" || got.Path[1] != "copy" || got.Item.Label != "Copy" {
+		t.Fatalf("action event = %#v", got)
 	}
 }
 
@@ -88,6 +223,24 @@ func TestMenuDataVersionCachesEntries(t *testing.T) {
 	updatedEntries := state.resolveEntries(widget.DataVersion(2))
 	if &entries[0] == &updatedEntries[0] {
 		t.Fatal("changed Menu data version reused stale entries")
+	}
+}
+
+func TestMenuDataCacheInvalidatesAutomaticSectionSeparators(t *testing.T) {
+	widget := MenuSections("sections", []Section{
+		{Title: "Edit", Items: []Item{{Key: "copy", Label: "Copy"}}},
+		{Title: "View", Items: []Item{{Key: "zoom", Label: "Zoom"}}},
+	}).DataVersion(1)
+	state := new(menuState)
+	withSeparators := state.resolveEntries(widget)
+	withoutSeparators := state.resolveEntries(widget.AutoSeparateSections(false))
+	if len(withSeparators) != len(withoutSeparators)+1 {
+		t.Fatalf("section separator cache = %d/%d entries, want one separator difference", len(withSeparators), len(withoutSeparators))
+	}
+	for _, entry := range withoutSeparators {
+		if entry.separator {
+			t.Fatal("automatic section separator remained after disabling it")
+		}
 	}
 }
 
@@ -106,6 +259,18 @@ func TestMenuCompactTokensAndSubmenu(t *testing.T) {
 	child := base.Compact(true).submenu(state, Item{Key: "more"})
 	if !child.compact {
 		t.Fatal("submenu did not inherit compact mode")
+	}
+}
+
+func TestMenuSubmenuInheritsDataAndSectionConfiguration(t *testing.T) {
+	root := Menu("actions", []Item{{Key: "more", Children: []Item{{Key: "copy", Label: "Copy"}}}}).
+		DataVersion(7).
+		AutoSeparateSections(false).
+		Compact(true)
+	state := &menuState{key: "actions"}
+	child := root.submenu(state, root.items[0])
+	if child.dataVersion != 7 || !child.hasDataVersion || child.autoSeparateSections || !child.compact {
+		t.Fatalf("submenu configuration = %#v", child)
 	}
 }
 
@@ -332,6 +497,52 @@ func TestMenuLayoutUsesStableWidth(t *testing.T) {
 		Layout(ctx, menuTestLayoutContext(nil, time.Unix(1, 0)))
 	if dims.Size.X != 192 || dims.Size.Y != 86 {
 		t.Fatalf("menu size = %v, want viewport-clamped 192x86", dims.Size)
+	}
+}
+
+func TestMenuStyleWidthConstraintsArePreserved(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	widget := Menu("styled-width", []Item{{Key: "copy", Label: "Copy"}}).
+		Style(flowstyle.Style{}.Width(unit.Dp(300)))
+	dims := widget.Layout(ctx, gtx)
+	if dims.Size.X != 300 {
+		t.Fatalf("styled menu width = %d, want 300", dims.Size.X)
+	}
+}
+
+func TestMenuWidthConstraintsPreserveParentMinimum(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	gtx.Constraints = layout.Constraints{Min: image.Pt(300, 0), Max: image.Pt(500, 400)}
+	widget := Menu("constraint-conflict", []Item{{Key: "copy", Label: "Copy"}}).
+		AutoWidth().MaxWidth(120)
+	widget.applyConstraints(ctx, &gtx, nil)
+	if got := gtx.Constraints.Max.X; got != 300 || gtx.Constraints.Min.X != 300 {
+		t.Fatalf("conflicting width constraints = %v, want exact 300px parent minimum", gtx.Constraints)
+	}
+}
+
+func TestMenuAutoWidthUsesItemPartFontWeight(t *testing.T) {
+	ctx := menuTestContext()
+	widget := Menu("weighted", []Item{{Key: "copy", Label: "Copy"}}).Style(
+		flowstyle.Style{}.Part(flowstyle.PartItem, flowstyle.Style{}.FontWeight(int(font.Bold))),
+	)
+	if got := widget.preferredItemFontWeight(ctx, widget.items[0]); got != font.Bold {
+		t.Fatalf("measured item font weight = %v, want %v", got, font.Bold)
+	}
+}
+
+func TestMenuAutoWidthUsesItemPartPadding(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	base := Menu("padding", []Item{{Key: "copy", Label: "Copy"}})
+	wide := base.Style(flowstyle.Style{}.Part(flowstyle.PartItem, flowstyle.Style{}.PaddingX(40)))
+	baseWidth := base.preferredItemWidthPx(ctx, gtx, base.items[0])
+	wideWidth := wide.preferredItemWidthPx(ctx, gtx, wide.items[0])
+	wantDelta := 2 * (gtx.Dp(unit.Dp(40)) - gtx.Dp(base.themeTokens(ctx).ItemPaddingX))
+	if wideWidth-baseWidth != wantDelta {
+		t.Fatalf("item padding width delta = %d, want %d", wideWidth-baseWidth, wantDelta)
 	}
 }
 

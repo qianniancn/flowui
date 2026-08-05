@@ -45,6 +45,14 @@ const (
 	IndicatorDot
 )
 
+// ActionEvent describes an activated menu item and its path from the root
+// menu. Path includes the activated item's key.
+type ActionEvent struct {
+	Item Item
+	Key  string
+	Path []string
+}
+
 type Item struct {
 	Key              string
 	Label            string
@@ -93,6 +101,7 @@ type Widget struct {
 	disabledKeys         []string
 	selectionMode        SelectionMode
 	onAction             func(string)
+	onActionEvent        func(ActionEvent)
 	onChange             func(string)
 	onSelectionChange    func([]string)
 	onCheckedChange      func(string, bool)
@@ -105,7 +114,14 @@ type Widget struct {
 	disabled             bool
 	compact              bool
 	width                unit.Dp
+	minWidthPx           int
+	autoWidth            bool
+	minWidth             unit.Dp
+	hasMinWidth          bool
+	maxWidth             unit.Dp
+	hasMaxWidth          bool
 	nested               bool
+	actionPath           []string
 	parentState          *menuState
 	parentItemKey        string
 	customStyle          flowstyle.Style
@@ -153,8 +169,9 @@ func (m Widget) EmptyText(text string) Widget {
 	return m
 }
 
-// DataVersion enables item validation and flattened-data reuse. Increase
-// version whenever the item data or section structure changes.
+// DataVersion enables item validation and reuse of flattened data and
+// AutoWidth measurements. Increase the version whenever menu content,
+// section structure, or width-affecting child content changes.
 func (m Widget) DataVersion(version uint64) Widget {
 	m.dataVersion = version
 	m.hasDataVersion = true
@@ -183,6 +200,12 @@ func (m Widget) DisabledKeys(keys []string) Widget {
 
 func (m Widget) OnAction(fn func(string)) Widget {
 	m.onAction = fn
+	return m
+}
+
+// OnActionEvent reports the complete activated item and its submenu path.
+func (m Widget) OnActionEvent(fn func(ActionEvent)) Widget {
+	m.onActionEvent = fn
 	return m
 }
 
@@ -225,6 +248,33 @@ func (m Widget) Compact(compact bool) Widget {
 
 func (m Widget) Width(dp int) Widget {
 	m.width = unit.Dp(max(dp, 0))
+	return m
+}
+
+// WithMinimumWidthPx applies an owner-provided physical minimum width without
+// adding that implementation detail to the public MenuWidget API.
+func WithMinimumWidthPx(m Widget, px int) Widget {
+	m.minWidthPx = max(px, 0)
+	return m
+}
+
+// AutoWidth sizes the menu to its content, subject to MinWidth and MaxWidth.
+func (m Widget) AutoWidth() Widget {
+	m.autoWidth = true
+	return m
+}
+
+// MinWidth sets the minimum menu width when AutoWidth is enabled.
+func (m Widget) MinWidth(dp int) Widget {
+	m.minWidth = unit.Dp(max(dp, 0))
+	m.hasMinWidth = true
+	return m
+}
+
+// MaxWidth limits the menu width when AutoWidth is enabled.
+func (m Widget) MaxWidth(dp int) Widget {
+	m.maxWidth = unit.Dp(max(dp, 0))
+	m.hasMaxWidth = true
 	return m
 }
 
@@ -290,6 +340,7 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.disabledKeys = m.disabledKeys
 	child.selectionMode = m.selectionMode
 	child.onAction = m.onAction
+	child.onActionEvent = m.onActionEvent
 	child.onChange = m.onChange
 	child.onSelectionChange = m.onSelectionChange
 	child.onCheckedChange = m.onCheckedChange
@@ -301,8 +352,18 @@ func (m Widget) submenu(state *menuState, item Item) Widget {
 	child.hasCloseOnSelect = m.hasCloseOnSelect
 	child.disabled = m.disabled
 	child.compact = m.compact
+	child.dataVersion = m.dataVersion
+	child.hasDataVersion = m.hasDataVersion
+	child.autoSeparateSections = m.autoSeparateSections
 	child.width = m.width
+	child.minWidthPx = m.minWidthPx
+	child.autoWidth = m.autoWidth
+	child.minWidth = m.minWidth
+	child.hasMinWidth = m.hasMinWidth
+	child.maxWidth = m.maxWidth
+	child.hasMaxWidth = m.hasMaxWidth
 	child.customStyle = m.customStyle
+	child.actionPath = append(append([]string(nil), m.actionPath...), item.Key)
 	return child.
 		withDerivedIdentity(state.key, "submenu:"+item.Key).
 		withParent(state, item.Key)
@@ -453,6 +514,10 @@ func (m Widget) activate(entry entry) bool {
 	item := entry.item
 	if item.OnAction != nil {
 		item.OnAction()
+	}
+	if m.onActionEvent != nil {
+		path := append(append([]string(nil), m.actionPath...), item.Key)
+		m.onActionEvent(ActionEvent{Item: item, Key: item.Key, Path: path})
 	}
 	switch item.Kind {
 	case ItemCheckbox:

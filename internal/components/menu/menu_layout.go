@@ -19,7 +19,7 @@ import (
 )
 
 func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuState, interactive bool) layout.Dimensions {
-	m.applyConstraints(ctx, &gtx)
+	m.applyConstraints(ctx, &gtx, menuState)
 	children := make([]frame.Widget, 0, 3)
 	if m.beforeContent != nil {
 		children = append(children, m.beforeContent)
@@ -33,18 +33,38 @@ func (m Widget) layout(ctx *frame.Context, gtx layout.Context, menuState *menuSt
 	return layoutui.LayoutTrackedFlex(ctx, gtx, layout.Vertical, 0, layout.Start, children...)
 }
 
-func (m Widget) applyConstraints(ctx *frame.Context, gtx *layout.Context) {
+func (m Widget) applyConstraints(ctx *frame.Context, gtx *layout.Context, menuState *menuState) {
 	tokens := m.themeTokens(ctx)
-	width := tokens.Width
-	if m.width > 0 {
-		width = m.width
-	}
+	constraintMinWidth := max(gtx.Constraints.Min.X, 0)
 	maxWidth := gtx.Constraints.Max.X
 	if tokens.MaxWidthFraction > 0 {
 		viewport := frame.OverlayViewport(ctx, gtx.Constraints.Max)
 		maxWidth = min(maxWidth, int(float32(viewport.X)*min(max(tokens.MaxWidthFraction, 0), 1)))
 	}
-	widthPx := min(max(gtx.Dp(width), 0), maxWidth)
+	widthPx := 0
+	switch {
+	case m.width > 0:
+		widthPx = gtx.Dp(m.width)
+	case m.autoWidth:
+		widthPx = m.preferredWidthPxCached(ctx, *gtx, menuState)
+	default:
+		widthPx = gtx.Dp(tokens.Width)
+	}
+	if m.minWidthPx > 0 {
+		widthPx = max(widthPx, m.minWidthPx)
+	}
+	if m.hasMinWidth {
+		widthPx = max(widthPx, gtx.Dp(m.minWidth))
+	}
+	if m.hasMaxWidth {
+		maxWidth = min(maxWidth, gtx.Dp(m.maxWidth))
+	}
+	// A component cannot honor a narrower local maximum than the minimum
+	// required by its parent. Preserve Gio's invariant instead of returning
+	// dimensions outside the incoming constraint range.
+	maxWidth = max(maxWidth, constraintMinWidth)
+	widthPx = max(widthPx, constraintMinWidth)
+	widthPx = min(max(widthPx, 0), max(maxWidth, 0))
 	gtx.Constraints.Min.X = widthPx
 	gtx.Constraints.Max.X = widthPx
 	if tokens.MaxHeight > 0 {
@@ -258,6 +278,9 @@ func (m Widget) layoutItem(ctx *frame.Context, gtx layout.Context, menuState *me
 			style.description = col
 			style.shortcut = col
 		}
+		if part.Text.FontWeight != nil {
+			style.fontWeight = font.Weight(*part.Text.FontWeight)
+		}
 	}
 	itemState.focus.Opacity(animGtx, focusVisible && !styleDisabled, frame.ActiveTheme(ctx).Motion)
 
@@ -345,11 +368,11 @@ func (m Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, entry 
 func (m Widget) layoutItemText(ctx *frame.Context, gtx layout.Context, item Item, style itemStyle) layout.Dimensions {
 	tokens := m.themeTokens(ctx)
 	if item.Description == "" {
-		return text.New(item.Label).Size(float32(tokens.ItemTextSize)).Weight(font.Medium).Color(style.foreground).Layout(ctx, gtx)
+		return text.New(item.Label).Size(float32(tokens.ItemTextSize)).Weight(style.fontWeight).Color(style.foreground).Layout(ctx, gtx)
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return text.New(item.Label).Size(float32(tokens.ItemTextSize)).Weight(font.Medium).Color(style.foreground).Layout(ctx, gtx)
+			return text.New(item.Label).Size(float32(tokens.ItemTextSize)).Weight(style.fontWeight).Color(style.foreground).Layout(ctx, gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return text.New(item.Description).Size(float32(tokens.ItemDescriptionSize)).Color(style.description).Layout(ctx, gtx)

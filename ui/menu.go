@@ -24,6 +24,9 @@ type MenuSelectionMode = menu.SelectionMode
 // MenuIndicatorType selects the marker shown beside a selected entry.
 type MenuIndicatorType = menu.IndicatorType
 
+// MenuActionEvent describes an activated menu item and its submenu path.
+type MenuActionEvent = menu.ActionEvent
+
 const (
 	MenuItemAction     = menu.ItemAction
 	MenuItemCheckbox   = menu.ItemCheckbox

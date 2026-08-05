@@ -127,8 +127,9 @@ func (p Popup) Layout(ctx *frame.Context, gtx layout.Context, anchor image.Recta
 		tokens := activeTheme.Components.Tooltip
 		arrowSize := gtx.Dp(tokens.ArrowSize)
 		panelRadius := min(max(gtx.Dp(tokens.Radius), 0), min(panelDims.Size.X, panelDims.Size.Y)/2)
-		arrowAnchor := tooltipArrowAnchor(anchor, panelPos, panelDims.Size, placement, panelRadius, arrowSize)
-		drawTooltipArrow(gtx, placement, panelDims.Size, arrowAnchor, arrowSize, gtx.Dp(tokens.BorderWidth), tooltipStyleFor(activeTheme))
+		arrowAnchor := overlay.ArrowAnchor(anchor, panelPos, panelDims.Size, placement, panelRadius, arrowSize)
+		style := tooltipStyleFor(activeTheme)
+		overlay.DrawArrow(gtx, placement, panelDims.Size, arrowAnchor, arrowSize, gtx.Dp(tokens.BorderWidth), style.surface, style.border)
 	}
 	offset.Pop()
 	opacity.Pop()

@@ -101,6 +101,20 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	return layout.Dimensions{Size: outerSize}
 }
 
+// Measure reports the icon's constrained bounds without decoding or painting
+// its IconVG data.
+func (w Widget) Measure(_ *frame.Context, gtx layout.Context) layout.Dimensions {
+	if w.data == nil {
+		return layout.Dimensions{}
+	}
+	size := w.size
+	if size == 0 {
+		size = defaultSize
+	}
+	target := gtx.Dp(size)
+	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(target, target))}
+}
+
 // Layout renders IconVG data using the supplied constraints and color.
 func Layout(data []byte, gtx layout.Context, col color.NRGBA) layout.Dimensions {
 	if len(data) == 0 {

@@ -192,20 +192,20 @@ func TestTooltipPositionAndFlip(t *testing.T) {
 func TestTooltipArrowTracksTriggerForAlignedAndShiftedPanels(t *testing.T) {
 	trigger := image.Rect(100, 50, 140, 70)
 	panel := image.Pt(100, 30)
-	if got := tooltipArrowAnchor(trigger, image.Pt(100, 10), panel, overlay.PopoverTopStart, 0, 12); got != 20 {
+	if got := overlay.ArrowAnchor(trigger, image.Pt(100, 10), panel, overlay.PopoverTopStart, 0, 12); got != 20 {
 		t.Fatalf("top start arrow = %v, want 20", got)
 	}
-	if got := tooltipArrowAnchor(trigger, image.Pt(40, 10), panel, overlay.PopoverTopEnd, 0, 12); got != 80 {
+	if got := overlay.ArrowAnchor(trigger, image.Pt(40, 10), panel, overlay.PopoverTopEnd, 0, 12); got != 80 {
 		t.Fatalf("top end arrow = %v, want 80", got)
 	}
-	if got := tooltipArrowAnchor(trigger, image.Pt(0, 10), panel, overlay.PopoverTop, 12, 12); got != 82 {
+	if got := overlay.ArrowAnchor(trigger, image.Pt(0, 10), panel, overlay.PopoverTop, 12, 12); got != 82 {
 		t.Fatalf("overflow-shifted arrow = %v, want clamped 82", got)
 	}
 }
 
 func TestTooltipTransformOriginUsesTriggerAnchor(t *testing.T) {
 	trigger := image.Rect(100, 50, 140, 70)
-	origin := tooltipTransformOrigin(trigger, image.Pt(100, 10), image.Pt(100, 30), overlay.PopoverTopStart)
+	origin := overlay.PanelTransformOriginAt(trigger, image.Pt(100, 10), image.Pt(100, 30), overlay.PopoverTopStart.Placement())
 	if origin != f32.Pt(20, 30) {
 		t.Fatalf("transform origin = %v, want (20,30)", origin)
 	}

@@ -238,10 +238,6 @@ func popoverSlideOffset(ctx *frame.Context, gtx layout.Context, progress float32
 	return overlay.SlideOffset(delta, progress, placement.Placement())
 }
 
-func popoverAvoidOverflow(pos, panel, bounds image.Point) image.Point {
-	return overlay.AvoidOverflow(pos, panel, bounds)
-}
-
 func (p PopoverWidget) layoutDismissAreas(gtx layout.Context, state *popoverState, bounds image.Point, protected ...image.Rectangle) {
 	areas := overlay.DismissRectsExcluding(image.Rectangle{Max: bounds}, protected...)
 	for i, area := range areas {

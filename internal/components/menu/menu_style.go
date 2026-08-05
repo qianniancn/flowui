@@ -3,6 +3,7 @@ package menu
 import (
 	"image/color"
 
+	"gioui.org/font"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 	"github.com/qianniancn/flowui/internal/theme"
 )
@@ -20,6 +21,7 @@ type itemStyle struct {
 	description color.NRGBA
 	shortcut    color.NRGBA
 	indicator   color.NRGBA
+	fontWeight  font.Weight
 }
 
 func menuRootDeclaration(activeTheme *theme.Theme, tokens theme.MenuTheme) flowstyle.Style {
@@ -107,6 +109,7 @@ func menuItemStyle(activeTheme *theme.Theme, variant ItemVariant) itemStyle {
 		description: menuMutedColor(activeTheme),
 		shortcut:    menuMutedColor(activeTheme),
 		indicator:   menuIndicatorColor(activeTheme),
+		fontWeight:  font.Medium,
 	}
 	if variant == ItemDanger {
 		style.indicator = menuDangerColor(activeTheme)

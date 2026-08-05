@@ -67,7 +67,7 @@ func basicDropdown(send ui.Send[Msg]) ui.DropdownWidget {
 		{Key: "open-file", Label: "Open file", Leading: ui.Icon(lucide.FolderOpen).Size(16), Trailing: keyboardShortcut("O", false)},
 		{Key: "save-file", Label: "Save file", Leading: ui.Icon(lucide.Save).Size(16), Trailing: keyboardShortcut("S", false)},
 		{Key: "delete-file", Label: "Delete file", Variant: ui.DropdownItemDanger, Leading: ui.Icon(lucide.Trash2).Size(16), Trailing: keyboardShortcut("D", true)},
-	}).OnAction(func(key string) { send(SetAction(key)) })
+	}).OnActionEvent(func(event ui.DropdownActionEvent) { send(SetAction(event.Key)) })
 }
 
 func keyboardShortcut(key string, shift bool) ui.Widget {
@@ -99,7 +99,7 @@ func richDropdown(send ui.Send[Msg]) ui.DropdownWidget {
 				ui.Text("alex@example.com").Size(12),
 			).Gap(2),
 		).Style(ui.Padding(12)),
-	).OnAction(func(key string) { send(SetAction(key)) })
+	).OnActionEvent(func(event ui.DropdownActionEvent) { send(SetAction(event.Key)) })
 }
 
 func longPressDropdown(send ui.Send[Msg]) ui.DropdownWidget {
@@ -107,7 +107,7 @@ func longPressDropdown(send ui.Send[Msg]) ui.DropdownWidget {
 		{Key: "preview", Label: "Preview", Leading: ui.Icon(lucide.Eye).Size(16)},
 		{Key: "download", Label: "Download", Leading: ui.Icon(lucide.Download).Size(16)},
 	}).TriggerMode(ui.DropdownTriggerLongPress).
-		OnAction(func(key string) { send(SetAction(key)) })
+		OnActionEvent(func(event ui.DropdownActionEvent) { send(SetAction(event.Key)) })
 }
 
 func sortDropdown(model Model, send ui.Send[Msg]) ui.DropdownWidget {

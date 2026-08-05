@@ -111,11 +111,11 @@ func menusPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	return demoPage("Menus",
 		demoSection{Title: "Menubar", Content: demoPanel(
 			ui.Menubar("catalog-menubar", []ui.MenubarItem{
-				ui.MenubarMenu("catalog-file-menu", "File", menuItems).OnAction(action),
+				ui.MenubarMenu("catalog-file-menu", "File", menuItems).OnActionEvent(func(event ui.MenuActionEvent) { action(event.Key) }),
 				ui.MenubarMenu("catalog-edit-menu", "Edit", []ui.MenuItem{
 					{Key: "copy", Label: "Copy", Shortcut: "Ctrl+C", Leading: ui.Icon(lucide.Copy).Size(16)},
 					{Key: "paste", Label: "Paste", Shortcut: "Ctrl+V", Leading: ui.Icon(lucide.ClipboardPaste).Size(16)},
-				}).OnAction(action),
+				}).OnActionEvent(func(event ui.MenuActionEvent) { action(event.Key) }),
 			}).Alt("Catalog menu bar"),
 		)},
 		demoSection{Title: "Dropdown", Content: demoPanel(
@@ -126,7 +126,7 @@ func menusPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					{Key: "download", Label: "Download", Leading: ui.Icon(lucide.Download).Size(16)},
 					{Key: "archive", Label: "Archive", Leading: ui.Icon(lucide.Archive).Size(16)},
 				},
-			).OnAction(action),
+			).OnActionEvent(func(event ui.DropdownActionEvent) { action(event.Key) }),
 		)},
 		demoSection{Title: "DropdownButton", Content: demoPanel(
 			ui.DropdownButton("catalog-dropdown-button",
@@ -137,7 +137,7 @@ func menusPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				},
 			).Variant(ui.ButtonSecondary).
 				OnClick(func() { action("Create") }).
-				OnAction(action),
+				OnActionEvent(func(event ui.DropdownActionEvent) { action(event.Key) }),
 		)},
 		demoSection{Title: "DropdownSections & MenuSections", Content: demoPanel(demoRow(
 			ui.DropdownSections("catalog-dropdown-sections",
@@ -146,17 +146,17 @@ func menusPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Icon(lucide.ChevronDown).Size(14),
 				).Gap(7)).Variant(ui.ButtonSecondary),
 				menuSections,
-			).OnAction(action),
-			ui.Box(ui.MenuSections("catalog-menu-sections", menuSections).OnAction(action)).Style(ui.Width(300)),
+			).OnActionEvent(func(event ui.DropdownActionEvent) { action(event.Key) }),
+			ui.Box(ui.MenuSections("catalog-menu-sections", menuSections).OnActionEvent(func(event ui.MenuActionEvent) { action(event.Key) })).Style(ui.Width(300)),
 		))},
 		demoSection{Title: "ContextMenu", Content: demoPanel(
 			ui.ContextMenu("catalog-context-menu",
 				contextMenuTrigger(),
-				ui.Menu("catalog-context-content", menuItems).OnAction(action),
+				ui.Menu("catalog-context-content", menuItems).OnActionEvent(func(event ui.MenuActionEvent) { action(event.Key) }),
 			),
 		)},
 		demoSection{Title: "Menu", Content: demoPanel(ui.Column(
-			ui.Box(ui.Menu("catalog-inline-menu", menuItems).OnAction(action)).Style(ui.Width(280)),
+			ui.Box(ui.Menu("catalog-inline-menu", menuItems).OnActionEvent(func(event ui.MenuActionEvent) { action(event.Key) })).Style(ui.Width(280)),
 			ui.Text(model.LastAction).Size(12),
 		).Gap(10))},
 	)

@@ -64,12 +64,12 @@ func applicationMenubar(model Model, send ui.Send[Msg]) ui.MenubarWidget {
 			},
 			ui.MenuSeparator(),
 			{Key: "print", Label: "Print", Shortcut: "Ctrl+P", Leading: ui.Icon(lucide.Printer).Size(16)},
-		}).OnAction(func(key string) { send(SetAction(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(SetAction(event.Key)) }),
 		ui.MenubarMenu("edit", "Edit", []ui.MenuItem{
 			{Key: "cut", Label: "Cut", Shortcut: "Ctrl+X", Leading: ui.Icon(lucide.Scissors).Size(16)},
 			{Key: "copy", Label: "Copy", Shortcut: "Ctrl+C", Leading: ui.Icon(lucide.Copy).Size(16)},
 			{Key: "paste", Label: "Paste", Shortcut: "Ctrl+V", Leading: ui.Icon(lucide.ClipboardPaste).Size(16)},
-		}).OnAction(func(key string) { send(SetAction(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(SetAction(event.Key)) }),
 		ui.MenubarMenu("view", "View", []ui.MenuItem{
 			{Key: "zoom-in", Label: "Zoom in", Shortcut: "Ctrl++", Leading: ui.Icon(lucide.ZoomIn).Size(16)},
 			{Key: "zoom-out", Label: "Zoom out", Shortcut: "Ctrl+-", Leading: ui.Icon(lucide.ZoomOut).Size(16)},
@@ -89,7 +89,7 @@ func applicationMenubar(model Model, send ui.Send[Msg]) ui.MenubarWidget {
 				},
 			},
 		}).
-			OnAction(func(key string) { send(SetAction(key)) }).
+			OnActionEvent(func(event ui.MenuActionEvent) { send(SetAction(event.Key)) }).
 			OnCheckedChange(func(_ string, checked bool) { send(SetToolbar(checked)) }).
 			OnRadioChange(func(_ string, value string) { send(SetLayout(value)) }),
 		ui.MenubarMenu("help", "Help", nil).Disabled(true),

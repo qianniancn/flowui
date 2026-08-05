@@ -161,20 +161,20 @@ func applicationMenu(send ui.Send[Msg]) ui.MenubarWidget {
 			{Key: "new-file", Label: "New File", Shortcut: "Ctrl+N", Leading: ui.Icon(lucide.FilePlus).Size(16)},
 			{Key: "open-file", Label: "Open File", Shortcut: "Ctrl+O", Leading: ui.Icon(lucide.FolderOpen).Size(16)},
 			{Key: "save", Label: "Save", Shortcut: "Ctrl+S", Leading: ui.Icon(lucide.Save).Size(16)},
-		}).OnAction(func(key string) { send(actionMsg(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(actionMsg(event.Key)) }),
 		ui.MenubarMenu("edit", "Edit", []ui.MenuItem{
 			{Key: "undo", Label: "Undo", Shortcut: "Ctrl+Z", Leading: ui.Icon(lucide.Undo2).Size(16)},
 			{Key: "redo", Label: "Redo", Shortcut: "Ctrl+Y", Leading: ui.Icon(lucide.Redo2).Size(16)},
 			ui.MenuSeparator(),
 			{Key: "copy", Label: "Copy", Shortcut: "Ctrl+C", Leading: ui.Icon(lucide.Copy).Size(16)},
-		}).OnAction(func(key string) { send(actionMsg(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(actionMsg(event.Key)) }),
 		ui.MenubarMenu("view", "View", []ui.MenuItem{
 			{Key: "command-palette", Label: "Command Palette", Shortcut: "Ctrl+Shift+P"},
 			{Key: "terminal", Label: "Terminal", Shortcut: "Ctrl+`", Leading: ui.Icon(lucide.Terminal).Size(16)},
-		}).OnAction(func(key string) { send(actionMsg(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(actionMsg(event.Key)) }),
 		ui.MenubarMenu("help", "Help", []ui.MenuItem{
 			{Key: "about", Label: "About FlowUI", Leading: ui.Icon(lucide.Info).Size(16)},
-		}).OnAction(func(key string) { send(actionMsg(key)) }),
+		}).OnActionEvent(func(event ui.MenuActionEvent) { send(actionMsg(event.Key)) }),
 	}).Compact(true).Alt("Application menu")
 }
 

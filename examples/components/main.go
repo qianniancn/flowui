@@ -181,8 +181,8 @@ func catalogTitleBar(application *ui.Application, model Model, send ui.Send[Msg]
 			{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutGrid).Size(16)},
 			ui.MenuSeparator(),
 			{Key: "close", Label: "Close", Shortcut: "Alt+F4", Leading: ui.Icon(lucide.X).Size(16)},
-		}).Style(titlebarMenuStyle).Width(190).OnAction(func(key string) {
-			if key == "close" {
+		}).Style(titlebarMenuStyle).Width(190).OnActionEvent(func(event ui.MenuActionEvent) {
+			if event.Key == "close" {
 				application.Close(catalogWindowKey)
 				return
 			}
@@ -197,16 +197,16 @@ func catalogTitleBar(application *ui.Application, model Model, send ui.Send[Msg]
 			{Key: "overlays", Label: "Overlays", Leading: ui.Icon(lucide.MessageSquareMore).Size(16)},
 			{Key: "tables", Label: "Tables", Leading: ui.Icon(lucide.Table2).Size(16)},
 			{Key: "charts", Label: "Charts", Leading: ui.Icon(lucide.ChartNoAxesCombined).Size(16)},
-		}).Style(titlebarMenuStyle).Width(210).OnAction(navigate)),
+		}).Style(titlebarMenuStyle).Width(210).OnActionEvent(func(event ui.MenuActionEvent) { navigate(event.Key) })),
 		ui.MenubarMenuContent("catalog-window-help", "Help", ui.Menu("catalog-window-help:menu", []ui.MenuItem{
 			{Key: "app-shell", Label: "Application shell", Leading: ui.Icon(lucide.AppWindow).Size(16)},
 			{Key: "about", Label: "About FlowUI", Leading: ui.Icon(lucide.Info).Size(16)},
-		}).Style(titlebarMenuStyle).Width(210).OnAction(func(key string) {
-			if key == "about" {
+		}).Style(titlebarMenuStyle).Width(210).OnActionEvent(func(event ui.MenuActionEvent) {
+			if event.Key == "about" {
 				send(func(model *Model) { model.AboutOpen = true })
 				return
 			}
-			navigate(key)
+			navigate(event.Key)
 		})),
 	}).Compact(true).Alt("Application menu")
 

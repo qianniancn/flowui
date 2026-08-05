@@ -246,12 +246,12 @@ func treeContextMenu(treeKey, target string, renameEnabled bool, send ui.Send[Ms
 		{Key: "rename", Label: "Rename", Shortcut: "F2", Leading: ui.Icon(lucide.Pencil).Size(16), Disabled: !renameEnabled},
 		ui.MenuSeparator(),
 		{Key: "delete", Label: "Delete", Variant: ui.MenuItemDanger, Leading: ui.Icon(lucide.Trash2).Size(16)},
-	}).Compact(true).Style(ui.Width(168)).OnAction(func(action string) {
-		if action == "rename" {
+	}).Compact(true).Style(ui.Width(168)).OnActionEvent(func(event ui.MenuActionEvent) {
+		if event.Key == "rename" {
 			send(Msg{RenameTree: treeKey, RenameRequest: target})
 			return
 		}
-		send(Msg{Action: fmt.Sprintf("%s: %s", action, target)})
+		send(Msg{Action: fmt.Sprintf("%s: %s", event.Key, target)})
 	})
 }
 

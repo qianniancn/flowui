@@ -115,8 +115,8 @@ func memberMenu(value member, model Model, send ui.Send[Msg]) ui.MenuWidget {
 		{Key: "archive", Label: "Archive member", Disabled: true, Leading: ui.Icon(lucide.Archive).Size(16)},
 		{Key: "delete", Label: "Delete member", Variant: ui.MenuItemDanger, Leading: ui.Icon(lucide.Trash2).Size(16)},
 	}).
-		OnAction(func(action string) {
-			send(Msg{Action: fmt.Sprintf("%s: %s", value.name, action)})
+		OnActionEvent(func(event ui.MenuActionEvent) {
+			send(Msg{Action: fmt.Sprintf("%s: %s", value.name, event.Key)})
 		}).
 		OnCheckedChange(func(_ string, checked bool) {
 			send(Msg{ShowEmail: &checked})

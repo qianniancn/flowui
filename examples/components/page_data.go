@@ -90,8 +90,8 @@ func catalogTableRowMenu(row ui.TableRow, send ui.Send[Msg]) ui.MenuWidget {
 		ui.MenuSeparator(),
 		{Key: "disable", Label: "Disable component", Disabled: row.Key == "surface", Leading: ui.Icon(lucide.Ban).Size(16)},
 		{Key: "delete", Label: "Remove from catalog", Variant: ui.MenuItemDanger, Leading: ui.Icon(lucide.Trash2).Size(16)},
-	}).OnAction(func(action string) {
-		send(func(model *Model) { model.LastAction = fmt.Sprintf("%s: %s", row.Label, action) })
+	}).OnActionEvent(func(event ui.MenuActionEvent) {
+		send(func(model *Model) { model.LastAction = fmt.Sprintf("%s: %s", row.Label, event.Key) })
 	})
 }
 

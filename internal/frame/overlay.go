@@ -127,6 +127,9 @@ func RegisterOverlay(ctx *Context, request OverlayRequest) {
 	if request.Layout == nil {
 		panic("flowui: nil overlay layout")
 	}
+	if HiddenLayout(ctx) {
+		return
+	}
 	identity := overlayIdentity{key: request.Key, layer: request.Layer}
 	host := &ctx.overlays
 	if host.policyPass {
@@ -231,7 +234,7 @@ func OverlayNaturallyDisabled(gtx layout.Context) bool {
 // AfterOverlays schedules state cleanup after all dynamically registered
 // overlays have completed their layout.
 func AfterOverlays(ctx *Context, fn func()) {
-	if fn != nil {
+	if fn != nil && !HiddenLayout(ctx) {
 		activeTheme := ctx.theme
 		styles := append([]style.Style(nil), ctx.styles...)
 		inheritedStyles := append([]style.Style(nil), ctx.inheritedStyles...)
@@ -577,6 +580,9 @@ type OverlayPlacement struct {
 
 // TrackOverlayPlacement lays out child under a mutable transform node.
 func TrackOverlayPlacement(ctx *Context, child func() layout.Dimensions) (layout.Dimensions, OverlayPlacement) {
+	if HiddenLayout(ctx) {
+		return child(), OverlayPlacement{}
+	}
 	host, parent, node := beginOverlayPlacement(ctx)
 	defer func() { host.current = parent }()
 	return child(), OverlayPlacement{host: host, index: node}
@@ -585,6 +591,9 @@ func TrackOverlayPlacement(ctx *Context, child func() layout.Dimensions) (layout
 // TrackWidgetPlacement lays out a Widget under a mutable transform node
 // without requiring a per-call closure.
 func TrackWidgetPlacement(ctx *Context, gtx layout.Context, child Widget) (layout.Dimensions, OverlayPlacement) {
+	if HiddenLayout(ctx) {
+		return child.Layout(ctx, gtx), OverlayPlacement{}
+	}
 	host, parent, node := beginOverlayPlacement(ctx)
 	defer func() { host.current = parent }()
 	return child.Layout(ctx, gtx), OverlayPlacement{host: host, index: node}

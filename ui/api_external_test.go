@@ -15,6 +15,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/ui"
 )
@@ -60,6 +61,7 @@ func TestStyleBackedWidgetsExposeStyleMethod(t *testing.T) {
 		"DatePicker":        reflect.TypeFor[ui.DatePickerWidget](),
 		"DateRangePicker":   reflect.TypeFor[ui.DateRangePickerWidget](),
 		"Description":       reflect.TypeFor[ui.DescriptionWidget](),
+		"DockLayout":        reflect.TypeFor[ui.DockLayoutWidget](),
 		"Dropdown":          reflect.TypeFor[ui.DropdownWidget](),
 		"Input":             reflect.TypeFor[ui.InputWidget](),
 		"InputGroup":        reflect.TypeFor[ui.InputGroupWidget](),
@@ -71,6 +73,7 @@ func TestStyleBackedWidgetsExposeStyleMethod(t *testing.T) {
 		"Meter":             reflect.TypeFor[ui.MeterWidget](),
 		"Modal":             reflect.TypeFor[ui.ModalWidget](),
 		"Pagination":        reflect.TypeFor[ui.PaginationWidget](),
+		"PanelHost":         reflect.TypeFor[ui.PanelHostWidget](),
 		"PieChart":          reflect.TypeFor[ui.PieChartWidget](),
 		"Popover":           reflect.TypeFor[ui.PopoverWidget](),
 		"ProgressBar":       reflect.TypeFor[ui.ProgressBarWidget](),
@@ -243,7 +246,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 		Key: "member", Label: "Member",
 		Cells: []ui.TableCell{{Text: "Member"}, {Content: ui.Input("member-status", "Active"), Interactive: true}},
 	}}
-	tabs := []ui.TabItem{{Key: "general", Label: "General", Panel: ui.Text("Panel")}}
+	tabs := []ui.TabItem{{Key: "general", Label: "General", Icon: lucide.Settings, Content: ui.Text("General"), Panel: ui.Text("Panel")}}
 	saveCommand := ui.NewCommand("save-command", "Save").
 		Icon(ui.Icon(lucide.Save).Size(16)).
 		Shortcut(ui.KeyShortcut("S", ui.ShortcutPrimary)).
@@ -572,7 +575,27 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			BorderColor(ui.Color(color.NRGBA{A: 0xff})),
 		),
 		ui.Surface(
-			ui.Tabs("settings", "general", tabs).Variant(ui.TabsSecondary),
+			ui.Tabs("settings", "general", tabs).
+				Variant(ui.TabsSecondary).
+				Size(ui.TabsLarge).
+				Leading(ui.Icon(lucide.LayoutDashboard).Size(16)).
+				Trailing(ui.Icon(lucide.Plus).Size(16)).
+				KeepAlive(true).
+				ForceRender(true).
+				DestroyOnHidden(false).
+				Animated(true).
+				AnimationDuration(time.Millisecond).
+				IndicatorAnimationDuration(2*time.Millisecond).
+				PanelTransition(ui.TabsPanelFade).
+				PanelAnimationDuration(3*time.Millisecond).
+				Activation(ui.TabsActivationManual).
+				IndicatorWidth(unit.Dp(24)).
+				IndicatorAlign(ui.TabsIndicatorCenter).
+				OverflowTrigger(ui.Icon(lucide.Ellipsis).Size(16)).
+				MoreLabel("More settings").
+				Centered(true).
+				Placement(ui.TabsEnd).
+				OnClose(func(string) {}),
 		).Variant(ui.SurfaceSecondary).Style(ui.Radius(8)),
 		ui.Collapsible("details", model.open, "Details", ui.Text("More information")).
 			Leading(ui.Icon(lucide.Info).Size(16)).
@@ -649,6 +672,20 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Label("Resize panes").
 			OnRatioChange(func(float32) {}).
 			Disabled(false),
+		ui.PanelHost("facade-panel-host", "editor", []ui.PanelItem{
+			{Key: "editor", Content: ui.Text("Editor")},
+			{Key: "output", Content: ui.Text("Output")},
+		}).
+			KeepAlive(true).
+			ForceRender(true).
+			DestroyOnHidden(false),
+		ui.DockLayout("facade-dock", ui.DockSplit("facade-root", ui.DockHorizontal,
+			ui.DockPanel("facade-left", ui.Text("Left")),
+			ui.DockPanel("facade-right", ui.Text("Right")),
+		).Ratio(.3)).
+			DefaultSnapshot(ui.DockLayoutSnapshot{Ratios: map[string]float32{"facade-root": .3}}).
+			MaximizedKey("").
+			KeepAlive(true),
 		ui.StatusBar(ui.Text("Ready"), ui.Text("Ln 1, Col 1")),
 		ui.Table("members", tableColumns, tableRows).
 			Variant(ui.TableSecondary).
@@ -889,6 +926,29 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 
 func TestPublicFacadeImportContract(t *testing.T) {
 	_ = ui.WindowTitleBarSupported()
+	workbench := ui.NewWorkbenchController(ui.NewWorkbenchState([]ui.WorkbenchGroup{{
+		Key:  "editor",
+		Tabs: []ui.WorkbenchTab{{Key: "main.go", Title: "main.go", Closable: true}},
+	}}))
+	_ = workbench.Commands()
+	_ = workbench.CommandScope(ui.Text("Editor"))
+	_ = workbench.BindTabs("editor", ui.Tabs("editor-tabs", "main.go", nil))
+	_ = workbench.BindPanel("editor", ui.PanelHost("editor-panels", "main.go", nil))
+	_ = workbench.BindDock(ui.DockLayout("editor-dock", ui.DockPanel("editor", ui.Text("Editor"))))
+	encodedWorkbench, err := ui.MarshalWorkbenchSnapshot(workbench.Snapshot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ui.UnmarshalWorkbenchSnapshot(encodedWorkbench); err != nil {
+		t.Fatal(err)
+	}
+	encodedDock, err := ui.MarshalDockLayoutSnapshot(ui.DockLayoutSnapshot{Version: ui.DockSnapshotVersion})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ui.UnmarshalDockLayoutSnapshot(encodedDock); err != nil {
+		t.Fatal(err)
+	}
 	program := ui.Program[facadeModel, facadeMsg]{
 		Init:   func() (facadeModel, ui.Cmd[facadeMsg]) { return facadeModel{}, nil },
 		Update: func(*facadeModel, facadeMsg) ui.Cmd[facadeMsg] { return nil },

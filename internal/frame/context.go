@@ -3,12 +3,15 @@ package frame
 import (
 	"image"
 	"image/color"
+	"maps"
 
 	"gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/input"
 	"gioui.org/io/semantic"
 	"gioui.org/io/system"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/qianniancn/flowui/internal/locale"
@@ -28,6 +31,7 @@ type Context struct {
 	themeGeneration              uint64
 	language                     locale.Language
 	states                       state.Store
+	retentionScopes              []string
 	keys                         state.Keys
 	exclusive                    state.Exclusive
 	focus                        state.Focus
@@ -51,6 +55,37 @@ type Context struct {
 	overlays                     overlayHost
 	styles                       []style.Style
 	inheritedStyles              []style.Style
+	hiddenLayoutDepth            int
+	semantics                    []SemanticNode
+}
+
+// SemanticRole identifies a framework-level role that Gio's semantic package
+// does not model yet. Widgets still emit Gio semantic operations for existing
+// clients; this additive registry carries relationships such as Tab -> Panel.
+type SemanticRole uint8
+
+const (
+	SemanticUnknown SemanticRole = iota
+	SemanticTabList
+	SemanticTab
+	SemanticTabPanel
+)
+
+// SemanticNode is the normalized semantic description registered during a
+// frame. Key is a stable FlowUI identity. Controls links a Tab to its panel;
+// Owner links a Tab to its list or a TabPanel to its owning list.
+type SemanticNode struct {
+	Key         string
+	Role        SemanticRole
+	Label       string
+	Description string
+	Controls    string
+	Owner       string
+	Selected    bool
+	Disabled    bool
+	Hidden      bool
+	PosInSet    int
+	SetSize     int
 }
 
 // New creates a per-window frame context. Application state remains in the
@@ -190,13 +225,81 @@ func ActiveLanguage(ctx *Context) locale.Language {
 
 // Invalidate asks Gio to draw another frame.
 func (ctx *Context) Invalidate() {
+	if ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	if ctx.window != nil {
 		ctx.window.Invalidate()
 	}
 }
 
+// PushHiddenLayout marks a subtree as a state-initialization pass. Hidden
+// layouts receive a private operation stream and disabled input, while their
+// frame state can still be retained under the surrounding lifecycle scope.
+// The marker also prevents focus, field-association, exclusive-action and
+// overlay registrations from escaping into the visible frame.
+func PushHiddenLayout(ctx *Context) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	previous := ctx.hiddenLayoutDepth
+	ctx.hiddenLayoutDepth++
+	return func() {
+		ctx.hiddenLayoutDepth = previous
+	}
+}
+
+// LayoutHidden lays out a widget to initialize or retain its state without
+// painting it or exposing it to input and semantics. A non-empty scope keeps
+// identities observed by the hidden widget alive across later frames.
+func LayoutHidden(ctx *Context, gtx layout.Context, scope string, child Widget) layout.Dimensions {
+	if ctx == nil || child == nil {
+		return layout.Dimensions{}
+	}
+	var hiddenOps op.Ops
+	hiddenGtx := gtx
+	hiddenGtx.Ops = &hiddenOps
+	hiddenGtx.Source = input.Source{}
+	hiddenGtx = hiddenGtx.Disabled()
+	restoreHidden := PushHiddenLayout(ctx)
+	defer restoreHidden()
+	if scope != "" {
+		restoreRetention := PushStateRetention(ctx, scope)
+		defer restoreRetention()
+	}
+	return child.Layout(ctx, hiddenGtx)
+}
+
+// HiddenLayout reports whether the current widget is being laid out only to
+// initialize hidden state. It is internal-facing but useful to composite
+// components that need to suppress visible-only side effects.
+func HiddenLayout(ctx *Context) bool {
+	return ctx != nil && ctx.hiddenLayoutDepth > 0
+}
+
+// PushMeasurement isolates explicit key claims made by a fallback measurement
+// layout. The measured widget may be laid out again in the same frame, so its
+// temporary claims must not collide with the real paint pass.
+func PushMeasurement(ctx *Context) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	previous := ctx.keys.Frame()
+	if previous == nil {
+		ctx.keys.BeginFrame()
+		previous = ctx.keys.Frame()
+	}
+	snapshot := make(map[string]state.Kind, len(previous))
+	maps.Copy(snapshot, previous)
+	clear(previous)
+	return func() {
+		clear(previous)
+		maps.Copy(previous, snapshot)
+	}
+}
+
 func PerformWindowActions(ctx *Context, actions system.Action) {
-	if ctx != nil && ctx.window != nil && actions != 0 {
+	if ctx != nil && ctx.hiddenLayoutDepth == 0 && ctx.window != nil && actions != 0 {
 		ctx.window.Perform(actions)
 	}
 }
@@ -212,7 +315,7 @@ func SetWindowCloseRequest(ctx *Context, request func()) {
 // RequestWindowClose routes a client-side close control through the
 // application lifecycle. It reports whether a callback was installed.
 func RequestWindowClose(ctx *Context) bool {
-	if ctx == nil || ctx.requestWindowClose == nil {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 || ctx.requestWindowClose == nil {
 		return false
 	}
 	ctx.requestWindowClose()
@@ -225,10 +328,36 @@ func BeginFrame(ctx *Context) {
 	ctx.keys.BeginFrame()
 	ctx.exclusive.BeginFrame()
 	ctx.focus.BeginFrame()
+	ctx.semantics = ctx.semantics[:0]
 	ctx.fieldLabels, ctx.previousLabels = rotateStringMap(ctx.previousLabels, ctx.fieldLabels)
 	ctx.fieldDescriptions, ctx.previousDescriptions = rotateStringMap(ctx.previousDescriptions, ctx.fieldDescriptions)
 	ctx.preparedLabels, ctx.previousPreparedLabels = rotateSet(ctx.previousPreparedLabels, ctx.preparedLabels)
 	ctx.preparedDescriptions, ctx.previousPreparedDescriptions = rotateSet(ctx.previousPreparedDescriptions, ctx.preparedDescriptions)
+}
+
+// RegisterSemantic records a framework-level semantic role for the current
+// frame. Hidden layout passes are deliberately excluded so inactive panels do
+// not remain focusable or visible to assistive technology.
+func RegisterSemantic(ctx *Context, node SemanticNode) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 || node.Key == "" || node.Role == SemanticUnknown {
+		return
+	}
+	for index := range ctx.semantics {
+		if ctx.semantics[index].Key == node.Key {
+			ctx.semantics[index] = node
+			return
+		}
+	}
+	ctx.semantics = append(ctx.semantics, node)
+}
+
+// Semantics returns a snapshot of the framework-level semantic registry for
+// the current frame. The returned slice can be modified by the caller.
+func Semantics(ctx *Context) []SemanticNode {
+	if ctx == nil {
+		return nil
+	}
+	return append([]SemanticNode(nil), ctx.semantics...)
 }
 
 func rotateStringMap(current, previous map[string]string) (map[string]string, map[string]string) {
@@ -281,6 +410,9 @@ func (ctx *Context) RequestFocus(tag event.Tag) {
 }
 
 func RequestFocusVisible(ctx *Context, tag event.Tag, visible bool) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	origin := state.FocusOriginKeyboard
 	if !visible {
 		origin = state.FocusOriginPointer
@@ -315,6 +447,9 @@ func PushFocusCollector(ctx *Context, collector *FocusCollector) func() {
 }
 
 func registerCollectedFocus(ctx *Context, tag event.Tag, enabled bool) {
+	if ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	if ctx.focusCollector != nil && tag != nil && enabled {
 		ctx.focusCollector.Targets = append(ctx.focusCollector.Targets, tag)
 	}
@@ -329,6 +464,9 @@ func PushFocusGroup(ctx *Context, group *FocusGroup) func() {
 }
 
 func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool) {
+	if ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	registerCollectedFocus(ctx, tag, enabled)
 	if ctx.focusGroup == nil || tag == nil || !enabled {
 		return
@@ -337,6 +475,9 @@ func RegisterFocusGroupItem(ctx *Context, tag event.Tag, enabled bool) {
 }
 
 func FocusVisible(ctx *Context, tag event.Tag, focused bool) bool {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return false
+	}
 	return ctx.focus.Observe(tag, focused)
 }
 
@@ -351,6 +492,9 @@ type fieldFocusTarget struct {
 }
 
 func RegisterFieldFocus(ctx *Context, key string, tag event.Tag, enabled bool) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	if ctx.fieldFocus == nil {
 		ctx.fieldFocus = make(map[string]fieldFocusTarget)
 	}
@@ -370,6 +514,9 @@ func RequestFieldFocusVisible(ctx *Context, key string, visible bool) {
 }
 
 func RegisterFieldLabel(ctx *Context, key, label string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	if ctx.fieldLabels == nil {
 		ctx.fieldLabels = make(map[string]string)
 	}
@@ -377,6 +524,9 @@ func RegisterFieldLabel(ctx *Context, key, label string) {
 }
 
 func PrepareFieldLabel(ctx *Context, key, label string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	RegisterFieldLabel(ctx, key, label)
 	if ctx.preparedLabels == nil {
 		ctx.preparedLabels = make(map[string]struct{})
@@ -395,6 +545,9 @@ func FieldLabel(ctx *Context, key string) string {
 }
 
 func RegisterFieldDescription(ctx *Context, key, description string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	if ctx.fieldDescriptions == nil {
 		ctx.fieldDescriptions = make(map[string]string)
 	}
@@ -402,6 +555,9 @@ func RegisterFieldDescription(ctx *Context, key, description string) {
 }
 
 func PrepareFieldDescription(ctx *Context, key, description string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	RegisterFieldDescription(ctx, key, description)
 	if ctx.preparedDescriptions == nil {
 		ctx.preparedDescriptions = make(map[string]struct{})
@@ -443,12 +599,18 @@ func WithFieldSemantics(ctx *Context, key string, child layout.Widget) layout.Wi
 }
 
 func FocusOnPress(ctx *Context, tag event.Tag, history []widget.Press, before int) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	ctx.focus.OnPress(tag, history, before)
 }
 
 // PreserveFocus prevents the frame's global pointer catcher from clearing the
 // current focus after a pointer-only overlay surface consumed a press.
 func PreserveFocus(ctx *Context) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	ctx.focus.Preserve()
 }
 
@@ -602,11 +764,86 @@ const (
 )
 
 func UseState[T any](ctx *Context, key, slot string) *T {
-	return state.Use[T](&ctx.states, state.Identity{Key: key, Slot: slot}, nil)
+	id := state.Identity{Key: key, Slot: slot}
+	value := state.Use[T](&ctx.states, id, nil)
+	ctx.recordStateRetention(id)
+	return value
 }
 
 func UseStateWith[T any](ctx *Context, key, slot string, factory func() *T) *T {
-	return state.Use(&ctx.states, state.Identity{Key: key, Slot: slot}, factory)
+	id := state.Identity{Key: key, Slot: slot}
+	value := state.Use(&ctx.states, id, factory)
+	ctx.recordStateRetention(id)
+	return value
+}
+
+// PushStateRetention makes states used by descendant widgets part of a named
+// lifecycle scope. The scope remembers identities observed while mounted and
+// can keep them alive while the subtree is hidden.
+func PushStateRetention(ctx *Context, scope string) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	ctx.states.Retain(scope)
+	previous := len(ctx.retentionScopes)
+	ctx.retentionScopes = append(ctx.retentionScopes, scope)
+	return func() {
+		ctx.retentionScopes = ctx.retentionScopes[:previous]
+	}
+}
+
+// StateRetentionDepth reports the number of active lifecycle scopes. Composite
+// widgets can capture the depth before opening their own scopes and preserve
+// only outer owners while delegating lifecycle ownership to child widgets.
+func StateRetentionDepth(ctx *Context) int {
+	if ctx == nil {
+		return 0
+	}
+	return len(ctx.retentionScopes)
+}
+
+// PushStateRetentionBoundary temporarily excludes scopes created at or after
+// depth. It is useful when a composite child owns a separate lifecycle: outer
+// scopes remain intact while the child's state is not retained by stale parent
+// scopes. The caller must pass a depth captured from StateRetentionDepth.
+func PushStateRetentionBoundary(ctx *Context, depth int) func() {
+	if ctx == nil {
+		return func() {}
+	}
+	if depth < 0 {
+		depth = 0
+	}
+	if depth > len(ctx.retentionScopes) {
+		depth = len(ctx.retentionScopes)
+	}
+	previous := ctx.retentionScopes
+	ctx.retentionScopes = previous[:depth:depth]
+	return func() {
+		ctx.retentionScopes = previous
+	}
+}
+
+// RetainState keeps the identities previously observed in scope alive for the
+// current frame without laying out the hidden subtree.
+func RetainState(ctx *Context, scope string) {
+	if ctx == nil {
+		return
+	}
+	ctx.states.Retain(scope)
+}
+
+// ReleaseStateRetention forgets the identities associated with scope.
+func ReleaseStateRetention(ctx *Context, scope string) {
+	if ctx == nil {
+		return
+	}
+	ctx.states.ReleaseRetention(scope)
+}
+
+func (ctx *Context) recordStateRetention(id state.Identity) {
+	for _, scope := range ctx.retentionScopes {
+		ctx.states.RecordRetention(scope, id)
+	}
 }
 
 // StateStore returns the underlying state store for advanced use cases such as
@@ -639,18 +876,30 @@ func StateLen(ctx *Context) int {
 // exclusive groups, allowing applications to control their lifecycle independently
 // and support nested or stacked scenarios.
 func RegisterExclusive(ctx *Context, group, key string, close func()) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	ctx.exclusive.Register(group, key, close)
 }
 
 func ActivateExclusive(ctx *Context, group, key string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	ctx.exclusive.Activate(group, key)
 }
 
 func ReleaseExclusive(ctx *Context, group, key string) {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return
+	}
 	ctx.exclusive.Release(group, key)
 }
 
 func ActiveExclusive(ctx *Context, group string) string {
+	if ctx == nil || ctx.hiddenLayoutDepth > 0 {
+		return ""
+	}
 	return ctx.exclusive.Active(group)
 }
 

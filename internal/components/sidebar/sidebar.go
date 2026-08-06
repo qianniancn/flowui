@@ -46,7 +46,15 @@ type Widget struct {
 	collapsed      bool
 	width          unit.Dp
 	collapsedWidth unit.Dp
+	padding        unit.Dp
+	hasPadding     bool
+	itemGap        unit.Dp
+	hasItemGap     bool
 	itemHeight     unit.Dp
+	itemPaddingX   unit.Dp
+	hasItemPadding bool
+	itemRadius     unit.Dp
+	hasItemRadius  bool
 	customStyle    flowstyle.Style
 }
 
@@ -99,11 +107,51 @@ func (w Widget) CollapsedWidth(dp int) Widget {
 	return w
 }
 
+// Padding overrides the outer inset around sidebar content.
+func (w Widget) Padding(dp int) Widget {
+	if dp < 0 {
+		panic("flowui: sidebar padding cannot be negative")
+	}
+	w.padding = unit.Dp(dp)
+	w.hasPadding = true
+	return w
+}
+
+// ItemGap overrides the vertical gap between navigation items.
+func (w Widget) ItemGap(dp int) Widget {
+	if dp < 0 {
+		panic("flowui: sidebar item gap cannot be negative")
+	}
+	w.itemGap = unit.Dp(dp)
+	w.hasItemGap = true
+	return w
+}
+
 func (w Widget) ItemHeight(dp int) Widget {
 	if dp <= 0 {
 		panic("flowui: sidebar item height must be positive")
 	}
 	w.itemHeight = unit.Dp(dp)
+	return w
+}
+
+// ItemPaddingX overrides horizontal padding inside each navigation item.
+func (w Widget) ItemPaddingX(dp int) Widget {
+	if dp < 0 {
+		panic("flowui: sidebar item padding cannot be negative")
+	}
+	w.itemPaddingX = unit.Dp(dp)
+	w.hasItemPadding = true
+	return w
+}
+
+// ItemRadius overrides the corner radius of item hover and selected fills.
+func (w Widget) ItemRadius(dp int) Widget {
+	if dp < 0 {
+		panic("flowui: sidebar item radius cannot be negative")
+	}
+	w.itemRadius = unit.Dp(dp)
+	w.hasItemRadius = true
 	return w
 }
 

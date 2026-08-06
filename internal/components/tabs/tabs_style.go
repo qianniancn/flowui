@@ -39,6 +39,10 @@ func tabsSizeStyleFor(theme *theme.Theme, size TabsSize) tabsSizeStyle {
 		style.height = theme.Components.Tabs.SmallTabHeight
 		style.paddingX = theme.Components.Tabs.SmallTabPaddingX
 		style.weight = font.Normal
+	} else if size == TabsLarge {
+		style.height = theme.Components.Tabs.LargeTabHeight
+		style.paddingX = theme.Components.Tabs.LargeTabPaddingX
+		style.textSize = theme.Components.Tabs.LargeTextSize
 	}
 	return style
 }

@@ -24,10 +24,12 @@ const (
 )
 
 type Widget struct {
-	data     []byte
-	size     unit.Dp
-	color    color.NRGBA
-	hasColor bool
+	data        []byte
+	size        unit.Dp
+	color       color.NRGBA
+	hasColor    bool
+	baseline    unit.Dp
+	hasBaseline bool
 }
 
 type cacheKey struct {
@@ -70,6 +72,15 @@ func (w Widget) Color(col color.NRGBA) Widget {
 	return w
 }
 
+// Baseline sets the distance from the bottom of the icon box to its baseline.
+// Gio reports baselines from the bottom, so a value of zero places the
+// baseline on the bottom edge. The value is clamped to the laid out height.
+func (w Widget) Baseline(dp float32) Widget {
+	w.baseline = unit.Dp(max(dp, 0))
+	w.hasBaseline = true
+	return w
+}
+
 // LucideSizeForStroke returns the icon size that preserves Lucide's standard
 // 2-unit stroke in its 24-unit viewBox.
 func LucideSizeForStroke(gtx layout.Context, stroke unit.Dp) int {
@@ -98,7 +109,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 	stack := op.Offset(offset).Push(gtx.Ops)
 	Layout(w.data, iconGtx, col)
 	stack.Pop()
-	return layout.Dimensions{Size: outerSize}
+	return layout.Dimensions{Size: outerSize, Baseline: w.baselineFor(gtx, outerSize)}
 }
 
 // Measure reports the icon's constrained bounds without decoding or painting
@@ -112,7 +123,15 @@ func (w Widget) Measure(_ *frame.Context, gtx layout.Context) layout.Dimensions 
 		size = defaultSize
 	}
 	target := gtx.Dp(size)
-	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(target, target))}
+	measuredSize := gtx.Constraints.Constrain(image.Pt(target, target))
+	return layout.Dimensions{Size: measuredSize, Baseline: w.baselineFor(gtx, measuredSize)}
+}
+
+func (w Widget) baselineFor(gtx layout.Context, size image.Point) int {
+	if !w.hasBaseline {
+		return 0
+	}
+	return min(max(gtx.Dp(w.baseline), 0), size.Y)
 }
 
 // Layout renders IconVG data using the supplied constraints and color.

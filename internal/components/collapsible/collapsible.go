@@ -34,6 +34,7 @@ type Widget struct {
 	trailing           frame.Widget
 	disabled           bool
 	onExpandedChange   func(bool)
+	triggerStyle       flowstyle.Style
 	customStyle        flowstyle.Style
 }
 
@@ -77,6 +78,12 @@ func (w Widget) Disabled(disabled bool) Widget {
 
 func (w Widget) OnExpandedChange(fn func(bool)) Widget {
 	w.onExpandedChange = fn
+	return w
+}
+
+// TriggerStyle customizes the compact button that expands or collapses the section.
+func (w Widget) TriggerStyle(value flowstyle.Style) Widget {
+	w.triggerStyle = value
 	return w
 }
 
@@ -132,7 +139,7 @@ func (w Widget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions
 			Trailing: w.trailing,
 			Content:  w.content,
 			Disabled: w.disabled,
-		}, expanded, disabled)
+		}, expanded, disabled, w.triggerStyle)
 	}))
 }
 
@@ -237,7 +244,7 @@ func (g GroupWidget) layout(ctx *frame.Context, gtx layout.Context, state *colla
 			defer restore()
 			dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 				disabled := g.disabled || item.Disabled || !gtx.Enabled()
-				return layoutItem(ctx, gtx, state.itemFor(item.Key), item, slices.Contains(g.expandedKeys, item.Key), disabled)
+				return layoutItem(ctx, gtx, state.itemFor(item.Key), item, slices.Contains(g.expandedKeys, item.Key), disabled, flowstyle.Style{})
 			})
 			dimensions[index], placements[index] = dims, placement
 			return dims

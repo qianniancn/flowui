@@ -54,9 +54,10 @@ func drawTabIndicator(gtx layout.Context, theme *theme.Theme, rect image.Rectang
 		}
 		return
 	}
-	radius := min(max(gtx.Dp(theme.Components.Tabs.IndicatorRadius), 1), min(rect.Dx(), rect.Dy())/2)
+	radiusToken := theme.Components.Tabs.IndicatorRadius
+	radius := min(max(gtx.Dp(radiusToken), 1), min(rect.Dx(), rect.Dy())/2)
 	if theme.Palette.SurfaceShadow.A != 0 {
-		shapeRadius := theme.Components.Tabs.IndicatorRadius
+		shapeRadius := radiusToken
 		render.DrawShadow(gtx, rect, render.RoundedShadowCorners(shapeRadius, shapeRadius, shapeRadius, shapeRadius), render.ThemeShadow(theme.Shadows.Surface, theme.Palette.SurfaceShadow, 1))
 	}
 	paint.FillShape(gtx.Ops, col, clip.UniformRRect(rect, radius).Op(gtx.Ops))
@@ -70,7 +71,8 @@ func drawTabFocus(gtx layout.Context, theme *theme.Theme, size image.Point, vari
 	rect := image.Rectangle{Max: size}.Inset(max(width/2, 1))
 	radius := 0
 	if variant != TabsSecondary {
-		radius = min(max(gtx.Dp(theme.Components.Tabs.IndicatorRadius), 1), min(rect.Dx(), rect.Dy())/2)
+		radiusToken := theme.Components.Tabs.IndicatorRadius
+		radius = min(max(gtx.Dp(radiusToken), 1), min(rect.Dx(), rect.Dy())/2)
 	}
 	col.A = byte(float32(col.A)*opacity + 0.5)
 	stroke := clip.Stroke{
@@ -205,5 +207,17 @@ func drawTabsChevron(gtx layout.Context, theme *theme.Theme, size image.Point, o
 	iconGtx := gtx
 	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
 	icon.Layout(data, iconGtx, col)
+	offset.Pop()
+}
+
+func drawTabClose(gtx layout.Context, theme *theme.Theme, size image.Point, col color.NRGBA) {
+	diameter := min(size.X, size.Y)
+	if diameter <= 0 {
+		return
+	}
+	offset := op.Offset(image.Pt((size.X-diameter)/2, (size.Y-diameter)/2)).Push(gtx.Ops)
+	iconGtx := gtx
+	iconGtx.Constraints = layout.Exact(image.Pt(diameter, diameter))
+	icon.Layout(lucide.X, iconGtx, col)
 	offset.Pop()
 }

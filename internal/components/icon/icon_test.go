@@ -26,6 +26,32 @@ func TestIconUsesDefaultAndConfiguredSizes(t *testing.T) {
 	}
 }
 
+func TestIconBaselineUsesConfiguredDistanceFromBottom(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	gtx := iconTestContext()
+	gtx.Constraints = layout.Exact(image.Pt(13, 13))
+
+	dims := New(testIcon).Baseline(1).Layout(ctx, gtx)
+	if dims.Baseline != 1 {
+		t.Fatalf("icon baseline = %d, want 1", dims.Baseline)
+	}
+
+	if measured := New(testIcon).Baseline(1).Measure(ctx, gtx); measured.Baseline != 1 {
+		t.Fatalf("measured icon baseline = %d, want 1", measured.Baseline)
+	}
+}
+
+func TestIconBaselineClampsToHeight(t *testing.T) {
+	ctx := frame.New(nil, nil, locale.LanguageEnglish)
+	gtx := iconTestContext()
+	gtx.Constraints = layout.Exact(image.Pt(13, 13))
+
+	dims := New(testIcon).Baseline(20).Layout(ctx, gtx)
+	if dims.Baseline != 13 {
+		t.Fatalf("icon baseline = %d, want 13", dims.Baseline)
+	}
+}
+
 func TestNilIconHasNoLayout(t *testing.T) {
 	dims := New(nil).Layout(frame.New(nil, nil, locale.LanguageEnglish), iconTestContext())
 	if dims.Size != (image.Point{}) {

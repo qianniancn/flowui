@@ -17,9 +17,10 @@ import (
 	"github.com/qianniancn/flowui/internal/components/icon"
 	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
-func layoutItem(ctx *frame.Context, gtx layout.Context, state *collapsibleItemState, item Item, expanded, disabled bool) layout.Dimensions {
+func layoutItem(ctx *frame.Context, gtx layout.Context, state *collapsibleItemState, item Item, expanded, disabled bool, triggerStyle flowstyle.Style) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.Collapsible
 	target := float32(0)
@@ -47,7 +48,8 @@ func layoutItem(ctx *frame.Context, gtx layout.Context, state *collapsibleItemSt
 		Label(item.Label).
 		Variant(variant).
 		Disabled(disabled).
-		FullWidth()
+		FullWidth().
+		Style(triggerStyle)
 
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	var triggerDims, contentDims layout.Dimensions

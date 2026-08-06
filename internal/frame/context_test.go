@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"gioui.org/app"
+	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/locale"
 	"github.com/qianniancn/flowui/internal/style"
@@ -106,6 +108,20 @@ func TestContextPublicFocusHelpersPreserveModality(t *testing.T) {
 	}
 }
 
+func TestSemanticRegistryExcludesHiddenLayout(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageEnglish)
+	BeginFrame(ctx)
+	RegisterSemantic(ctx, SemanticNode{Key: "tabs", Role: SemanticTabList, Label: "Tabs"})
+	LayoutHidden(ctx, layout.Context{Ops: new(op.Ops)}, "hidden", WidgetFunc(func(ctx *Context, _ layout.Context) layout.Dimensions {
+		RegisterSemantic(ctx, SemanticNode{Key: "hidden", Role: SemanticTabPanel, Label: "Hidden"})
+		return layout.Dimensions{}
+	}))
+	nodes := Semantics(ctx)
+	if len(nodes) != 1 || nodes[0].Key != "tabs" {
+		t.Fatalf("semantic registry = %#v", nodes)
+	}
+}
+
 func TestContextScopesKeysWithSeparators(t *testing.T) {
 	ctx := New(nil, nil, locale.LanguageAuto)
 	BeginFrame(ctx)
@@ -147,6 +163,77 @@ func TestContextSweepsUnmountedInteractionState(t *testing.T) {
 	EndFrame(ctx)
 	if StateLen(ctx) != 0 {
 		t.Fatalf("interaction states = %d, want 0", StateLen(ctx))
+	}
+}
+
+func TestLayoutHiddenRetainsStateWithoutVisibleServices(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	BeginFrame(ctx)
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops}
+	tag := new(int)
+	child := WidgetFunc(func(ctx *Context, gtx layout.Context) layout.Dimensions {
+		if gtx.Source.Enabled() {
+			t.Fatal("hidden layout retained an enabled event source")
+		}
+		RegisterFieldFocus(ctx, "hidden-field", tag, true)
+		RequestFocus(ctx, tag)
+		RegisterOverlay(ctx, OverlayRequest{
+			Key:    "hidden-overlay",
+			Layout: func(layout.Context, image.Rectangle, bool) layout.Dimensions { return layout.Dimensions{} },
+		})
+		UseState[widget.Clickable](ctx, "hidden-control", "probe")
+		return layout.Dimensions{Size: image.Pt(10, 10)}
+	})
+	LayoutHidden(ctx, gtx, "hidden-scope", child)
+	if len(ctx.fieldFocus) != 0 || len(ctx.overlays.requests) != 0 {
+		t.Fatalf("hidden services leaked: fields %d overlays %d", len(ctx.fieldFocus), len(ctx.overlays.requests))
+	}
+	EndFrame(ctx)
+	if _, ok := PeekState[widget.Clickable](ctx, "hidden-control", "probe"); !ok {
+		t.Fatal("hidden layout state was not retained by its scope")
+	}
+
+	BeginFrame(ctx)
+	RetainState(ctx, "hidden-scope")
+	EndFrame(ctx)
+	if _, ok := PeekState[widget.Clickable](ctx, "hidden-control", "probe"); !ok {
+		t.Fatal("retained hidden state was released on the next frame")
+	}
+}
+
+func TestStateRetentionBoundaryKeepsOnlyOuterScopes(t *testing.T) {
+	ctx := New(nil, nil, locale.LanguageAuto)
+	const (
+		outerScope = "outer"
+		innerScope = "inner"
+	)
+
+	BeginFrame(ctx)
+	restoreOuter := PushStateRetention(ctx, outerScope)
+	restoreInner := PushStateRetention(ctx, innerScope)
+	if depth := StateRetentionDepth(ctx); depth != 2 {
+		t.Fatalf("retention depth = %d, want 2", depth)
+	}
+	restoreBoundary := PushStateRetentionBoundary(ctx, 1)
+	UseState[widget.Clickable](ctx, "boundary-control", "probe")
+	restoreBoundary()
+	restoreInner()
+	restoreOuter()
+	EndFrame(ctx)
+
+	BeginFrame(ctx)
+	RetainState(ctx, outerScope)
+	EndFrame(ctx)
+	if _, ok := PeekState[widget.Clickable](ctx, "boundary-control", "probe"); !ok {
+		t.Fatal("outer retention scope did not keep boundary state")
+	}
+
+	BeginFrame(ctx)
+	RetainState(ctx, innerScope)
+	EndFrame(ctx)
+	if _, ok := PeekState[widget.Clickable](ctx, "boundary-control", "probe"); ok {
+		t.Fatal("inner retention scope retained state across its boundary")
 	}
 }
 

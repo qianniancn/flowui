@@ -33,11 +33,24 @@ type tabsState struct {
 	keyFilters       []event.Filter
 	previous         widget.Clickable
 	next             widget.Clickable
+	add              widget.Clickable
 	indicator        tabsIndicatorState
 	disclosure       disclosure.Binding[string]
 	selectedKey      string
 	selectionSet     bool
 	selectionPending bool
+	listLayoutSet    bool
+	lastListSize     image.Point
+	lastListAxis     TabsOrientation
+	lastListCount    int
+	lastListWidths   []int
+	retainedPanels   map[string]struct{}
+	renderedPanels   map[string]struct{}
+	forceRender      bool
+	destroyOnHidden  bool
+	editingKey       string
+	panelKey         string
+	panelOpacity     animation.FloatTransition
 }
 
 // tabsDisclosureCfg builds a disclosure.Config from the widget's selected-key fields.
@@ -95,6 +108,35 @@ func (s *tabsState) checkItems(items []TabItem) {
 	}
 }
 
+// normalizeSelection keeps the effective selection usable when a controlled
+// value points at a removed or disabled item. The requested fallback is still
+// sent through the disclosure binding so controlled callers can update their
+// model; the fallback is used optimistically for the current frame.
+func (s *tabsState) normalizeSelection(widget TabsWidget, selectedKey string) string {
+	index := tabsIndexByKey(widget.items, selectedKey)
+	if index >= 0 && !widget.items[index].Disabled {
+		return selectedKey
+	}
+	fallback, ok := tabsFirstEnabled(widget.items)
+	if !ok {
+		s.selectionPending = false
+		s.selectedKey = ""
+		return ""
+	}
+	if index >= 0 {
+		fallback, ok = tabsCloseFallback(widget.items, index)
+		if !ok {
+			fallback, _ = tabsFirstEnabled(widget.items)
+		}
+	}
+	effective := s.requestSelectedKey(widget, widget.items[fallback].Key)
+	if widget.hasSelectedKey {
+		s.selectedKey = widget.items[fallback].Key
+		return s.selectedKey
+	}
+	return effective
+}
+
 func (s *tabsState) syncSelection(items []TabItem, selectedKey string) {
 	if s.selectionSet && s.selectedKey == selectedKey {
 		return
@@ -126,6 +168,31 @@ func (s *tabsState) ensureSelectionVisible(items []TabItem, selectedKey string) 
 	return previous.First != s.list.Position.First || previous.Offset != s.list.Position.Offset
 }
 
+// noteListLayout remembers the geometry that controls which items are visible.
+// A changed geometry should re-run selection visibility once, while ordinary
+// scroll-button movement must remain under the user's control.
+func (s *tabsState) noteListLayout(size image.Point, axis TabsOrientation, widths []int, count int) bool {
+	changed := !s.listLayoutSet || s.lastListSize != size || s.lastListAxis != axis || s.lastListCount != count || !sameTabWidths(s.lastListWidths, widths)
+	s.listLayoutSet = true
+	s.lastListSize = size
+	s.lastListAxis = axis
+	s.lastListCount = count
+	s.lastListWidths = append(s.lastListWidths[:0], widths...)
+	return changed
+}
+
+func sameTabWidths(first, second []int) bool {
+	if len(first) != len(second) {
+		return false
+	}
+	for index, width := range first {
+		if second[index] != width {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *tabsState) selectionFullyVisible(index int) bool {
 	position := s.list.Position
 	if position.Count == 0 || index < position.First || index >= position.First+position.Count {
@@ -140,7 +207,7 @@ func (s *tabsState) selectionFullyVisible(index int) bool {
 	return index != position.First+position.Count-1 || position.OffsetLast >= 0
 }
 
-func (s *tabsState) updateKeys(gtx layout.Context, items []TabItem, selectedKey string, orientation TabsOrientation) (string, bool) {
+func (s *tabsState) updateKeys(gtx layout.Context, items []TabItem, selectedKey string, orientation TabsOrientation, activation TabsActivationMode) (string, string, bool) {
 	s.keyFilters = s.keyFilters[:0]
 	for _, item := range items {
 		if item.Disabled {
@@ -148,31 +215,34 @@ func (s *tabsState) updateKeys(gtx layout.Context, items []TabItem, selectedKey 
 		}
 		itemState := s.item(item.Key)
 		tag := &itemState.clickable
+		names := []key.Name{key.NameHome, key.NameEnd}
 		if orientation == TabsVertical {
-			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
-				key.NameDownArrow,
-				key.NameUpArrow,
-				key.NameHome,
-				key.NameEnd,
-			)...)
+			names = append([]key.Name{key.NameDownArrow, key.NameUpArrow}, names...)
 		} else {
-			s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag,
-				key.NameRightArrow,
-				key.NameLeftArrow,
-				key.NameHome,
-				key.NameEnd,
-			)...)
+			names = append([]key.Name{key.NameRightArrow, key.NameLeftArrow}, names...)
 		}
+		if activation == TabsActivationManual {
+			names = append(names, key.NameReturn, key.NameEnter, key.NameSpace)
+		}
+		s.keyFilters = append(s.keyFilters, itemState.keyFilters.Resolve(tag, names...)...)
+		// Workbench-style tab strips conventionally support Ctrl/Cmd+Tab and
+		// Ctrl/Cmd+PageUp/PageDown in addition to the roving arrow keys.
+		s.keyFilters = append(s.keyFilters,
+			key.Filter{Focus: tag, Name: key.NamePageUp, Required: key.ModShortcut},
+			key.Filter{Focus: tag, Name: key.NamePageDown, Required: key.ModShortcut},
+			key.Filter{Focus: tag, Name: key.NameTab, Required: key.ModShortcut},
+		)
 	}
 	if len(s.keyFilters) == 0 {
-		return "", false
+		return "", "", false
 	}
 
 	current := s.focusedIndex(gtx, items)
 	if current < 0 {
 		current = tabsIndexByKey(items, selectedKey)
 	}
-	target := -1
+	selectionTarget := -1
+	focusTarget := -1
 	for {
 		e, ok := gtx.Event(s.keyFilters...)
 		if !ok {
@@ -184,23 +254,45 @@ func (s *tabsState) updateKeys(gtx layout.Context, items []TabItem, selectedKey 
 		}
 		switch event.Name {
 		case key.NameRightArrow, key.NameDownArrow:
-			target, _ = tabsMoveIndex(items, current, 1)
+			current, _ = tabsMoveIndex(items, current, 1)
+			focusTarget = current
 		case key.NameLeftArrow, key.NameUpArrow:
-			target, _ = tabsMoveIndex(items, current, -1)
+			current, _ = tabsMoveIndex(items, current, -1)
+			focusTarget = current
+		case key.NamePageDown, key.NameTab:
+			current, _ = tabsMoveIndex(items, current, 1)
+			focusTarget = current
+		case key.NamePageUp:
+			current, _ = tabsMoveIndex(items, current, -1)
+			focusTarget = current
 		case key.NameHome:
-			target, _ = tabsFirstEnabled(items)
+			current, _ = tabsFirstEnabled(items)
+			focusTarget = current
 		case key.NameEnd:
-			target, _ = tabsLastEnabled(items)
+			current, _ = tabsLastEnabled(items)
+			focusTarget = current
+		case key.NameReturn, key.NameEnter, key.NameSpace:
+			if activation == TabsActivationManual {
+				selectionTarget = current
+				focusTarget = current
+			}
 		}
-		if target >= 0 {
-			current = target
+		if activation == TabsActivationAutomatic && focusTarget >= 0 {
+			selectionTarget = focusTarget
 		}
 	}
-	if target < 0 || items[target].Key == selectedKey {
-		return "", false
+	if focusTarget >= 0 {
+		s.ensureVisible(focusTarget)
 	}
-	s.ensureVisible(target)
-	return items[target].Key, true
+	selectionKey := ""
+	if selectionTarget >= 0 && items[selectionTarget].Key != selectedKey {
+		selectionKey = items[selectionTarget].Key
+	}
+	focusKey := ""
+	if focusTarget >= 0 {
+		focusKey = items[focusTarget].Key
+	}
+	return selectionKey, focusKey, selectionKey != "" || focusKey != ""
 }
 
 func (s *tabsState) focusedIndex(gtx layout.Context, items []TabItem) int {
@@ -257,6 +349,10 @@ func (s *tabsState) canScrollNext(count int) bool {
 
 type tabsItemState struct {
 	clickable   widget.Clickable
+	close       widget.Clickable
+	editor      widget.Editor
+	editReady   bool
+	editFocused bool
 	interaction state.FocusAnimation
 	selection   animation.FloatTransition
 	keyFilters  state.KeyFilterCache
@@ -277,6 +373,10 @@ type tabsIndicatorState struct {
 }
 
 func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientation TabsOrientation, target image.Rectangle, motions ...theme.MotionTheme) image.Rectangle {
+	return s.transitionWithDuration(gtx, key, orientation, target, tabsIndicatorDuration, motions...)
+}
+
+func (s *tabsIndicatorState) transitionWithDuration(gtx layout.Context, key string, orientation TabsOrientation, target image.Rectangle, duration time.Duration, motions ...theme.MotionTheme) image.Rectangle {
 	if key == "" || target.Empty() {
 		s.set = false
 		return image.Rectangle{}
@@ -292,7 +392,7 @@ func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientat
 	}
 
 	if s.key != key {
-		s.from = s.current(gtx, motions...)
+		s.from = s.currentWithDuration(gtx, duration, motions...)
 		s.to = target
 		s.at = gtx.Now
 		s.key = key
@@ -307,14 +407,13 @@ func (s *tabsIndicatorState) transition(gtx layout.Context, key string, orientat
 			s.at = gtx.Now
 		}
 	}
-	return s.current(gtx, motions...)
+	return s.currentWithDuration(gtx, duration, motions...)
 }
 
-func (s *tabsIndicatorState) current(gtx layout.Context, motions ...theme.MotionTheme) image.Rectangle {
+func (s *tabsIndicatorState) currentWithDuration(gtx layout.Context, duration time.Duration, motions ...theme.MotionTheme) image.Rectangle {
 	if s.from == s.to {
 		return s.to
 	}
-	duration := tabsIndicatorDuration
 	if len(motions) > 0 {
 		duration = theme.ResolveMotionDuration(motions[0], duration)
 	}
@@ -338,11 +437,32 @@ func (s *tabsIndicatorState) current(gtx layout.Context, motions ...theme.Motion
 }
 
 func (s *tabsItemState) selectionProgress(gtx layout.Context, selected bool, motions ...theme.MotionTheme) float32 {
+	return s.selectionProgressWithDuration(gtx, selected, tabsColorDuration, motions...)
+}
+
+func (s *tabsItemState) selectionProgressWithDuration(gtx layout.Context, selected bool, duration time.Duration, motions ...theme.MotionTheme) float32 {
 	target := float32(0)
 	if selected {
 		target = 1
 	}
-	return s.selection.Value(gtx, target, tabsColorDuration, animation.EaseSmoothstep, motions...)
+	return s.selection.Value(gtx, target, duration, animation.EaseSmoothstep, motions...)
+}
+
+func (s *tabsState) panelOpacityFor(gtx layout.Context, key string, transition TabsPanelTransition, duration time.Duration, motion theme.MotionTheme) float32 {
+	if transition != TabsPanelFade || key == "" {
+		s.panelKey = key
+		s.panelOpacity.Reset()
+		return 1
+	}
+	if s.panelKey != key {
+		if s.panelKey == "" {
+			s.panelOpacity.Initialize(1, gtx.Now)
+		} else {
+			s.panelOpacity.Set(0, 1, gtx.Now)
+		}
+		s.panelKey = key
+	}
+	return s.panelOpacity.Value(gtx, 1, duration, animation.EaseCubicOut, motion)
 }
 
 func tabsIndexByKey(items []TabItem, key string) int {
@@ -385,6 +505,25 @@ func tabsFirstEnabled(items []TabItem) (int, bool) {
 
 func tabsLastEnabled(items []TabItem) (int, bool) {
 	for index := len(items) - 1; index >= 0; index-- {
+		if !items[index].Disabled {
+			return index, true
+		}
+	}
+	return -1, false
+}
+
+// tabsCloseFallback prefers the next enabled item and then the previous one.
+// It returns false when no other enabled item remains.
+func tabsCloseFallback(items []TabItem, closed int) (int, bool) {
+	if closed < 0 || closed >= len(items) {
+		return tabsFirstEnabled(items)
+	}
+	for index := closed + 1; index < len(items); index++ {
+		if !items[index].Disabled {
+			return index, true
+		}
+	}
+	for index := closed - 1; index >= 0; index-- {
 		if !items[index].Disabled {
 			return index, true
 		}

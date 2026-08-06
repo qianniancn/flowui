@@ -158,8 +158,12 @@ type PieChartTheme = theme.PieChartTheme
 // CandlestickChartTheme contains the layout and series settings for candlestick charts.
 type CandlestickChartTheme = theme.CandlestickChartTheme
 
-// TabsTheme contains the sizing and spacing settings for tabs.
+// TabsTheme contains the sizing, spacing, content, and motion tokens for tabs.
 type TabsTheme = theme.TabsTheme
+
+// WorkbenchTheme contains shell-level sidebar, editor, panel, divider, tab,
+// and density tokens for editor-like workbenches.
+type WorkbenchTheme = theme.WorkbenchTheme
 
 // CollapsibleTheme contains the spacing and animation settings for collapsibles.
 type CollapsibleTheme = theme.CollapsibleTheme

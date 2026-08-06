@@ -74,3 +74,30 @@ func TestStorePeekDoesNotRetainState(t *testing.T) {
 		t.Fatal("Peek retained an unused state")
 	}
 }
+
+func TestStoreRetainsStateByScopeUntilScopeIsReleased(t *testing.T) {
+	var store Store
+	id := Identity{Key: "tabs/account/editor", Slot: "editor"}
+
+	store.BeginFrame()
+	first := Use[frameAwareState](&store, id, nil)
+	store.RecordRetention("tabs/account", id)
+	store.EndFrame()
+
+	store.BeginFrame()
+	store.Retain("tabs/account")
+	store.EndFrame()
+	if store.Len() != 1 {
+		t.Fatalf("retained states = %d, want 1", store.Len())
+	}
+
+	store.BeginFrame()
+	store.ReleaseRetention("tabs/account")
+	store.EndFrame()
+	if store.Len() != 0 {
+		t.Fatalf("released states = %d, want 0", store.Len())
+	}
+	if first.frames != 2 {
+		t.Fatalf("BeginFrame calls = %d, want 2", first.frames)
+	}
+}

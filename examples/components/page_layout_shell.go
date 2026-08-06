@@ -79,10 +79,32 @@ func splitPanePage(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 			catalogPane("Output", ui.Icon(lucide.Terminal).Size(18)),
 		).Vertical().DefaultRatio(.68).MinFirst(180).MinSecond(100).Label("Resize editor and output"),
 	).DefaultRatio(.26).MinFirst(180).MinSecond(360).Label("Resize explorer and editor")
+	dockWorkspace := ui.DockLayout("catalog-dock-workspace", ui.DockSplit("catalog-dock-root", ui.DockHorizontal,
+		ui.DockPanel("catalog-dock-explorer", catalogPane("Explorer", ui.Icon(lucide.Files).Size(18))),
+		ui.DockSplit("catalog-dock-editor-bottom", ui.DockVertical,
+			ui.DockPanel("catalog-dock-editor", catalogPane("Editor", ui.Icon(lucide.FileCode).Size(18))),
+			ui.DockPanel("catalog-dock-output", catalogPane("Output", ui.Icon(lucide.Terminal).Size(18))),
+		).Ratio(.72),
+	).Ratio(.24))
+	panelHost := ui.PanelHost("catalog-panel-host", "editor", []ui.PanelItem{
+		{Key: "editor", Content: ui.Center(ui.Text("Editor view"))},
+		{Key: "output", Content: ui.Center(ui.Text("Output view"))},
+	}).KeepAlive(true).ForceRender(true)
+	viewStack := ui.ViewStack("catalog-view-stack", "overview", []ui.PanelItem{
+		{Key: "overview", Content: ui.Center(ui.Text("Overview view"))},
+		{Key: "settings", Content: ui.Center(ui.Text("Settings view"))},
+	}).KeepAlive(true)
 	return demoPage("Split pane",
 		demoSection{Title: "Horizontal & vertical SplitPane", Content: demoPanel(
 			ui.Box(workspace).Style(ui.FillWidth().Height(430)),
 		)},
+		demoSection{Title: "DockLayout, PanelHost & ViewStack", Content: demoPanel(ui.Column(
+			ui.Box(dockWorkspace).Style(ui.FillWidth().Height(300)),
+			ui.Row(
+				ui.Box(panelHost).Style(ui.FillWidth().Height(100)),
+				ui.Box(viewStack).Style(ui.FillWidth().Height(100)),
+			).Gap(12),
+		).Gap(12))},
 	)
 }
 
@@ -167,7 +189,6 @@ func appShellPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 			})).Style(ui.Width(260)),
 		).Gap(12),
 	)
-
 	return demoPage("Application shell",
 		demoSection{Title: "WindowTitleBar, StatusBar, Actions & Portal", Content: ui.ActionScope(actions, ui.Box(shell).Style(ui.FillWidth().Height(440).Overflow(ui.StyleOverflowHidden)))},
 		demoSection{Title: "CommandScope, CommandButton & CommandMenuItem", Content: demoPanel(commandDemo)},

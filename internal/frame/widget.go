@@ -31,6 +31,10 @@ func MeasureWidget(ctx *Context, gtx layout.Context, value Widget) layout.Dimens
 		return measurable.Measure(ctx, measureGtx)
 	}
 	measureGtx.Source = input.Source{}
+	restoreHidden := PushHiddenLayout(ctx)
+	defer restoreHidden()
+	restoreMeasurement := PushMeasurement(ctx)
+	defer restoreMeasurement()
 	return value.Layout(ctx, measureGtx.Disabled())
 }
 

@@ -150,6 +150,23 @@ func TestDarkThemeDefinesThemedSurfaceAndShadow(t *testing.T) {
 	}
 }
 
+func TestWorkbenchThemeFollowsLightAndDarkSurfaces(t *testing.T) {
+	light := theme.DefaultTheme()
+	dark := theme.DarkTheme()
+	if light.Components.Workbench.SidebarWidth <= light.Components.Workbench.SidebarMinWidth || light.Components.Workbench.Density != 1 {
+		t.Fatalf("light workbench sizing = %#v", light.Components.Workbench)
+	}
+	if dark.Components.Workbench.EditorBackground != dark.Palette.Background ||
+		dark.Components.Workbench.SidebarBackground != dark.Palette.SurfaceSecondary {
+		t.Fatalf("dark workbench surfaces = %#v", dark.Components.Workbench)
+	}
+	workbench := light.Components.Workbench
+	workbench.Density = 1.5
+	if workbench.EffectiveDensity() != 1.5 || workbench.Scale(10) != 15 {
+		t.Fatalf("scaled workbench density = %v/%v", workbench.EffectiveDensity(), workbench.Scale(10))
+	}
+}
+
 func TestSelectionColorsMatchTheme(t *testing.T) {
 	light := color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x50}
 	dark := color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x58}

@@ -224,6 +224,7 @@ type ComponentsTheme struct {
 	Heatmap           HeatmapTheme
 	GanttChart        GanttChartTheme
 	Tabs              TabsTheme
+	Workbench         WorkbenchTheme
 	Collapsible       CollapsibleTheme
 	Select            SelectTheme
 	Popover           PopoverTheme
@@ -921,22 +922,84 @@ type TabsTheme struct {
 	ListRadius          unit.Dp
 	TabHeight           unit.Dp
 	SmallTabHeight      unit.Dp
+	LargeTabHeight      unit.Dp
 	TabMinWidth         unit.Dp
 	TabPaddingX         unit.Dp
 	SmallTabPaddingX    unit.Dp
+	LargeTabPaddingX    unit.Dp
 	TabGap              unit.Dp
 	TextSize            unit.Sp
+	LargeTextSize       unit.Sp
+	IconSize            unit.Dp
+	IconGap             unit.Dp
+	CloseButtonSize     unit.Dp
+	CloseButtonGap      unit.Dp
+	ExtraContentGap     unit.Dp
 	IndicatorRadius     unit.Dp
 	IndicatorLineWidth  unit.Dp
+	IndicatorWidth      unit.Dp
+	IndicatorMinWidth   unit.Dp
+	IndicatorInset      unit.Dp
 	FocusRingWidth      unit.Dp
 	SeparatorWidth      unit.Dp
 	PanelPadding        unit.Dp
 	PanelGap            unit.Dp
+	ColorDuration       time.Duration
+	IndicatorDuration   time.Duration
+	PanelDuration       time.Duration
 	ScrollButtonSize    unit.Dp
 	ScrollButtonInset   unit.Dp
 	ScrollShadowSize    unit.Dp
 	ScrollChevronSize   unit.Dp
 	ScrollChevronStroke unit.Dp
+}
+
+// WorkbenchTheme contains shell-level tokens shared by editor workbenches.
+// It is intentionally separate from TabsTheme so an application can tune its
+// chrome without changing ordinary tabs elsewhere in the UI.
+type WorkbenchTheme struct {
+	SidebarWidth              unit.Dp
+	SidebarMinWidth           unit.Dp
+	SidebarBackground         color.NRGBA
+	SidebarForeground         color.NRGBA
+	SidebarHoverBackground    color.NRGBA
+	SidebarActiveBackground   color.NRGBA
+	SidebarActiveForeground   color.NRGBA
+	SidebarBorder             color.NRGBA
+	EditorBackground          color.NRGBA
+	EditorForeground          color.NRGBA
+	EditorTabBackground       color.NRGBA
+	EditorTabHoverBackground  color.NRGBA
+	EditorTabActiveBackground color.NRGBA
+	EditorTabActiveForeground color.NRGBA
+	BottomPanelBackground     color.NRGBA
+	BottomPanelForeground     color.NRGBA
+	BottomPanelBorder         color.NRGBA
+	StatusBarBackground       color.NRGBA
+	StatusBarForeground       color.NRGBA
+	DividerColor              color.NRGBA
+	DividerHoverColor         color.NRGBA
+	DividerWidth              unit.Dp
+	DividerHandleSize         unit.Dp
+	TabHeight                 unit.Dp
+	TabPaddingX               unit.Dp
+	TabGap                    unit.Dp
+	GroupGap                  unit.Dp
+	Density                   float32
+}
+
+// EffectiveDensity returns a usable density multiplier for shell dimensions.
+// Invalid or non-positive custom values fall back to the default density.
+func (t WorkbenchTheme) EffectiveDensity() float32 {
+	if math.IsNaN(float64(t.Density)) || math.IsInf(float64(t.Density), 0) || t.Density <= 0 {
+		return 1
+	}
+	return t.Density
+}
+
+// Scale applies the Workbench density to a dimension token.
+func (t WorkbenchTheme) Scale(value unit.Dp) unit.Dp {
+	return unit.Dp(float32(value) * t.EffectiveDensity())
 }
 
 type CollapsibleTheme struct {
@@ -1892,22 +1955,66 @@ func DefaultTheme() Theme {
 				ListRadius:          20,
 				TabHeight:           32,
 				SmallTabHeight:      24,
+				LargeTabHeight:      40,
 				TabMinWidth:         80,
-				TabPaddingX:         16,
+				TabPaddingX:         8,
 				SmallTabPaddingX:    12,
+				LargeTabPaddingX:    20,
 				TabGap:              4,
 				TextSize:            14,
+				LargeTextSize:       16,
+				IconSize:            16,
+				IconGap:             1,
+				CloseButtonSize:     16,
+				CloseButtonGap:      4,
+				ExtraContentGap:     8,
 				IndicatorRadius:     24,
 				IndicatorLineWidth:  2,
+				IndicatorWidth:      0,
+				IndicatorMinWidth:   24,
+				IndicatorInset:      0,
 				FocusRingWidth:      2,
 				SeparatorWidth:      1,
 				PanelPadding:        8,
 				PanelGap:            16,
+				ColorDuration:       150 * time.Millisecond,
+				IndicatorDuration:   250 * time.Millisecond,
+				PanelDuration:       200 * time.Millisecond,
 				ScrollButtonSize:    16,
 				ScrollButtonInset:   4,
 				ScrollShadowSize:    64,
 				ScrollChevronSize:   10,
 				ScrollChevronStroke: 1.5,
+			},
+			Workbench: WorkbenchTheme{
+				SidebarWidth:              240,
+				SidebarMinWidth:           160,
+				SidebarBackground:         color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
+				SidebarForeground:         color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+				SidebarHoverBackground:    color.NRGBA{R: 0xec, G: 0xec, B: 0xee, A: 0xff},
+				SidebarActiveBackground:   color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x22},
+				SidebarActiveForeground:   color.NRGBA{R: 0x00, G: 0x56, B: 0xbd, A: 0xff},
+				SidebarBorder:             color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+				EditorBackground:          color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+				EditorForeground:          color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+				EditorTabBackground:       color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
+				EditorTabHoverBackground:  color.NRGBA{R: 0xfa, G: 0xfa, B: 0xfa, A: 0xff},
+				EditorTabActiveBackground: color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+				EditorTabActiveForeground: color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+				BottomPanelBackground:     color.NRGBA{R: 0xf4, G: 0xf4, B: 0xf5, A: 0xff},
+				BottomPanelForeground:     color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+				BottomPanelBorder:         color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+				StatusBarBackground:       color.NRGBA{R: 0xec, G: 0xec, B: 0xee, A: 0xff},
+				StatusBarForeground:       color.NRGBA{R: 0x2f, G: 0x2f, B: 0x36, A: 0xff},
+				DividerColor:              color.NRGBA{R: 0xe4, G: 0xe4, B: 0xe7, A: 0xff},
+				DividerHoverColor:         color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0xff},
+				DividerWidth:              1,
+				DividerHandleSize:         4,
+				TabHeight:                 32,
+				TabPaddingX:               8,
+				TabGap:                    0,
+				GroupGap:                  4,
+				Density:                   1,
 			},
 			Collapsible: CollapsibleTheme{
 				BodyPadding:       8,
@@ -2226,6 +2333,25 @@ func DarkTheme() Theme {
 		OverlayShadow:              color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x4d},
 	}
 	theme.Shadows.Overlay = ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{{Blur: 1, Opacity: 1}}}
+	theme.Components.Workbench.SidebarBackground = theme.Palette.SurfaceSecondary
+	theme.Components.Workbench.SidebarForeground = theme.Palette.SurfaceSecondaryForeground
+	theme.Components.Workbench.SidebarHoverBackground = theme.Palette.SurfaceHover
+	theme.Components.Workbench.SidebarActiveBackground = theme.Palette.AccentSoft
+	theme.Components.Workbench.SidebarActiveForeground = theme.Palette.AccentSoftForeground
+	theme.Components.Workbench.SidebarBorder = theme.Palette.Border
+	theme.Components.Workbench.EditorBackground = theme.Palette.Background
+	theme.Components.Workbench.EditorForeground = theme.Palette.Foreground
+	theme.Components.Workbench.EditorTabBackground = theme.Palette.SurfaceSecondary
+	theme.Components.Workbench.EditorTabHoverBackground = theme.Palette.SurfaceHover
+	theme.Components.Workbench.EditorTabActiveBackground = theme.Palette.Surface
+	theme.Components.Workbench.EditorTabActiveForeground = theme.Palette.SurfaceForeground
+	theme.Components.Workbench.BottomPanelBackground = theme.Palette.SurfaceSecondary
+	theme.Components.Workbench.BottomPanelForeground = theme.Palette.SurfaceSecondaryForeground
+	theme.Components.Workbench.BottomPanelBorder = theme.Palette.Border
+	theme.Components.Workbench.StatusBarBackground = theme.Palette.SurfaceTertiary
+	theme.Components.Workbench.StatusBarForeground = theme.Palette.SurfaceTertiaryForeground
+	theme.Components.Workbench.DividerColor = theme.Palette.Border
+	theme.Components.Workbench.DividerHoverColor = theme.Palette.Accent
 	theme.Components.Input.ShadowOpacity = 0
 	theme.Components.TextArea.ShadowOpacity = 0
 	theme.Components.Menu.ShadowOpacity = 0

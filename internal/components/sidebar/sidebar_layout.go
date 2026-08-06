@@ -25,6 +25,10 @@ import (
 func (w Widget) layout(ctx *frame.Context, gtx layout.Context, state *sidebarState, entries []entry) layout.Dimensions {
 	activeTheme := frame.ActiveTheme(ctx)
 	tokens := activeTheme.Components.Sidebar
+	padding := tokens.Padding
+	if w.hasPadding {
+		padding = w.padding
+	}
 	expandedWidth := tokens.Width
 	if w.width > 0 {
 		expandedWidth = w.width
@@ -45,7 +49,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context, state *sidebarSta
 	expandedWidthPx := min(gtx.Dp(expandedWidth), gtx.Constraints.Max.X)
 	width := int(animation.LerpFloat(float32(gtx.Dp(collapsedWidth)), float32(expandedWidthPx), expansion) + .5)
 	size := gtx.Constraints.Constrain(image.Pt(width, gtx.Constraints.Max.Y))
-	expandedContentWidth := max(expandedWidthPx-gtx.Dp(tokens.Padding)*2, 0)
+	expandedContentWidth := max(expandedWidthPx-gtx.Dp(padding)*2, 0)
 	rootGtx := gtx
 	rootGtx.Constraints = layout.Exact(size)
 	if w.alt != "" {
@@ -57,7 +61,7 @@ func (w Widget) layout(ctx *frame.Context, gtx layout.Context, state *sidebarSta
 	func() {
 		restore := frame.PushColors(ctx, activeTheme.Palette.SurfaceForeground, activeTheme.Palette.Surface)
 		defer restore()
-		content = layoutui.LayoutTrackedInset(ctx, rootGtx, layout.UniformInset(tokens.Padding), func(gtx layout.Context) layout.Dimensions {
+		content = layoutui.LayoutTrackedInset(ctx, rootGtx, layout.UniformInset(padding), func(gtx layout.Context) layout.Dimensions {
 			children := make([]frame.Widget, 0, 3)
 			if w.header != nil {
 				children = append(children, sidebarTransitionContent(w.header, w.targetContentOpacity(expansion), w.expandedLayoutWidth(expandedContentWidth)))
@@ -91,7 +95,11 @@ func (w Widget) layoutEntries(ctx *frame.Context, gtx layout.Context, state *sid
 	}
 	tokens := frame.ActiveTheme(ctx).Components.Sidebar
 	state.list.Axis = layout.Vertical
-	state.list.Gap = gtx.Dp(tokens.ItemGap)
+	itemGap := tokens.ItemGap
+	if w.hasItemGap {
+		itemGap = w.itemGap
+	}
+	state.list.Gap = gtx.Dp(itemGap)
 	state.list.Alignment = layout.Start
 	state.list.ScrollToEnd = false
 	state.list.ScrollAnyAxis = false
@@ -232,7 +240,11 @@ func (w Widget) layoutItemVisual(ctx *frame.Context, gtx layout.Context, item It
 	contentPlacement.PlaceOffset(contentOffset)
 
 	opacity := paint.PushOpacity(gtx.Ops, style.opacity)
-	drawSidebarItem(gtx, frame.ActiveTheme(ctx), size, style, focus)
+	itemRadius := frame.ActiveTheme(ctx).Components.Sidebar.ItemRadius
+	if w.hasItemRadius {
+		itemRadius = w.itemRadius
+	}
+	drawSidebarItem(gtx, frame.ActiveTheme(ctx), size, style, focus, itemRadius)
 	offset := op.Offset(contentOffset).Push(gtx.Ops)
 	content.Add(gtx.Ops)
 	offset.Pop()
@@ -243,13 +255,21 @@ func (w Widget) layoutItemVisual(ctx *frame.Context, gtx layout.Context, item It
 func (w Widget) layoutItemContent(ctx *frame.Context, gtx layout.Context, item Item, foreground color.NRGBA, expansion float32) layout.Dimensions {
 	tokens := frame.ActiveTheme(ctx).Components.Sidebar
 	width := gtx.Constraints.Max.X
-	padding := gtx.Dp(tokens.ItemPaddingX)
+	itemPadding := tokens.ItemPaddingX
+	if w.hasItemPadding {
+		itemPadding = w.itemPaddingX
+	}
+	padding := gtx.Dp(itemPadding)
 	gap := gtx.Dp(tokens.ItemContentGap)
+	outerPadding := tokens.Padding
+	if w.hasPadding {
+		outerPadding = w.padding
+	}
 	collapsedWidth := tokens.CollapsedWidth
 	if w.collapsedWidth > 0 {
 		collapsedWidth = w.collapsedWidth
 	}
-	collapsedContentWidth := min(max(gtx.Dp(collapsedWidth)-gtx.Dp(tokens.Padding)*2, 0), width)
+	collapsedContentWidth := min(max(gtx.Dp(collapsedWidth)-gtx.Dp(outerPadding)*2, 0), width)
 	childGtx := gtx
 	childGtx.Constraints.Min = image.Point{}
 	childGtx.Constraints.Max.X = max(width-padding*2, 0)
@@ -387,9 +407,9 @@ func drawSidebarRoot(gtx layout.Context, activeTheme *theme.Theme, size image.Po
 	paint.FillShape(gtx.Ops, activeTheme.Palette.Border, clip.Rect(border).Op())
 }
 
-func drawSidebarItem(gtx layout.Context, activeTheme *theme.Theme, size image.Point, style sidebarItemStyle, focus float32) {
+func drawSidebarItem(gtx layout.Context, activeTheme *theme.Theme, size image.Point, style sidebarItemStyle, focus float32, itemRadius unit.Dp) {
 	rect := image.Rectangle{Max: size}
-	radius := min(max(gtx.Dp(activeTheme.Components.Sidebar.ItemRadius), 0), min(size.X, size.Y)/2)
+	radius := min(max(gtx.Dp(itemRadius), 0), min(size.X, size.Y)/2)
 	if style.background.A != 0 {
 		paint.FillShape(gtx.Ops, style.background, clip.UniformRRect(rect, radius).Op(gtx.Ops))
 	}

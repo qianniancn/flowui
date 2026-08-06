@@ -118,7 +118,11 @@ func TestSidebarRejectsInvalidConfiguration(t *testing.T) {
 		{"duplicate item key", func() { validateSidebarItems([]Item{{Key: "same"}, {Key: "same"}}) }},
 		{"width", func() { New("primary", "", nil).Width(0) }},
 		{"collapsed width", func() { New("primary", "", nil).CollapsedWidth(-1) }},
+		{"padding", func() { New("primary", "", nil).Padding(-1) }},
+		{"item gap", func() { New("primary", "", nil).ItemGap(-1) }},
 		{"item height", func() { New("primary", "", nil).ItemHeight(0) }},
+		{"item padding", func() { New("primary", "", nil).ItemPaddingX(-1) }},
+		{"item radius", func() { New("primary", "", nil).ItemRadius(-1) }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			defer func() {
@@ -192,6 +196,26 @@ func TestCollapsedSidebarLaysOutItemIcons(t *testing.T) {
 	layoutSidebarFrame(sidebarTestContext(nil), new(input.Router), widget, time.Unix(2, 0))
 	if icon.layouts != 1 {
 		t.Fatalf("collapsed item icon layouts = %d, want 1", icon.layouts)
+	}
+}
+
+func TestCollapsedSidebarCompactMetricsPreserveIconSpace(t *testing.T) {
+	icon := &sidebarProbe{size: image.Pt(32, 32)}
+	widget := New("primary", "home", []Item{{Key: "home", Label: "Home", Leading: icon}}).
+		Collapsed(true).
+		Width(40).
+		CollapsedWidth(40).
+		Padding(4).
+		ItemGap(0).
+		ItemHeight(36).
+		ItemPaddingX(0).
+		ItemRadius(0)
+	dims := layoutSidebarFrame(sidebarTestContext(nil), new(input.Router), widget, time.Unix(2, 0))
+	if dims.Size.X != 40 {
+		t.Fatalf("collapsed width = %d, want 40", dims.Size.X)
+	}
+	if icon.maxWidth != 32 {
+		t.Fatalf("icon max width = %d, want 32", icon.maxWidth)
 	}
 }
 

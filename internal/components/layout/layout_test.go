@@ -613,6 +613,37 @@ func TestFlexOverlayPositionMatchesIgnoredNegativeGap(t *testing.T) {
 	}
 }
 
+func TestRowAlignBaselinePositionsChildrenOnOneBaseline(t *testing.T) {
+	ctx := newContext(nil)
+	viewport := image.Pt(100, 30)
+	firstBounds := image.Rectangle{}
+	secondBounds := image.Rectangle{}
+	first := &overlayProbeWidget{
+		key:      "baseline-first",
+		size:     image.Pt(10, 14),
+		baseline: 2,
+		anchor:   image.Rect(0, 0, 1, 1),
+		got:      &firstBounds,
+	}
+	second := &overlayProbeWidget{
+		key:      "baseline-second",
+		size:     image.Pt(10, 10),
+		baseline: 0,
+		anchor:   image.Rect(0, 0, 1, 1),
+		got:      &secondBounds,
+	}
+	gtx := layout.Context{Constraints: layout.Exact(viewport), Ops: new(op.Ops)}
+
+	frame.BeginFrameWithViewport(ctx, viewport)
+	Row(first, second).AlignBaseline().Gap(4).Layout(ctx, gtx)
+	frame.LayoutOverlays(ctx, gtx)
+	frame.EndFrame(ctx)
+
+	if firstBounds.Min.Y != 0 || secondBounds.Min.Y != 2 {
+		t.Fatalf("baseline offsets = %d/%d, want 0/2", firstBounds.Min.Y, secondBounds.Min.Y)
+	}
+}
+
 func TestLayoutItemsPropagatesOverlayPositions(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -863,11 +894,12 @@ func (overflowWidget) Layout(_ *frame.Context, _ layout.Context) layout.Dimensio
 }
 
 type overlayProbeWidget struct {
-	key     string
-	size    image.Point
-	anchor  image.Rectangle
-	got     *image.Rectangle
-	capture func(image.Rectangle)
+	key      string
+	size     image.Point
+	baseline int
+	anchor   image.Rectangle
+	got      *image.Rectangle
+	capture  func(image.Rectangle)
 }
 
 func (w *overlayProbeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
@@ -885,7 +917,7 @@ func (w *overlayProbeWidget) Layout(ctx *frame.Context, gtx layout.Context) layo
 			return layout.Dimensions{}
 		},
 	})
-	return layout.Dimensions{Size: w.size}
+	return layout.Dimensions{Size: w.size, Baseline: w.baseline}
 }
 
 func resolveOverlayAnchor(t *testing.T, constraints layout.Constraints, widget frame.Widget) image.Rectangle {

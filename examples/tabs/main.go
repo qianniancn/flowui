@@ -1,6 +1,9 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/ui"
+)
 
 type Model struct {
 	Primary           string
@@ -9,6 +12,7 @@ type Model struct {
 	SecondaryVertical string
 	Custom            string
 	Overflow          string
+	Lifecycle         string
 }
 
 type TabGroup int
@@ -20,6 +24,7 @@ const (
 	secondaryVerticalTabs
 	customTabs
 	overflowTabs
+	lifecycleTabs
 )
 
 type SelectTab struct {
@@ -41,6 +46,8 @@ func Update(model *Model, msg SelectTab) ui.Cmd[SelectTab] {
 		model.Custom = msg.Key
 	case overflowTabs:
 		model.Overflow = msg.Key
+	case lifecycleTabs:
+		model.Lifecycle = msg.Key
 	}
 	return nil
 }
@@ -63,6 +70,8 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 						ui.Box(
 							ui.Tabs("secondary", model.Secondary, projectTabs()).
 								Variant(ui.TabsSecondary).
+								IndicatorWidth(48).
+								IndicatorAlign(ui.TabsIndicatorCenter).
 								OnChange(func(key string) { send(SelectTab{Group: secondaryTabs, Key: key}) }),
 						).Style(ui.Width(620)),
 					),
@@ -89,6 +98,7 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 									Size(ui.TabsSmall).
 									Color(ui.TabsColorAccent).
 									Fit().
+									Activation(ui.TabsActivationManual).
 									OnChange(func(key string) { send(SelectTab{Group: customTabs, Key: key}) }),
 							),
 						).Style(ui.Width(380)),
@@ -96,8 +106,24 @@ func View(_ *ui.Context, model Model, send ui.Send[SelectTab]) ui.Widget {
 					section("Overflow",
 						ui.Box(
 							ui.Tabs("overflow", model.Overflow, overflowTabsItems()).
+								Overflow(ui.TabsOverflowMenu).
+								OverflowTrigger(ui.Icon(lucide.Ellipsis).Size(16)).
+								MoreLabel("More tabs").
 								OnChange(func(key string) { send(SelectTab{Group: overflowTabs, Key: key}) }),
 						).Style(ui.Width(460)),
+					),
+					section("Slots and panel lifecycle",
+						ui.Box(
+							ui.Tabs("lifecycle", model.Lifecycle, lifecycleTabsItems()).
+								Variant(ui.TabsSecondary).
+								Size(ui.TabsLarge).
+								Leading(ui.Icon(lucide.LayoutDashboard).Size(16)).
+								Trailing(ui.Text("3 tabs").Size(12)).
+								KeepAlive(true).
+								ForceRender(true).
+								PanelTransition(ui.TabsPanelFade).
+								OnChange(func(key string) { send(SelectTab{Group: lifecycleTabs, Key: key}) }),
+						).Style(ui.Width(620)),
 					),
 				).Gap(24),
 			).Vertical(),
@@ -175,8 +201,17 @@ func main() {
 		SecondaryVertical: "security",
 		Custom:            "weekly",
 		Overflow:          "overview",
+		Lifecycle:         "account",
 	},
 		Update, View), ui.Title("FlowUI Tabs"),
 		ui.Size(940, 860),
 	)
+}
+
+func lifecycleTabsItems() []ui.TabItem {
+	return []ui.TabItem{
+		{Key: "account", Label: "Account", Leading: ui.Icon(lucide.UserRound).Size(16), Panel: panel("Account", "This panel keeps its widget state while hidden.")},
+		{Key: "security", Label: "Security", Leading: ui.Icon(lucide.ShieldCheck).Size(16), Panel: panel("Security", "Authentication settings live in this panel.")},
+		{Key: "billing", Label: "Billing", Leading: ui.Icon(lucide.CreditCard).Size(16), Panel: panel("Billing", "Billing history and invoices.")},
+	}
 }

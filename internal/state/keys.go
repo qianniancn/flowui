@@ -51,6 +51,8 @@ const (
 	KindScroll           Kind = "scroll"
 	KindScrollbar        Kind = "scrollbar"
 	KindSplitPane        Kind = "split-pane"
+	KindPanelHost        Kind = "panel-host"
+	KindDockLayout       Kind = "dock-layout"
 	KindTitleBar         Kind = "title-bar"
 	KindStyle            Kind = "style"
 	KindPortal           Kind = "portal"

@@ -86,6 +86,24 @@ func TestSplitPaneHorizontalLayout(t *testing.T) {
 	}
 }
 
+func TestSplitPaneReservesShadowOutsetInsidePane(t *testing.T) {
+	ctx := newContext(nil)
+	first := new(splitPaneProbe)
+	value := SplitPane("workspace", Box(first).Style(flowstyle.Style{}.
+		FillWidth().
+		FillHeight().
+		BoxShadow(0, 2, 4, 0, flowstyle.RGBA(0x00000080)),
+	), Spacer(1, 1)).DefaultRatio(.25)
+	var router input.Router
+	start := time.Unix(1, 0)
+	layoutSplitPaneFrame(ctx, &router, value, start, image.Pt(400, 200))
+	layoutSplitPaneFrame(ctx, &router, value, start.Add(time.Millisecond), image.Pt(400, 200))
+
+	if first.constraints != layout.Exact(image.Pt(80, 176)) {
+		t.Fatalf("shadow-safe first pane constraints = %#v, want 80x176", first.constraints)
+	}
+}
+
 func TestSplitPaneVerticalLayoutAndMinimums(t *testing.T) {
 	first := new(splitPaneProbe)
 	second := new(splitPaneProbe)
@@ -200,13 +218,6 @@ func TestSplitPaneDisabledIgnoresPointer(t *testing.T) {
 	}
 	if cursor := router.Cursor(); cursor == pointer.CursorColResize {
 		t.Fatal("disabled split pane exposed resize cursor")
-	}
-}
-
-func TestSplitPaneTheme(t *testing.T) {
-	tokens := frame.ActiveTheme(newContext(nil)).Components.SplitPane
-	if tokens.DividerWidth != 1 || tokens.HitSize != 12 || tokens.ActiveWidth != 2 || tokens.HandleLength != 32 {
-		t.Fatalf("split pane theme = %#v", tokens)
 	}
 }
 

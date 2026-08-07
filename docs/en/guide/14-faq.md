@@ -39,7 +39,9 @@ gradient fills, and `MeasureText` for a measurement pass. Low-level pointer
 controls can use `AddPointerArea`, `NextPointerEvent`,
 `IsPrimaryPointerPress`, and `GrabPointer`. `LayoutVisualOverflow` is for a
 local ripple or focus decoration; use `Popover`, `Portal`, or another overlay
-component for content that is not part of the local layout.
+component for content that is not part of the local layout. Use
+`LayoutVisualOutset` or `VisualOutset` when local paint also needs safe space
+inside an ancestor scroll or split viewport.
 
 ## Minimum Go version
 

@@ -372,6 +372,10 @@ func cloneResolvedStyle(src style.ResolvedStyle) style.ResolvedStyle {
 			outlineCopy.Color = cloneColorSource(outlineCopy.Color)
 			paintCopy.Outline = &outlineCopy
 		}
+		if paintCopy.VisualOutset != nil {
+			outsetCopy := *paintCopy.VisualOutset
+			paintCopy.VisualOutset = &outsetCopy
+		}
 		if paintCopy.Opacity != nil {
 			opacityCopy := *paintCopy.Opacity
 			paintCopy.Opacity = &opacityCopy

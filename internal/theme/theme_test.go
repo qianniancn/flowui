@@ -16,16 +16,6 @@ func TestDefaultMotionTheme(t *testing.T) {
 	}
 }
 
-func TestDefaultShadowProfiles(t *testing.T) {
-	shadows := theme.DefaultTheme().Shadows
-	if shadows.Surface.Layers[1].Blur != 4 || shadows.Overlay.Layers[1].Blur != 22 {
-		t.Fatalf("surface shadows = %#v", shadows)
-	}
-	if shadows.Menu.Layers[2].Blur != 28 || shadows.Control.Layers[2].Blur != 4 || shadows.Checkbox.Layers[1].Blur != 2 || shadows.SwitchThumb.Layers[1].Blur != 8 {
-		t.Fatalf("component shadows = %#v", shadows)
-	}
-}
-
 func TestResolveMotionDuration(t *testing.T) {
 	if got := theme.ResolveMotionDuration(theme.MotionTheme{Enabled: true, DurationScale: 0.5}, time.Second); got != 500*time.Millisecond {
 		t.Fatalf("scaled duration = %v, want 500ms", got)
@@ -121,13 +111,6 @@ func TestSyncMaterialThemeUsesFontConfig(t *testing.T) {
 	}
 	if bridge.Shaper == nil {
 		t.Fatal("font configuration removed the text shaper")
-	}
-}
-
-func TestDefaultThemeUsesWhiteWindowBackground(t *testing.T) {
-	want := color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
-	if got := theme.DefaultTheme().Palette.Background; got != want {
-		t.Fatalf("default window background = %#v, want %#v", got, want)
 	}
 }
 

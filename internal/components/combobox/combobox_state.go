@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/disclosure"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/components/optionrow"
 	"github.com/qianniancn/flowui/internal/field"
@@ -32,6 +33,7 @@ type comboBoxState struct {
 	dialog             overlay.ClickArea
 	list               layout.List
 	bar                widget.Scrollbar
+	visualOutset       layoutui.VisualOutsetState
 	disclosure         disclosure.Binding[string]
 	selectedKey        string
 	open               bool

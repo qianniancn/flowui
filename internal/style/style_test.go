@@ -129,10 +129,12 @@ func TestPackedColors(t *testing.T) {
 func TestCascadeReplacesShadowsAndOutline(t *testing.T) {
 	base := Style{}.
 		BoxShadow(0, 2, 4, 0, TokenSurfaceShadow).
-		Outline(1, 2, TokenFocus)
+		Outline(1, 2, TokenFocus).
+		VisualOutset(1, 2, 3, 4)
 
 	override := Style{}.
-		BoxShadow(0, 6, 12, 1, RGBA(0x11223344))
+		BoxShadow(0, 6, 12, 1, RGBA(0x11223344)).
+		VisualOutset(5, 6, 7, 8)
 
 	resolved := Cascade(StyleState{}, base, override)
 	if resolved.Paint == nil || len(resolved.Paint.Shadows) != 1 {
@@ -143,6 +145,9 @@ func TestCascadeReplacesShadowsAndOutline(t *testing.T) {
 	}
 	if resolved.Paint.Outline == nil || resolved.Paint.Outline.Width != 1 || resolved.Paint.Outline.Color != TokenFocus {
 		t.Fatalf("outline = %#v", resolved.Paint.Outline)
+	}
+	if resolved.Paint.VisualOutset == nil || *resolved.Paint.VisualOutset != (Insets{Top: 5, Right: 6, Bottom: 7, Left: 8}) {
+		t.Fatalf("visual outset = %#v", resolved.Paint.VisualOutset)
 	}
 }
 
@@ -195,9 +200,9 @@ func TestCascadeCanClearBackgroundAndShadows(t *testing.T) {
 		Background(RGB(0x112233)).
 		BoxShadow(0, 2, 4, 0, RGBA(0x00000044))
 
-	resolved := Cascade(StyleState{}, base, Style{}.BackgroundNone().BoxShadowNone())
+	resolved := Cascade(StyleState{}, base, Style{}.BackgroundNone().BoxShadowNone().VisualOutsetNone())
 
-	if resolved.Paint == nil || resolved.Paint.Background != nil || len(resolved.Paint.Shadows) != 0 {
+	if resolved.Paint == nil || resolved.Paint.Background != nil || len(resolved.Paint.Shadows) != 0 || resolved.Paint.VisualOutset != nil {
 		t.Fatalf("cleared paint = %#v", resolved.Paint)
 	}
 }

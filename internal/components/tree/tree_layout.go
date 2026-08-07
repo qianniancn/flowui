@@ -55,7 +55,7 @@ func (t Widget) layout(ctx *frame.Context, gtx layout.Context, treeStateValue *t
 			treeStateValue.list.Gap = gtx.Dp(tokens.Gap)
 			treeStateValue.list.Alignment = layout.Start
 			treeStateValue.list.ScrollAnyAxis = false
-			return layoutui.LayoutTrackedScrollbar(ctx, gtx, &treeStateValue.list, &treeStateValue.bar, len(visible), t.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
+			return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &treeStateValue.list, &treeStateValue.bar, &treeStateValue.visualOutset, len(visible), t.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
 				return t.layoutItem(ctx, gtx, treeStateValue, visible[index], index)
 			})
 		})

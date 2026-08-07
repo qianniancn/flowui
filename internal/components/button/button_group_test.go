@@ -11,7 +11,6 @@ import (
 	"github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/frame"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
-	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestButtonGroupInheritsOptionsAndPreservesButtonOverrides(t *testing.T) {
@@ -133,13 +132,6 @@ func TestButtonGroupCorners(t *testing.T) {
 	verticalEnd := buttonGroupCorners(buttonGroupItemStyle{grouped: true, orientation: ButtonGroupVertical, position: buttonGroupEnd})
 	if !verticalEnd.se || !verticalEnd.sw || verticalEnd.nw || verticalEnd.ne {
 		t.Fatalf("vertical end corners = %#v", verticalEnd)
-	}
-}
-
-func TestButtonGroupThemeMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.ButtonGroup
-	if tokens.SeparatorWidth != 1 || tokens.SeparatorLength != 0.5 || tokens.SeparatorOpacity != 0.15 {
-		t.Fatalf("ButtonGroup theme = %#v", tokens)
 	}
 }
 

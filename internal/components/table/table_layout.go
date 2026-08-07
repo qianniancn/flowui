@@ -115,7 +115,7 @@ func (t Widget) layoutHorizontal(ctx *frame.Context, gtx layout.Context, stateVa
 	stateValue.horizontal.Gap = 0
 	stateValue.horizontal.Alignment = layout.Start
 	stateValue.horizontal.ScrollAnyAxis = false
-	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.horizontal, &stateValue.horizontalBar, 1, t.disabled, false, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &stateValue.horizontal, &stateValue.horizontalBar, &stateValue.horizontalVisualOutset, 1, t.disabled, false, func(gtx layout.Context, _ int) layout.Dimensions {
 		gtx.Constraints.Min.X = columns.width
 		gtx.Constraints.Max.X = columns.width
 		return t.layoutContent(ctx, gtx, stateValue, columns, style)
@@ -344,7 +344,7 @@ func (t Widget) layoutBody(ctx *frame.Context, gtx layout.Context, stateValue *t
 		if showLoader {
 			itemCount++
 		}
-		contentDims = layoutui.LayoutTrackedScrollbar(ctx, gtx, &stateValue.vertical, &stateValue.verticalBar, itemCount, t.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
+		contentDims = layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &stateValue.vertical, &stateValue.verticalBar, &stateValue.verticalVisualOutset, itemCount, t.disabled, true, func(gtx layout.Context, index int) layout.Dimensions {
 			if index == rowCount {
 				return t.layoutLoadMore(ctx, gtx, columns.width)
 			}

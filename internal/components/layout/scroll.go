@@ -3,6 +3,7 @@ package layoutui
 import (
 	"gioui.org/layout"
 	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
@@ -67,6 +68,7 @@ func (s ScrollWidget) ScrollAnyAxis() ScrollWidget {
 func (s ScrollWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	prepareFieldAssociations(ctx, s.child)
 	state := ctx.ScrollState(s.key)
+	visual := visualOutsetStateFor(ctx, stateutil.KindScroll, s.key)
 	bar := derivedScrollbarState(ctx, s.key)
 	state.Axis = s.axis
 	state.Gap = 0
@@ -76,7 +78,7 @@ func (s ScrollWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	if s.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutScrollbarList(ctx, gtx, "", state, bar, 1, s.disabled, false, flowstyle.Style{}, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, "", state, bar, visual, 1, s.disabled, false, flowstyle.Style{}, func(gtx layout.Context, _ int) layout.Dimensions {
 		return s.child.Layout(ctx, gtx)
 	})
 }

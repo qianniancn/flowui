@@ -19,17 +19,6 @@ import (
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
-func TestCloseButtonHeroUIDefaults(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	component := activeTheme.Components.CloseButton
-	if component.Size != 24 || component.Radius != 12 || component.Padding != 4 || component.IconSize != 16 {
-		t.Fatalf("close button geometry = %#v", component)
-	}
-	if component.FocusRingWidth != 2 || component.PressedScale != 0.93 {
-		t.Fatalf("close button interaction tokens = %#v", component)
-	}
-}
-
 func TestCloseButtonLayoutUsesThemeGeometry(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	activeTheme.Components.CloseButton.Size = 30

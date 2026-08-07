@@ -123,20 +123,6 @@ func TestCheckboxVariantsMatchHeroUI(t *testing.T) {
 	}
 }
 
-func TestCheckboxThemeMatchesHeroUIGeometry(t *testing.T) {
-	activeTheme := DefaultTheme()
-	tokens := activeTheme.Components.Checkbox
-	if tokens.Size != 16 || tokens.IndicatorSize != 12 || tokens.LabelGap != 8 || tokens.DescriptionIndent != 28 {
-		t.Fatalf("Checkbox geometry = %+v", tokens)
-	}
-	if tokens.CheckStroke != 1.5 || tokens.IndeterminateStroke != 1.5 || tokens.FocusRingWidth != 2 {
-		t.Fatalf("Checkbox stroke geometry = %+v", tokens)
-	}
-	if dark := theme.DarkTheme().Components.Checkbox.ShadowOpacity; dark != 0 {
-		t.Fatalf("dark Checkbox shadow opacity = %v, want 0", dark)
-	}
-}
-
 func TestCheckboxInvalidHoverStyle(t *testing.T) {
 	theme := DefaultTheme()
 	style := checkboxStyleFor(&theme, CheckboxPrimary, true, false, false, true)

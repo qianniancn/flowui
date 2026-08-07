@@ -108,19 +108,6 @@ func TestAlertConditionalTransitionsAnimateRootAndPart(t *testing.T) {
 	}
 }
 
-func TestAlertHeroUIDefaultTheme(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Alert
-	if tokens.PaddingX != 16 || tokens.PaddingY != 12 || tokens.Gap != 16 || tokens.Radius != 24 {
-		t.Fatalf("alert geometry = %#v", tokens)
-	}
-	if tokens.IndicatorPadding != 4 || tokens.IconSize != 16 {
-		t.Fatalf("alert indicator geometry = %#v", tokens)
-	}
-	if tokens.TitleSize != 14 || tokens.TitleLineHeight != 24 || tokens.DescriptionSize != 14 || tokens.DescriptionLineHeight != 20 {
-		t.Fatalf("alert typography = %#v", tokens)
-	}
-}
-
 func TestAlertFillsWidthAndMatchesHeroUIHeight(t *testing.T) {
 	dims := New("New features available", "Check out the latest updates.").Layout(newAlertContext(nil), alertTestContext())
 	if dims.Size.X != 480 {

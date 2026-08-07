@@ -115,6 +115,16 @@ func TestStyleBackedWidgetsExposeStyleMethod(t *testing.T) {
 	}
 }
 
+func TestDropdownPublicItemKinds(t *testing.T) {
+	var kind ui.DropdownItemKind = ui.DropdownItemCheckbox
+	if kind != ui.MenuItemCheckbox {
+		t.Fatalf("dropdown checkbox kind = %v, want menu checkbox kind", kind)
+	}
+	if item := ui.DropdownGroupLabel("More"); item.Kind != ui.DropdownItemGroupLabel || item.Label != "More" {
+		t.Fatalf("dropdown group label = %#v", item)
+	}
+}
+
 func TestContextExposesOnlySupportedMethods(t *testing.T) {
 	contextType := reflect.TypeFor[*ui.Context]()
 	want := map[string]struct{}{
@@ -980,6 +990,8 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.Widget = externalWidget{}
 	var _ ui.Widget = ui.WidgetFunc(func(*ui.Context, layout.Context) layout.Dimensions { return layout.Dimensions{} })
 	_ = ui.LayoutVisualOverflow(nil, layout.Context{}, nil, func(*ui.Context, layout.Context, image.Rectangle) {})
+	_ = ui.LayoutVisualOutset(nil, layout.Context{}, nil, 1, 2, 3, 4)
+	_ = ui.VisualOutset(1, 2, 3, 4)
 	var _ ui.Widget = ui.Box(ui.Text("Save")).Key("save").Label("Save").Disabled(false).OnClick(func() {})
 	var _ func(*ui.Context, string) *int = ui.UseState[int]
 	var _ func(*ui.Context, string, func() *int) *int = ui.UseStateWith[int]

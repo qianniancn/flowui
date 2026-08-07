@@ -81,7 +81,10 @@ func (measuredBadge) Measure(_ *ui.Context, gtx layout.Context) layout.Dimension
 Low-level pointer widgets can use `AddPointerArea`, `NextPointerEvent`,
 `IsPrimaryPointerPress`, and `GrabPointer`. Use `LayoutVisualOverflow` for a
 local ripple or focus decoration that must cross the child's own clip. It is
-not a replacement for `Popover`, `Portal`, or another overlay host.
+not a replacement for `Popover`, `Portal`, or another overlay host. When that
+decoration also needs room inside an ancestor scroll or split viewport, report
+its top/right/bottom/left extent with `LayoutVisualOutset`; a component with a
+Style shell can use `VisualOutset` instead.
 
 ## Rules of thumb
 

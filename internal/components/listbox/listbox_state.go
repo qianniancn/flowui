@@ -9,6 +9,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/components/disclosure"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/components/optionrow"
 	"github.com/qianniancn/flowui/internal/frame"
@@ -37,6 +38,7 @@ type listBoxState struct {
 	multipleReady    bool
 	list             layout.List
 	bar              widget.Scrollbar
+	visualOutset     layoutui.VisualOutsetState
 	items            map[string]*listBoxItemState
 	frameItems       map[string]struct{}
 	itemKeys         map[string]int

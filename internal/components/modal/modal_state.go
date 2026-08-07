@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/disclosure"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/overlay"
 	"github.com/qianniancn/flowui/internal/state"
@@ -30,19 +31,21 @@ func deleteModalState(ctx *frame.Context, key string) {
 }
 
 type modalState struct {
-	dismiss      [4]overlay.ClickArea
-	dialog       overlay.ClickArea
-	close        widget.Clickable
-	bodyList     layout.List
-	bodyBar      widget.Scrollbar
-	outsideList  layout.List
-	focusStart   modalFocusTag
-	focusTarget  modalFocusTag
-	focusEnd     modalFocusTag
-	transition   animation.FloatTransition
-	focusPending bool
-	disclosure   disclosure.Binding[bool]
-	open         bool // cached effective open, updated by isOpen/requestOpen
+	dismiss             [4]overlay.ClickArea
+	dialog              overlay.ClickArea
+	close               widget.Clickable
+	bodyList            layout.List
+	bodyBar             widget.Scrollbar
+	bodyVisualOutset    layoutui.VisualOutsetState
+	outsideList         layout.List
+	outsideVisualOutset layoutui.VisualOutsetState
+	focusStart          modalFocusTag
+	focusTarget         modalFocusTag
+	focusEnd            modalFocusTag
+	transition          animation.FloatTransition
+	focusPending        bool
+	disclosure          disclosure.Binding[bool]
+	open                bool // cached effective open, updated by isOpen/requestOpen
 }
 
 // modalDisclosureCfg builds a disclosure.Config from the widget's open-state fields.

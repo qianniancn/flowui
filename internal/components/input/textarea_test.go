@@ -2,7 +2,6 @@ package input
 
 import (
 	"image"
-	"image/color"
 	"strings"
 	"testing"
 
@@ -112,20 +111,6 @@ func TestTextAreaFrameConstrainsInnerGeometryToRows(t *testing.T) {
 	TextArea("notes", "").FullWidth().layoutFrame(newContext(nil), testLayoutContext(), state, resolved, true, child)
 	if got.Min != image.Pt(276, 60) || got.Max != image.Pt(276, 60) {
 		t.Fatalf("inner constraints = %#v, want fixed 276x60", got)
-	}
-}
-
-func TestTextAreaHeroUIDefaultTheme(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.TextArea
-	if tokens.MinHeight != 38 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.PaddingY != 8 || tokens.TextSize != 14 || tokens.LineHeight != 20 {
-		t.Fatalf("textarea geometry = %#v", tokens)
-	}
-	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 || tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
-		t.Fatalf("textarea state tokens = %#v", tokens)
-	}
-	darkTokens := theme.DarkTheme().Components.TextArea
-	if darkTokens.ShadowOpacity != 0 || darkTokens.ShadowStrength != 1.5 {
-		t.Fatalf("dark textarea shadow = %#v", darkTokens)
 	}
 }
 

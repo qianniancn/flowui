@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"github.com/qianniancn/flowui/internal/frame"
 )
 
@@ -27,4 +28,20 @@ func LayoutVisualOverflow(ctx *frame.Context, gtx layout.Context, child frame.Wi
 	}
 	content.Add(gtx.Ops)
 	return dims
+}
+
+// LayoutVisualOutset declares paint that may extend beyond child without
+// changing its measured size. Scroll and other clipping containers use the
+// declaration to reserve room within their viewport on subsequent frames.
+func LayoutVisualOutset(ctx *frame.Context, gtx layout.Context, child frame.Widget, top, right, bottom, left unit.Dp) layout.Dimensions {
+	frame.ReportVisualOverflow(ctx, frame.VisualOutset{
+		Top:    max(gtx.Dp(top), 0),
+		Right:  max(gtx.Dp(right), 0),
+		Bottom: max(gtx.Dp(bottom), 0),
+		Left:   max(gtx.Dp(left), 0),
+	})
+	if child == nil {
+		return layout.Dimensions{}
+	}
+	return child.Layout(ctx, gtx)
 }

@@ -285,6 +285,12 @@ func TestShadowRasterScaleLimitsLargeRasters(t *testing.T) {
 	}
 }
 
+func TestShadowRasterPaddingMatchesBlurLimit(t *testing.T) {
+	if got, want := ShadowRasterPadding(1000, 0, 0), 194; got != want {
+		t.Fatalf("shadow raster padding = %d, want %d", got, want)
+	}
+}
+
 func TestHugeShadowEntryIsRejected(t *testing.T) {
 	col := color.NRGBA{R: 20, G: 80, B: 180, A: 120}
 	shape := shadowShape{Kind: ShadowRoundedRect, Radii: cornerRadiiPx{NW: 24, NE: 24, SE: 24, SW: 24}}

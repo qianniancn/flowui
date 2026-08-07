@@ -286,11 +286,16 @@ type PaintStyle struct {
 	Radii        *CornerRadii
 	Shadows      []Shadow
 	Outline      *OutlineStyle
+	// VisualOutset is an optional minimum visual overflow reservation. It is
+	// combined with the shadow and outline extents when a clipping container
+	// lays out this box.
+	VisualOutset *Insets
 	Opacity      *float32
 
-	radiusMask    uint8
-	backgroundSet bool
-	shadowsSet    bool
+	radiusMask      uint8
+	backgroundSet   bool
+	shadowsSet      bool
+	visualOutsetSet bool
 }
 
 type CornerRadii struct {
@@ -725,6 +730,10 @@ func hashPaintStyle(h hash.Hash, p *PaintStyle) {
 		writeFloat32(h, float32(p.Outline.Offset))
 		hashColorSource(h, p.Outline.Color)
 	}
+	if p.VisualOutset != nil {
+		writeUint8(h, 12)
+		hashInsets(h, p.VisualOutset)
+	}
 	if p.Opacity != nil {
 		writeUint8(h, 7)
 		writeFloat32(h, *p.Opacity)
@@ -735,6 +744,8 @@ func hashPaintStyle(h hash.Hash, p *PaintStyle) {
 	writeBool(h, p.backgroundSet)
 	writeUint8(h, 10)
 	writeBool(h, p.shadowsSet)
+	writeUint8(h, 13)
+	writeBool(h, p.visualOutsetSet)
 }
 
 func hashPaintSource(h hash.Hash, ps PaintSource) {

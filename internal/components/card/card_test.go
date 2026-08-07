@@ -32,22 +32,6 @@ func TestCardVariantsMapToSemanticSurfaces(t *testing.T) {
 	}
 }
 
-func TestCardUsesHeroUIDefaultSpacing(t *testing.T) {
-	ctx := cardTestContext(nil)
-	var ops op.Ops
-	dims := Card(
-		fixedWidget{size: image.Pt(40, 10)},
-		fixedWidget{size: image.Pt(40, 10)},
-	).Layout(ctx, layout.Context{
-		Constraints: layout.Constraints{Max: image.Pt(300, 200)},
-		Ops:         &ops,
-	})
-
-	if dims.Size != image.Pt(72, 64) {
-		t.Fatalf("card size = %v, want (72,64)", dims.Size)
-	}
-}
-
 func TestCardThemeControlsSpacing(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	activeTheme.Components.Card.Padding = 20

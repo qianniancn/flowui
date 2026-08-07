@@ -299,28 +299,6 @@ func TestMenuRuntimeHoverInspectionDoesNotClaimSubmenuState(t *testing.T) {
 	child.stateFor(ctx)
 }
 
-func TestMenuHeroUIDefaultTheme(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Menu
-	if tokens.Width != 220 || tokens.MaxHeight != 0 || tokens.Padding != 6 || tokens.Radius != 24 || tokens.BorderWidth != 0 || tokens.ItemGap != 2 || tokens.ItemMinHeight != 36 || tokens.ItemRadius != 16 {
-		t.Fatalf("menu geometry = %#v", tokens)
-	}
-	if tokens.ItemPaddingX != 10 || tokens.ItemPaddingY != 6 || tokens.ItemContentGap != 12 || tokens.ItemTextSize != 14 || tokens.ShortcutTextSize != 14 || tokens.ShortcutHeight != 24 || tokens.ShortcutPaddingX != 8 {
-		t.Fatalf("menu content tokens = %#v", tokens)
-	}
-	if tokens.IndicatorSize != 16 || tokens.IndicatorContentGap != 2 || tokens.CheckmarkSize != 10 || tokens.RadioDotSize != 8 || tokens.IndicatorOffsetY != 1.5 || tokens.SubmenuIndicatorSize != 14 || tokens.IndicatorColor != activeTheme.Palette.Accent {
-		t.Fatalf("menu indicator tokens = %#v", tokens)
-	}
-	if tokens.FocusRingWidth != 2 || tokens.FocusRingOffset != 2 || tokens.PressedScale != 0.98 || tokens.SubmenuGap != 8 || tokens.ContextMenuOffset != 2 || tokens.EnterScale != 0.9 || tokens.ExitScale != 0.95 || tokens.ShadowOpacity != 1 {
-		t.Fatalf("menu state tokens = %#v", tokens)
-	}
-	darkTheme := theme.DarkTheme()
-	dark := darkTheme.Components.Menu
-	if dark.ShadowOpacity != 0 || dark.BorderWidth != 1 || dark.BorderColor != (color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x4d}) || dark.IndicatorColor != darkTheme.Palette.Accent {
-		t.Fatalf("dark menu elevation = shadow %v border %v", dark.ShadowOpacity, dark.BorderWidth)
-	}
-}
-
 func TestMenuItemIndicatorUsesThemeColor(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
 	want := color.NRGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}

@@ -57,6 +57,7 @@ type Context struct {
 	inheritedStyles              []style.Style
 	hiddenLayoutDepth            int
 	semantics                    []SemanticNode
+	visualOverflowCollector      *VisualOverflowCollector
 }
 
 // SemanticRole identifies a framework-level role that Gio's semantic package

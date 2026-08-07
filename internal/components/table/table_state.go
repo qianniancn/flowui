@@ -14,6 +14,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/checkbox"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/interact"
@@ -25,30 +26,32 @@ const stateSlotTable = "table"
 const tableColorDuration = 100 * time.Millisecond
 
 type tableState struct {
-	vertical           layout.List
-	verticalBar        widget.Scrollbar
-	horizontal         layout.List
-	horizontalBar      widget.Scrollbar
-	rows               map[string]*tableRowState
-	columns            map[string]*tableColumnState
-	frameRows          map[string]struct{}
-	frameColumns       map[string]struct{}
-	rowKeys            map[string]struct{}
-	columnKeys         map[string]struct{}
-	keyFilters         []event.Filter
-	selectedKeys       state.StringSetCache
-	disabledKeys       state.StringSetCache
-	pressedKey         key.Name
-	pressedRowKey      string
-	pressedModifiers   key.Modifiers
-	selectionAnchor    string
-	typeahead          nav.Typeahead
-	selectAll          widget.Clickable
-	selectAllFocus     state.FocusAnimation
-	selectAllSelection checkbox.SelectionAnimation
-	loadMoreCount      int
-	loadMoreHasMore    bool
-	loadMoreRequested  bool
+	vertical               layout.List
+	verticalBar            widget.Scrollbar
+	verticalVisualOutset   layoutui.VisualOutsetState
+	horizontal             layout.List
+	horizontalBar          widget.Scrollbar
+	horizontalVisualOutset layoutui.VisualOutsetState
+	rows                   map[string]*tableRowState
+	columns                map[string]*tableColumnState
+	frameRows              map[string]struct{}
+	frameColumns           map[string]struct{}
+	rowKeys                map[string]struct{}
+	columnKeys             map[string]struct{}
+	keyFilters             []event.Filter
+	selectedKeys           state.StringSetCache
+	disabledKeys           state.StringSetCache
+	pressedKey             key.Name
+	pressedRowKey          string
+	pressedModifiers       key.Modifiers
+	selectionAnchor        string
+	typeahead              nav.Typeahead
+	selectAll              widget.Clickable
+	selectAllFocus         state.FocusAnimation
+	selectAllSelection     checkbox.SelectionAnimation
+	loadMoreCount          int
+	loadMoreHasMore        bool
+	loadMoreRequested      bool
 }
 
 func (s *tableState) updateLoadMore(count int, hasMore, loading, visible bool, onLoadMore func()) {

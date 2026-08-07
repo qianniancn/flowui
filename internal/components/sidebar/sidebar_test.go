@@ -306,12 +306,8 @@ func TestSidebarPointerClickDoesNotShowKeyboardFocus(t *testing.T) {
 	}
 }
 
-func TestSidebarThemeAndSelectedColors(t *testing.T) {
+func TestSidebarSelectedColorsFollowTheme(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Sidebar
-	if tokens.Width != 248 || tokens.CollapsedWidth != 64 || tokens.ItemHeight != 40 || tokens.ItemRadius != 8 || tokens.ItemPaddingX != 10 {
-		t.Fatalf("Sidebar theme = %#v", tokens)
-	}
 	selected := sidebarItemStyleFor(&activeTheme, true, false, false, false)
 	if selected.background != activeTheme.Palette.AccentSoft || selected.foreground != activeTheme.Palette.AccentSoftForeground {
 		t.Fatalf("selected colors = %#v/%#v", selected.background, selected.foreground)

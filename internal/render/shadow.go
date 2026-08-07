@@ -319,6 +319,7 @@ const (
 	softShadowCacheLimit      = 256
 	softShadowCacheMaxBytes   = 32 << 20
 	softShadowVariantLimit    = 4
+	maxSoftShadowBlur         = 96
 	maxShadowRasterPixels     = 256 * 1024
 	maxShadowRasterScale      = 8
 )
@@ -357,10 +358,10 @@ func softShadowEntry(size image.Point, shape shadowShape, blur, spread, offX, of
 	if size.X <= 0 || size.Y <= 0 || blur < 0 || col.A == 0 {
 		return softShadowCacheEntry{}
 	}
-	blur = min(blur, 96)
+	blur = min(blur, maxSoftShadowBlur)
 	shape = normalizeShadowShape(image.Rectangle{Max: size}, shape)
-	padX := blur*2 + absInt(spread) + absInt(offX) + 2
-	padY := blur*2 + absInt(spread) + absInt(offY) + 2
+	padX := ShadowRasterPadding(blur, spread, offX)
+	padY := ShadowRasterPadding(blur, spread, offY)
 	rasterSize, ok := shadowRasterSize(size, padX, padY)
 	if !ok {
 		return softShadowCacheEntry{}
@@ -479,8 +480,12 @@ func evictOldestShadowEntryLocked() {
 }
 
 func buildSoftShadowEntry(size image.Point, shape shadowShape, blur, spread, offX, offY int, col color.NRGBA) softShadowCacheEntry {
-	padX := blur*2 + absInt(spread) + absInt(offX) + 2
-	padY := blur*2 + absInt(spread) + absInt(offY) + 2
+	if blur < 0 {
+		return softShadowCacheEntry{}
+	}
+	blur = min(blur, maxSoftShadowBlur)
+	padX := ShadowRasterPadding(blur, spread, offX)
+	padY := ShadowRasterPadding(blur, spread, offY)
 	rasterSize, ok := shadowRasterSize(size, padX, padY)
 	if !ok {
 		return softShadowCacheEntry{}
@@ -993,11 +998,37 @@ func premul(c, a uint8) uint8 {
 	return uint8((uint16(c)*uint16(a) + 127) / 255)
 }
 
-func absInt(v int) int {
-	if v < 0 {
-		return -v
+// ShadowRasterPadding returns the symmetric pixel padding used by a soft
+// shadow raster on one axis. It is shared with clipping containers so their
+// reserved visual space matches the pixels DrawShadow may emit.
+func ShadowRasterPadding(blur, spread, offset int) int {
+	blur = min(max(blur, 0), maxSoftShadowBlur)
+	return saturatedIntSum(blur, blur, absoluteInt(spread), absoluteInt(offset), 2)
+}
+
+func absoluteInt(value int) int {
+	if value >= 0 {
+		return value
 	}
-	return v
+	if value == -value {
+		return maxIntValue()
+	}
+	return -value
+}
+
+func saturatedIntSum(values ...int) int {
+	limit := maxIntValue()
+	result := 0
+	for _, value := range values {
+		if value <= 0 {
+			continue
+		}
+		if result > limit-value {
+			return limit
+		}
+		result += value
+	}
+	return result
 }
 
 func maxIntValue() int {

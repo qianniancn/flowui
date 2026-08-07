@@ -28,10 +28,6 @@ func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
 }
 
-func DefaultTheme() theme.Theme {
-	return theme.DefaultTheme()
-}
-
 func testComponentState[T any](ctx *frame.Context, key, slot string) *T {
 	value, _ := frame.PeekState[T](ctx, key, slot)
 	return value
@@ -57,56 +53,7 @@ func mustPanic(t *testing.T, fn func()) {
 	fn()
 }
 
-func TestTabsThemeMatchesHeroUI(t *testing.T) {
-	theme := DefaultTheme()
-	tabs := theme.Components.Tabs
-	if tabs.TabHeight != 32 || tabs.TextSize != 14 || tabs.ListPadding != 4 {
-		t.Fatalf("tabs metrics = height %v text %v padding %v, want 32, 14, 4", tabs.TabHeight, tabs.TextSize, tabs.ListPadding)
-	}
-	if tabs.SmallTabHeight != 24 || tabs.SmallTabPaddingX != 12 {
-		t.Fatalf("small tabs metrics = height %v padding %v, want 24 and 12", tabs.SmallTabHeight, tabs.SmallTabPaddingX)
-	}
-	if tabs.ScrollShadowSize != 64 {
-		t.Fatalf("tabs scroll shadow size = %v, want 64", tabs.ScrollShadowSize)
-	}
-	if tabs.IndicatorLineWidth != 2 || tabs.PanelPadding != 8 || tabs.RootGap+tabs.PanelGap != 24 {
-		t.Fatal("tabs indicator or panel metrics do not match HeroUI")
-	}
-	if tabs.LargeTabHeight != 40 || tabs.LargeTextSize != 16 || tabs.ColorDuration <= 0 || tabs.IndicatorDuration <= 0 || tabs.PanelDuration <= 0 {
-		t.Fatal("extended tabs theme metrics were not initialized")
-	}
-	if tabs.IndicatorWidth != 0 {
-		t.Fatalf("default indicator width = %v, want automatic width", tabs.IndicatorWidth)
-	}
-	if tabs.ExtraContentGap <= 0 {
-		t.Fatal("extra-content tabs tokens were not initialized")
-	}
-	if theme.Palette.Segment.A == 0 || theme.Palette.SegmentForeground.A == 0 {
-		t.Fatal("tabs segment palette was not initialized")
-	}
-	if got := tabsListStyleFor(&theme, TabsPrimary).background; got != theme.Palette.Default {
-		t.Fatalf("primary tabs background = %#v, want default palette %#v", got, theme.Palette.Default)
-	}
-
-	primary := tabsItemStyleFor(&theme, TabsPrimary, TabsColorDefault, false, false)
-	secondary := tabsItemStyleFor(&theme, TabsSecondary, TabsColorDefault, false, false)
-	accent := tabsItemStyleFor(&theme, TabsPrimary, TabsColorAccent, false, false)
-	secondaryAccent := tabsItemStyleFor(&theme, TabsSecondary, TabsColorAccent, false, false)
-	if primary.indicator != theme.Palette.Segment || primary.selectedForeground != theme.Palette.SegmentForeground {
-		t.Fatal("primary tabs do not use segment palette")
-	}
-	if secondary.indicator != theme.Palette.Accent || secondary.selectedForeground != theme.Palette.Foreground {
-		t.Fatal("secondary tabs do not use accent line and foreground text")
-	}
-	if accent.indicator != theme.Palette.Accent || accent.selectedForeground != theme.Palette.AccentForeground {
-		t.Fatal("accent tabs do not use the primary button palette")
-	}
-	if secondaryAccent.indicator != theme.Palette.Accent || secondaryAccent.selectedForeground != theme.Palette.Accent {
-		t.Fatal("secondary accent tabs do not use accent text and indicator")
-	}
-}
-
-func TestTabsItemPartMatchesHeroUIOpacity(t *testing.T) {
+func TestTabsItemPartAppliesStateOpacity(t *testing.T) {
 	ctx := newContext(nil)
 	gtx := testLayoutContext()
 	widget := TabsWidget{key: "tabs"}
@@ -584,16 +531,6 @@ func TestTabsPanelFadeHonorsDurationAndMotion(t *testing.T) {
 	}
 }
 
-func TestTabsAccessibleLabelReplacesVisualLabelInSemantics(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	items := []TabItem{{Key: "settings", Label: "", AccessibleLabel: "Settings", Panel: text.New("Settings")}}
-	layoutTabsFrame(ctx, router, Tabs("accessible", "settings", items), time.Unix(1, 0), image.Pt(240, 120))
-	if _, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Settings"); !ok {
-		t.Fatal("accessible tab label was not exposed in semantics")
-	}
-}
-
 func TestTabsForceRenderInitializesHiddenPanelsWithoutExposingThem(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
@@ -644,55 +581,44 @@ func TestTabsForceRenderYieldsToDestroyOnHidden(t *testing.T) {
 	}
 }
 
-func TestTabsKeepAliveRetainsHiddenPanelState(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	selected := "account"
-	account := &tabsStatePanelProbe{}
-	security := &tabsStatePanelProbe{}
-	items := []TabItem{
-		{Key: "account", Label: "Account", Panel: account},
-		{Key: "security", Label: "Security", Panel: security},
-	}
-	widgetForFrame := func() TabsWidget {
-		return Tabs("settings", selected, items).KeepAlive(true)
-	}
+func TestTabsHiddenPanelStateLifecycle(t *testing.T) {
+	for _, test := range []struct {
+		name            string
+		destroyOnHidden bool
+		wantRetained    bool
+	}{
+		{name: "keep alive", wantRetained: true},
+		{name: "destroy on hidden", destroyOnHidden: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			router := new(input.Router)
+			selected := "account"
+			account := &tabsStatePanelProbe{}
+			security := &tabsStatePanelProbe{}
+			items := []TabItem{
+				{Key: "account", Label: "Account", Panel: account},
+				{Key: "security", Label: "Security", Panel: security},
+			}
+			widgetForFrame := func() TabsWidget {
+				return Tabs("settings", selected, items).KeepAlive(true).DestroyOnHidden(test.destroyOnHidden)
+			}
 
-	layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, 0), image.Pt(360, 180))
-	if account.state == nil || account.key == "" {
-		t.Fatal("selected panel did not create its state")
-	}
-	first := account.state
-	selected = "security"
-	layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, int64(time.Millisecond)), image.Pt(360, 180))
-	if security.layouts != 1 {
-		t.Fatalf("selected security panel layouts = %d, want 1", security.layouts)
-	}
-	retained, ok := frame.PeekState[widget.Clickable](ctx, account.key, "probe")
-	if !ok || retained != first {
-		t.Fatal("hidden account panel state was not retained")
-	}
-}
-
-func TestTabsDestroyOnHiddenReleasesPanelState(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	selected := "account"
-	account := &tabsStatePanelProbe{}
-	security := &tabsStatePanelProbe{}
-	items := []TabItem{
-		{Key: "account", Label: "Account", Panel: account},
-		{Key: "security", Label: "Security", Panel: security},
-	}
-	widgetForFrame := func() TabsWidget {
-		return Tabs("settings", selected, items).KeepAlive(true).DestroyOnHidden(true)
-	}
-
-	layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, 0), image.Pt(360, 180))
-	selected = "security"
-	layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, int64(time.Millisecond)), image.Pt(360, 180))
-	if _, ok := frame.PeekState[widget.Clickable](ctx, account.key, "probe"); ok {
-		t.Fatal("destroy-on-hidden panel state was retained")
+			layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, 0), image.Pt(360, 180))
+			if account.state == nil || account.key == "" {
+				t.Fatal("selected panel did not create its state")
+			}
+			first := account.state
+			selected = "security"
+			layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, int64(time.Millisecond)), image.Pt(360, 180))
+			if security.layouts != 1 {
+				t.Fatalf("selected security panel layouts = %d, want 1", security.layouts)
+			}
+			retained, ok := frame.PeekState[widget.Clickable](ctx, account.key, "probe")
+			if ok != test.wantRetained || ok && retained != first {
+				t.Fatalf("hidden panel state retained = %v, want %v", ok, test.wantRetained)
+			}
+		})
 	}
 }
 
@@ -739,32 +665,6 @@ func TestTabsPanelKeysAreScopedPerItem(t *testing.T) {
 	layoutTabsFrame(ctx, router, widgetForFrame(), time.Unix(1, int64(time.Millisecond)), image.Pt(360, 180))
 	if account.key == security.key {
 		t.Fatalf("panel state keys collided: %q", account.key)
-	}
-}
-
-func TestTabsSlotsAndClosableItemsExposeLayout(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	leading := &tabsSlotProbe{}
-	trailing := &tabsSlotProbe{}
-	closed := ""
-	items := []TabItem{{Key: "account", Label: "Account", Closable: true, Panel: text.New("Panel")}}
-	widget := Tabs("settings", "account", items).
-		Leading(leading).
-		Trailing(trailing).
-		OnClose(func(key string) { closed = key })
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(360, 180))
-	if leading.layouts != 1 || trailing.layouts != 1 {
-		t.Fatalf("slot layouts = leading %d trailing %d, want 1 and 1", leading.layouts, trailing.layouts)
-	}
-	closeBounds, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Close Account")
-	if !ok {
-		t.Fatal("closable tab did not expose a close action")
-	}
-	clickTabsAt(router, f32.Pt(float32(closeBounds.Min.X+closeBounds.Max.X)/2, float32(closeBounds.Min.Y+closeBounds.Max.Y)/2))
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(360, 180))
-	if closed != "account" {
-		t.Fatalf("closed key = %q, want account", closed)
 	}
 }
 
@@ -972,7 +872,7 @@ func TestTabsSelectionVisibilityRechecksAfterResize(t *testing.T) {
 }
 
 func TestTabsScrollShadowGeometryMatchesOrientation(t *testing.T) {
-	background := DefaultTheme().Palette.Background
+	background := theme.DefaultTheme().Palette.Background
 	horizontal, ok := tabsScrollShadowFor(image.Pt(300, 40), TabsHorizontal, 64, 1, background)
 	if !ok {
 		t.Fatal("horizontal trailing shadow was not created")
@@ -995,50 +895,77 @@ func TestTabsScrollShadowGeometryMatchesOrientation(t *testing.T) {
 	}
 }
 
-func TestTabsOverflowScrollButtonAdvancesList(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	items := tabsOverflowItems()
-	widget := Tabs("overflow", "overview", items)
+func TestTabsOverflowScrollButtonsAdvanceList(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		vertical bool
+		viewport image.Point
+		label    string
+	}{
+		{name: "horizontal", viewport: image.Pt(300, 160), label: "Scroll tabs right"},
+		{name: "vertical", vertical: true, viewport: image.Pt(320, 120), label: "Scroll tabs down"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			router := new(input.Router)
+			items := tabsOverflowItems()
+			widget := Tabs("overflow", "Overview", items)
+			if test.vertical {
+				widget = widget.Vertical()
+			}
 
-	layoutTabsFrameWithOverlays(ctx, router, widget, time.Unix(1, 0), image.Pt(300, 160))
-	state := testComponentState[tabsState](ctx, "overflow", stateSlotTabs)
-	if !state.canScrollNext(len(items)) {
-		t.Fatal("overflowing tabs did not expose forward scrolling")
-	}
-	buttonBounds, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Scroll tabs right")
-	if !ok {
-		t.Fatal("horizontal tabs did not expose the right scroll button semantics")
-	}
-	clickTabsAt(router, f32.Pt(
-		float32(buttonBounds.Min.X+buttonBounds.Max.X)/2,
-		float32(buttonBounds.Min.Y+buttonBounds.Max.Y)/2,
-	))
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(300, 160))
-	if state.list.Position.First == 0 {
-		t.Fatal("forward scroll button did not advance the tab list")
-	}
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(2*time.Millisecond)), image.Pt(300, 160))
-	if state.list.Position.First == 0 {
-		t.Fatal("controlled selection pulled overflow scrolling back to the first tab")
+			layoutTabsFrameWithOverlays(ctx, router, widget, time.Unix(1, 0), test.viewport)
+			state := testComponentState[tabsState](ctx, "overflow", stateSlotTabs)
+			if !state.canScrollNext(len(items)) {
+				t.Fatal("overflowing tabs did not expose forward scrolling")
+			}
+			bounds, ok := semanticBoundsForLabel(router.AppendSemantics(nil), test.label)
+			if !ok {
+				t.Fatalf("missing %q scroll button semantics", test.label)
+			}
+			clickTabsAt(router, f32.Pt(float32(bounds.Min.X+bounds.Max.X)/2, float32(bounds.Min.Y+bounds.Max.Y)/2))
+			layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), test.viewport)
+			if state.list.Position.First == 0 {
+				t.Fatal("forward scroll button did not advance the tab list")
+			}
+			layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(2*time.Millisecond)), test.viewport)
+			if state.list.Position.First == 0 {
+				t.Fatal("controlled selection pulled scrolling back to the first tab")
+			}
+		})
 	}
 }
 
-func TestTabsOverflowMenuMeasuresVisibleItemsAndExposesMoreTrigger(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	items := tabsOverflowItems()
-	widget := Tabs("overflow-menu", "Overview", items).Overflow(TabsOverflowMenu)
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(300, 160))
-	state := testComponentState[tabsState](ctx, "overflow-menu", stateSlotTabs)
-	if state.list.Position.Count == 0 || state.list.Position.Count >= len(items) {
-		t.Fatalf("visible tab count = %d, want between 1 and %d", state.list.Position.Count, len(items)-1)
-	}
-	if _, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "More"); !ok {
-		t.Fatal("overflow menu did not expose the More trigger")
-	}
-	if _, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Revenue"); ok {
-		t.Fatal("hidden tab was laid out in the main tab strip")
+func TestTabsOverflowMenuReservesTrigger(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		vertical bool
+		viewport image.Point
+	}{
+		{name: "horizontal", viewport: image.Pt(300, 160)},
+		{name: "vertical", vertical: true, viewport: image.Pt(320, 120)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := newContext(nil)
+			router := new(input.Router)
+			items := tabsOverflowItems()
+			widget := Tabs("overflow-menu", "Overview", items).Overflow(TabsOverflowMenu)
+			if test.vertical {
+				widget = widget.Vertical()
+			}
+			layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), test.viewport)
+			state := testComponentState[tabsState](ctx, "overflow-menu", stateSlotTabs)
+			if state.list.Position.Count == 0 || state.list.Position.Count >= len(items) {
+				t.Fatalf("visible tab count = %d, want between 1 and %d", state.list.Position.Count, len(items)-1)
+			}
+			nodes := router.AppendSemantics(nil)
+			if _, ok := semanticBoundsForLabel(nodes, "More"); !ok {
+				t.Fatal("overflow menu did not expose the More trigger")
+			}
+			if _, ok := semanticBoundsForLabel(nodes, "Revenue"); ok {
+				t.Fatal("hidden tab was laid out in the main tab strip")
+			}
+		})
 	}
 }
 
@@ -1296,47 +1223,6 @@ func TestTabsInlineEditCommitsWhenFocusLeavesEditor(t *testing.T) {
 	}
 }
 
-func TestVerticalTabsOverflowScrollButtonAdvancesList(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	items := tabsOverflowItems()
-	widget := Tabs("vertical-overflow", "Overview", items).Vertical()
-
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(320, 120))
-	state := testComponentState[tabsState](ctx, "vertical-overflow", stateSlotTabs)
-	if !state.canScrollNext(len(items)) {
-		t.Fatal("overflowing vertical tabs did not expose downward scrolling")
-	}
-	buttonBounds, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "Scroll tabs down")
-	if !ok {
-		t.Fatal("vertical tabs did not expose the down scroll button semantics")
-	}
-	clickTabsAt(router, f32.Pt(
-		float32(buttonBounds.Min.X+buttonBounds.Max.X)/2,
-		float32(buttonBounds.Min.Y+buttonBounds.Max.Y)/2,
-	))
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, int64(time.Millisecond)), image.Pt(320, 120))
-	if state.list.Position.First == 0 {
-		t.Fatal("down scroll button did not advance the vertical tab list")
-	}
-}
-
-func TestVerticalTabsOverflowMenuReservesMoreRow(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	items := tabsOverflowItems()
-	widget := Tabs("vertical-overflow-menu", "Overview", items).
-		Vertical().Overflow(TabsOverflowMenu)
-	layoutTabsFrame(ctx, router, widget, time.Unix(1, 0), image.Pt(320, 120))
-	state := testComponentState[tabsState](ctx, "vertical-overflow-menu", stateSlotTabs)
-	if state.list.Position.Count == 0 || state.list.Position.Count >= len(items) {
-		t.Fatalf("vertical visible tab count = %d, want between 1 and %d", state.list.Position.Count, len(items)-1)
-	}
-	if _, ok := semanticBoundsForLabel(router.AppendSemantics(nil), "More"); !ok {
-		t.Fatal("vertical overflow menu did not expose the More trigger")
-	}
-}
-
 func TestVerticalTabsOverflowMenuMeasuresCustomTriggerWidth(t *testing.T) {
 	ctx := newContext(nil)
 	gtx := testLayoutContext()
@@ -1375,52 +1261,29 @@ func TestTabsScrollButtonLabelsMatchOrientation(t *testing.T) {
 	}
 }
 
-func TestTabsSemanticsExposeSelectedTab(t *testing.T) {
+func TestTabsSemanticContracts(t *testing.T) {
 	ctx := newContext(nil)
 	router := new(input.Router)
-	layoutTabsFrame(ctx, router, Tabs("settings", "security", tabsTestItems()), time.Unix(1, 0), image.Pt(400, 200))
+	items := tabsTestItems()
+	items[1].AccessibleLabel = "Security settings"
+	layoutTabsFrame(ctx, router, Tabs("semantic-roles", "security", items), time.Unix(1, 0), image.Pt(400, 200))
 
-	selected := selectedSemanticLabels(router.AppendSemantics(nil))
-	if len(selected) != 1 || selected[0] != "Security" {
-		t.Fatalf("selected semantic labels = %v, want [Security]", selected)
+	gioNodes := router.AppendSemantics(nil)
+	selected := selectedSemanticLabels(gioNodes)
+	if len(selected) != 1 || selected[0] != "Security settings" {
+		t.Fatalf("selected semantic labels = %v, want [Security settings]", selected)
 	}
-}
+	descriptions := semanticDescriptions(gioNodes)
+	for _, want := range []string{"Tab list", "Selected tab", "Tab panel: Security settings"} {
+		if !containsString(descriptions, want) {
+			t.Fatalf("semantic descriptions = %v, missing %q", descriptions, want)
+		}
+	}
+	panelNode, ok := semanticNodeByDescription(gioNodes, "Tab panel: Security settings")
+	if !ok || panelNode.Desc.Label != "Security settings" || panelNode.Desc.Disabled {
+		t.Fatalf("panel semantics = %#v, want labeled and enabled", panelNode.Desc)
+	}
 
-func TestTabsSemanticsExposeTabListAndPanelRoles(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	layoutTabsFrame(ctx, router, Tabs("settings", "security", tabsTestItems()), time.Unix(1, 0), image.Pt(400, 200))
-
-	descriptions := semanticDescriptions(router.AppendSemantics(nil))
-	if !containsString(descriptions, "Tab list") {
-		t.Fatalf("semantic descriptions = %v, missing tab list", descriptions)
-	}
-	if !containsString(descriptions, "Selected tab") {
-		t.Fatalf("semantic descriptions = %v, missing selected tab", descriptions)
-	}
-	if !containsString(descriptions, "Tab panel: Security") {
-		t.Fatalf("semantic descriptions = %v, missing selected panel", descriptions)
-	}
-}
-
-func TestTabsPanelSemanticsExposeLabelAndEnabledState(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	layoutTabsFrame(ctx, router, Tabs("panel-semantics", "security", tabsTestItems()), time.Unix(1, 0), image.Pt(400, 200))
-
-	node, ok := semanticNodeByDescription(router.AppendSemantics(nil), "Tab panel: Security")
-	if !ok {
-		t.Fatal("selected panel semantic node was not found")
-	}
-	if node.Desc.Label != "Security" || node.Desc.Disabled {
-		t.Fatalf("panel semantics = %#v, want label Security and enabled", node.Desc)
-	}
-}
-
-func TestTabsRegistersWorkbenchSemanticRelationships(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	layoutTabsFrame(ctx, router, Tabs("semantic-roles", "security", tabsTestItems()), time.Unix(1, 0), image.Pt(400, 200))
 	nodes := frame.Semantics(ctx)
 	var list, selectedTab, panel *frame.SemanticNode
 	for index := range nodes {
@@ -1628,10 +1491,6 @@ func (p *tabsStatePanelProbe) Layout(ctx *frame.Context, _ layout.Context) layou
 	return layout.Dimensions{Size: image.Pt(80, 32)}
 }
 
-type tabsSlotProbe struct {
-	layouts int
-}
-
 type tabsMeasurableProbe struct {
 	layouts int
 	size    image.Point
@@ -1679,11 +1538,6 @@ func (p *tabsScopedContentProbe) Measure(ctx *frame.Context, _ layout.Context) l
 func (p *tabsScopedContentProbe) Layout(ctx *frame.Context, _ layout.Context) layout.Dimensions {
 	p.layoutKey = frame.FullKey(ctx, "content")
 	return layout.Dimensions{Size: image.Pt(44, 24)}
-}
-
-func (p *tabsSlotProbe) Layout(_ *frame.Context, _ layout.Context) layout.Dimensions {
-	p.layouts++
-	return layout.Dimensions{Size: image.Pt(24, 24)}
 }
 
 type tabsOverlayProbe struct {

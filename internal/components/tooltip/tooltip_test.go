@@ -19,19 +19,6 @@ import (
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
-func TestTooltipHeroUIDefaultTokens(t *testing.T) {
-	value := theme.DefaultTheme().Components.Tooltip
-	if value.Delay != 1500*time.Millisecond || value.CloseDelay != 500*time.Millisecond {
-		t.Fatalf("delays = %v/%v, want 1500ms/500ms", value.Delay, value.CloseDelay)
-	}
-	if value.Offset != 3 || value.ArrowOffset != 7 || value.Padding != 8 || value.Radius != 12 || value.BorderWidth != 1 || value.MaxWidth != 320 {
-		t.Fatalf("layout tokens = %+v", value)
-	}
-	if value.TextSize != 12 || value.ArrowSize != 12 || value.AnimationDistance != 4 || value.AnimationScale != .90 || value.ExitScale != .95 {
-		t.Fatalf("visual tokens = %+v", value)
-	}
-}
-
 func TestTooltipBorderUsesThemeColor(t *testing.T) {
 	themeValue := theme.DefaultTheme()
 	style := tooltipStyleFor(&themeValue)

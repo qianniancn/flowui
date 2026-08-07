@@ -5,6 +5,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/frame"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 )
@@ -14,6 +15,7 @@ const stateSlotSidebar = "sidebar"
 type sidebarState struct {
 	list             layout.List
 	bar              widget.Scrollbar
+	visualOutset     layoutui.VisualOutsetState
 	items            map[string]*sidebarItemState
 	frameItems       map[string]struct{}
 	itemIndex        map[string]int

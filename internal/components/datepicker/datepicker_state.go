@@ -10,6 +10,7 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
 	"github.com/qianniancn/flowui/internal/components/disclosure"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/optionrow"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/overlay"
@@ -43,6 +44,7 @@ type datePickerState struct {
 	nextBackground    animation.ColorTransition
 	yearList          layout.List
 	yearBar           widget.Scrollbar
+	yearVisualOutset  layoutui.VisualOutsetState
 	yearScrollYear    int
 	yearScrollReady   bool
 	days              map[string]*datePickerCellState

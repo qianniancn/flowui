@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/flowui/internal/frame"
+	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
 func TestScrollKeepsState(t *testing.T) {
@@ -63,6 +64,86 @@ func TestScrollOptions(t *testing.T) {
 	}
 	if !state.ScrollAnyAxis {
 		t.Fatal("scroll-any-axis was not enabled")
+	}
+}
+
+func TestScrollReservesShadowOutsetAtViewportEdges(t *testing.T) {
+	ctx := newContext(nil)
+	router := new(input.Router)
+	probe := new(constraintWidget)
+	value := Scroll("shadow", Box(probe).Style(flowstyle.Style{}.
+		FillWidth().
+		Height(20).
+		BoxShadow(0, 2, 4, 0, flowstyle.RGBA(0x00000080)),
+	))
+	start := time.Unix(1, 0)
+
+	layoutScrollFrame(ctx, router, value, start)
+	if probe.constraints.Max.X != 100 {
+		t.Fatalf("initial child width = %d, want 100", probe.constraints.Max.X)
+	}
+	layoutScrollFrame(ctx, router, value, start.Add(time.Millisecond))
+
+	// The shadow raster needs 10px on each horizontal edge. The item's 12px
+	// vertical outsets are applied only at the viewport's first and last edge.
+	if probe.constraints.Min.X != 80 || probe.constraints.Max.X != 80 {
+		t.Fatalf("shadow-safe child width = %v, want exact 80", probe.constraints)
+	}
+	if probe.constraints.Min.Y != 20 || probe.constraints.Max.Y != 20 {
+		t.Fatalf("shadow-safe child height = %v, want exact 20", probe.constraints)
+	}
+}
+
+func TestVisualOutsetPreservesBottomBaseline(t *testing.T) {
+	dims := layoutVisualOutset(newContext(nil), layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	}, frame.VisualOutset{Top: 3, Bottom: 5}, func(layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: image.Pt(20, 10), Baseline: 2}
+	})
+
+	if dims.Size != image.Pt(20, 18) || dims.Baseline != 7 {
+		t.Fatalf("visual outset dimensions = %v, want size (20,18) and baseline 7", dims)
+	}
+}
+
+func TestVisualOutsetStateSurvivesHiddenLayout(t *testing.T) {
+	ctx := newContext(nil)
+	visual := &VisualOutsetState{outset: frame.VisualOutset{Top: 4, Right: 5, Bottom: 6, Left: 7}}
+	list := new(layout.List)
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(100, 100)},
+		Ops:         new(op.Ops),
+	}
+
+	frame.BeginFrameWithViewport(ctx, image.Pt(100, 100))
+	frame.LayoutHidden(ctx, gtx, "hidden", frame.WidgetFunc(func(ctx *frame.Context, hiddenGtx layout.Context) layout.Dimensions {
+		return layoutVisualOutsetList(ctx, hiddenGtx, list, 1, visual, func(layout.Context, int) layout.Dimensions {
+			return layout.Dimensions{Size: image.Pt(20, 20)}
+		})
+	}))
+	frame.EndFrame(ctx)
+
+	want := frame.VisualOutset{Top: 4, Right: 5, Bottom: 6, Left: 7}
+	if visual.outset != want {
+		t.Fatalf("hidden layout changed visual outset = %#v, want %#v", visual.outset, want)
+	}
+}
+
+func TestOverflowHiddenStopsVisualOutsetPropagation(t *testing.T) {
+	ctx := newContext(nil)
+	collector := new(frame.VisualOverflowCollector)
+	restore := frame.PushVisualOverflowCollector(ctx, collector)
+	child := frame.WidgetFunc(func(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
+		return LayoutVisualOutset(ctx, gtx, Spacer(10, 10), 8, 8, 8, 8)
+	})
+	Box(child).
+		Style(flowstyle.Style{}.Width(20).Height(20).Overflow(flowstyle.OverflowHidden)).
+		Layout(ctx, testLayoutContext())
+	restore()
+
+	if got := collector.Outset(); !got.Empty() {
+		t.Fatalf("clipped descendant reported visual outset %#v", got)
 	}
 }
 

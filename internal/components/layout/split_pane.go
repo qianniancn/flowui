@@ -53,15 +53,17 @@ type SplitPaneWidget struct {
 }
 
 type splitPaneState struct {
-	ratio       float32
-	initialized bool
-	hovered     bool
-	dragging    bool
-	pointerID   pointer.ID
-	dragOffset  float32
-	orientation SplitPaneOrientation
-	axisReady   bool
-	focus       state.FocusAnimation
+	ratio              float32
+	initialized        bool
+	hovered            bool
+	dragging           bool
+	pointerID          pointer.ID
+	dragOffset         float32
+	orientation        SplitPaneOrientation
+	axisReady          bool
+	focus              state.FocusAnimation
+	firstVisualOutset  VisualOutsetState
+	secondVisualOutset VisualOutsetState
 }
 
 func SplitPane(key string, first, second frame.Widget) SplitPaneWidget {
@@ -178,8 +180,11 @@ func (s SplitPaneWidget) layoutPane(ctx *frame.Context, gtx layout.Context, valu
 	firstSize := axis.Convert(image.Pt(first, axisSize.Y))
 	secondSize := axis.Convert(image.Pt(second, axisSize.Y))
 	secondOffset := axis.Convert(image.Pt(first+divider, 0))
-	s.layoutChild(ctx, gtx, s.first, firstSize, image.Point{})
-	s.layoutChild(ctx, gtx, s.second, secondSize, secondOffset)
+	firstOutsetChanged := s.layoutChild(ctx, gtx, s.first, firstSize, image.Point{}, &value.firstVisualOutset)
+	secondOutsetChanged := s.layoutChild(ctx, gtx, s.second, secondSize, secondOffset, &value.secondVisualOutset)
+	if firstOutsetChanged || secondOutsetChanged {
+		ctx.Invalidate()
+	}
 
 	focusVisible := frame.FocusVisible(ctx, value, gtx.Focused(value))
 	focusOpacity := value.focus.Opacity(gtx, focusVisible && enabled, frame.ActiveTheme(ctx).Motion)
@@ -236,21 +241,41 @@ func (s SplitPaneWidget) update(ctx *frame.Context, gtx layout.Context, value *s
 	return next, keyboardChanged
 }
 
-func (s SplitPaneWidget) layoutChild(ctx *frame.Context, gtx layout.Context, child frame.Widget, size, offset image.Point) {
+func (s SplitPaneWidget) layoutChild(ctx *frame.Context, gtx layout.Context, child frame.Widget, size, offset image.Point, visual *VisualOutsetState) bool {
+	outset := frame.VisualOutset{}
+	if visual != nil {
+		outset = visual.outset
+	}
+	left := max(outset.Left, 0)
+	top := max(outset.Top, 0)
+	right := max(outset.Right, 0)
+	bottom := max(outset.Bottom, 0)
 	childGtx := gtx
-	childGtx.Constraints = layout.Exact(size)
+	childGtx.Constraints = layout.Exact(image.Pt(
+		max(size.X-visualOutsetSum(left, right), 0),
+		max(size.Y-visualOutsetSum(top, bottom), 0),
+	))
+	collector := new(frame.VisualOverflowCollector)
+	restoreCollector := frame.PushVisualOverflowCollector(ctx, collector)
+	collecting := frame.CollectingVisualOverflow(ctx)
 	macro := op.Record(gtx.Ops)
 	_, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 		return child.Layout(ctx, childGtx)
 	})
 	call := macro.Stop()
-	placement.PlaceOffset(offset)
+	restoreCollector()
+	changed := collecting && visual != nil && visual.observe(collector.Outset(), true)
+	innerOffset := image.Pt(left, top)
+	placement.PlaceOffset(offset.Add(innerOffset))
 	placement.ClipTo(image.Rectangle{Min: offset, Max: offset.Add(size)})
 	transform := op.Offset(offset).Push(gtx.Ops)
 	clipped := clip.Rect{Max: size}.Push(gtx.Ops)
+	inset := op.Offset(innerOffset).Push(gtx.Ops)
 	call.Add(gtx.Ops)
+	inset.Pop()
 	clipped.Pop()
 	transform.Pop()
+	return changed
 }
 
 func (s SplitPaneWidget) addHandle(gtx layout.Context, value *splitPaneState, enabled bool, axis layout.Axis, size image.Point, first, divider, hitSize int, cursor pointer.Cursor) {

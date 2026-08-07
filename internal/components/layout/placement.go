@@ -88,6 +88,12 @@ func LayoutTrackedList(ctx *frame.Context, gtx layout.Context, state *layout.Lis
 	return layoutTrackedList(ctx, gtx, state, count, item)
 }
 
+// LayoutTrackedListWithVisualOutset lays out a Gio list while reserving
+// reported visual overflow at the viewport edges.
+func LayoutTrackedListWithVisualOutset(ctx *frame.Context, gtx layout.Context, state *layout.List, visual *VisualOutsetState, count int, item layout.ListElement) layout.Dimensions {
+	return layoutVisualOutsetList(ctx, gtx, state, count, visual, item)
+}
+
 func deduplicateListChildren(children []listChildPlacement) []listChildPlacement {
 	write := 0
 	for _, child := range children {

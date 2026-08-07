@@ -39,13 +39,8 @@ func TestProgressCircleRatioAndSemantics(t *testing.T) {
 	}
 }
 
-func TestProgressCircleMatchesHeroUISizes(t *testing.T) {
-	activeTheme := DefaultTheme()
-	tokens := activeTheme.Components.ProgressCircle
-	if tokens.SmallSize != 20 || tokens.MediumSize != 28 || tokens.LargeSize != 36 || tokens.StrokeRatio != 4.0/36.0 {
-		t.Fatalf("ProgressCircle theme = %+v", tokens)
-	}
-	geometry, ok := resolveProgressCircleGeometry(36, tokens.StrokeRatio)
+func TestProgressCircleGeometry(t *testing.T) {
+	geometry, ok := resolveProgressCircleGeometry(36, 4.0/36.0)
 	if !ok || geometry.outerRadius != 18 || geometry.innerRadius != 14 || geometry.outerRadius-geometry.innerRadius != 4 {
 		t.Fatalf("ProgressCircle geometry = %+v/%v", geometry, ok)
 	}

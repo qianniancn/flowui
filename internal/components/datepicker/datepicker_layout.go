@@ -568,7 +568,7 @@ func (d DatePickerWidget) layoutYears(ctx *frame.Context, gtx layout.Context, st
 		state.yearList.ScrollTo((target - minYear) / 3)
 		state.yearScrollReady = false
 	}
-	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.yearList, &state.yearBar, rows, !gtx.Enabled(), false, func(gtx layout.Context, row int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &state.yearList, &state.yearBar, &state.yearVisualOutset, rows, !gtx.Enabled(), false, func(gtx layout.Context, row int) layout.Dimensions {
 		cellWidth := gtx.Constraints.Max.X / 3
 		yearStart := minYear + row*3
 		return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,

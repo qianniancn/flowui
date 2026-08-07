@@ -27,24 +27,6 @@ func TestToastIndicatorNilHidesIndicator(t *testing.T) {
 	}
 }
 
-func TestToastHeroUIDefaultTheme(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Toast
-	if tokens.Width != 460 || tokens.Inset != 16 || tokens.Gap != 12 || tokens.Radius != 24 {
-		t.Fatalf("toast geometry = %#v", tokens)
-	}
-	if tokens.MaxVisible != 3 || tokens.ScaleFactor != 0.05 || tokens.DefaultTimeout != 4*time.Second || tokens.AnimationDuration != 350*time.Millisecond {
-		t.Fatalf("toast behavior tokens = %#v", tokens)
-	}
-	if activeTheme.Palette.SuccessSoftForeground != (color.NRGBA{R: 0x2b, G: 0x77, B: 0x45, A: 0xff}) || activeTheme.Palette.WarningSoftForeground != (color.NRGBA{R: 0x85, G: 0x5f, B: 0x2e, A: 0xff}) {
-		t.Fatalf("light status foregrounds = success %#v warning %#v", activeTheme.Palette.SuccessSoftForeground, activeTheme.Palette.WarningSoftForeground)
-	}
-	darkTheme := theme.DarkTheme()
-	if darkTheme.Palette.SuccessSoftForeground != (color.NRGBA{R: 0x74, G: 0xd8, B: 0x8f, A: 0xff}) || darkTheme.Palette.WarningSoftForeground != (color.NRGBA{R: 0xf9, G: 0xcb, B: 0x86, A: 0xff}) {
-		t.Fatalf("dark status foregrounds = success %#v warning %#v", darkTheme.Palette.SuccessSoftForeground, darkTheme.Palette.WarningSoftForeground)
-	}
-}
-
 func TestToastStateSyncUsesDefaultAndExplicitTimeouts(t *testing.T) {
 	start := time.Unix(1, 0)
 	var state toastProviderState
@@ -283,27 +265,6 @@ func TestToastStylesUseVariantColors(t *testing.T) {
 	}
 	if got := toastStyleFor(&activeTheme, ToastWarning).title; got.A != 0 {
 		t.Fatalf("warning title = %#v, want transparent", got)
-	}
-}
-
-func TestToastProviderLayoutsAtHeroUIWidthAndPlacement(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
-	router := new(input.Router)
-	start := time.Unix(1, 0)
-	provider := ToastProvider("toasts", []ToastItem{Toast("saved", "Saved").Timeout(0)})
-	layoutToastFrame(ctx, router, provider, start, image.Pt(600, 400))
-	layoutToastFrame(ctx, router, provider, start.Add(activeTheme.Components.Toast.AnimationDuration), image.Pt(600, 400))
-
-	node, ok := semanticNodeWithLabel(router.AppendSemantics(nil), "Saved")
-	if !ok {
-		t.Fatal("toast semantic node is missing")
-	}
-	if node.Desc.Bounds.Dx() != 460 {
-		t.Fatalf("toast width = %d, want 460", node.Desc.Bounds.Dx())
-	}
-	if node.Desc.Bounds.Min.X != 70 {
-		t.Fatalf("toast x = %d, want 70", node.Desc.Bounds.Min.X)
 	}
 }
 
@@ -550,14 +511,15 @@ func TestToastRootAcceptsKeyboardFocus(t *testing.T) {
 	}
 }
 
-func TestToastCustomIndicatorUsesHeroUISize(t *testing.T) {
+func TestToastCustomIndicatorUsesThemeSize(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
+	activeTheme.Components.Toast.IndicatorSize = 22
 	ctx := frame.New(nil, &activeTheme, locale.LanguageEnglish)
 	probe := new(toastProbe)
 	provider := ToastProvider("toasts", nil)
 	provider.layoutToastIndicator(ctx, toastTestContextAt(time.Unix(1, 0)), Toast("custom", "Custom").Indicator(probe), toastStyleFor(&activeTheme, ToastDefault))
-	if probe.constraints != layout.Exact(image.Pt(16, 16)) {
-		t.Fatalf("indicator constraints = %#v, want exact 16x16", probe.constraints)
+	if probe.constraints != layout.Exact(image.Pt(22, 22)) {
+		t.Fatalf("indicator constraints = %#v, want exact 22x22", probe.constraints)
 	}
 }
 

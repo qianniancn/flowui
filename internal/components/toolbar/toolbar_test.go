@@ -14,7 +14,6 @@ import (
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
-	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestToolbarLayoutMatchesHeroUISpacing(t *testing.T) {
@@ -66,11 +65,7 @@ func TestToolbarKeyboardNavigation(t *testing.T) {
 	}
 }
 
-func TestToolbarThemeAndSeparatorOrientation(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Toolbar
-	if tokens.Gap != 8 || tokens.Padding != 4 || tokens.Radius != 24 || tokens.SeparatorLength != 20 || tokens.SeparatorWidth != 1 {
-		t.Fatalf("Toolbar theme = %#v", tokens)
-	}
+func TestToolbarSeparatorOrientation(t *testing.T) {
 	ctx := frame.New(nil, nil, locale.LanguageAuto)
 	if dims := layoutToolbarFrame(ctx, new(input.Router), New(Separator()), time.Unix(5, 0)); dims.Size != image.Pt(1, 20) {
 		t.Fatalf("horizontal Toolbar separator = %v, want (1,20)", dims.Size)

@@ -4,6 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"github.com/qianniancn/flowui/internal/frame"
+	stateutil "github.com/qianniancn/flowui/internal/state"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
 )
 
@@ -63,6 +64,7 @@ func (l ListWidget) ScrollAnyAxis() ListWidget {
 
 func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimensions {
 	state := ctx.ListState(l.key)
+	visual := visualOutsetStateFor(ctx, stateutil.KindList, l.key)
 	bar := derivedScrollbarState(ctx, l.key)
 	state.Axis = layout.Vertical
 	state.Gap = max(gtx.Dp(l.gap), 0)
@@ -72,7 +74,7 @@ func (l ListWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	if l.disabled {
 		gtx = gtx.Disabled()
 	}
-	return layoutScrollbarList(ctx, gtx, "", state, bar, l.count, l.disabled, false, flowstyle.Style{}, func(gtx layout.Context, index int) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, "", state, bar, visual, l.count, l.disabled, false, flowstyle.Style{}, func(gtx layout.Context, index int) layout.Dimensions {
 		item := l.item(index)
 		prepareFieldAssociations(ctx, item)
 		return item.Layout(ctx, gtx)

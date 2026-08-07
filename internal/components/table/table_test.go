@@ -785,21 +785,8 @@ func TestTableComposedRegionsInheritSurfaceColors(t *testing.T) {
 	}
 }
 
-func TestTableThemeMatchesHeroUIStyle(t *testing.T) {
+func TestTableVariantGeometryAndStyles(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Table
-	if tokens.RootPadding != 4 || tokens.RootRadius != 20 || tokens.HeaderRadius != 16 || tokens.BodyRadius != 16 {
-		t.Fatalf("Table root geometry = %+v", tokens)
-	}
-	if tokens.HeaderHeight != 36 || tokens.RowMinHeight != 44 || tokens.CellPaddingX != 16 || tokens.CellPaddingY != 12 {
-		t.Fatalf("Table geometry = %+v", tokens)
-	}
-	if tokens.HeaderTextSize != 12 || tokens.CellTextSize != 14 || tokens.ColumnSeparatorHeight != 16 {
-		t.Fatalf("Table typography/separator geometry = %+v", tokens)
-	}
-	if tokens.StripeBackground != activeTheme.Palette.SurfaceSecondary {
-		t.Fatalf("Table stripe background = %#v, want themed surface secondary %#v", tokens.StripeBackground, activeTheme.Palette.SurfaceSecondary)
-	}
 	gtx := layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}
 	size := image.Pt(200, 100)
 	if tableRootRadius(gtx, &activeTheme, size, VariantSecondary, false) != 0 || tableHeaderRadius(gtx, &activeTheme, size, VariantSecondary, false) != 16 {

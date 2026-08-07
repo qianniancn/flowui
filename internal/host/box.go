@@ -228,6 +228,9 @@ func (b BoxWidget) layoutResolved(ctx *frame.Context, gtx layout.Context, resolv
 
 func (b BoxWidget) layoutVisual(ctx *frame.Context, gtx layout.Context, resolved flowstyle.ResolvedStyle) layout.Dimensions {
 	b.applyConstraints(&gtx, resolved.Box)
+	if frame.CollectingVisualOverflow(ctx) {
+		frame.ReportVisualOverflow(ctx, boxVisualOutset(gtx, resolved.Paint))
+	}
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 		return b.layoutContent(ctx, gtx, resolved)
@@ -317,6 +320,10 @@ func (b BoxWidget) layoutOverflow(ctx *frame.Context, gtx layout.Context, paintS
 	if boxStyle == nil || boxStyle.Overflow == nil || *boxStyle.Overflow == flowstyle.OverflowVisible {
 		return child(gtx)
 	}
+	// This box owns the clip, so visual overflow from descendants must not be
+	// reserved again by an ancestor viewport.
+	restoreCollector := frame.PushVisualOverflowCollector(ctx, new(frame.VisualOverflowCollector))
+	defer restoreCollector()
 	macro := op.Record(gtx.Ops)
 	dims, placement := frame.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 		return child(gtx)
@@ -531,6 +538,62 @@ func boxShadows(gtx layout.Context, rect image.Rectangle, style *flowstyle.Paint
 			Color:   col,
 		})
 	}
+}
+
+func boxVisualOutset(gtx layout.Context, style *flowstyle.PaintStyle) frame.VisualOutset {
+	if style == nil {
+		return frame.VisualOutset{}
+	}
+	result := frame.VisualOutset{}
+	if style.VisualOutset != nil {
+		result = result.Max(frame.VisualOutset{
+			Top:    max(gtx.Dp(style.VisualOutset.Top), 0),
+			Right:  max(gtx.Dp(style.VisualOutset.Right), 0),
+			Bottom: max(gtx.Dp(style.VisualOutset.Bottom), 0),
+			Left:   max(gtx.Dp(style.VisualOutset.Left), 0),
+		})
+	}
+	for _, shadow := range style.Shadows {
+		col, ok := styleruntime.Color(shadow.Color)
+		if !ok || col.A == 0 {
+			continue
+		}
+		blur := gtx.Dp(shadow.Blur)
+		if blur < 0 {
+			continue
+		}
+		padX := render.ShadowRasterPadding(blur, gtx.Dp(shadow.Spread), gtx.Dp(shadow.OffsetX))
+		padY := render.ShadowRasterPadding(blur, gtx.Dp(shadow.Spread), gtx.Dp(shadow.OffsetY))
+		result = result.Max(frame.VisualOutset{
+			Top:    padY,
+			Right:  padX,
+			Bottom: padY,
+			Left:   padX,
+		})
+	}
+	if style.Outline != nil {
+		width := gtx.Dp(style.Outline.Width)
+		if width > 0 {
+			expand := saturatedAdd(width, max(gtx.Dp(style.Outline.Offset), 0))
+			result = result.Max(frame.VisualOutset{Top: expand, Right: expand, Bottom: expand, Left: expand})
+		}
+	}
+	return result
+}
+
+func saturatedAdd(values ...int) int {
+	limit := int(^uint(0) >> 1)
+	result := 0
+	for _, value := range values {
+		if value <= 0 {
+			continue
+		}
+		if result > limit-value {
+			return limit
+		}
+		result += value
+	}
+	return result
 }
 
 func boxBorder(gtx layout.Context, shape clip.RRect, style *flowstyle.PaintStyle) {

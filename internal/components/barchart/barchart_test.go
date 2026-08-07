@@ -533,11 +533,7 @@ func TestBarChartTooltipAnimatesOutWithLastSelection(t *testing.T) {
 	}
 }
 
-func TestBarChartThemeAndSemantics(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.BarChart
-	if tokens.Height != 320 || tokens.BarRadius != 0 || tokens.SeriesColors[0] != (color.NRGBA{R: 0x50, G: 0x70, B: 0xdd, A: 0xff}) {
-		t.Fatalf("BarChart theme tokens = %#v", tokens)
-	}
+func TestBarChartSemantics(t *testing.T) {
 	ctx := barChartTestContext()
 	router := new(input.Router)
 	layoutBarChartFrame(ctx, router, New("chart", []Series{Values("series", "Series", []float64{1})}).Label("Quarterly sales"), time.Unix(2, 0))

@@ -365,12 +365,7 @@ func TestCandlestickChartClickAndDataWindowInteractions(t *testing.T) {
 	}
 }
 
-func TestCandlestickChartThemeAndSmallLayout(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.CandlestickChart
-	if tokens.Height != 360 || tokens.CrosshairWidth != 1 || tokens.CrosshairLabelPadding != 4 || tokens.UpColor != (color.NRGBA{R: 0xeb, G: 0x54, B: 0x54, A: 0xff}) || tokens.DownColor != (color.NRGBA{R: 0x47, G: 0xb2, B: 0x62, A: 0xff}) {
-		t.Fatalf("CandlestickChart theme tokens = %#v", tokens)
-	}
-
+func TestCandlestickChartHandlesSmallConstraints(t *testing.T) {
 	ctx := candlestickTestContext()
 	router := new(input.Router)
 	viewport := image.Pt(24, 18)

@@ -32,8 +32,9 @@ type ScrollbarWidget struct {
 }
 
 type scrollbarState struct {
-	list layout.List
-	bar  widget.Scrollbar
+	list         layout.List
+	bar          widget.Scrollbar
+	visualOutset VisualOutsetState
 }
 
 func Scrollbar(key string, child frame.Widget) ScrollbarWidget {
@@ -104,7 +105,7 @@ func (s ScrollbarWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.D
 	}
 	styleState := scrollbarStyleState(&state.bar, s.disabled)
 	return LayoutStyled(ctx, gtx, key, styleState, s.customStyle, frame.WidgetFunc(func(_ *frame.Context, gtx layout.Context) layout.Dimensions {
-		return layoutScrollbarList(ctx, gtx, key, &state.list, &state.bar, 1, s.disabled, s.overlay, s.customStyle, func(gtx layout.Context, _ int) layout.Dimensions {
+		return layoutScrollbarList(ctx, gtx, key, &state.list, &state.bar, &state.visualOutset, 1, s.disabled, s.overlay, s.customStyle, func(gtx layout.Context, _ int) layout.Dimensions {
 			return s.child.Layout(ctx, gtx)
 		})
 	}))
@@ -115,7 +116,7 @@ func derivedScrollbarState(ctx *frame.Context, owner string) *widget.Scrollbar {
 	return frame.UseState[widget.Scrollbar](ctx, key, stateSlotScrollbarBar)
 }
 
-func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, key string, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, custom flowstyle.Style, item layout.ListElement) layout.Dimensions {
+func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, key string, list *layout.List, bar *widget.Scrollbar, visual *VisualOutsetState, count int, disabled, overlay bool, custom flowstyle.Style, item layout.ListElement) layout.Dimensions {
 	if disabled {
 		gtx = gtx.Disabled()
 	}
@@ -137,7 +138,7 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, key string, lis
 		gtx.Constraints.Min = axis.Convert(minConstraints)
 	}
 
-	listDims := layoutTrackedList(ctx, gtx, list, count, item)
+	listDims := layoutVisualOutsetList(ctx, gtx, list, count, visual, item)
 	gtx.Constraints = originalConstraints
 	majorAxisSize := axis.Convert(listDims.Size).X
 	start, end := scrollbarViewport(list.Position, count, majorAxisSize)
@@ -175,7 +176,14 @@ func layoutScrollbarList(ctx *frame.Context, gtx layout.Context, key string, lis
 
 // LayoutTrackedScrollbar lays out a Gio list with FlowUI's scrollbar style.
 func LayoutTrackedScrollbar(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
-	return layoutScrollbarList(ctx, gtx, "", list, bar, count, disabled, overlay, flowstyle.Style{}, item)
+	return layoutScrollbarList(ctx, gtx, "", list, bar, nil, count, disabled, overlay, flowstyle.Style{}, item)
+}
+
+// LayoutTrackedScrollbarWithVisualOutset lays out a Gio list with a persistent
+// visual-outset state. Composite components use it when they clip arbitrary
+// child content inside their own viewport.
+func LayoutTrackedScrollbarWithVisualOutset(ctx *frame.Context, gtx layout.Context, list *layout.List, bar *widget.Scrollbar, visual *VisualOutsetState, count int, disabled, overlay bool, item layout.ListElement) layout.Dimensions {
+	return layoutScrollbarList(ctx, gtx, "", list, bar, visual, count, disabled, overlay, flowstyle.Style{}, item)
 }
 
 func resolvedScrollbarStyle(ctx *frame.Context, gtx layout.Context, key string, bar *widget.Scrollbar, disabled bool, custom flowstyle.Style) material.ScrollbarStyle {

@@ -411,6 +411,34 @@ func (s Style) BoxShadowNone() Style {
 	})
 }
 
+// VisualOutset declares the minimum visual space this box may paint beyond
+// its layout bounds. Clipping containers reserve the declaration together
+// with the box's shadow and outline extents.
+func (s Style) VisualOutset(top, right, bottom, left unit.Dp) Style {
+	if !finite(float32(top)) || !finite(float32(right)) ||
+		!finite(float32(bottom)) || !finite(float32(left)) {
+		return s
+	}
+	return s.editPaint(func(paint *PaintStyle) {
+		paint.VisualOutset = &Insets{
+			Top:    max(top, 0),
+			Right:  max(right, 0),
+			Bottom: max(bottom, 0),
+			Left:   max(left, 0),
+		}
+		paint.visualOutsetSet = true
+	})
+}
+
+// VisualOutsetNone clears a visual overflow declaration inherited from a
+// lower-precedence style.
+func (s Style) VisualOutsetNone() Style {
+	return s.editPaint(func(paint *PaintStyle) {
+		paint.VisualOutset = nil
+		paint.visualOutsetSet = true
+	})
+}
+
 func (s Style) Outline(width, offset unit.Dp, col ColorSource) Style {
 	if !finite(float32(width)) || !finite(float32(offset)) {
 		return s

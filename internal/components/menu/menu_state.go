@@ -10,6 +10,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/overlay"
@@ -22,6 +23,7 @@ type menuState struct {
 	key                   string
 	list                  layout.List
 	bar                   widget.Scrollbar
+	visualOutset          layoutui.VisualOutsetState
 	items                 map[string]*menuItemState
 	frameItems            map[string]struct{}
 	itemKeys              map[string]struct{}

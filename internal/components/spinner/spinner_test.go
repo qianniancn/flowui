@@ -39,25 +39,6 @@ func TestSpinnerColorsUseThemePalette(t *testing.T) {
 	}
 }
 
-func TestSpinnerHeroUISizes(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	tests := []struct {
-		size SpinnerSize
-		want int
-	}{
-		{SpinnerSmall, 16},
-		{SpinnerMedium, 24},
-		{SpinnerLarge, 32},
-		{SpinnerExtraLarge, 40},
-	}
-	for _, test := range tests {
-		style := spinnerSizeStyleFor(&activeTheme, test.size)
-		if got := int(style.diameter); got != test.want {
-			t.Fatalf("spinner size %d = %d, want %d", test.size, got, test.want)
-		}
-	}
-}
-
 func TestSpinnerHeroUIGeometry(t *testing.T) {
 	geometry, ok := resolveSpinnerGeometry(24, .125, .0625)
 	if !ok {

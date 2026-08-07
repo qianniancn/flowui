@@ -24,13 +24,6 @@ import (
 
 const stateSlotClickable = "clickable"
 
-func TestModalCloseGeometryMatchesHeroUI(t *testing.T) {
-	component := theme.DefaultTheme().Components.Modal
-	if component.CloseInset != 16 {
-		t.Fatalf("modal close inset = %v, want 16", component.CloseInset)
-	}
-}
-
 func newContext(_ any) *frame.Context {
 	return frame.New(nil, nil, locale.LanguageAuto)
 }

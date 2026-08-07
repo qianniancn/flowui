@@ -20,19 +20,6 @@ import (
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
-func TestToggleButtonHeroUIDefaultTheme(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.ToggleButton
-	if tokens.SmallHeight != 32 || tokens.MediumHeight != 36 || tokens.LargeHeight != 40 || tokens.Radius != 24 || tokens.ContentGap != 8 {
-		t.Fatalf("toggle button geometry = %#v", tokens)
-	}
-	if tokens.SmallTextSize != 14 || tokens.MediumTextSize != 14 || tokens.LargeTextSize != 16 || tokens.FocusRingWidth != 2 || tokens.FocusRingOffset != 2 {
-		t.Fatalf("toggle button text/focus tokens = %#v", tokens)
-	}
-	if tokens.PressedScaleSmall != 0.98 || tokens.PressedScaleMedium != 0.97 || tokens.PressedScaleLarge != 0.96 {
-		t.Fatalf("toggle button pressed scales = %#v", tokens)
-	}
-}
-
 func TestToggleButtonUsesHeroUISizes(t *testing.T) {
 	for _, test := range []struct {
 		name string

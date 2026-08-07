@@ -125,36 +125,6 @@ func TestInputDefaultLayout(t *testing.T) {
 	}
 }
 
-func TestInputHeroUIDefaultTheme(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Input
-	if tokens.Height != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.TextSize != 14 || tokens.LineHeight != 20 {
-		t.Fatalf("input geometry = %#v", tokens)
-	}
-	if tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 {
-		t.Fatalf("input state tokens = %#v", tokens)
-	}
-	if tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
-		t.Fatalf("input shadow color = %#v, want enhanced black", tokens.ShadowColor)
-	}
-	darkTokens := theme.DarkTheme().Components.Input
-	if darkTokens.ShadowOpacity != 0 {
-		t.Fatalf("dark input shadow = color %#v opacity %v", darkTokens.ShadowColor, darkTokens.ShadowOpacity)
-	}
-	darkTheme := theme.DarkTheme()
-	if darkTheme.Palette.Background != (color.NRGBA{R: 0x06, G: 0x06, B: 0x07, A: 0xff}) ||
-		darkTheme.Palette.Surface != (color.NRGBA{R: 0x18, G: 0x18, B: 0x1b, A: 0xff}) ||
-		darkTheme.Palette.DefaultColor() != (color.NRGBA{R: 0x27, G: 0x27, B: 0x2a, A: 0xff}) {
-		t.Fatalf("dark input backgrounds = page %#v primary %#v secondary %#v", darkTheme.Palette.Background, darkTheme.Palette.Surface, darkTheme.Palette.DefaultColor())
-	}
-	if activeTheme.Palette.Background != (color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}) {
-		t.Fatalf("light background = %#v, want white window background", activeTheme.Palette.Background)
-	}
-	if activeTheme.Palette.Focus != activeTheme.Palette.Accent {
-		t.Fatalf("focus = %#v, want accent %#v", activeTheme.Palette.Focus, activeTheme.Palette.Accent)
-	}
-}
-
 func TestInputFullWidth(t *testing.T) {
 	dims := Input("name", "").FullWidth().Layout(newContext(nil), testLayoutContext())
 

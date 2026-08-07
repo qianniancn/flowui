@@ -757,15 +757,8 @@ func TestTreeTypeaheadSkipsDisabledAndWraps(t *testing.T) {
 	}
 }
 
-func TestTreeGeometryAndStyleMatchHeroUIPatterns(t *testing.T) {
+func TestTreeItemStylesFollowTheme(t *testing.T) {
 	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Tree
-	if tokens.Padding != 4 || tokens.Gap != 4 || tokens.RowHeight != 36 || tokens.RowRadius != 16 || tokens.RowPaddingX != 8 || tokens.RowPaddingY != 6 {
-		t.Fatalf("Tree geometry = %+v", tokens)
-	}
-	if tokens.Indent != 20 || tokens.ChevronSlotSize != 20 || tokens.ChevronIconSize != 16 || tokens.ContentGap != 8 || tokens.SmallRowRadius != 4 || tokens.SmallItemTextSize != 13 || tokens.DragPreviewOffset != 12 || tokens.DragPreviewMaxWidth != 240 || tokens.DragPreviewRadius != 6 {
-		t.Fatalf("Tree hierarchy geometry = %+v", tokens)
-	}
 	selected := treeItemStyleFor(&activeTheme, true, false, false)
 	if selected.background != activeTheme.Palette.AccentSoft || selected.foreground != activeTheme.Palette.AccentSoftForeground {
 		t.Fatalf("selected style = %#v/%#v", selected.background, selected.foreground)

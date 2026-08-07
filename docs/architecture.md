@@ -140,7 +140,9 @@ not. Applications may use a custom `StylePart` string for their own components.
 
 The common renderer owns margin, constraints, aspect ratio, padding, overflow
 clipping, cursor, background/gradient, per-corner radius, shadows, border,
-outline, opacity, and transforms. Components must not duplicate a partial
+outline, opacity, and transforms. It also reports the visual extent of shadows
+and outlines to clipping viewports; those viewports reserve internal edge space
+without changing normal sibling layout. Components must not duplicate a partial
 adapter for these properties. They retain only domain-specific geometry such as
 progress ratios, slider thumb positions, or chart paths.
 
@@ -157,7 +159,9 @@ Custom drawing can reuse the public helpers `ui.ResolveColor`,
 `ui.ResolveBrush`, `ui.DrawBrush`, and `ui.MeasureText`. Low-level pointer
 controls can use `ui.AddPointerArea`, `ui.NextPointerEvent`,
 `ui.IsPrimaryPointerPress`, and `ui.GrabPointer`. `ui.LayoutVisualOverflow`
-is for local decorations such as a ripple or focus ring; it is not a popup or
+is for local decorations such as a ripple or focus ring. Use
+`ui.LayoutVisualOutset` (or `ui.VisualOutset` on a Style shell) to reserve
+space for that paint inside a clipping viewport; neither API is a popup or
 overlay replacement. The internal components use the corresponding shared
 implementations below the public facade.
 

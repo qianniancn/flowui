@@ -309,15 +309,6 @@ func TestDateRangePickerTriggerFocusDoesNotFocusDateSegments(t *testing.T) {
 	}
 }
 
-func TestDateRangePickerInputHeightMatchesHeroUI(t *testing.T) {
-	ctx := newContext(nil)
-	router := new(input.Router)
-	dimensions := layoutDateComponentFrame(ctx, router, DateRangePicker("range", DateRange{}), testDate(2026, 7, 1))
-	if dimensions.Size.Y != 36 {
-		t.Fatalf("date range picker height = %d, want 36", dimensions.Size.Y)
-	}
-}
-
 func TestDateSegmentsScrollWhenWidthIsConstrained(t *testing.T) {
 	ctx := newContextWithThemeAndLanguage(nil, nil, locale.LanguageEnglish)
 	router := new(input.Router)

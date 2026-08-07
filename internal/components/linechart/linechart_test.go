@@ -2,7 +2,6 @@ package linechart
 
 import (
 	"image"
-	"image/color"
 	"math"
 	"runtime"
 	"testing"
@@ -628,11 +627,7 @@ func TestLineChartTooltipAnimatesOutWithLastSelection(t *testing.T) {
 	}
 }
 
-func TestLineChartThemeAndSemantics(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.LineChart
-	if tokens.Height != 320 || tokens.LineWidth != 2 || tokens.PointSize != 6 || tokens.SeriesColors[0] != (color.NRGBA{R: 0x50, G: 0x70, B: 0xdd, A: 0xff}) {
-		t.Fatalf("LineChart theme tokens = %#v", tokens)
-	}
+func TestLineChartSemantics(t *testing.T) {
 	ctx := lineChartTestContext()
 	router := new(input.Router)
 	layoutLineChartFrame(ctx, router, New("chart", []Series{Values("series", "Series", []float64{1})}).Label("Traffic trend"), time.Unix(2, 0))

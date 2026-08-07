@@ -188,11 +188,7 @@ func TestPieChartLegendAndSemantics(t *testing.T) {
 	}
 }
 
-func TestPieChartThemeAndValidation(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.PieChart
-	if tokens.Height != 360 || tokens.EmphasisSize != 5 || tokens.SeriesColors[0] != (color.NRGBA{R: 0x50, G: 0x70, B: 0xdd, A: 0xff}) {
-		t.Fatalf("PieChart theme tokens = %#v", tokens)
-	}
+func TestPieChartRejectsInvalidConfiguration(t *testing.T) {
 	for _, widget := range []Widget{
 		New("pie", []Data{Slice("same", "First", 1), Slice("same", "Second", 2)}),
 		New("pie", []Data{Slice("", "Empty", 1)}),

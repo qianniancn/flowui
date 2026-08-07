@@ -15,7 +15,6 @@ import (
 	"github.com/qianniancn/flowui/internal/components/text"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
-	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestCollapsibleOptions(t *testing.T) {
@@ -35,16 +34,6 @@ func TestCollapsibleOptions(t *testing.T) {
 		OnExpandedChange(func([]string) {})
 	if group.key != "group" || len(group.expandedKeys) != 1 || len(group.items) != 3 || !group.allowMultipleExpanded || !group.disabled || group.onExpandedChange == nil {
 		t.Fatal("collapsible group options were not retained")
-	}
-}
-
-func TestCollapsibleThemeMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Collapsible
-	if tokens.BodyPadding != 8 || tokens.IndicatorSize != 16 || tokens.IndicatorStroke != 1.7 {
-		t.Fatalf("collapsible metrics = padding %v indicator %v stroke %v", tokens.BodyPadding, tokens.IndicatorSize, tokens.IndicatorStroke)
-	}
-	if tokens.ContentDuration != 200*time.Millisecond || tokens.IndicatorDuration != 250*time.Millisecond {
-		t.Fatalf("collapsible durations = content %v indicator %v", tokens.ContentDuration, tokens.IndicatorDuration)
 	}
 }
 

@@ -85,20 +85,6 @@ func TestInputGroupTextAreaOptionsAreImmutableAndInherited(t *testing.T) {
 	}
 }
 
-func TestInputGroupHeroUIDefaultTheme(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.InputGroup
-	if tokens.MinHeight != 36 || tokens.Radius != 12 || tokens.PaddingX != 12 || tokens.TextAreaMinHeight != 38 || tokens.TextAreaPaddingY != 8 || tokens.DividerWidth != 0 {
-		t.Fatalf("input group geometry = %#v", tokens)
-	}
-	if tokens.TextSize != 14 || tokens.LineHeight != 20 || tokens.FocusRingWidth != 2 || tokens.InvalidOutlineWidth != 1 || tokens.ShadowOpacity != 1 || tokens.ShadowStrength != 1.5 || tokens.ShadowColor != (color.NRGBA{A: 0xff}) {
-		t.Fatalf("input group state tokens = %#v", tokens)
-	}
-	darkTokens := theme.DarkTheme().Components.InputGroup
-	if darkTokens.ShadowOpacity != 0 || darkTokens.ShadowStrength != 1.5 {
-		t.Fatalf("dark input group shadow = %#v", darkTokens)
-	}
-}
-
 func TestInputGroupDefaultAndFullWidthLayout(t *testing.T) {
 	group := InputGroup(Input("email", "").Placeholder("name@email.com")).
 		Prefix(inputGroupFixedWidget{size: image.Pt(16, 16)}).

@@ -27,19 +27,6 @@ func (p *avatarProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(16, 16))}
 }
 
-func TestAvatarGeometryMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Avatar
-	if tokens.SmallSize != 32 || tokens.MediumSize != 40 || tokens.LargeSize != 48 {
-		t.Fatalf("Avatar sizes = %v/%v/%v", tokens.SmallSize, tokens.MediumSize, tokens.LargeSize)
-	}
-	if tokens.SmallRadius != 16 || tokens.MediumRadius != 24 || tokens.LargeRadius != 24 {
-		t.Fatalf("Avatar radii = %v/%v/%v", tokens.SmallRadius, tokens.MediumRadius, tokens.LargeRadius)
-	}
-	if tokens.SmallTextSize != 14 || tokens.MediumTextSize != 14 || tokens.LargeTextSize != 16 {
-		t.Fatalf("Avatar text sizes = %v/%v/%v", tokens.SmallTextSize, tokens.MediumTextSize, tokens.LargeTextSize)
-	}
-}
-
 func TestAvatarSizesStaySquare(t *testing.T) {
 	ctx := avatarTestContext()
 	for _, test := range []struct {

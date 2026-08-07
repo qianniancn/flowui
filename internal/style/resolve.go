@@ -257,6 +257,10 @@ func mergePaint(dst, src *PaintStyle) {
 		outline.Color = cloneColorSource(src.Outline.Color)
 		dst.Outline = &outline
 	}
+	if src.visualOutsetSet {
+		dst.VisualOutset = clonePtr(src.VisualOutset)
+		dst.visualOutsetSet = true
+	}
 	dst.Opacity = pick(dst.Opacity, src.Opacity)
 }
 
@@ -446,6 +450,8 @@ func clonePaint(source *PaintStyle) *PaintStyle {
 		outline.Color = cloneColorSource(source.Outline.Color)
 		result.Outline = &outline
 	}
+	result.VisualOutset = clonePtr(source.VisualOutset)
+	result.visualOutsetSet = source.visualOutsetSet
 	result.Opacity = clonePtr(source.Opacity)
 	return &result
 }

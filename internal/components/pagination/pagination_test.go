@@ -66,13 +66,6 @@ func TestPaginationControlledPageClick(t *testing.T) {
 	}
 }
 
-func TestPaginationThemeMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Pagination
-	if tokens.SmallSize != 28 || tokens.MediumSize != 32 || tokens.LargeSize != 36 || tokens.Radius != 24 || tokens.NavGap != 6 || tokens.ItemGap != 4 || tokens.FocusRingWidth != 2 {
-		t.Fatalf("Pagination theme = %+v", tokens)
-	}
-}
-
 func paginationTestContext(router *input.Router, max image.Point, now time.Time) layout.Context {
 	var source input.Source
 	if router != nil {

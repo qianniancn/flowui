@@ -16,7 +16,6 @@ import (
 	"github.com/qianniancn/flowui/internal/components/menu"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/locale"
-	"github.com/qianniancn/flowui/internal/theme"
 )
 
 type fixedMenubarWidget struct {
@@ -355,16 +354,7 @@ func TestMenubarOutsidePressClosesImmediately(t *testing.T) {
 	}
 }
 
-func TestMenubarThemeAndSemantics(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Menubar
-	if tokens.TriggerHeight != 32 || tokens.TriggerPaddingX != 12 || tokens.TriggerRadius != 8 || tokens.TriggerTextSize != 14 || tokens.PanelGap != 4 {
-		t.Fatalf("Menubar theme tokens = %#v", tokens)
-	}
-	activeTheme := theme.DefaultTheme()
-	compact := menubarTestWidget().Compact(true).themeTokens(&activeTheme)
-	if compact.TriggerHeight != 28 || compact.TriggerPaddingX != 8 || compact.TriggerRadius != 4 || compact.TriggerTextSize != 13 {
-		t.Fatalf("compact Menubar theme tokens = %#v", compact)
-	}
+func TestMenubarSemantics(t *testing.T) {
 	ctx := menubarTestContext()
 	router := new(input.Router)
 	widget := menubarTestWidget().Alt("Application menu")

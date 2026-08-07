@@ -211,6 +211,18 @@ func BoxShadowNone() Style {
 	return styleStart().BoxShadowNone()
 }
 
+// VisualOutset declares the minimum visual space this box may paint beyond
+// its layout bounds when it is inside a clipping container.
+func VisualOutset(top, right, bottom, left unit.Dp) Style {
+	return styleStart().VisualOutset(top, right, bottom, left)
+}
+
+// VisualOutsetNone clears a visual overflow declaration inherited from a
+// lower-precedence style.
+func VisualOutsetNone() Style {
+	return styleStart().VisualOutsetNone()
+}
+
 // Outline sets the focus or emphasis outline around the styled box.
 func Outline(width, offset unit.Dp, col ColorSource) Style {
 	return styleStart().Outline(width, offset, col)

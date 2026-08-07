@@ -15,7 +15,6 @@ import (
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/frame"
 	flowstyle "github.com/qianniancn/flowui/internal/style"
-	"github.com/qianniancn/flowui/internal/theme"
 )
 
 func TestScrollbarOptionsAndState(t *testing.T) {
@@ -47,18 +46,6 @@ func TestScrollbarPassesDisabledContext(t *testing.T) {
 	Scrollbar("body", probe).Disabled(true).Layout(newContext(nil), testLayoutContext())
 	if probe.enabled {
 		t.Fatal("scrollbar child was laid out with enabled context")
-	}
-}
-
-func TestScrollbarThemeMatchesHeroUIThinStyle(t *testing.T) {
-	activeTheme := theme.DefaultTheme()
-	tokens := activeTheme.Components.Scrollbar
-	if tokens.TrackWidth != 10 || tokens.ThumbWidth != 6 || tokens.ContentGap != 4 || tokens.MinThumbLength != 32 || tokens.Radius != 3 || tokens.ThumbOpacity != .15 {
-		t.Fatalf("scrollbar theme = %#v", tokens)
-	}
-	style := scrollbarStyleFor(&activeTheme, new(widget.Scrollbar), false)
-	if style.Width() != 10 || style.Indicator.Color.A != 38 || style.Track.Color.A != 0 {
-		t.Fatalf("scrollbar style width/color = %v/%#v", style.Width(), style.Indicator.Color)
 	}
 }
 

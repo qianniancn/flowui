@@ -62,7 +62,7 @@ func (l ListBoxWidget) layoutContent(ctx *frame.Context, gtx layout.Context, sty
 		state.list.Alignment = layout.Start
 		state.list.ScrollToEnd = false
 		state.list.ScrollAnyAxis = false
-		return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.list, &state.bar, len(entries), l.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
+		return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &state.list, &state.bar, &state.visualOutset, len(entries), l.disabled, false, func(gtx layout.Context, index int) layout.Dimensions {
 			entry := entries[index]
 			if entry.header {
 				return l.layoutSectionHeader(ctx, gtx, entry.title)

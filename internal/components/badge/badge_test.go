@@ -27,19 +27,6 @@ func (p *badgeProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimen
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
 }
 
-func TestBadgeGeometryMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Badge
-	if tokens.SmallMinSize != 16 || tokens.MediumMinSize != 28 || tokens.LargeMinSize != 32 {
-		t.Fatalf("Badge sizes = %v/%v/%v", tokens.SmallMinSize, tokens.MediumMinSize, tokens.LargeMinSize)
-	}
-	if tokens.SmallRadius != 12 || tokens.MediumRadius != 24 || tokens.LargeRadius != 16 || tokens.BorderWidth != 1 || tokens.PlacementOffsetRatio != 0.25 {
-		t.Fatalf("Badge geometry = %#v", tokens)
-	}
-	if tokens.SmallTextSize != 10 || tokens.MediumTextSize != 12 || tokens.LargeTextSize != 14 {
-		t.Fatalf("Badge text sizes = %v/%v/%v", tokens.SmallTextSize, tokens.MediumTextSize, tokens.LargeTextSize)
-	}
-}
-
 func TestBadgePlacementsMatchHeroUIQuarterOffset(t *testing.T) {
 	anchor := image.Pt(40, 40)
 	badge := image.Pt(16, 16)

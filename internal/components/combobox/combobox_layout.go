@@ -191,7 +191,7 @@ func (c ComboBoxWidget) layoutPanel(ctx *frame.Context, gtx layout.Context, stat
 			return c.layoutEmpty(ctx, gtx)
 		}
 		state.list.Axis = layout.Vertical
-		return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.list, &state.bar, len(visible), !gtx.Enabled(), false, func(gtx layout.Context, index int) layout.Dimensions {
+		return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &state.list, &state.bar, &state.visualOutset, len(visible), !gtx.Enabled(), false, func(gtx layout.Context, index int) layout.Dimensions {
 			item := c.items[visible[index]]
 			return c.layoutItem(ctx, gtx, state, editor, item, item.Key == c.selectedKey, index == state.highlight)
 		})

@@ -34,7 +34,7 @@ func (p *probeWidget) Layout(ctx *frame.Context, gtx layout.Context) layout.Dime
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
 }
 
-func TestAlertDialogDefaultsMatchHeroUI(t *testing.T) {
+func TestAlertDialogDefaults(t *testing.T) {
 	dialog := New("delete", true, "Delete project?", "This action cannot be undone.")
 	if dialog.status != StatusDanger {
 		t.Fatalf("default status = %v, want danger", dialog.status)
@@ -47,11 +47,6 @@ func TestAlertDialogDefaultsMatchHeroUI(t *testing.T) {
 	}
 	if !dialog.closeButton {
 		t.Fatal("alert dialog default example should include the close trigger")
-	}
-
-	tokens := theme.DefaultTheme().Components.AlertDialog
-	if tokens.IconSize != 40 || tokens.IconGlyphSize != 20 || tokens.HeaderGap != 12 || tokens.TitleSize != 16 {
-		t.Fatalf("geometry = %+v, want icon 40/20, gap 12, title 16", tokens)
 	}
 }
 

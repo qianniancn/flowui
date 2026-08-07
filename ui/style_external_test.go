@@ -15,6 +15,14 @@ import (
 	"github.com/qianniancn/flowui/uitest"
 )
 
+func ExampleLinearGradient() {
+	gradient := ui.LinearGradient(
+		ui.ColorStop(0, ui.RGB(0x2563eb)),
+		ui.ColorStop(1, ui.TokenAccent),
+	).Angle(90)
+	_ = ui.Surface(ui.Text("Status")).Style(ui.Background(gradient))
+}
+
 func TestResolveStyleSupportsCustomWidgets(t *testing.T) {
 	activeTheme := ui.DefaultTheme()
 	activeTheme.Palette.Surface = color.NRGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}

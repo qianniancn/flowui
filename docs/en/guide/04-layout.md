@@ -44,6 +44,30 @@ ui.Grid(3, cardA, cardB, cardC).Gap(16)
 ui.AutoGrid(190, cardA, cardB, cardC).ColumnGap(16).RowGap(12)
 ```
 
+### Visual outset and clipping
+
+`Scroll`, `List`, `Scrollbar`, and `SplitPane` automatically reserve space
+inside their viewport for shadows and outlines declared by `Style`. Components
+with the common Box shell, such as `Input` and `Card`, need no extra margin.
+The space is applied at viewport edges, not between every pair of list items.
+An explicit `OverflowHidden` box remains a local clip boundary; child paint
+already clipped there does not affect an outer viewport.
+
+For custom paint that extends beyond its box, declare a minimum range with
+`VisualOutset`, or use `LayoutVisualOutset` when there is no Style shell:
+
+```go
+ui.Box(customCanvas).Style(
+	ui.VisualOutset(6, 8, 10, 8),
+)
+
+// top, right, bottom, left for direct custom paint.
+ui.LayoutVisualOutset(ctx, gtx, customCanvas, 6, 8, 10, 8)
+```
+
+When a new extent is discovered, the viewport requests another frame to settle
+the safe padding. It never lets that paint escape the scroll viewport or window.
+
 The runnable [`examples/grid_layout`](https://github.com/qianniancn/flowui/tree/main/examples/grid_layout) compares
 fixed columns, responsive columns, and independent row/column gaps.
 

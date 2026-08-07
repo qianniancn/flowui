@@ -28,6 +28,15 @@ func BenchmarkWrapLayout(b *testing.B) {
 	benchmarkLayoutWidget(b, widget)
 }
 
+func BenchmarkPrepareFieldAssociations(b *testing.B) {
+	ctx := newContext(nil)
+	widget := Box(Box(Box(&enabledProbeWidget{})))
+	b.ReportAllocs()
+	for b.Loop() {
+		prepareFieldAssociations(ctx, widget)
+	}
+}
+
 func benchmarkLayoutWidget(b *testing.B, widget frame.Widget) {
 	ctx := newContext(nil)
 	viewport := image.Pt(320, 200)

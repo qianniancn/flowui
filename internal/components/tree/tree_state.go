@@ -18,6 +18,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"github.com/qianniancn/flowui/internal/animation"
+	layoutui "github.com/qianniancn/flowui/internal/components/layout"
 	"github.com/qianniancn/flowui/internal/components/nav"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/interact"
@@ -68,6 +69,7 @@ func flattenVisibleItems(items []Item, expanded map[string]struct{}) []flatItem 
 type treeState struct {
 	list               layout.List
 	bar                widget.Scrollbar
+	visualOutset       layoutui.VisualOutsetState
 	items              map[string]*treeItemState
 	frameItems         map[string]struct{}
 	itemKeys           map[string]struct{}

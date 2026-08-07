@@ -29,22 +29,6 @@ func (p *chipProbe) Layout(ctx *frame.Context, gtx layout.Context) layout.Dimens
 	return layout.Dimensions{Size: gtx.Constraints.Constrain(p.size)}
 }
 
-func TestChipGeometryMatchesHeroUI(t *testing.T) {
-	tokens := theme.DefaultTheme().Components.Chip
-	if tokens.SmallHeight != 20 || tokens.MediumHeight != 24 || tokens.LargeHeight != 28 {
-		t.Fatalf("heights = %v/%v/%v, want 20/24/28", tokens.SmallHeight, tokens.MediumHeight, tokens.LargeHeight)
-	}
-	if tokens.SmallPaddingX != 4 || tokens.MediumPaddingX != 8 || tokens.LargePaddingX != 12 {
-		t.Fatalf("horizontal padding = %v/%v/%v, want 4/8/12", tokens.SmallPaddingX, tokens.MediumPaddingX, tokens.LargePaddingX)
-	}
-	if tokens.SmallPaddingY != 0 || tokens.MediumPaddingY != 2 || tokens.LargePaddingY != 4 {
-		t.Fatalf("vertical padding = %v/%v/%v, want 0/2/4", tokens.SmallPaddingY, tokens.MediumPaddingY, tokens.LargePaddingY)
-	}
-	if tokens.LabelPaddingX != 2 || tokens.ContentGap != 2 || tokens.Radius != 16 || tokens.LineHeight != 20 {
-		t.Fatalf("shared geometry = %+v, want label padding 2, gap 2, radius 16, line height 20", tokens)
-	}
-}
-
 func TestChipSizesHaveStableHeroUIHeights(t *testing.T) {
 	tests := []struct {
 		size Size

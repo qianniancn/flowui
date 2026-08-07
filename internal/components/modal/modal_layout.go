@@ -374,7 +374,7 @@ func (m ModalWidget) layoutDialogContent(ctx *frame.Context, gtx layout.Context,
 	if m.scroll == ModalScrollOutside {
 		state.outsideList.Axis = layout.Vertical
 		state.outsideList.ScrollAnyAxis = false
-		return layoutui.LayoutTrackedList(ctx, gtx, &state.outsideList, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+		return layoutui.LayoutTrackedListWithVisualOutset(ctx, gtx, &state.outsideList, &state.outsideVisualOutset, 1, func(gtx layout.Context, _ int) layout.Dimensions {
 			return m.layoutDialogSections(ctx, gtx, state)
 		})
 	}
@@ -517,7 +517,7 @@ func (m ModalWidget) layoutBody(ctx *frame.Context, gtx layout.Context, state *m
 	}
 	state.bodyList.Axis = layout.Vertical
 	state.bodyList.ScrollAnyAxis = false
-	return layoutui.LayoutTrackedScrollbar(ctx, gtx, &state.bodyList, &state.bodyBar, 1, !gtx.Enabled(), false, func(gtx layout.Context, _ int) layout.Dimensions {
+	return layoutui.LayoutTrackedScrollbarWithVisualOutset(ctx, gtx, &state.bodyList, &state.bodyBar, &state.bodyVisualOutset, 1, !gtx.Enabled(), false, func(gtx layout.Context, _ int) layout.Dimensions {
 		return body.Layout(ctx, gtx)
 	})
 }

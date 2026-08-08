@@ -31,6 +31,7 @@ styles, window management, asynchronous effects, and deterministic UI tests.
 | 14 | [FAQ](guide/14-faq.md) | Common questions and troubleshooting |
 | 15 | [Gantt chart](guide/15-gantt.md) | Tasks, dependencies, and editing |
 | 16 | [Component screenshots](guide/16-component-screenshots.md) | Visual reference for the examples |
+| 17 | [Node graph](guide/17-node-graph.md) | Nodes, ports, edges, and a controlled viewport |
 
 ## Repository map
 

@@ -162,6 +162,16 @@ func chartsPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	gantt := catalogGantt(func(selection ui.GanttSelection) {
 		send(func(model *Model) { model.LastAction = "Selected " + selection.Label })
 	})
+	graph := ui.NodeGraph("catalog-node-graph", ui.NodeGraphData{
+		Nodes: model.GraphNodes,
+		Edges: model.GraphEdges,
+	}).Height(320).Viewport(model.GraphViewport).OnViewportChange(func(viewport ui.NodeGraphViewport) {
+		send(func(model *Model) { model.GraphViewport = viewport })
+	}).OnNodesChange(func(changes []ui.NodeGraphNodeChange) {
+		send(func(model *Model) { model.GraphNodes = ui.ApplyNodeGraphChanges(model.GraphNodes, changes) })
+	}).OnConnect(func(connection ui.NodeGraphConnection) {
+		send(func(model *Model) { model.GraphEdges = appendCatalogNodeGraphConnection(model.GraphEdges, connection) })
+	})
 
 	return demoPage("Charts",
 		demoSection{Title: "Selection", Content: ui.Text(selected).Size(13)},
@@ -171,7 +181,34 @@ func chartsPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		demoSection{Title: "CandlestickChart", Content: demoPanel(candlestick)},
 		demoSection{Title: "Heatmap", Content: demoPanel(heatmap)},
 		demoSection{Title: "GanttChart", Content: demoPanel(gantt)},
+		demoSection{Title: "NodeGraph", Content: graph},
 	)
+}
+
+func catalogNodeGraphNodes() []ui.NodeGraphNode {
+	return []ui.NodeGraphNode{
+		ui.NewNodeGraphNode("source", "Source", ui.NodeGraphPoint{X: 60, Y: 90}).
+			Outputs(ui.NewNodeGraphPort("data", "Data")),
+		ui.NewNodeGraphNode("transform", "Transform", ui.NodeGraphPoint{X: 340, Y: 130}).
+			Inputs(ui.NewNodeGraphPort("input", "Input")).
+			Outputs(ui.NewNodeGraphPort("output", "Output")),
+	}
+}
+
+func catalogNodeGraphEdges() []ui.NodeGraphEdge {
+	return []ui.NodeGraphEdge{
+		ui.NewNodeGraphEdge("source-data", ui.NewNodeGraphEndpoint("source", "data"), ui.NewNodeGraphEndpoint("transform", "input")),
+	}
+}
+
+func appendCatalogNodeGraphConnection(edges []ui.NodeGraphEdge, connection ui.NodeGraphConnection) []ui.NodeGraphEdge {
+	for _, edge := range edges {
+		if edge.Source == connection.Source && edge.Target == connection.Target {
+			return edges
+		}
+	}
+	id := "connection-" + connection.Source.NodeID + "-" + connection.Source.PortID + "-" + connection.Target.NodeID + "-" + connection.Target.PortID
+	return append(edges, ui.NewNodeGraphEdge(id, connection.Source, connection.Target))
 }
 
 func catalogCandles() ([]ui.CandlestickChartData, []time.Time) {

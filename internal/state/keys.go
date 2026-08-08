@@ -38,6 +38,7 @@ const (
 	KindCandlestickChart Kind = "candlestick-chart"
 	KindHeatmap          Kind = "heatmap"
 	KindGanttChart       Kind = "gantt-chart"
+	KindNodeGraph        Kind = "node-graph"
 	KindTween            Kind = "tween"
 	KindTimeline         Kind = "timeline"
 	KindLayoutAnim       Kind = "layout-anim"

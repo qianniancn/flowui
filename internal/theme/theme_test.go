@@ -150,6 +150,30 @@ func TestWorkbenchThemeFollowsLightAndDarkSurfaces(t *testing.T) {
 	}
 }
 
+func TestNodeGraphThemeFollowsLightAndDarkPalettes(t *testing.T) {
+	light := theme.DefaultTheme()
+	dark := theme.DarkTheme()
+	if light.Components.NodeGraph.CanvasBackground != light.Palette.Background ||
+		light.Components.NodeGraph.CanvasBorder != light.Palette.Border ||
+		light.Components.NodeGraph.CanvasRadius != 8 ||
+		light.Components.NodeGraph.GridColor != light.Palette.MutedForeground ||
+		light.Components.NodeGraph.GridOpacity != .35 ||
+		light.Components.NodeGraph.NodeBackground != light.Palette.FieldBackground ||
+		light.Components.NodeGraph.EdgeColor != light.Palette.Accent ||
+		light.Components.NodeGraph.SelectedEdgeColor != light.Palette.AccentHover ||
+		light.Components.NodeGraph.SelectionBorder != light.Palette.Accent {
+		t.Fatalf("light node graph theme = %#v", light.Components.NodeGraph)
+	}
+	if dark.Components.NodeGraph.CanvasBackground != dark.Palette.Background ||
+		dark.Components.NodeGraph.NodeBackground != dark.Palette.FieldBackground ||
+		dark.Components.NodeGraph.GridColor != dark.Palette.MutedForeground ||
+		dark.Components.NodeGraph.GridOpacity != .35 ||
+		dark.Components.NodeGraph.EdgeColor != dark.Palette.Accent ||
+		dark.Components.NodeGraph.SelectedEdgeColor != dark.Palette.AccentHover {
+		t.Fatalf("dark node graph theme = %#v", dark.Components.NodeGraph)
+	}
+}
+
 func TestSelectionColorsMatchTheme(t *testing.T) {
 	light := color.NRGBA{R: 0x00, G: 0x6f, B: 0xee, A: 0x50}
 	dark := color.NRGBA{R: 0x04, G: 0x85, B: 0xf7, A: 0x58}

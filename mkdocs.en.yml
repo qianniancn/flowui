@@ -64,6 +64,7 @@ nav:
       - Forms and controlled state: guide/07-forms-and-controlled-state.md
       - Overlays and popups: guide/09-overlays-and-popups.md
       - Gantt chart: guide/15-gantt.md
+      - Node graph: guide/17-node-graph.md
   - Application capabilities:
       - Commands and subscriptions: guide/08-commands-and-subscriptions.md
       - Custom components: guide/10-custom-components.md

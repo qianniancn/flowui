@@ -85,6 +85,9 @@ type Model struct {
 	TableSelected []string
 	TableSort     ui.TableSortDescriptor
 	LastAction    string
+	GraphViewport ui.NodeGraphViewport
+	GraphNodes    []ui.NodeGraphNode
+	GraphEdges    []ui.NodeGraphEdge
 }
 
 func initialModel() Model {
@@ -127,6 +130,8 @@ func initialModel() Model {
 		TreeDropMessage:     "Drag a row to move it before, inside, or after another node.",
 		MotionForward:       true,
 		MotionPlaying:       true,
+		GraphNodes:          catalogNodeGraphNodes(),
+		GraphEdges:          catalogNodeGraphEdges(),
 	}
 }
 

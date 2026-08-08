@@ -161,6 +161,9 @@ type CandlestickChartTheme = theme.CandlestickChartTheme
 // TabsTheme contains the sizing, spacing, content, and motion tokens for tabs.
 type TabsTheme = theme.TabsTheme
 
+// NodeGraphTheme contains canvas, node, edge, and selection colors for node graphs.
+type NodeGraphTheme = theme.NodeGraphTheme
+
 // WorkbenchTheme contains shell-level sidebar, editor, panel, divider, tab,
 // and density tokens for editor-like workbenches.
 type WorkbenchTheme = theme.WorkbenchTheme

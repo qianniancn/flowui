@@ -935,6 +935,68 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 }
 
 func TestPublicFacadeImportContract(t *testing.T) {
+	graph := ui.NodeGraph("workflow", ui.NodeGraphData{
+		Nodes: []ui.NodeGraphNode{
+			ui.NewNodeGraphNode("source", "Source", ui.NodeGraphPoint{}).
+				Outputs(ui.NewNodeGraphPort("output", "Output")),
+			ui.NewNodeGraphNode("target", "Target", ui.NodeGraphPoint{X: 240}).
+				Inputs(ui.NewNodeGraphPort("input", "Input")),
+		},
+		Edges: []ui.NodeGraphEdge{
+			ui.NewNodeGraphEdge("source-target", ui.NewNodeGraphEndpoint("source", "output"), ui.NewNodeGraphEndpoint("target", "input")),
+		},
+	}).Height(280).
+		Viewport(ui.NodeGraphViewport{Zoom: 1}).
+		DefaultViewport(ui.NodeGraphViewport{Zoom: 1}).
+		FitView(true).
+		FitViewPadding(.1).
+		Grid(true).
+		GridPattern(ui.NodeGraphGridDots).
+		GridColor(color.NRGBA{R: 0x32, G: 0x78, B: 0xc8, A: 0xff}).
+		GridOpacity(.45).
+		GridSize(16).
+		ZoomRange(.5, 2).
+		SelectedKeys([]string{"source"}).
+		SelectedEdgeKeys([]string{"source-target"}).
+		SelectionMode(ui.NodeGraphSelectionMultiple).
+		SelectionOnDrag(true).
+		SelectionBoxMode(ui.NodeGraphSelectionBoxPartial).
+		NodesDraggable(true).
+		NodesSelectable(true).
+		NodesConnectable(true).
+		NodesDeletable(true).
+		EdgesSelectable(true).
+		EdgesDeletable(true).
+		EdgesReconnectable(true).
+		NodeDragThreshold(3).
+		SnapToGrid(true).
+		SnapGrid(16, 16).
+		DropTypes("application/x-flowui-node", "text/plain").
+		OnDrop(func(ui.NodeGraphDropEvent) {}).
+		Disabled(false).
+		OnViewportChange(func(ui.NodeGraphViewport) {}).
+		OnCanvasClick(func(ui.NodeGraphCanvasEvent) {}).
+		OnCanvasDoubleClick(func(ui.NodeGraphCanvasEvent) {}).
+		OnCanvasContextMenu(func(ui.NodeGraphCanvasEvent) {}).
+		OnNodeClick(func(ui.NodeGraphNodeEvent) {}).
+		OnNodeDoubleClick(func(ui.NodeGraphNodeEvent) {}).
+		OnNodeContextMenu(func(ui.NodeGraphNodeEvent) {}).
+		OnNodeHover(func(ui.NodeGraphNodeEvent) {}).
+		OnNodeLeave(func(ui.NodeGraphNodeEvent) {}).
+		OnEdgeClick(func(ui.NodeGraphEdgeEvent) {}).
+		OnEdgeDoubleClick(func(ui.NodeGraphEdgeEvent) {}).
+		OnEdgeContextMenu(func(ui.NodeGraphEdgeEvent) {}).
+		OnEdgeHover(func(ui.NodeGraphEdgeEvent) {}).
+		OnEdgeLeave(func(ui.NodeGraphEdgeEvent) {}).
+		OnNodesChange(func([]ui.NodeGraphNodeChange) {}).
+		OnEdgesChange(func([]ui.NodeGraphEdgeChange) {}).
+		OnReconnect(func(ui.NodeGraphEdge, ui.NodeGraphConnection) {}).
+		IsValidConnection(func(ui.NodeGraphConnection) bool { return true }).
+		OnConnect(func(ui.NodeGraphConnection) {})
+	var _ ui.Widget = graph
+	_ = ui.ApplyNodeGraphEdgeChanges(nil, []ui.NodeGraphEdgeChange{{Kind: ui.NodeGraphEdgeChangeRemove}})
+	_ = ui.ReconnectNodeGraphEdge(ui.NodeGraphEdge{}, ui.NodeGraphConnection{}, nil)
+	_ = ui.NodeGraphReconnectBoth
 	_ = ui.WindowTitleBarSupported()
 	workbench := ui.NewWorkbenchController(ui.NewWorkbenchState([]ui.WorkbenchGroup{{
 		Key:  "editor",
@@ -1057,6 +1119,7 @@ func TestPublicFacadeImportContract(t *testing.T) {
 	var _ ui.TitleBarTheme
 	var _ ui.PaginationTheme
 	var _ ui.ProgressCircleTheme
+	var _ ui.NodeGraphTheme
 
 	if root := facadeView(nil, facadeModel{}, func(facadeMsg) {}); root == nil {
 		t.Fatal("public facade returned a nil widget tree")

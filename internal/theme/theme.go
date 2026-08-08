@@ -223,6 +223,7 @@ type ComponentsTheme struct {
 	CandlestickChart  CandlestickChartTheme
 	Heatmap           HeatmapTheme
 	GanttChart        GanttChartTheme
+	NodeGraph         NodeGraphTheme
 	Tabs              TabsTheme
 	Workbench         WorkbenchTheme
 	Collapsible       CollapsibleTheme
@@ -952,6 +953,28 @@ type TabsTheme struct {
 	ScrollShadowSize    unit.Dp
 	ScrollChevronSize   unit.Dp
 	ScrollChevronStroke unit.Dp
+}
+
+// NodeGraphTheme controls canvas, node, edge, and selection colors for
+// node-based graph editors.
+type NodeGraphTheme struct {
+	CanvasBackground    color.NRGBA
+	CanvasBorder        color.NRGBA
+	CanvasRadius        unit.Dp
+	CanvasBorderWidth   unit.Dp
+	GridColor           color.NRGBA
+	GridOpacity         float32
+	NodeBackground      color.NRGBA
+	NodeBorder          color.NRGBA
+	NodeForeground      color.NRGBA
+	NodeMutedForeground color.NRGBA
+	PortColor           color.NRGBA
+	PortBorder          color.NRGBA
+	EdgeColor           color.NRGBA
+	SelectedEdgeColor   color.NRGBA
+	SelectedNodeBorder  color.NRGBA
+	SelectionFill       color.NRGBA
+	SelectionBorder     color.NRGBA
 }
 
 // WorkbenchTheme contains shell-level tokens shared by editor workbenches.
@@ -2241,6 +2264,7 @@ func DefaultTheme() Theme {
 		},
 	}
 	theme.Components.Table.StripeBackground = theme.Palette.SurfaceSecondary
+	theme.Components.NodeGraph = nodeGraphThemeFor(theme.Palette)
 	SyncMaterialTheme(&theme)
 	return theme
 }
@@ -2369,10 +2393,33 @@ func DarkTheme() Theme {
 	theme.Components.ColorSwatchPicker.ShadowOpacity = 0
 	theme.Components.TitleBar.ControlPressed = theme.Palette.SurfacePressed
 	theme.Components.Table.StripeBackground = theme.Palette.SurfaceSecondary
+	theme.Components.NodeGraph = nodeGraphThemeFor(theme.Palette)
 	theme.Components.Modal.Backdrop = color.NRGBA{A: 0x99}
 	theme.Components.Modal.BlurBackdrop = color.NRGBA{A: 0x99}
 	SyncMaterialTheme(&theme)
 	return theme
+}
+
+func nodeGraphThemeFor(palette Palette) NodeGraphTheme {
+	return NodeGraphTheme{
+		CanvasBackground:    palette.Background,
+		CanvasBorder:        palette.Border,
+		CanvasRadius:        8,
+		CanvasBorderWidth:   1,
+		GridColor:           palette.MutedForeground,
+		GridOpacity:         .35,
+		NodeBackground:      palette.FieldBackground,
+		NodeBorder:          palette.Border,
+		NodeForeground:      palette.SurfaceForeground,
+		NodeMutedForeground: palette.MutedForeground,
+		PortColor:           palette.Foreground,
+		PortBorder:          palette.Surface,
+		EdgeColor:           palette.Accent,
+		SelectedEdgeColor:   palette.AccentHover,
+		SelectedNodeBorder:  palette.MutedForeground,
+		SelectionFill:       palette.AccentSoft,
+		SelectionBorder:     palette.Accent,
+	}
 }
 
 // MaterialOf returns the internal Gio material bridge for text/editor helpers.

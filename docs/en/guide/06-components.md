@@ -84,7 +84,8 @@ Inline editing commits on Enter or focus loss and cancels with Escape.
 
 `Table`, `ListBox`, progress controls, `Meter`, `Spinner`, and the chart family
 cover data-heavy screens. The chart family includes line, bar, pie,
-candlestick, heatmap, and Gantt charts.
+candlestick, heatmap, and Gantt charts. `NodeGraph` provides a node-and-edge
+canvas with controlled panning and zooming; see [Node graph](17-node-graph.md).
 
 ## Layout and shells
 

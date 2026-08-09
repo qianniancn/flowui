@@ -632,7 +632,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			OnAction(func(string) {}).
 			OnDrop(func(ui.TreeDropEvent) {}).
 			CanDrop(func(ui.TreeDropEvent) bool { return true }).
+			OnDragStart(func(ui.TreeDragEvent) {}).
+			OnDragEnter(func(ui.TreeDragEvent) {}).
+			OnDragLeave(func(ui.TreeDragEvent) {}).
+			OnDragOver(func(ui.TreeDragEvent) {}).
+			OnDragEnd(func(ui.TreeDragEvent) {}).
 			OnLoadChildren(func(string) {}).
+			OnLoadChildrenEvent(func(ui.TreeLoadEvent) {}).
+			FilterFunc(func(ui.TreeItem) bool { return true }).
+			FilterVersion(1).
 			OnRename(func(string, string) {}).
 			RequestRename("folder", 1).
 			Variant(ui.TreeSurface).

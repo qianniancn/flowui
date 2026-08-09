@@ -12,6 +12,7 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/qianniancn/flowui/internal/components/menu"
@@ -50,6 +51,66 @@ func TestFilterTreeItemsKeepsAncestors(t *testing.T) {
 	}
 	if len(filterTreeItems(items, "missing")) != 0 {
 		t.Fatal("expected empty filter result")
+	}
+}
+
+func TestFilterTreeItemsByKeepsAncestors(t *testing.T) {
+	items := []Item{
+		{Key: "src", Label: "Source", Children: []Item{
+			{Key: "main", Label: "main.go"},
+			{Key: "util", Label: "util.go"},
+		}},
+		{Key: "docs", Label: "Docs"},
+	}
+	filtered := filterTreeItemsBy(items, func(item Item) bool { return item.Key == "util" })
+	if len(filtered) != 1 || filtered[0].Key != "src" || len(filtered[0].Children) != 1 || filtered[0].Children[0].Key != "util" {
+		t.Fatalf("filtered = %#v", filtered)
+	}
+}
+
+func TestTreeCustomFilterVersionControlsCache(t *testing.T) {
+	items := []Item{{Key: "root", Label: "First"}, {Key: "other", Label: "Other"}}
+	want := "First"
+	match := func(item Item) bool { return item.Label == want }
+	state := new(treeState)
+	first := state.resolveVisible(New("tree", "", items).DataVersion(1).FilterFunc(match).FilterVersion(1))
+	want = "Other"
+	stale := state.resolveVisible(New("tree", "", items).DataVersion(1).FilterFunc(match).FilterVersion(1))
+	if len(first) != 1 || first[0].item.Key != "root" || len(stale) != 1 || stale[0].item.Key != "root" {
+		t.Fatalf("same filter version did not reuse cache: first %#v stale %#v", first, stale)
+	}
+	updated := state.resolveVisible(New("tree", "", items).DataVersion(1).FilterFunc(match).FilterVersion(2))
+	if len(updated) != 1 || updated[0].item.Key != "other" {
+		t.Fatalf("new filter version was not resolved: %#v", updated)
+	}
+}
+
+func TestItemsFromSimpleBuildsStableHierarchy(t *testing.T) {
+	probe := &treeProbe{size: image.Pt(20, 12)}
+	items := ItemsFromSimple([]SimpleItem{
+		NewSimpleItem("readme", "docs", "README"),
+		NewSimpleItem("workspace", "", "Workspace"),
+		{Key: "docs", ParentKey: "workspace", Label: "Docs", Content: probe, DragDisabled: true},
+		NewSimpleItem("orphan", "missing", "Orphan"),
+	})
+	if len(items) != 2 || items[0].Key != "workspace" || items[1].Key != "orphan" {
+		t.Fatalf("roots = %#v", items)
+	}
+	if len(items[0].Children) != 1 || items[0].Children[0].Key != "docs" || len(items[0].Children[0].Children) != 1 || items[0].Children[0].Children[0].Key != "readme" {
+		t.Fatalf("hierarchy = %#v", items[0])
+	}
+	if items[0].Children[0].Content != probe || !items[0].Children[0].DragDisabled {
+		t.Fatalf("simple item properties were not preserved: %#v", items[0].Children[0])
+	}
+}
+
+func TestItemsFromSimplePromotesCyclesToRoots(t *testing.T) {
+	items := ItemsFromSimple([]SimpleItem{
+		NewSimpleItem("a", "b", "A"),
+		NewSimpleItem("b", "a", "B"),
+	})
+	if len(items) != 2 || items[0].Key != "a" || items[1].Key != "b" {
+		t.Fatalf("cycle roots = %#v", items)
 	}
 }
 
@@ -122,6 +183,7 @@ func BenchmarkTreeDataVersion(b *testing.B) {
 	}{
 		{name: "unversioned", widget: widget},
 		{name: "versioned", widget: widget.DataVersion(1)},
+		{name: "versioned-filter", widget: widget.DataVersion(1).Filter("Item")},
 	} {
 		b.Run(benchmark.name, func(b *testing.B) {
 			state := new(treeState)
@@ -330,6 +392,27 @@ func TestTreeAsyncBranchRequestsLoadAndExpansion(t *testing.T) {
 	}
 }
 
+func TestTreeLoadEventIncludesRetryAndExpansion(t *testing.T) {
+	var events []LoadEvent
+	var legacy []string
+	initial := New("async", "", nil).
+		OnLoadChildren(func(key string) { legacy = append(legacy, key) }).
+		OnLoadChildrenEvent(func(event LoadEvent) { events = append(events, event) })
+	initial.requestItemToggle(Item{Key: "remote", ChildrenState: ChildrenUnloaded})
+
+	retry := New("async", "", nil).
+		ExpandedKeys([]string{"remote"}).
+		OnLoadChildrenEvent(func(event LoadEvent) { events = append(events, event) })
+	retry.requestItemToggle(Item{Key: "remote", ChildrenState: ChildrenError})
+
+	if !treeSameKeys(legacy, []string{"remote"}) {
+		t.Fatalf("legacy load calls = %#v", legacy)
+	}
+	if len(events) != 2 || events[0] != (LoadEvent{Key: "remote"}) || events[1] != (LoadEvent{Key: "remote", Retry: true, Expanded: true}) {
+		t.Fatalf("load events = %#v", events)
+	}
+}
+
 func TestTreeAsyncStateControlsBranchAndErrorDescription(t *testing.T) {
 	if !treeItemExpandable(Item{ChildrenState: ChildrenUnloaded}) || !treeItemExpandable(Item{ChildrenState: ChildrenLoading}) || !treeItemExpandable(Item{ChildrenState: ChildrenError}) {
 		t.Fatal("an asynchronous Tree item was not expandable")
@@ -400,6 +483,114 @@ func TestTreeSelectionNoneOnlyRunsAction(t *testing.T) {
 	}
 }
 
+func TestTreeCascadeCheckedKeysDeriveParentsAndHalfChecked(t *testing.T) {
+	checked, half := deriveCascadeCheckedKeys(treeTestItems(), treeKeySet([]string{"main"}))
+	if !treeSameKeys(checked, []string{"main"}) {
+		t.Fatalf("checked = %#v, want only main", checked)
+	}
+	if !treeSameKeys(half, []string{"project", "src"}) {
+		t.Fatalf("half = %#v, want project and src half-checked", half)
+	}
+
+	checked, half = deriveCascadeCheckedKeys(treeTestItems(), treeKeySet([]string{"main", "ui", "readme"}))
+	if !treeSameKeys(checked, []string{"main", "project", "readme", "src", "ui"}) {
+		t.Fatalf("checked = %#v, want project and src promoted to checked", checked)
+	}
+	if len(half) != 0 {
+		t.Fatalf("half = %#v, want none", half)
+	}
+}
+
+func TestTreeCascadeCheckboxesTreatDisabledNodesAsBoundaries(t *testing.T) {
+	items := []Item{{
+		Key: "root", Label: "Root", Children: []Item{
+			{Key: "enabled", Label: "Enabled"},
+			{Key: "locked", Label: "Locked", DisableCheckbox: true, Children: []Item{{Key: "nested", Label: "Nested"}}},
+			{Key: "disabled", Label: "Disabled", Disabled: true, Children: []Item{{Key: "deep", Label: "Deep"}}},
+		},
+	}}
+	isDisabled := func(item Item) bool { return item.Disabled || item.DisableCheckbox }
+	checked, half := deriveCascadeCheckedKeysWith(items, treeKeySet([]string{"root"}), isDisabled)
+	if !treeSameKeys(checked, []string{"enabled", "root"}) || len(half) != 0 {
+		t.Fatalf("parent cascade = checked %#v half %#v", checked, half)
+	}
+	checked, half = deriveCascadeCheckedKeysWith(items, treeKeySet([]string{"enabled"}), isDisabled)
+	if !treeSameKeys(checked, []string{"enabled", "root"}) || len(half) != 0 {
+		t.Fatalf("enabled child cascade = checked %#v half %#v", checked, half)
+	}
+	checked, half = deriveCascadeCheckedKeysWith(items, treeKeySet([]string{"nested", "deep"}), isDisabled)
+	if !treeSameKeys(checked, []string{"deep", "nested"}) || len(half) != 0 {
+		t.Fatalf("isolated checks = checked %#v half %#v", checked, half)
+	}
+}
+
+func TestTreeCheckRequestDoesNotModifyDisabledBranches(t *testing.T) {
+	items := []Item{{
+		Key: "root", Label: "Root", Children: []Item{
+			{Key: "enabled", Label: "Enabled"},
+			{Key: "locked", Label: "Locked", DisableCheckbox: true, Children: []Item{{Key: "nested", Label: "Nested"}}},
+		},
+	}}
+	var nextChecked, nextHalf []string
+	tree := New("checks", "", items).
+		Checkable(true).
+		OnCheckedChange(func(checked, half []string) {
+			nextChecked, nextHalf = checked, half
+		})
+	state := new(treeState)
+	tree.checkedKeySet = state.checkedKeys.Resolve(nil)
+	tree.resolveCheckState(state)
+	tree.requestCheck("root", true)
+	if !treeSameKeys(nextChecked, []string{"enabled", "root"}) || len(nextHalf) != 0 {
+		t.Fatalf("check request = checked %#v half %#v", nextChecked, nextHalf)
+	}
+}
+
+func TestTreeDisabledPreservesCascadeCheckState(t *testing.T) {
+	tree := New("checks", "", treeTestItems()).
+		Checkable(true).
+		CheckedKeys([]string{"main"}).
+		Disabled(true)
+	state := new(treeState)
+	tree.checkedKeySet = state.checkedKeys.Resolve(tree.checkedKeys)
+	tree.resolveCheckState(state)
+	if !treeSameKeys(tree.resolvedChecked, []string{"main"}) || !treeSameKeys(tree.resolvedHalf, []string{"project", "src"}) {
+		t.Fatalf("disabled Tree cascade = checked %#v half %#v", tree.resolvedChecked, tree.resolvedHalf)
+	}
+}
+
+func TestTreeDisabledKeysStopCascadeCheckState(t *testing.T) {
+	items := []Item{{Key: "root", Label: "Root", Children: []Item{
+		{Key: "enabled", Label: "Enabled"},
+		{Key: "locked", Label: "Locked"},
+	}}}
+	tree := New("checks", "", items).
+		Checkable(true).
+		CheckedKeys([]string{"root"}).
+		DisabledKeys([]string{"locked"})
+	state := new(treeState)
+	tree.checkedKeySet = state.checkedKeys.Resolve(tree.checkedKeys)
+	tree.disabledKeySet = state.disabledKeys.Resolve(tree.disabledKeys)
+	tree.resolveCheckState(state)
+	if !treeSameKeys(tree.resolvedChecked, []string{"enabled", "root"}) || len(tree.resolvedHalf) != 0 {
+		t.Fatalf("disabled keys cascade = checked %#v half %#v", tree.resolvedChecked, tree.resolvedHalf)
+	}
+}
+
+func TestTreeRowClickExpandsHonorsExpandAction(t *testing.T) {
+	clickTree := New("files", "", treeTestItems()).ExpandOnRowClick(true)
+	if !clickTree.rowClickExpands(1) {
+		t.Fatal("single click should expand by default")
+	}
+	doubleTree := New("files", "", treeTestItems()).ExpandAction(ExpandActionDoubleClick)
+	if doubleTree.rowClickExpands(1) {
+		t.Fatal("single click should not expand in double-click mode")
+	}
+	if !doubleTree.rowClickExpands(2) {
+		t.Fatal("double click should expand in double-click mode")
+	}
+}
+
 func TestTreeAllowEmptySelection(t *testing.T) {
 	changed := "not-called"
 	tree := New("files", "project", treeTestItems()).
@@ -444,6 +635,15 @@ func TestTreeSelectedDragKeysPreserveOrderAndExcludeDescendants(t *testing.T) {
 		SelectedKeys([]string{"ui", "project", "main", "archive"})
 	if got := tree.selectedDragKeys(visible); !treeSameKeys(got, []string{"project", "archive"}) {
 		t.Fatalf("drag keys = %#v, want project/archive", got)
+	}
+	items := treeTestItems()
+	items[0].DragDisabled = true
+	visible = flattenVisibleItems(items, treeKeySet([]string{"project", "src"}))
+	tree = New("files", "", items).
+		SelectionMode(SelectionMultiple).
+		SelectedKeys([]string{"project", "main", "archive"})
+	if got := tree.selectedDragKeys(visible); !treeSameKeys(got, []string{"main", "archive"}) {
+		t.Fatalf("drag keys with disabled parent = %#v, want main/archive", got)
 	}
 }
 
@@ -939,6 +1139,34 @@ func TestTreeDragAutoScrollAdvancesList(t *testing.T) {
 	}
 }
 
+func TestTreeDragGeometryCachesVersionedRowsAndTracksOffscreenSources(t *testing.T) {
+	items := make([]Item, 128)
+	for index := range items {
+		items[index] = Item{Key: fmt.Sprintf("item-%d", index), Label: fmt.Sprintf("Item %d", index)}
+	}
+	tree := New("files", "", items).DataVersion(1)
+	visible := flattenVisibleItems(items, nil)
+	state := new(treeState)
+	geometry := state.dragGeometryFor(tree, visible, 24, 40, 1)
+	firstHeight := &geometry.heights[0]
+	if again := state.dragGeometryFor(tree, visible, 24, 40, 1); &again.heights[0] != firstHeight {
+		t.Fatal("versioned drag geometry was rebuilt without a data change")
+	}
+
+	sourceIndex := 2
+	targetIndex := 96
+	pointerY := float32(geometry.starts[targetIndex] - geometry.starts[sourceIndex] + 12)
+	target := geometry.dropTargetAt(visible, sourceIndex, pointerY)
+	if target.key != "item-96" || target.index != targetIndex {
+		t.Fatalf("offscreen drop target = %#v, want item-96", target)
+	}
+	position := layout.Position{First: 80, Offset: 5, Count: 3}
+	wantViewportY := float32(geometry.starts[sourceIndex] - geometry.starts[position.First] - position.Offset)
+	if got := geometry.viewportY(position, sourceIndex, 0); got != wantViewportY {
+		t.Fatalf("offscreen source viewport y = %v, want %v", got, wantViewportY)
+	}
+}
+
 func TestTreeDragHoverExpandsOnceAfterDelay(t *testing.T) {
 	state := new(treeState)
 	start := time.Unix(7, 0)
@@ -973,10 +1201,22 @@ func TestTreeDropRejectsSelfDescendantsAndDisabledItems(t *testing.T) {
 	if treeDropAllowed(tree.DisabledKeys([]string{"archive"}), visible, []string{"main"}, "archive", DropInside) {
 		t.Fatal("Tree allowed dropping onto a disabled item")
 	}
+	items[1].DropDisabled = true
+	visible = flattenVisibleItems(items, treeKeySet([]string{"project", "src"}))
+	if treeDropAllowed(New("files", "", items), visible, []string{"main"}, "archive", DropInside) {
+		t.Fatal("Tree allowed dropping onto a drop-disabled item")
+	}
+	items = treeTestItems()
+	items[1].AcceptsChildren = true
+	items[0].Children[0].Children[0].DragDisabled = true
+	visible = flattenVisibleItems(items, treeKeySet([]string{"project", "src"}))
+	if treeDropAllowed(New("files", "", items), visible, []string{"main"}, "archive", DropInside) {
+		t.Fatal("Tree allowed a drag-disabled item as source")
+	}
 	if treeDropAllowed(tree, visible, []string{"main"}, "readme", DropInside) {
 		t.Fatal("Tree allowed dropping inside a leaf")
 	}
-	if !treeDropAllowed(tree, visible, []string{"main"}, "readme", DropBefore) {
+	if !treeDropAllowed(tree, visible, []string{"ui"}, "readme", DropBefore) {
 		t.Fatal("Tree rejected dropping before a leaf")
 	}
 	target := treeDropIndicatorTarget(visible, treeDropTarget{key: "project", drawKey: "project", position: DropAfter})
@@ -1002,6 +1242,49 @@ func TestTreeCanDropReceivesBatchAndControlsIndicator(t *testing.T) {
 	proposed.SourceKeys[0] = "changed"
 	if sources[0] != "main" {
 		t.Fatal("drop proposal exposed the Tree source slice")
+	}
+}
+
+func TestTreeDragLifecycleReportsValidTargetTransitions(t *testing.T) {
+	var phases []string
+	record := func(phase string) func(DragEvent) {
+		return func(event DragEvent) {
+			phases = append(phases, fmt.Sprintf("%s:%s:%d:%s", phase, event.TargetKey, event.Position, event.SourceKey))
+			if phase == "start" {
+				event.SourceKeys[0] = "changed"
+			}
+		}
+	}
+	tree := New("files", "", nil).
+		OnDragStart(record("start")).
+		OnDragEnter(record("enter")).
+		OnDragLeave(record("leave")).
+		OnDragOver(record("over")).
+		OnDragEnd(record("end"))
+	state := new(treeState)
+	sources := []string{"one", "two"}
+	first := treeDropTarget{key: "folder", position: DropInside}
+	second := treeDropTarget{key: "archive", position: DropBefore}
+	tree.updateDragLifecycle(state, sources, first)
+	tree.updateDragLifecycle(state, sources, first)
+	tree.updateDragLifecycle(state, sources, second)
+	tree.endDragLifecycle(state)
+	want := []string{
+		"start::0:one",
+		"enter:folder:1:one",
+		"over:folder:1:one",
+		"over:folder:1:one",
+		"leave:folder:1:one",
+		"enter:archive:0:one",
+		"over:archive:0:one",
+		"leave:archive:0:one",
+		"end:archive:0:one",
+	}
+	if !treeSameKeys(phases, want) {
+		t.Fatalf("drag phases = %#v, want %#v", phases, want)
+	}
+	if sources[0] != "one" || len(state.dragEventSources) != 0 || state.dragEventTarget.key != "" {
+		t.Fatalf("drag lifecycle state = sources %#v state %#v", sources, state)
 	}
 }
 
@@ -1190,6 +1473,37 @@ func TestTreeComposedContentInheritsSelectedColors(t *testing.T) {
 	}
 }
 
+func TestTreeCustomContentInheritsSelectedColors(t *testing.T) {
+	activeTheme := theme.DefaultTheme()
+	content := &treeProbe{size: image.Pt(120, 18)}
+	item := Item{Key: "selected", Label: "Selected", Content: content}
+	New("tree", "selected", []Item{item}).Layout(
+		treeTestContext(&activeTheme, locale.LanguageEnglish),
+		treeLayoutContext(nil, image.Pt(320, 100), time.Time{}),
+	)
+	if content.layouts != 1 || content.foreground != activeTheme.Palette.AccentSoftForeground || content.background != activeTheme.Palette.AccentSoft {
+		t.Fatalf("custom content = layouts %d colors %#v/%#v", content.layouts, content.foreground, content.background)
+	}
+}
+
+func TestTreeCustomSwitcherTracksExpansion(t *testing.T) {
+	collapsed := &treeProbe{size: image.Pt(12, 12)}
+	expanded := &treeProbe{size: image.Pt(12, 12)}
+	item := Item{
+		Key: "folder", Label: "Folder",
+		Children: []Item{{Key: "file", Label: "File"}},
+		Switcher: collapsed, ExpandedSwitcher: expanded,
+	}
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	New("tree", "", []Item{item}).ExpandedKeys([]string{"folder"}).Layout(
+		ctx,
+		treeLayoutContext(nil, image.Pt(320, 100), time.Time{}),
+	)
+	if collapsed.layouts != 0 || expanded.layouts != 1 {
+		t.Fatalf("switcher layouts = %d/%d, want 0/1", collapsed.layouts, expanded.layouts)
+	}
+}
+
 func TestTreeSemanticsExposeSelectionAndExpansion(t *testing.T) {
 	ctx := treeTestContext(nil, locale.LanguageEnglish)
 	router := new(input.Router)
@@ -1207,6 +1521,40 @@ func TestTreeSemanticsExposeSelectionAndExpansion(t *testing.T) {
 	node, ok := treeSemanticNode(router.AppendSemantics(nil), "Project")
 	if !ok || !node.Desc.Selected || node.Desc.Description != "Expanded" {
 		t.Fatalf("Project semantics = found %v selected %v description %q", ok, node.Desc.Selected, node.Desc.Description)
+	}
+}
+
+func TestTreeCheckboxSemanticsExposeCheckedAndPartialState(t *testing.T) {
+	ctx := treeTestContext(nil, locale.LanguageEnglish)
+	router := new(input.Router)
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: image.Pt(320, 160)},
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	items := []Item{
+		{Key: "checked", Label: "Checked"},
+		{Key: "partial", Label: "Partial", Children: []Item{{Key: "child", Label: "Child"}}},
+	}
+	frame.BeginFrame(ctx)
+	New("files", "", items).
+		Checkable(true).
+		CheckStrictly(true).
+		CheckedKeys([]string{"checked"}).
+		HalfCheckedKeys([]string{"partial"}).
+		Layout(ctx, gtx)
+	frame.ApplyFrameCommands(ctx, gtx)
+	frame.EndFrame(ctx)
+	router.Frame(&ops)
+	nodes := router.AppendSemantics(nil)
+	checked, ok := treeSemanticNodeByClass(nodes, "Checked", semantic.CheckBox)
+	if !ok || !checked.Desc.Selected || checked.Desc.Disabled {
+		t.Fatalf("checked checkbox semantics = found %v desc %#v", ok, checked.Desc)
+	}
+	partial, ok := treeSemanticNodeByClass(nodes, "Partial", semantic.CheckBox)
+	if !ok || partial.Desc.Selected || partial.Desc.Description != "Partially selected" {
+		t.Fatalf("partial checkbox semantics = found %v desc %#v", ok, partial.Desc)
 	}
 }
 
@@ -1298,6 +1646,18 @@ func treeSemanticNode(nodes []input.SemanticNode, label string) (input.SemanticN
 			return node, true
 		}
 		if child, ok := treeSemanticNode(node.Children, label); ok {
+			return child, true
+		}
+	}
+	return input.SemanticNode{}, false
+}
+
+func treeSemanticNodeByClass(nodes []input.SemanticNode, label string, class semantic.ClassOp) (input.SemanticNode, bool) {
+	for _, node := range nodes {
+		if node.Desc.Label == label && node.Desc.Class == class {
+			return node, true
+		}
+		if child, ok := treeSemanticNodeByClass(node.Children, label, class); ok {
 			return child, true
 		}
 	}

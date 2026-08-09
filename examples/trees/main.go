@@ -13,6 +13,8 @@ import (
 type Model struct {
 	Items           []ui.TreeItem
 	Selected        string
+	Checked         []string
+	HalfChecked     []string
 	MultiSelected   []string
 	Expanded        []string
 	AsyncItems      []ui.TreeItem
@@ -31,25 +33,27 @@ type Model struct {
 }
 
 type Msg struct {
-	Tree           string
-	Selected       string
-	SelectedKeys   []string
-	SetSelection   bool
-	Expanded       []string
-	Action         string
-	Connectors     bool
-	SetConnectors  bool
-	Dashed         bool
-	SetDashed      bool
-	Drop           ui.TreeDropEvent
-	LoadChildren   string
-	ChildrenLoaded string
-	RenameKey      string
-	RenameLabel    string
-	RenameTree     string
-	RenameRequest  string
-	ContextTree    string
-	ContextKey     string
+	Tree            string
+	Selected        string
+	SelectedKeys    []string
+	HalfCheckedKeys []string
+	SetSelection    bool
+	SetChecked      bool
+	Expanded        []string
+	Action          string
+	Connectors      bool
+	SetConnectors   bool
+	Dashed          bool
+	SetDashed       bool
+	Drop            ui.TreeDropEvent
+	LoadChildren    string
+	ChildrenLoaded  string
+	RenameKey       string
+	RenameLabel     string
+	RenameTree      string
+	RenameRequest   string
+	ContextTree     string
+	ContextKey      string
 }
 
 func Update(model *Model, msg Msg) ui.Cmd[Msg] {
@@ -73,6 +77,10 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	}
 	if msg.SetSelection {
 		model.MultiSelected = append([]string(nil), msg.SelectedKeys...)
+	}
+	if msg.SetChecked {
+		model.Checked = append([]string(nil), msg.SelectedKeys...)
+		model.HalfChecked = append([]string(nil), msg.HalfCheckedKeys...)
 	}
 	if msg.Action != "" {
 		model.LastAction = fmt.Sprintf("Activated: %s", msg.Action)
@@ -140,10 +148,15 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					ui.Divider(),
 					section("File browser",
 						ui.Box(controlledTree("files", model.Selected, model.Expanded, items, send).
+							ExpandOnRowClick(true).
 							RequestRename(fileRename, model.RenameRevision).
 							ContextMenu(treeContextMenu("files", model.ContextKey, model.ContextTree == "files" && model.ContextKey == model.Selected, send)).
 							OnContextMenu(func(key string) { send(Msg{ContextTree: "files", ContextKey: key}) }).
 							OnRename(func(key, label string) { send(Msg{RenameKey: key, RenameLabel: label}) })).
+							Style(ui.Width(520)),
+					),
+					section("Checkable",
+						ui.Box(controlledCheckTree("checks", model.Checked, model.HalfChecked, model.Expanded, items, send)).
 							Style(ui.Width(520)),
 					),
 					section("Compact file tree",
@@ -168,18 +181,43 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								CanDrop(func(event ui.TreeDropEvent) bool {
 									return event.TargetKey != "flowui" || event.Position != ui.TreeDropBefore
 								}).
+								OnDragStart(func(event ui.TreeDragEvent) {
+									send(Msg{Action: fmt.Sprintf("Dragging: %d item(s)", len(event.SourceKeys))})
+								}).
+								OnDragEnter(func(event ui.TreeDragEvent) {
+									send(Msg{Action: fmt.Sprintf("Drop %s %s", treeDropPositionText(event.Position), event.TargetKey)})
+								}).
 								OnDrop(func(event ui.TreeDropEvent) { send(Msg{Drop: event}) })).
 								Style(ui.Width(520)),
 						).Gap(8),
 					),
 					section("Async children",
 						ui.Box(controlledTree("async", model.AsyncSelected, model.AsyncExpanded, model.AsyncItems, send).
-							OnLoadChildren(func(key string) { send(Msg{LoadChildren: key}) })).
+							OnLoadChildrenEvent(func(event ui.TreeLoadEvent) { send(Msg{LoadChildren: event.Key}) })).
+							Style(ui.Width(520)),
+					),
+					section("Flat data",
+						ui.Box(ui.Tree("simple", "", ui.TreeItemsFromSimple(simpleTreeItems())).
+							ExpandedKeys([]string{"simple-flowui", "simple-ui"}).
+							Guides(true)).
+							Style(ui.Width(520)),
+					),
+					section("Custom filter",
+						ui.Box(ui.Tree("filtered", "", fileItems()).
+							FilterFunc(func(item ui.TreeItem) bool { return item.Key == "tree" }).
+							FilterVersion(1).
+							ExpandedKeys([]string{"flowui", "components"}).
+							Guides(true)).
 							Style(ui.Width(520)),
 					),
 					section("Surface",
 						ui.Box(controlledTree("surface", model.SurfaceSelected, model.SurfaceExpanded, workspaceItems(), send).
 							Variant(ui.TreeSurface)).
+							Style(ui.Width(520)),
+					),
+					section("Custom rows",
+						ui.Box(ui.Tree("custom", "", customTreeItems()).
+							ExpandedKeys([]string{"design"})).
 							Style(ui.Width(520)),
 					),
 					section("Action only",
@@ -231,6 +269,20 @@ func controlledMultiTree(key string, selected, expanded []string, items []ui.Tre
 		})
 }
 
+func controlledCheckTree(key string, checked, halfChecked, expanded []string, items []ui.TreeItem, send ui.Send[Msg]) ui.TreeWidget {
+	return ui.Tree(key, "", items).
+		Checkable(true).
+		CheckedKeys(checked).
+		HalfCheckedKeys(halfChecked).
+		ExpandedKeys(expanded).
+		OnCheckedChange(func(keys, halfKeys []string) {
+			send(Msg{SelectedKeys: keys, HalfCheckedKeys: halfKeys, SetChecked: true})
+		}).
+		OnExpandedChange(func(keys []string) {
+			send(Msg{Tree: key, Expanded: keys})
+		})
+}
+
 func section(title string, child ui.Widget) ui.Widget {
 	return ui.Column(ui.Text(title).Size(18), child).Gap(10)
 }
@@ -253,6 +305,27 @@ func treeContextMenu(treeKey, target string, renameEnabled bool, send ui.Send[Ms
 		}
 		send(Msg{Action: fmt.Sprintf("%s: %s", event.Key, target)})
 	})
+}
+
+func customTreeItems() []ui.TreeItem {
+	return []ui.TreeItem{
+		{
+			Key:              "design",
+			Label:            "Design",
+			Switcher:         ui.Icon(lucide.ChevronRight).Size(14),
+			ExpandedSwitcher: ui.Icon(lucide.ChevronDown).Size(14),
+			Children: []ui.TreeItem{
+				{
+					Key:   "figma",
+					Label: "Figma",
+					Content: ui.Row(
+						ui.Icon(lucide.FilePenLine).Size(16),
+						ui.Column(ui.Text("Figma"), ui.Description("Shared design file")).Gap(2),
+					).Gap(8).AlignMiddle(),
+				},
+			},
+		},
+	}
 }
 
 func moveTreeItems(items *[]ui.TreeItem, event ui.TreeDropEvent) bool {
@@ -436,8 +509,28 @@ func asyncItems() []ui.TreeItem {
 	}
 }
 
+func simpleTreeItems() []ui.TreeSimpleItem {
+	return []ui.TreeSimpleItem{
+		ui.NewTreeSimpleItem("simple-flowui", "", "FlowUI"),
+		{Key: "simple-ui", ParentKey: "simple-flowui", Label: "ui", Leading: treeIcon(lucide.Folder), ExpandedLeading: treeIcon(lucide.FolderOpen)},
+		{Key: "simple-tree", ParentKey: "simple-ui", Label: "tree.go", Leading: treeIcon(lucide.FileCode)},
+		{Key: "simple-readme", ParentKey: "simple-flowui", Label: "README.md", Leading: treeIcon(lucide.FileText)},
+	}
+}
+
 func containsKey(keys []string, key string) bool {
 	return slices.Contains(keys, key)
+}
+
+func treeDropPositionText(position ui.TreeDropPosition) string {
+	switch position {
+	case ui.TreeDropBefore:
+		return "before"
+	case ui.TreeDropAfter:
+		return "after"
+	default:
+		return "inside"
+	}
 }
 
 func fileItems() []ui.TreeItem {

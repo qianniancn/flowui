@@ -1,19 +1,15 @@
 package tree
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
-	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
-	"gioui.org/io/pointer"
-	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
@@ -83,6 +79,9 @@ type treeState struct {
 	dragSource         string
 	dragSources        []string
 	dropTarget         treeDropTarget
+	dragEventActive    bool
+	dragEventSources   []string
+	dragEventTarget    treeDropTarget
 	dragHoverKey       string
 	dragHoverAt        time.Time
 	dragHoverRequested bool
@@ -95,16 +94,101 @@ type treeState struct {
 	renameRequest      uint64
 	renameRequestReady bool
 	dataCache          treeDataCache
+	dragGeometry       treeDragGeometry
 	selectedKeys       state.StringSetCache
+	checkedKeys        state.StringSetCache
+	halfCheckedKeys    state.StringSetCache
 	disabledKeys       state.StringSetCache
 }
 
 type treeDataCache struct {
-	ready        bool
-	version      uint64
-	filter       string
-	expandedKeys []string
-	visible      []flatItem
+	ready         bool
+	version       uint64
+	filterQuery   string
+	customFilter  bool
+	filterVersion uint64
+	expandedKeys  []string
+	visible       []flatItem
+}
+
+// treeDragGeometry keeps the stable row geometry needed while an item is
+// dragged. It avoids rebuilding a full height table for every pointer frame.
+type treeDragGeometry struct {
+	ready             bool
+	cacheable         bool
+	dataVersion       uint64
+	filterQuery       string
+	customFilter      bool
+	filterVersion     uint64
+	expandedKeys      []string
+	rowHeight         int
+	descriptionHeight int
+	gap               int
+	heights           []int
+	starts            []int
+	subtreeEnd        []int
+	indexByKey        map[string]int
+}
+
+func (s *treeState) dragGeometryFor(tree Widget, visible []flatItem, rowHeight, descriptionHeight, gap int) *treeDragGeometry {
+	cacheable := tree.hasDataVersion && (tree.filterFunc == nil || tree.hasFilterVersion)
+	geometry := &s.dragGeometry
+	if geometry.ready && geometry.cacheable && cacheable &&
+		geometry.dataVersion == tree.dataVersion &&
+		geometry.filterQuery == tree.filterQuery &&
+		geometry.customFilter == (tree.filterFunc != nil) &&
+		geometry.filterVersion == tree.filterVersion &&
+		geometry.rowHeight == rowHeight && geometry.descriptionHeight == descriptionHeight && geometry.gap == gap &&
+		len(geometry.heights) == len(visible) && treeKeysEqual(geometry.expandedKeys, tree.expandedKeys) {
+		return geometry
+	}
+
+	geometry.ready = true
+	geometry.cacheable = cacheable
+	geometry.dataVersion = tree.dataVersion
+	geometry.filterQuery = tree.filterQuery
+	geometry.customFilter = tree.filterFunc != nil
+	geometry.filterVersion = tree.filterVersion
+	geometry.expandedKeys = append(geometry.expandedKeys[:0], tree.expandedKeys...)
+	geometry.rowHeight = rowHeight
+	geometry.descriptionHeight = descriptionHeight
+	geometry.gap = gap
+	geometry.heights = slices.Grow(geometry.heights[:0], len(visible))
+	geometry.starts = slices.Grow(geometry.starts[:0], len(visible)+1)
+	geometry.subtreeEnd = slices.Grow(geometry.subtreeEnd[:0], len(visible))
+	geometry.starts = append(geometry.starts, 0)
+	if geometry.indexByKey == nil {
+		geometry.indexByKey = make(map[string]int, len(visible))
+	} else {
+		clear(geometry.indexByKey)
+	}
+	for index, entry := range visible {
+		height := rowHeight
+		if treeItemDescription(entry.item) != "" {
+			height = descriptionHeight
+		}
+		geometry.heights = append(geometry.heights, height)
+		geometry.starts = append(geometry.starts, geometry.starts[index]+height+gap)
+		geometry.subtreeEnd = append(geometry.subtreeEnd, index)
+		geometry.indexByKey[entry.item.Key] = index
+	}
+	stack := make([]int, 0)
+	for index, entry := range visible {
+		for len(stack) > 0 && entry.depth <= visible[stack[len(stack)-1]].depth {
+			parent := stack[len(stack)-1]
+			geometry.subtreeEnd[parent] = index - 1
+			stack = stack[:len(stack)-1]
+		}
+		stack = append(stack, index)
+	}
+	for _, index := range stack {
+		geometry.subtreeEnd[index] = len(visible) - 1
+	}
+	return geometry
+}
+
+func (s *treeState) resetDragGeometry() {
+	s.dragGeometry = treeDragGeometry{}
 }
 
 func treeStateFor(ctx *frame.Context, key string) *treeState {
@@ -127,30 +211,44 @@ func (s *treeState) item(key string) *treeItemState {
 }
 
 func (s *treeState) resolveVisible(tree Widget) []flatItem {
-	items := tree.items
-	expanded := tree.expandedKeys
-	if tree.filter != "" {
-		items = filterTreeItems(tree.items, tree.filter)
-		// Keep filter matches reachable by expanding every retained branch.
-		expanded = append([]string(nil), expanded...)
-		expanded = append(expanded, collectExpandableKeys(items)...)
-	}
-	if !tree.hasDataVersion {
+	filterActive := tree.filterFunc != nil || tree.filterQuery != ""
+	if !tree.hasDataVersion || (tree.filterFunc != nil && !tree.hasFilterVersion) {
 		s.dataCache = treeDataCache{}
 		s.checkItems(tree.items)
+		items, expanded := filteredTreeData(tree, filterActive)
 		return flattenVisibleItems(items, treeKeySet(expanded))
 	}
 	cache := &s.dataCache
-	if cache.ready && cache.version == tree.dataVersion && treeKeysEqual(cache.expandedKeys, expanded) && cache.filter == tree.filter {
+	if cache.ready && cache.version == tree.dataVersion && cache.filterQuery == tree.filterQuery && cache.customFilter == (tree.filterFunc != nil) && cache.filterVersion == tree.filterVersion && treeKeysEqual(cache.expandedKeys, tree.expandedKeys) {
 		return cache.visible
 	}
 	s.checkItems(tree.items)
+	items, expanded := filteredTreeData(tree, filterActive)
 	cache.visible = flattenVisibleItems(items, treeKeySet(expanded))
-	cache.expandedKeys = append(cache.expandedKeys[:0], expanded...)
+	cache.expandedKeys = append(cache.expandedKeys[:0], tree.expandedKeys...)
 	cache.version = tree.dataVersion
-	cache.filter = tree.filter
+	cache.filterQuery = tree.filterQuery
+	cache.customFilter = tree.filterFunc != nil
+	cache.filterVersion = tree.filterVersion
 	cache.ready = true
 	return cache.visible
+}
+
+func filteredTreeData(tree Widget, filterActive bool) ([]Item, []string) {
+	items := tree.items
+	expanded := tree.expandedKeys
+	if !filterActive {
+		return items, expanded
+	}
+	if tree.filterFunc != nil {
+		items = filterTreeItemsBy(items, tree.filterFunc)
+	} else {
+		items = filterTreeItems(items, tree.filterQuery)
+	}
+	// Keep filter matches reachable by expanding every retained branch.
+	expanded = append([]string(nil), expanded...)
+	expanded = append(expanded, collectExpandableKeys(items)...)
+	return items, expanded
 }
 
 func filterTreeItems(items []Item, query string) []Item {
@@ -158,14 +256,22 @@ func filterTreeItems(items []Item, query string) []Item {
 	if query == "" {
 		return items
 	}
+	return filterTreeItemsBy(items, func(item Item) bool {
+		return strings.Contains(strings.ToLower(item.Label), query) ||
+			strings.Contains(strings.ToLower(item.Description), query)
+	})
+}
+
+func filterTreeItemsBy(items []Item, matches func(Item) bool) []Item {
+	if matches == nil {
+		return items
+	}
 	var walk func([]Item) []Item
 	walk = func(children []Item) []Item {
 		out := make([]Item, 0, len(children))
 		for _, item := range children {
 			filteredChildren := walk(item.Children)
-			selfMatch := strings.Contains(strings.ToLower(item.Label), query) ||
-				strings.Contains(strings.ToLower(item.Description), query)
-			if selfMatch || len(filteredChildren) > 0 {
+			if matches(item) || len(filteredChildren) > 0 {
 				copyItem := item
 				copyItem.Children = filteredChildren
 				out = append(out, copyItem)
@@ -224,10 +330,11 @@ func (s *treeState) checkItems(items []Item) {
 type treeKeyResult struct {
 	focusKey        string
 	actionKey       string
+	checkKey        string
 	actionModifiers key.Modifiers
 	rangeKey        string
 	toggleKey       string
-	loadKey         string
+	loadEvent       LoadEvent
 	renameKey       string
 }
 
@@ -334,10 +441,10 @@ func (s *treeState) updateKeys(gtx layout.Context, tree Widget, visible []flatIt
 					if _, ok := expanded[entry.item.Key]; !ok {
 						result.toggleKey = entry.item.Key
 						if entry.item.ChildrenState == ChildrenUnloaded || entry.item.ChildrenState == ChildrenError {
-							result.loadKey = entry.item.Key
+							result.loadEvent = treeLoadEvent(entry.item, false)
 						}
 					} else if entry.item.ChildrenState == ChildrenError {
-						result.loadKey = entry.item.Key
+						result.loadEvent = treeLoadEvent(entry.item, true)
 					} else if child := treeFirstEnabledChild(visible, tree, current); child >= 0 {
 						current = child
 						result.focusKey = visible[child].item.Key
@@ -404,7 +511,9 @@ func (s *treeState) handleActivationKey(event key.Event, visible []flatItem, tre
 		}
 	case key.Release:
 		if s.pressedKey == event.Name && s.pressedActionKey != "" {
-			if s.pressedModifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
+			if event.Name == key.NameSpace && tree.checkable {
+				result.checkKey = s.pressedActionKey
+			} else if s.pressedModifiers.Contain(key.ModShift) && tree.selectionMode == SelectionMultiple {
 				result.rangeKey = s.pressedActionKey
 			} else {
 				result.actionKey = s.pressedActionKey
@@ -445,16 +554,15 @@ func (s *treeState) ensureVisible(index int) {
 }
 
 type treeItemState struct {
-	index      int
-	clickable  widget.Clickable
-	toggle     overlay.ClickArea
-	focus      state.FocusAnimation
-	keyFilters state.KeyFilterCache
-	expansion  animation.FloatTransition
-	drag       widget.Draggable
-	dragPress  f32.Point
-	dragTag    byte
-	dropTags   [3]byte
+	index       int
+	clickable   widget.Clickable
+	check       widget.Clickable
+	toggle      overlay.ClickArea
+	focus       state.FocusAnimation
+	keyFilters  state.KeyFilterCache
+	expansion   animation.FloatTransition
+	drag        interact.DragState
+	dropTargets [3]interact.DropTarget
 }
 
 type treeDropTarget struct {
@@ -462,40 +570,22 @@ type treeDropTarget struct {
 	drawKey  string
 	depth    int
 	position DropPosition
+	index    int
 }
 
 func (s *treeItemState) updateDrag(gtx layout.Context, mime string, sourceKeys []string) bool {
-	for {
-		eventValue, ok := interact.NextPointerEvent(gtx, &s.dragTag, pointer.Press)
-		if !ok {
-			break
-		}
-		if interact.IsPrimaryPointerPress(eventValue) {
-			s.dragPress = eventValue.Position
-		}
-	}
-	s.drag.Type = mime
-	if requestedMIME, requested := s.drag.Update(gtx); requested {
-		data, _ := json.Marshal(sourceKeys)
-		s.drag.Offer(gtx, requestedMIME, io.NopCloser(bytes.NewReader(data)))
-	}
-	position := s.drag.Pos()
-	slop := float32(gtx.Dp(3))
-	return s.drag.Dragging() && position.X*position.X+position.Y*position.Y > slop*slop
+	payload, _ := json.Marshal(sourceKeys)
+	return s.drag.Update(gtx, mime, payload, float32(gtx.Dp(3)))
 }
 
 func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, itemState *treeItemState, visible []flatItem, entry flatItem) {
-	for index := range itemState.dropTags {
+	for index := range itemState.dropTargets {
 		for {
-			raw, ok := gtx.Event(transfer.TargetFilter{Target: &itemState.dropTags[index], Type: state.dragMIME})
+			data, ok := itemState.dropTargets[index].Next(gtx, state.dragMIME, interact.DefaultMaxDropData)
 			if !ok {
 				break
 			}
-			event, ok := raw.(transfer.DataEvent)
-			if !ok {
-				continue
-			}
-			sourceKeys, ok := treeDropSource(event)
+			sourceKeys, ok := treeDropSource(data)
 			position := DropPosition(index)
 			if ok && t.dropAllowed(visible, sourceKeys, entry.item.Key, position) {
 				t.onDrop(treeDropEvent(sourceKeys, entry.item.Key, position))
@@ -504,14 +594,8 @@ func (t Widget) updateDropEvents(gtx layout.Context, state *treeState, itemState
 	}
 }
 
-func treeDropSource(event transfer.DataEvent) ([]string, bool) {
-	reader := event.Open()
-	if reader == nil {
-		return nil, false
-	}
-	data, err := io.ReadAll(io.LimitReader(reader, 64*1024+1))
-	_ = reader.Close()
-	if err != nil || len(data) == 0 || len(data) > 64*1024 {
+func treeDropSource(data []byte) ([]string, bool) {
+	if len(data) == 0 {
 		return nil, false
 	}
 	var keys []string
@@ -532,7 +616,7 @@ func treeDropAllowed(tree Widget, visible []flatItem, sourceKeys []string, targe
 	if len(sourceKeys) == 0 || targetIndex < 0 {
 		return false
 	}
-	if tree.itemDisabled(visible[targetIndex].item) {
+	if tree.itemDisabled(visible[targetIndex].item) || visible[targetIndex].item.DropDisabled {
 		return false
 	}
 	if position == DropInside && !treeItemAcceptsChildren(visible[targetIndex].item) {
@@ -540,7 +624,7 @@ func treeDropAllowed(tree Widget, visible []flatItem, sourceKeys []string, targe
 	}
 	for _, sourceKey := range sourceKeys {
 		sourceIndex := treeVisibleIndex(visible, sourceKey)
-		if sourceIndex < 0 || sourceIndex == targetIndex || tree.itemDisabled(visible[sourceIndex].item) {
+		if sourceIndex < 0 || sourceIndex == targetIndex || tree.itemDisabled(visible[sourceIndex].item) || visible[sourceIndex].item.DragDisabled {
 			return false
 		}
 		if targetIndex <= sourceIndex {
@@ -568,9 +652,80 @@ func (t Widget) dropAllowed(visible []flatItem, sourceKeys []string, targetKey s
 	return t.canDrop == nil || t.canDrop(treeDropEvent(sourceKeys, targetKey, position))
 }
 
+func (t Widget) dragDropAllowed(visible []flatItem, geometry *treeDragGeometry, sourceKeys []string, target treeDropTarget) bool {
+	if geometry == nil || target.index < 0 || target.index >= len(visible) || len(sourceKeys) == 0 {
+		return false
+	}
+	targetItem := visible[target.index].item
+	if t.itemDisabled(targetItem) || targetItem.DropDisabled || target.position == DropInside && !treeItemAcceptsChildren(targetItem) {
+		return false
+	}
+	for _, sourceKey := range sourceKeys {
+		sourceIndex, ok := geometry.indexByKey[sourceKey]
+		if !ok || sourceIndex == target.index || t.itemDisabled(visible[sourceIndex].item) || visible[sourceIndex].item.DragDisabled {
+			return false
+		}
+		if target.index > sourceIndex && target.index <= geometry.subtreeEnd[sourceIndex] {
+			return false
+		}
+	}
+	return t.canDrop == nil || t.canDrop(treeDropEvent(sourceKeys, target.key, target.position))
+}
+
 func treeDropEvent(sourceKeys []string, targetKey string, position DropPosition) DropEvent {
 	keys := append([]string(nil), sourceKeys...)
 	return DropEvent{SourceKey: keys[0], SourceKeys: keys, TargetKey: targetKey, Position: position}
+}
+
+func (t Widget) updateDragLifecycle(state *treeState, sourceKeys []string, target treeDropTarget) {
+	if !state.dragEventActive || !treeKeysEqual(state.dragEventSources, sourceKeys) {
+		if state.dragEventActive {
+			t.endDragLifecycle(state)
+		}
+		state.dragEventActive = true
+		state.dragEventSources = append(state.dragEventSources[:0], sourceKeys...)
+		if t.onDragStart != nil {
+			t.onDragStart(treeDragEvent(state.dragEventSources, treeDropTarget{}))
+		}
+	}
+	previous := state.dragEventTarget
+	changed := previous.key != target.key || previous.position != target.position
+	if changed && previous.key != "" && t.onDragLeave != nil {
+		t.onDragLeave(treeDragEvent(state.dragEventSources, previous))
+	}
+	if changed {
+		state.dragEventTarget = target
+	}
+	if changed && target.key != "" && t.onDragEnter != nil {
+		t.onDragEnter(treeDragEvent(state.dragEventSources, target))
+	}
+	if target.key != "" && t.onDragOver != nil {
+		t.onDragOver(treeDragEvent(state.dragEventSources, target))
+	}
+}
+
+func (t Widget) endDragLifecycle(state *treeState) {
+	if !state.dragEventActive {
+		return
+	}
+	if state.dragEventTarget.key != "" && t.onDragLeave != nil {
+		t.onDragLeave(treeDragEvent(state.dragEventSources, state.dragEventTarget))
+	}
+	if t.onDragEnd != nil {
+		t.onDragEnd(treeDragEvent(state.dragEventSources, state.dragEventTarget))
+	}
+	state.dragEventActive = false
+	state.dragEventSources = state.dragEventSources[:0]
+	state.dragEventTarget = treeDropTarget{}
+}
+
+func treeDragEvent(sourceKeys []string, target treeDropTarget) DragEvent {
+	keys := append([]string(nil), sourceKeys...)
+	event := DragEvent{SourceKeys: keys, TargetKey: target.key, Position: target.position}
+	if len(keys) > 0 {
+		event.SourceKey = keys[0]
+	}
+	return event
 }
 
 func treeDropTargetAt(visible []flatItem, sourceIndex int, pointerY float32, heights []int, gap int) treeDropTarget {
@@ -587,12 +742,30 @@ func treeDropTargetAt(visible []flatItem, sourceIndex int, pointerY float32, hei
 		if pointerY >= top && pointerY < bottom {
 			return treeDropTarget{
 				key: entry.item.Key, drawKey: entry.item.Key, depth: entry.depth,
-				position: treeDropPositionAt(pointerY-top, height, treeItemAcceptsChildren(entry.item)),
+				position: treeDropPositionAt(pointerY-top, height, treeItemAcceptsChildren(entry.item)), index: index,
 			}
 		}
 		top = bottom + float32(gap)
 	}
 	return treeDropTarget{}
+}
+
+func (g *treeDragGeometry) dropTargetAt(visible []flatItem, sourceIndex int, pointerY float32) treeDropTarget {
+	if g == nil || sourceIndex < 0 || sourceIndex >= len(g.heights) || len(g.heights) != len(visible) {
+		return treeDropTarget{}
+	}
+	contentY := pointerY + float32(g.starts[sourceIndex])
+	index := sort.Search(len(g.heights), func(index int) bool {
+		return contentY < float32(g.starts[index]+g.heights[index])
+	})
+	if index >= len(visible) || contentY < float32(g.starts[index]) {
+		return treeDropTarget{}
+	}
+	entry := visible[index]
+	return treeDropTarget{
+		key: entry.item.Key, drawKey: entry.item.Key, depth: entry.depth,
+		position: treeDropPositionAt(contentY-float32(g.starts[index]), g.heights[index], treeItemAcceptsChildren(entry.item)), index: index,
+	}
 }
 
 func treeDropIndicatorTarget(visible []flatItem, target treeDropTarget) treeDropTarget {
@@ -606,6 +779,14 @@ func treeDropIndicatorTarget(visible []flatItem, target treeDropTarget) treeDrop
 	for next := index + 1; next < len(visible) && visible[next].depth > target.depth; next++ {
 		target.drawKey = visible[next].item.Key
 	}
+	return target
+}
+
+func (g *treeDragGeometry) dropIndicatorTarget(visible []flatItem, target treeDropTarget) treeDropTarget {
+	if target.position != DropAfter || target.index < 0 || target.index >= len(visible) || len(g.subtreeEnd) != len(visible) {
+		return target
+	}
+	target.drawKey = visible[g.subtreeEnd[target.index]].item.Key
 	return target
 }
 
@@ -646,6 +827,13 @@ func treeDragViewportY(heights []int, gap int, position layout.Position, sourceI
 		}
 	}
 	return top + sourceY
+}
+
+func (g *treeDragGeometry) viewportY(position layout.Position, sourceIndex int, sourceY float32) float32 {
+	if g == nil || sourceIndex < 0 || sourceIndex >= len(g.heights) || position.First < 0 || position.First >= len(g.heights) {
+		return sourceY
+	}
+	return float32(g.starts[sourceIndex]-g.starts[position.First]-position.Offset) + sourceY
 }
 
 func treeListPositionContains(position layout.Position, index int) bool {
@@ -710,6 +898,7 @@ func (s *treeState) resetDragAssist() {
 	s.dragHoverKey = ""
 	s.dragHoverAt = time.Time{}
 	s.dragHoverRequested = false
+	s.resetDragGeometry()
 }
 
 func (s *treeState) beginRename(item Item) {

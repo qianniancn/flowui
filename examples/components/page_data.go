@@ -172,6 +172,11 @@ func chartsPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	}).OnConnect(func(connection ui.NodeGraphConnection) {
 		send(func(model *Model) { model.GraphEdges = appendCatalogNodeGraphConnection(model.GraphEdges, connection) })
 	})
+	timeLine := ui.TimeLine([]ui.TimeLineItem{
+		{Title: ui.Text("Created"), Content: ui.Text("Order submitted"), Color: ui.TimeLineBlue},
+		{Title: ui.Text("Paid"), Content: ui.Text("Payment received"), Color: ui.TimeLineGreen},
+		{Title: ui.Text("Shipped"), Content: ui.Text("Waiting for carrier"), Color: ui.TimeLineGray},
+	}).Mode(ui.TimeLineAlternate)
 
 	return demoPage("Charts",
 		demoSection{Title: "Selection", Content: ui.Text(selected).Size(13)},
@@ -182,6 +187,7 @@ func chartsPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		demoSection{Title: "Heatmap", Content: demoPanel(heatmap)},
 		demoSection{Title: "GanttChart", Content: demoPanel(gantt)},
 		demoSection{Title: "NodeGraph", Content: graph},
+		demoSection{Title: "TimeLine", Content: demoPanel(timeLine)},
 	)
 }
 

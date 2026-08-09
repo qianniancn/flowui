@@ -224,6 +224,7 @@ type ComponentsTheme struct {
 	Heatmap           HeatmapTheme
 	GanttChart        GanttChartTheme
 	NodeGraph         NodeGraphTheme
+	TimeLine          TimeLineTheme
 	Tabs              TabsTheme
 	Workbench         WorkbenchTheme
 	Collapsible       CollapsibleTheme
@@ -953,6 +954,31 @@ type TabsTheme struct {
 	ScrollShadowSize    unit.Dp
 	ScrollChevronSize   unit.Dp
 	ScrollChevronStroke unit.Dp
+}
+
+// TimeLineTheme controls the rail, marker, and text spacing of a time line.
+type TimeLineTheme struct {
+	TailColor            color.NRGBA
+	TailWidth            unit.Dp
+	DotBorderWidth       unit.Dp
+	DotSize              unit.Dp
+	DotBackground        color.NRGBA
+	ItemPaddingBottom    unit.Dp
+	TitleContentGap      unit.Dp
+	SectionGap           unit.Dp
+	InlineInset          unit.Dp
+	HorizontalTitleGap   unit.Dp
+	HorizontalContentGap unit.Dp
+	TitleColor           color.NRGBA
+	ContentColor         color.NRGBA
+	MutedColor           color.NRGBA
+	PrimaryColor         color.NRGBA
+	ErrorColor           color.NRGBA
+	SuccessColor         color.NRGBA
+	DisabledColor        color.NRGBA
+	HorizontalItemGap    unit.Dp
+	ProcessDashLength    unit.Dp
+	ProcessDashGap       unit.Dp
 }
 
 // NodeGraphTheme controls canvas, node, edge, and selection colors for
@@ -2009,6 +2035,29 @@ func DefaultTheme() Theme {
 				ScrollChevronSize:   10,
 				ScrollChevronStroke: 1.5,
 			},
+			TimeLine: TimeLineTheme{
+				TailColor:            color.NRGBA{R: 0xe5, G: 0xe6, B: 0xe8, A: 0xff},
+				TailWidth:            1,
+				DotBorderWidth:       2,
+				DotSize:              10,
+				DotBackground:        color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+				ItemPaddingBottom:    16,
+				TitleContentGap:      8,
+				SectionGap:           20,
+				InlineInset:          12,
+				HorizontalTitleGap:   8,
+				HorizontalContentGap: 8,
+				TitleColor:           color.NRGBA{R: 0x1f, G: 0x1f, B: 0x1f, A: 0xff},
+				ContentColor:         color.NRGBA{R: 0x59, G: 0x59, B: 0x59, A: 0xff},
+				MutedColor:           color.NRGBA{R: 0x8c, G: 0x8c, B: 0x8c, A: 0xff},
+				PrimaryColor:         color.NRGBA{R: 0x16, G: 0x7d, B: 0xd8, A: 0xff},
+				ErrorColor:           color.NRGBA{R: 0xff, G: 0x4d, B: 0x4f, A: 0xff},
+				SuccessColor:         color.NRGBA{R: 0x52, G: 0xc4, B: 0x1a, A: 0xff},
+				DisabledColor:        color.NRGBA{R: 0xb7, G: 0xb7, B: 0xb7, A: 0xff},
+				HorizontalItemGap:    24,
+				ProcessDashLength:    4,
+				ProcessDashGap:       4,
+			},
 			Workbench: WorkbenchTheme{
 				SidebarWidth:              240,
 				SidebarMinWidth:           160,
@@ -2358,6 +2407,15 @@ func DarkTheme() Theme {
 	}
 	theme.Shadows.Overlay = ShadowTheme{Layers: [ShadowLayerCount]ShadowLayerTheme{{Blur: 1, Opacity: 1}}}
 	theme.Components.Workbench.SidebarBackground = theme.Palette.SurfaceSecondary
+	theme.Components.TimeLine.TailColor = theme.Palette.Border
+	theme.Components.TimeLine.DotBackground = theme.Palette.Surface
+	theme.Components.TimeLine.TitleColor = theme.Palette.Foreground
+	theme.Components.TimeLine.ContentColor = theme.Palette.SurfaceForeground
+	theme.Components.TimeLine.MutedColor = theme.Palette.MutedForeground
+	theme.Components.TimeLine.PrimaryColor = theme.Palette.Accent
+	theme.Components.TimeLine.ErrorColor = theme.Palette.Danger
+	theme.Components.TimeLine.SuccessColor = theme.Palette.Success
+	theme.Components.TimeLine.DisabledColor = theme.Palette.MutedForeground
 	theme.Components.Workbench.SidebarForeground = theme.Palette.SurfaceSecondaryForeground
 	theme.Components.Workbench.SidebarHoverBackground = theme.Palette.SurfaceHover
 	theme.Components.Workbench.SidebarActiveBackground = theme.Palette.AccentSoft

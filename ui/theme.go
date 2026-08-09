@@ -161,6 +161,9 @@ type CandlestickChartTheme = theme.CandlestickChartTheme
 // TabsTheme contains the sizing, spacing, content, and motion tokens for tabs.
 type TabsTheme = theme.TabsTheme
 
+// TimeLineTheme contains the rail, marker, and spacing tokens for time lines.
+type TimeLineTheme = theme.TimeLineTheme
+
 // NodeGraphTheme contains canvas, node, edge, and selection colors for node graphs.
 type NodeGraphTheme = theme.NodeGraphTheme
 

@@ -114,6 +114,31 @@ func TestMenuAutoWidthMeasuresContentAndHonorsBounds(t *testing.T) {
 	if got := gtx.Constraints.Max.X; got > gtx.Dp(280) {
 		t.Fatalf("max width = %d, want <= 280dp", got)
 	}
+	if got, want := gtx.Constraints.Max.X, min(longWidth, gtx.Dp(280)); got != want {
+		t.Fatalf("auto width = %d, want content width %d without the default fraction cap", got, want)
+	}
+}
+
+func TestMenuAutoWidthIncludesLeadingContentGap(t *testing.T) {
+	ctx := menuTestContext()
+	gtx := menuTestLayoutContext(nil, time.Unix(1, 0))
+	leading := fixedMenuWidget{size: image.Pt(16, 16)}
+	widget := Menu("leading-gap", nil)
+	item := Item{Key: "roadmap", Label: "Roadmap", Leading: leading}
+	tokens := widget.themeTokens(ctx)
+	want := widget.measureWidgetWidth(ctx, gtx, leading) +
+		gtx.Dp(tokens.ItemContentGap) +
+		widget.measureTextWidth(ctx, gtx, item.Label, tokens.ItemTextSize, widget.preferredItemFontWeight(ctx, item)) +
+		gtx.Dp(tokens.ItemPaddingX)*2
+	if got := widget.preferredItemWidthPx(ctx, gtx, item); got != want {
+		t.Fatalf("auto item width = %d, want %d including leading content gap", got, want)
+	}
+	trailing := fixedMenuWidget{size: image.Pt(16, 16)}
+	trailingItem := Item{Key: "count", Label: "", Trailing: trailing}
+	wantTrailing := gtx.Dp(tokens.ItemPaddingX)*2 + widget.measureWidgetWidth(ctx, gtx, trailing)
+	if got := widget.preferredItemWidthPx(ctx, gtx, trailingItem); got != wantTrailing {
+		t.Fatalf("auto item width = %d, want %d without a leading gap", got, wantTrailing)
+	}
 }
 
 func TestMenuAutoWidthMeasuresEmptyText(t *testing.T) {

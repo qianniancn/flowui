@@ -107,15 +107,15 @@ func (m Widget) preferredWidthPx(ctx *frame.Context, gtx layout.Context) int {
 
 func (m Widget) preferredItemWidthPx(ctx *frame.Context, gtx layout.Context, item Item) int {
 	tokens := m.themeTokens(ctx)
-	content := 0
-	add := func(width int, gap int) {
-		if width <= 0 {
-			return
+	type measuredPart struct {
+		width    int
+		gapAfter int
+	}
+	parts := make([]measuredPart, 0, 5)
+	add := func(width, gapAfter int) {
+		if width > 0 {
+			parts = append(parts, measuredPart{width: width, gapAfter: gapAfter})
 		}
-		if content > 0 {
-			content += gap
-		}
-		content += width
 	}
 	if item.Kind == ItemCheckbox || item.Kind == ItemRadio || item.Indicator != nil || item.IndicatorType != IndicatorNone {
 		add(gtx.Dp(tokens.IndicatorSize), gtx.Dp(tokens.IndicatorContentGap))
@@ -127,7 +127,7 @@ func (m Widget) preferredItemWidthPx(ctx *frame.Context, gtx layout.Context, ite
 	if item.Description != "" {
 		labelWidth = max(labelWidth, m.measureTextWidth(ctx, gtx, item.Description, tokens.ItemDescriptionSize, font.Normal))
 	}
-	add(labelWidth, 0)
+	add(labelWidth, gtx.Dp(tokens.ItemContentGap))
 	if item.Shortcut != "" {
 		shortcut := m.measureTextWidth(ctx, gtx, item.Shortcut, tokens.ShortcutTextSize, font.Medium)
 		shortcut += 2 * gtx.Dp(tokens.ShortcutPaddingX)
@@ -141,7 +141,14 @@ func (m Widget) preferredItemWidthPx(ctx *frame.Context, gtx layout.Context, ite
 		if item.SubmenuIndicator != nil {
 			indicatorWidth = m.measureWidgetWidth(ctx, gtx, item.SubmenuIndicator)
 		}
-		add(indicatorWidth, gtx.Dp(tokens.ItemContentGap))
+		add(indicatorWidth, 0)
+	}
+	content := 0
+	for index, part := range parts {
+		content += part.width
+		if index+1 < len(parts) {
+			content += part.gapAfter
+		}
 	}
 	part := m.resolveItemMeasurementStyle(ctx, item)
 	paddingLeft := tokens.ItemPaddingX

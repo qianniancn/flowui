@@ -37,7 +37,7 @@ func (m Widget) applyConstraints(ctx *frame.Context, gtx *layout.Context, menuSt
 	tokens := m.themeTokens(ctx)
 	constraintMinWidth := max(gtx.Constraints.Min.X, 0)
 	maxWidth := gtx.Constraints.Max.X
-	if tokens.MaxWidthFraction > 0 {
+	if tokens.MaxWidthFraction > 0 && !m.autoWidth {
 		viewport := frame.OverlayViewport(ctx, gtx.Constraints.Max)
 		maxWidth = min(maxWidth, int(float32(viewport.X)*min(max(tokens.MaxWidthFraction, 0), 1)))
 	}

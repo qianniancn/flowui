@@ -80,6 +80,12 @@ semantic model exposes these as button-compatible tab descriptions; FlowUI also
 publishes tab-list and active-panel labels/descriptions and the panel enabled state.
 Inline editing commits on Enter or focus loss and cancels with Escape.
 
+`Tree` now supports single and multi selection, drag and drop, async loading, rename, filtering, checkbox trees (`Checkable`, `CheckedKeys`, `HalfCheckedKeys`, `CheckStrictly`), directory-style `ExpandAction` single or double click expansion, and per-item `Content` / `Switcher` / `ExpandedSwitcher` customization. Checkbox conduction treats `Disabled`, `DisabledKeys`, and `DisableCheckbox` as association boundaries without affecting parent derivation outside those boundaries. `DragDisabled` and `DropDisabled` independently restrict a node as a source or target; `OnDragStart`, `OnDragEnter`, `OnDragLeave`, `OnDragOver`, and `OnDragEnd` report valid drop-target lifecycle changes while `OnDrop` remains the final commit signal. `OnLoadChildrenEvent` reports the key, retry state, and current expansion state while the original `OnLoadChildren` remains available. `FilterFunc` supports business-specific matching while preserving ancestors; pair dynamic predicates with `FilterVersion` to invalidate the cache. Use `DataVersion` for large stable data and increase it whenever the hierarchy or row content changes. `TreeItemsFromSimple` adapts flat records into a hierarchy, treating unknown parent keys as roots.
+
+## Time line
+
+`TimeLine` follows the common Ant Design Timeline model. It supports vertical or horizontal orientation, `start`, `end`, and `alternate` modes, per-item `Placement`, `TitleSpan` or `TitleWidth`, `Gap`, filled or outlined markers, reverse order, custom colors, icons, and pending events. `PendingLoading` controls the pending marker, and `Disabled` mutes the entire timeline. The UI spelling is intentional because `ui.Timeline` is reserved for the animation API.
+
 ## Data and charts
 
 `Table`, `ListBox`, progress controls, `Meter`, `Spinner`, and the chart family

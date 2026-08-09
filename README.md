@@ -198,6 +198,7 @@ Every directory below is a runnable program:
 | [`examples/form`](examples/form) | Form controls and validation |
 | [`examples/async`](examples/async) | Commands and asynchronous results |
 | [`examples/components`](examples/components) | Component gallery |
+| [`examples/timelines`](examples/timelines) | Time line layouts and marker variants |
 | [`examples/grid_layout`](examples/grid_layout) | Fixed and responsive grid layouts |
 | [`examples/fonts`](examples/fonts) | System and bundled font configuration |
 | [`examples/custom_widgets`](examples/custom_widgets) | Custom composites and canvas widgets |

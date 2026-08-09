@@ -39,6 +39,16 @@ Use `Tabs`, `Sidebar`, `Tree`, `Menubar`, `Menu`, `ContextMenu`, `Pagination`,
 and `Toolbar` for navigation. `Dropdown`, `Popover`, `Tooltip`, `Modal`,
 `AlertDialog`, `Toast`, and `Portal` handle transient surfaces.
 
+`Sidebar` is the controlled primary application navigation surface. Use
+`SidebarItem.Children` for nested destinations and keep the expanded groups in
+application state with `OpenKeys` and `OnOpenChange`; `InlineIndent` adjusts
+the nesting offset, `ExpandAction` chooses click or hover activation while the
+sidebar is expanded, and each item can replace the default chevron through
+`Switcher` / `ExpandedSwitcher`.
+A collapsed parent opens its descendants in a right-side menu. `Menu` remains
+the component for commands and context actions, while `Tree` is for content
+hierarchies such as a file explorer.
+
 `Tabs` uses secondary tabs (`TabsSecondary`) as its standard treatment and also
 supports segmented tabs (`TabsPrimary`), three sizes, leading and trailing
 slots, icon/content tab items, close actions, and independently configured

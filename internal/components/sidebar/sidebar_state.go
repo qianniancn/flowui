@@ -1,6 +1,8 @@
 package sidebar
 
 import (
+	"slices"
+
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -28,16 +30,19 @@ type sidebarState struct {
 }
 
 type sidebarDataCache struct {
-	ready   bool
-	version uint64
-	entries []entry
-	items   []Item
+	ready     bool
+	version   uint64
+	openKeys  []string
+	collapsed bool
+	entries   []entry
+	items     []Item
 }
 
 type sidebarItemState struct {
-	clickable  widget.Clickable
-	focus      stateutil.FocusAnimation
-	keyFilters stateutil.KeyFilterCache
+	clickable          widget.Clickable
+	focus              stateutil.FocusAnimation
+	keyFilters         stateutil.KeyFilterCache
+	hoverOpenRequested bool
 }
 
 func sidebarStateFor(ctx *frame.Context, key string) *sidebarState {
@@ -59,22 +64,30 @@ func (s *sidebarState) item(key string) *sidebarItemState {
 
 func (s *sidebarState) resolveEntries(widget Widget) ([]entry, []Item) {
 	if !widget.hasDataVersion {
+		validateSidebarWidget(widget)
 		entries, items := widget.entriesAndItems()
 		s.checkItems(items)
 		s.dataCache.ready = false
 		return entries, items
 	}
-	if s.dataCache.ready && s.dataCache.version == widget.dataVersion {
+	if s.dataCache.ready && s.dataCache.version == widget.dataVersion && s.dataCache.collapsed == widget.collapsed && slices.Equal(s.dataCache.openKeys, widget.openKeys) {
 		return s.dataCache.entries, s.dataCache.items
 	}
+	validateSidebarWidget(widget)
 	entries, items := widget.entriesAndItems()
 	s.checkItems(items)
-	s.dataCache = sidebarDataCache{ready: true, version: widget.dataVersion, entries: entries, items: items}
+	s.dataCache = sidebarDataCache{
+		ready:     true,
+		version:   widget.dataVersion,
+		openKeys:  append([]string(nil), widget.openKeys...),
+		collapsed: widget.collapsed,
+		entries:   entries,
+		items:     items,
+	}
 	return entries, items
 }
 
 func (s *sidebarState) checkItems(items []Item) {
-	validateSidebarItems(items)
 	if s.itemIndex == nil {
 		s.itemIndex = make(map[string]int, len(items))
 	} else {

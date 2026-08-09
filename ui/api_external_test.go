@@ -657,7 +657,7 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			MaxHeight(240),
 		ui.SidebarSections("primary-navigation", model.selected, []ui.SidebarSection{
 			{Title: "Workspace", Items: []ui.SidebarItem{
-				{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutDashboard).Size(18)},
+				{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutDashboard).Size(18), Children: []ui.SidebarItem{{Key: "activity", Label: "Activity"}}},
 				{Key: "projects", Label: "Projects", Leading: ui.Icon(lucide.FolderKanban).Size(18), Trailing: ui.Text("8")},
 			}},
 			{Title: "Account", Items: []ui.SidebarItem{
@@ -669,11 +669,15 @@ func facadeView(ctx *ui.Context, model facadeModel, send ui.Send[facadeMsg]) ui.
 			Collapsed(false).
 			Width(248).
 			CollapsedWidth(64).
+			OpenKeys([]string{"overview"}).
+			ExpandAction(ui.SidebarExpandOnHover).
+			InlineIndent(20).
 			Alt("Primary navigation").
 			EmptyText("No destinations").
 			DisabledKeys([]string{"settings"}).
 			OnChange(func(key string) { send(facadeMsg{selected: key}) }).
 			OnAction(func(string) {}).
+			OnOpenChange(func(keys []string) { send(facadeMsg{expanded: keys}) }).
 			Disabled(false),
 		ui.Scrollbar("facade-scrollbar", ui.Spacer(640, 480)).
 			Horizontal().

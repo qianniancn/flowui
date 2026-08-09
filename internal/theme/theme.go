@@ -588,6 +588,8 @@ type SidebarTheme struct {
 	ItemRadius            unit.Dp
 	ItemPaddingX          unit.Dp
 	ItemContentGap        unit.Dp
+	InlineIndent          unit.Dp
+	SwitcherSize          unit.Dp
 	ItemTextSize          unit.Sp
 	SectionTextSize       unit.Sp
 	SectionHeight         unit.Dp
@@ -1684,6 +1686,8 @@ func DefaultTheme() Theme {
 				ItemRadius:            8,
 				ItemPaddingX:          10,
 				ItemContentGap:        12,
+				InlineIndent:          20,
+				SwitcherSize:          16,
 				ItemTextSize:          14,
 				SectionTextSize:       12,
 				SectionHeight:         28,

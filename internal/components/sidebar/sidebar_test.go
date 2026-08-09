@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"runtime"
+	"slices"
 	"testing"
 	"time"
 
@@ -69,6 +70,96 @@ func TestSidebarDataVersionCachesEntries(t *testing.T) {
 	}
 }
 
+func TestSidebarNestedItemsUseControlledOpenKeys(t *testing.T) {
+	items := []Item{{
+		Key:   "workspace",
+		Label: "Workspace",
+		Children: []Item{
+			{Key: "overview", Label: "Overview"},
+			{Key: "reports", Label: "Reports"},
+		},
+	}}
+	widget := New("nested", "overview", items).DataVersion(1)
+	state := new(sidebarState)
+	closed, closedItems := state.resolveEntries(widget)
+	if len(closed) != 1 || len(closedItems) != 1 || closed[0].item.Key != "workspace" {
+		t.Fatalf("closed entries = %#v items = %#v", closed, closedItems)
+	}
+	open, openItems := state.resolveEntries(widget.OpenKeys([]string{"workspace"}))
+	if len(open) != 3 || len(openItems) != 3 || open[1].depth != 1 || open[1].parentKey != "workspace" {
+		t.Fatalf("open entries = %#v items = %#v", open, openItems)
+	}
+	collapsed, collapsedItems := state.resolveEntries(widget.OpenKeys([]string{"workspace"}).Collapsed(true))
+	if len(collapsed) != 1 || len(collapsedItems) != 1 {
+		t.Fatalf("collapsed entries = %#v items = %#v", collapsed, collapsedItems)
+	}
+}
+
+func TestSidebarOpenKeysRequestIsImmutable(t *testing.T) {
+	keys := []string{"workspace"}
+	var requested []string
+	widget := New("nested", "", nil).OpenKeys(keys).OnOpenChange(func(next []string) { requested = next })
+	keys[0] = "changed"
+	widget.requestOpen("reports", true)
+	if got, want := requested, []string{"workspace", "reports"}; !slices.Equal(got, want) {
+		t.Fatalf("requested keys = %q, want %q", got, want)
+	}
+	widget.requestOpen("workspace", false)
+	if got, want := requested, []string{}; !slices.Equal(got, want) {
+		t.Fatalf("requested keys = %q, want %q", got, want)
+	}
+}
+
+func TestSidebarPointerActivationRequestsOpenKeys(t *testing.T) {
+	ctx := sidebarTestContext(nil)
+	router := new(input.Router)
+	var openKeys []string
+	widget := func() Widget {
+		return New("nested", "", []Item{{
+			Key:      "workspace",
+			Label:    "Workspace",
+			Children: []Item{{Key: "overview", Label: "Overview"}},
+		}}).OpenKeys(openKeys).OnOpenChange(func(next []string) { openKeys = next })
+	}
+	now := time.Unix(10, 0)
+	layoutSidebarFrame(ctx, router, widget(), now)
+	router.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, PointerID: 1, Buttons: pointer.ButtonPrimary, Position: f32.Pt(24, 24)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, PointerID: 1, Position: f32.Pt(24, 24)},
+	)
+	layoutSidebarFrame(ctx, router, widget(), now.Add(time.Millisecond))
+	layoutSidebarFrame(ctx, router, widget(), now.Add(2*time.Millisecond))
+	if got, want := openKeys, []string{"workspace"}; !slices.Equal(got, want) {
+		t.Fatalf("open keys = %q, want %q", got, want)
+	}
+}
+
+func TestSidebarKeyboardActivationRequestsOpenKeys(t *testing.T) {
+	ctx := sidebarTestContext(nil)
+	router := new(input.Router)
+	var openKeys []string
+	widget := func() Widget {
+		return New("nested", "", []Item{{
+			Key:      "workspace",
+			Label:    "Workspace",
+			Children: []Item{{Key: "overview", Label: "Overview"}},
+		}}).OpenKeys(openKeys).OnOpenChange(func(next []string) { openKeys = next })
+	}
+	now := time.Unix(11, 0)
+	layoutSidebarFrame(ctx, router, widget(), now)
+	state, _ := frame.PeekState[sidebarState](ctx, "nested", stateSlotSidebar)
+	router.Source().Execute(key.FocusCmd{Tag: &state.items["workspace"].clickable})
+	layoutSidebarFrame(ctx, router, widget(), now.Add(time.Millisecond))
+	router.Queue(
+		key.Event{Name: key.NameReturn, State: key.Press},
+		key.Event{Name: key.NameReturn, State: key.Release},
+	)
+	layoutSidebarFrame(ctx, router, widget(), now.Add(2*time.Millisecond))
+	if got, want := openKeys, []string{"workspace"}; !slices.Equal(got, want) {
+		t.Fatalf("open keys = %q, want %q", got, want)
+	}
+}
+
 func BenchmarkSidebarLargeData(b *testing.B) {
 	items := make([]Item, 10_000)
 	for index := range items {
@@ -123,6 +214,8 @@ func TestSidebarRejectsInvalidConfiguration(t *testing.T) {
 		{"item height", func() { New("primary", "", nil).ItemHeight(0) }},
 		{"item padding", func() { New("primary", "", nil).ItemPaddingX(-1) }},
 		{"item radius", func() { New("primary", "", nil).ItemRadius(-1) }},
+		{"inline indent", func() { New("primary", "", nil).InlineIndent(-1) }},
+		{"expand action", func() { New("primary", "", nil).ExpandAction(ExpandAction(255)) }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			defer func() {
@@ -143,7 +236,7 @@ func TestSidebarItemHeightOverridesTheme(t *testing.T) {
 	item := Item{Key: "home", Label: "Home"}
 	dims := New("primary", "home", []Item{item}).
 		ItemHeight(32).
-		layoutItem(ctx, gtx, new(sidebarState), new(sidebarItemState), item, 1)
+		layoutItem(ctx, gtx, new(sidebarState), new(sidebarItemState), entry{item: item}, 1)
 	if dims.Size != image.Pt(248, 32) {
 		t.Fatalf("item dimensions = %v, want (248,32)", dims.Size)
 	}

@@ -10,12 +10,14 @@ import (
 type Model struct {
 	selected  string
 	collapsed bool
+	openKeys  []string
 }
 
 type Msg any
 
 type Navigate string
 type ToggleSidebar struct{}
+type SetSidebarOpenKeys []string
 
 func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
@@ -23,6 +25,8 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 		model.selected = string(msg)
 	case ToggleSidebar:
 		model.collapsed = !model.collapsed
+	case SetSidebarOpenKeys:
+		model.openKeys = append(model.openKeys[:0], msg...)
 	}
 	return nil
 }
@@ -30,19 +34,24 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 func View(ctx *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	muted := ctx.Theme().Palette.MutedForeground
 	sidebar := ui.SidebarSections("workspace-navigation", model.selected, navigationSections()).
-		Header(sidebarHeader(model.collapsed, muted, send)).
+		Header(sidebarHeader(model.collapsed, muted)).
 		Footer(sidebarFooter(model.collapsed, muted)).
 		Collapsed(model.collapsed).
+		OpenKeys(model.openKeys).
 		Alt("Workspace navigation").
 		DisabledKeys([]string{"activity"}).
-		OnChange(func(key string) { send(Navigate(key)) })
+		OnChange(func(key string) { send(Navigate(key)) }).
+		OnOpenChange(func(keys []string) { send(SetSidebarOpenKeys(keys)) })
 
-	return ui.Surface(
-		ui.Row(
-			sidebar,
-			ui.Expanded(workspace(model.selected, muted)),
-		),
-	).Variant(ui.SurfaceSecondary)
+	content := ui.Stack(
+		ui.Stacked(workspace(model.selected, muted)),
+		ui.Overlay(
+			ui.Stack(
+				ui.Overlay(sidebarBoundaryToggle(model.collapsed, send)).Align(ui.AlignTopStart),
+			),
+		).Expanded().Offset(-16, 10),
+	)
+	return ui.Surface(ui.Row(sidebar, ui.Expanded(content))).Variant(ui.SurfaceSecondary)
 }
 
 func navigationSections() []ui.SidebarSection {
@@ -51,7 +60,16 @@ func navigationSections() []ui.SidebarSection {
 			Title: "Workspace",
 			Items: []ui.SidebarItem{
 				{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutDashboard).Size(18)},
-				{Key: "projects", Label: "Projects", Leading: ui.Icon(lucide.FolderKanban).Size(18), Trailing: ui.Chip("8").Variant(ui.ChipSoft).Size(ui.ChipSmall)},
+				{
+					Key:      "projects",
+					Label:    "Projects",
+					Leading:  ui.Icon(lucide.FolderKanban).Size(18),
+					Trailing: ui.Chip("8").Variant(ui.ChipSoft).Size(ui.ChipSmall),
+					Children: []ui.SidebarItem{
+						{Key: "roadmap", Label: "Roadmap", Leading: ui.Icon(lucide.Map).Size(16)},
+						{Key: "releases", Label: "Releases", Leading: ui.Icon(lucide.Rocket).Size(16)},
+					},
+				},
 				{Key: "calendar", Label: "Calendar", Leading: ui.Icon(lucide.CalendarDays).Size(18)},
 			},
 		},
@@ -72,14 +90,27 @@ func navigationSections() []ui.SidebarSection {
 	}
 }
 
-func sidebarHeader(collapsed bool, muted color.NRGBA, send ui.Send[Msg]) ui.Widget {
-	icon := lucide.PanelLeftClose
+func sidebarHeader(collapsed bool, muted color.NRGBA) ui.Widget {
+	if collapsed {
+		return ui.Center(ui.Icon(lucide.LayoutDashboard).Size(22))
+	}
+	return ui.Row(
+		ui.Icon(lucide.LayoutDashboard).Size(22),
+		ui.Expanded(ui.Column(
+			ui.Text("Northstar").Size(15),
+			ui.Text("Product workspace").Size(12).Color(muted),
+		)),
+	).AlignMiddle().Gap(10)
+}
+
+func sidebarBoundaryToggle(collapsed bool, send ui.Send[Msg]) ui.Widget {
+	icon := lucide.CircleChevronLeft
 	label := "Collapse sidebar"
 	if collapsed {
-		icon = lucide.PanelLeftOpen
+		icon = lucide.CircleChevronRight
 		label = "Expand sidebar"
 	}
-	toggle := ui.Tooltip(
+	return ui.Tooltip(
 		"sidebar-toggle-tip",
 		ui.Button("sidebar-toggle", ui.Icon(icon).Size(18)).
 			Variant(ui.ButtonGhost).
@@ -88,17 +119,6 @@ func sidebarHeader(collapsed bool, muted color.NRGBA, send ui.Send[Msg]) ui.Widg
 			OnClick(func() { send(ToggleSidebar{}) }),
 		ui.Text(label),
 	).Placement(ui.TooltipRight)
-	if collapsed {
-		return ui.Center(toggle)
-	}
-	return ui.Row(
-		ui.Icon(lucide.LayoutDashboard).Size(22),
-		ui.Expanded(ui.Column(
-			ui.Text("Northstar").Size(15),
-			ui.Text("Product workspace").Size(12).Color(muted),
-		)),
-		toggle,
-	).AlignMiddle().Gap(10)
 }
 
 func sidebarFooter(collapsed bool, muted color.NRGBA) ui.Widget {
@@ -119,6 +139,8 @@ func workspace(selected string, muted color.NRGBA) ui.Widget {
 	title := map[string]string{
 		"overview": "Overview",
 		"projects": "Projects",
+		"roadmap":  "Roadmap",
+		"releases": "Releases",
 		"calendar": "Calendar",
 		"reports":  "Reports",
 		"team":     "Team",
@@ -178,7 +200,7 @@ func milestone(name, date string, muted color.NRGBA) ui.Widget {
 }
 
 func main() {
-	ui.Run(ui.NewProgram(Model{selected: "overview"},
+	ui.Run(ui.NewProgram(Model{selected: "overview", openKeys: []string{"projects"}},
 		Update, View), ui.Title("FlowUI Sidebar"),
 		ui.Size(1080, 700),
 	)

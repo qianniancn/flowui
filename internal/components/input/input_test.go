@@ -86,26 +86,8 @@ func TestInputSyncsValue(t *testing.T) {
 	if got := editor.Text(); got != "Ada" {
 		t.Fatalf("editor text = %q, want Ada", got)
 	}
-	if editor.Submit {
-		t.Fatal("submit enabled without OnSubmit")
-	}
-}
-
-func TestInputEnablesSubmit(t *testing.T) {
-	ctx := newContext(nil)
-	var ops op.Ops
-
-	Input("name", "Ada").OnSubmit(func(string) {}).Layout(ctx, layout.Context{
-		Constraints: layout.Constraints{Max: image.Pt(300, 80)},
-		Ops:         &ops,
-	})
-
-	editor := testComponentState[widget.Editor](ctx, "name", stateSlotEditor)
-	if editor == nil {
-		t.Fatal("missing editor state")
-	}
 	if !editor.Submit {
-		t.Fatal("submit was not enabled")
+		t.Fatal("single-line input did not consume carriage returns")
 	}
 }
 

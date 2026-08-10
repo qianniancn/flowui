@@ -173,7 +173,9 @@ func (i InputWidget) prepareEditor(ctx *frame.Context, gtx layout.Context, state
 	frame.RegisterFieldFocus(ctx, key, editor, enabled)
 
 	editor.SingleLine = true
-	editor.Submit = i.onSubmit != nil
+	// Single-line editors must consume carriage returns even when callers do
+	// not need a submit callback; otherwise Gio replaces them with spaces.
+	editor.Submit = true
 	editor.ReadOnly = i.readOnly
 	editor.MaxLen = i.maxLength
 	editor.Mask, editor.InputHint, editor.Filter = inputTypeConfig(i.inputType)

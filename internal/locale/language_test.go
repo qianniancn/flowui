@@ -17,3 +17,11 @@ func TestFromTag(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectHonorsFlowUIOverride(t *testing.T) {
+	t.Setenv("FLOWUI_LANG", "zh-CN")
+	t.Setenv("LC_ALL", "en-US")
+	if got := Detect(); got != LanguageChinese {
+		t.Fatalf("Detect() = %q, want %q", got, LanguageChinese)
+	}
+}

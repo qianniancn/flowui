@@ -3,6 +3,8 @@ package locale
 import (
 	"os"
 	"strings"
+
+	giolocale "gioui.org/x/pref/locale"
 )
 
 // Language identifies the language used by localized FlowUI widgets.
@@ -36,10 +38,12 @@ func Detect() Language {
 			}
 		}
 	}
-	// Fall back to system locale
-	language := FromTag(systemLocaleName())
-	if language != LanguageAuto {
-		return language
+	// Fall back to Gio's platform locale adapter.
+	if tag, err := giolocale.Language(); err == nil {
+		language := FromTag(tag.String())
+		if language != LanguageAuto {
+			return language
+		}
 	}
 	return LanguageEnglish
 }

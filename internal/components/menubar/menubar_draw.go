@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/flowui/internal/render"
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
@@ -30,10 +31,5 @@ func drawMenubarTrigger(gtx layout.Context, tokens theme.MenubarTheme, size imag
 	focusRadius := max(radius-inset, 0)
 	col := style.focus
 	col.A = byte(float32(col.A)*focusOpacity + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(focusRect, focusRadius).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, rect, focusRadius, width, inset, col)
 }

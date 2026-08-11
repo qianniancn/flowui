@@ -75,12 +75,7 @@ func drawTabFocus(gtx layout.Context, theme *theme.Theme, size image.Point, vari
 		radius = min(max(gtx.Dp(radiusToken), 1), min(rect.Dx(), rect.Dy())/2)
 	}
 	col.A = byte(float32(col.A)*opacity + 0.5)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, image.Rectangle{Max: size}, radius, width, max(width/2, 1), col)
 }
 
 func drawTabSeparator(gtx layout.Context, theme *theme.Theme, size image.Point, orientation TabsOrientation, col color.NRGBA) {

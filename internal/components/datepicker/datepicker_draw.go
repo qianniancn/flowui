@@ -121,12 +121,7 @@ func drawDatePickerFocusRing(gtx layout.Context, activeTheme *theme.Theme, rect 
 		return
 	}
 	radius = max(radius-(width+1)/2, 0)
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, activeTheme.Palette.Focus)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, rect, radius, width, 0, activeTheme.Palette.Focus)
 }
 
 func datePickerNavStyle(theme *theme.Theme, hovered, pressed, disabled bool) datePickerNavButtonStyle {

@@ -21,6 +21,7 @@ import (
 	"github.com/qianniancn/flowui/internal/components/tooltip"
 	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/overlay"
+	"github.com/qianniancn/flowui/internal/render"
 	stateutil "github.com/qianniancn/flowui/internal/state"
 	"github.com/qianniancn/flowui/internal/theme"
 )
@@ -522,7 +523,5 @@ func drawSidebarItem(gtx layout.Context, activeTheme *theme.Theme, size image.Po
 	}
 	focusColor := style.focus
 	focusColor.A = byte(float32(focusColor.A)*focus + .5)
-	stroke := clip.Stroke{Path: clip.UniformRRect(focusRect, max(radius-inset, 0)).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, focusColor)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, rect, max(radius-inset, 0), width, inset, focusColor)
 }

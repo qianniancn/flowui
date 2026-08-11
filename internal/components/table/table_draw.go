@@ -12,6 +12,7 @@ import (
 	"gioui.org/op/paint"
 	"github.com/qianniancn/flowui-icons-lucide"
 	"github.com/qianniancn/flowui/internal/components/icon"
+	"github.com/qianniancn/flowui/internal/render"
 	"github.com/qianniancn/flowui/internal/theme"
 )
 
@@ -27,16 +28,7 @@ func drawTableBorder(gtx layout.Context, size image.Point, radius, width int, co
 		return
 	}
 	inset := max((width+1)/2, 1)
-	rect := image.Rectangle{Max: size}.Inset(inset)
-	if rect.Empty() {
-		return
-	}
-	stroke := clip.Stroke{
-		Path:  clip.UniformRRect(rect, max(radius-inset, 0)).Path(gtx.Ops),
-		Width: float32(width),
-	}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, image.Rectangle{Max: size}, max(radius-inset, 0), width, inset, col)
 }
 
 func drawTableHeader(gtx layout.Context, activeTheme *theme.Theme, size image.Point, radius int, col, separator color.NRGBA) {
@@ -80,9 +72,7 @@ func drawTableRow(gtx layout.Context, activeTheme *theme.Theme, size image.Point
 	radius := min(max(gtx.Dp(activeTheme.Components.Table.FocusRadius), 1), min(focusRect.Dx(), focusRect.Dy())/2)
 	col := style.focus
 	col.A = byte(float32(col.A)*focus + 0.5)
-	stroke := clip.Stroke{Path: clip.UniformRRect(focusRect, radius).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, rect, radius, width, inset, col)
 }
 
 func drawTableHeaderSeparator(gtx layout.Context, activeTheme *theme.Theme, x, height int, col color.NRGBA, full bool) {
@@ -144,9 +134,7 @@ func drawTableCellFocus(gtx layout.Context, activeTheme *theme.Theme, size image
 	}
 	radius := min(max(gtx.Dp(activeTheme.Components.Table.FocusRadius), 1), min(rect.Dx(), rect.Dy())/2)
 	col.A = byte(float32(col.A)*opacity + 0.5)
-	stroke := clip.Stroke{Path: clip.UniformRRect(rect, radius).Path(gtx.Ops), Width: float32(width)}.Op().Push(gtx.Ops)
-	paint.Fill(gtx.Ops, col)
-	stroke.Pop()
+	render.DrawRoundedInsetStroke(gtx, image.Rectangle{Max: size}, radius, width, max(width/2+1, 1), col)
 }
 
 func drawTableSortIndicator(gtx layout.Context, activeTheme *theme.Theme, size image.Point, direction SortDirection, col color.NRGBA) {

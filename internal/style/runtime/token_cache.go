@@ -50,25 +50,19 @@ func newTokenCache(maxSize int) *tokenCache {
 // get retrieves a cached token expansion result.
 // Returns (value, true) on hit, (zero, false) on miss.
 func (c *tokenCache) get(key tokenCacheKey) (style.Style, bool) {
-	c.mu.RLock()
-	entry, found := c.entries[key]
-	c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
+	entry, found := c.entries[key]
 	if !found {
-		c.mu.Lock()
 		c.misses++
-		c.mu.Unlock()
 		return style.Style{}, false
 	}
 
 	// Move to front (most recently used)
-	c.mu.Lock()
 	c.hits++
 	c.moveToFront(entry)
-	value := entry.value
-	c.mu.Unlock()
-
-	return value, true
+	return entry.value, true
 }
 
 // put stores a token expansion result in the cache.

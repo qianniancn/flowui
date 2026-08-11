@@ -56,25 +56,19 @@ func newCascadeCache(maxSize int) *cascadeCache {
 // Returns (value, true) on hit, (zero, false) on miss.
 // IMPORTANT: Returns a deep copy to prevent mutation of cached values by animate().
 func (c *cascadeCache) get(key cascadeCacheKey) (style.ResolvedStyle, bool) {
-	c.mu.RLock()
-	entry, found := c.entries[key]
-	c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
+	entry, found := c.entries[key]
 	if !found {
-		c.mu.Lock()
 		c.misses++
-		c.mu.Unlock()
 		return style.ResolvedStyle{}, false
 	}
 
 	// Move to front (most recently used)
-	c.mu.Lock()
 	c.hits++
 	c.moveToFront(entry)
-	value := cloneResolvedStyle(entry.value)
-	c.mu.Unlock()
-
-	return value, true
+	return cloneResolvedStyle(entry.value), true
 }
 
 // put stores a resolved style in the cache.

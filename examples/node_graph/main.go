@@ -329,8 +329,8 @@ func newCreatorNode(sequence int, title string, position ui.NodeGraphPoint) ui.N
 
 func largeGraphNodes() []ui.NodeGraphNode {
 	nodes := make([]ui.NodeGraphNode, 0, 144)
-	for row := 0; row < 12; row++ {
-		for column := 0; column < 12; column++ {
+	for row := range 12 {
+		for column := range 12 {
 			id := largeNodeID(row, column)
 			nodes = append(nodes, ui.NewNodeGraphNode(id, "Worker", ui.NodeGraphPoint{X: float32(column * 220), Y: float32(row * 140)}).Inputs(ui.NewNodeGraphPort("in", "In")).Outputs(ui.NewNodeGraphPort("out", "Out")))
 		}
@@ -340,8 +340,8 @@ func largeGraphNodes() []ui.NodeGraphNode {
 
 func largeGraphEdges() []ui.NodeGraphEdge {
 	edges := make([]ui.NodeGraphEdge, 0, 264)
-	for row := 0; row < 12; row++ {
-		for column := 0; column < 12; column++ {
+	for row := range 12 {
+		for column := range 12 {
 			if column < 11 {
 				edges = append(edges, ui.NewNodeGraphEdge("right-"+largeNodeID(row, column), ui.NewNodeGraphEndpoint(largeNodeID(row, column), "out"), ui.NewNodeGraphEndpoint(largeNodeID(row, column+1), "in")))
 			}

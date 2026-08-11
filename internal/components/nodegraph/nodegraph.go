@@ -4,6 +4,7 @@ package nodegraph
 
 import (
 	"image/color"
+	"slices"
 	"strings"
 
 	"gioui.org/io/key"
@@ -979,13 +980,7 @@ func (w Widget) DropTypes(types ...string) Widget {
 		if value == "" {
 			panic("flowui: node graph drop type must not be empty")
 		}
-		alreadyAdded := false
-		for _, existing := range unique {
-			if existing == value {
-				alreadyAdded = true
-				break
-			}
-		}
+		alreadyAdded := slices.Contains(unique, value)
 		if !alreadyAdded {
 			unique = append(unique, value)
 		}

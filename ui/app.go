@@ -9,12 +9,16 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/flowui/i18n"
+	"github.com/qianniancn/flowui/internal/core"
 	internalexplorer "github.com/qianniancn/flowui/internal/explorer"
-	"github.com/qianniancn/flowui/internal/frame"
 	"github.com/qianniancn/flowui/internal/runtime"
+	"github.com/qianniancn/flowui/theme"
+	"github.com/qianniancn/flowui/window"
 )
 
 // Program describes a complete MVU application. Init runs once for each
@@ -37,6 +41,17 @@ type Program[M any, Msg any] struct {
 	// WindowStateMessage maps native configuration changes to messages that
 	// Update receives before the following view.
 	WindowStateMessage func(WindowState) Msg
+	// CloseRequestMessage turns a native close request into an MVU message.
+	// When non-nil and the window has no OnWindowCloseRequest handler, FlowUI
+	// aborts the request and queues the returned message; the window stays
+	// open until the application calls Application.Close or RequestClose.
+	// Without a handler, Application.RequestClose requests the native close and
+	// reaches this hook too. Forced closes skip this hook. Repeated native
+	// requests while a confirmation is pending are delivered again, so Update
+	// should ignore duplicates. The message must be safe for Update to handle;
+	// use a message value that Update can recognize even when no confirmation
+	// is pending.
+	CloseRequestMessage func() Msg
 }
 
 // NewProgram creates a Program with a fixed initial model. Use a Program
@@ -52,84 +67,102 @@ func NewProgram[M any, Msg any](initial M, update Update[M, Msg], view View[M, M
 
 // Run opens a single window for program and blocks until the application exits.
 // Use Application when the process needs multiple windows or explicit
-// lifecycle control.
-func Run[M any, Msg any](program Program[M, Msg], opts ...Option) {
+// lifecycle control. Run panics when Program.CloseRequestMessage is set,
+// because the caller has no Application handle for the final close; use
+// NewApplication and Application.Run instead.
+func Run[M any, Msg any](program Program[M, Msg], opts ...window.Option) {
+	if program.CloseRequestMessage != nil {
+		panic("flowui: ui.Run cannot deliver CloseRequestMessage; use ui.NewApplication")
+	}
 	NewApplication().Run(NewWindow("main", program, opts...))
 }
 
 func runWindowCmd[M any, Msg any](
 	w *app.Window,
 	appearance *windowAppearance,
-	theme *Theme,
-	language Language,
+	activeTheme *theme.Theme,
+	language window.Language,
+	translations i18n.Catalog,
 	initial M,
 	initialCmd Cmd[Msg],
 	update Update[M, Msg],
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
 	windowStateMessage func(WindowState) Msg,
+	closeRequestMessage func() Msg,
 	onError func(error),
 	onDestroy func(),
 	onWindowState func(WindowState),
 	requestClose func(),
+	onClosing func(runtime.ClosingEvent) bool,
+	forceClose func(),
 	onExit func(M),
 ) error {
-	ctx := frame.New(w, theme, language)
-	frame.SetWindowCloseRequest(ctx, requestClose)
+	ctx, err := core.NewWithCatalogStrict(w, activeTheme, language, translations)
+	if err != nil {
+		return err
+	}
+	core.SetWindowCloseRequest(ctx, requestClose)
 	explorerService := internalexplorer.New(w)
-	eventWindow := &platformEventWindow{Window: w, explorer: explorerService}
+	eventWindow := &platformEventWindow{
+		Window:     w,
+		explorer:   explorerService,
+		forceClose: forceClose,
+	}
 	if onError == nil {
 		onError = func(err error) {
 			writeEffectError(os.Stderr, err)
 		}
 	}
-	var runtimeSubscriptions runtime.Subscriptions[M, Msg]
-	if subscriptions != nil {
-		runtimeSubscriptions = func(model M) []runtime.Subscription[Msg] {
-			requested := subscriptions(model)
-			result := make([]runtime.Subscription[Msg], len(requested))
-			for index, subscription := range requested {
-				result[index] = runtime.Subscription[Msg]{
-					Key: subscription.key,
-					Run: func(effectCtx context.Context, send func(Msg)) error {
-						effectCtx = internalexplorer.WithService(effectCtx, explorerService)
-						return subscription.run(effectCtx, Send[Msg](send))
-					},
-				}
-			}
-			return result
-		}
-	}
-	return runtime.LoopWithExit(eventWindow, initial, runtimeCmd(initialCmd, explorerService), func(model *M, msg Msg) runtime.Cmd[Msg] {
-		return runtimeCmd(update(model, msg), explorerService)
-	}, runtimeSubscriptions, onError, onDestroy, func(config app.Config, send func(Msg)) {
-		state := frame.UpdateWindowConfig(ctx, config)
+	return runtime.LoopWithExit(eventWindow, initial, initialCmd, update, subscriptions, onError, onDestroy, func(config app.Config, send Send[Msg]) {
+		state := core.UpdateWindowConfig(ctx, config)
 		if onWindowState != nil {
 			onWindowState(state)
 		}
 		if windowStateMessage != nil {
 			send(windowStateMessage(state))
 		}
-	}, func(gtx layout.Context, model M, send func(Msg)) {
+	}, nativeCloseHandler(onClosing, closeRequestMessage), func(gtx layout.Context, model M, send Send[Msg]) {
 		appearance.apply(ctx)
-		frame.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
+		core.BeginFrameWithViewport(ctx, gtx.Constraints.Max)
 		paint.FillShape(
 			gtx.Ops,
-			frame.ActiveTheme(ctx).Palette.Background,
+			core.ActiveTheme(ctx).Semantic().Background,
 			clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Op(),
 		)
-		if root := view(ctx, model, Send[Msg](send)); root != nil {
+		if root := view(ctx, model, send); root != nil {
 			root.Layout(ctx, gtx)
 		}
-		frame.LayoutOverlays(ctx, gtx)
-		frame.ApplyFrameCommands(ctx, gtx)
-		frame.EndFrame(ctx)
+		core.LayoutOverlays(ctx, gtx)
+		core.ApplyFrameCommands(ctx, gtx)
+		core.EndFrame(ctx)
 	}, onExit)
+}
+
+// nativeCloseHandler combines the explicit window close handler with the
+// program's close-request message hook. An explicit handler that returns true
+// owns the request. Otherwise a non-nil message aborts the native close and
+// queues the message.
+func nativeCloseHandler[Msg any](
+	handle func(runtime.ClosingEvent) bool,
+	message func() Msg,
+) func(runtime.ClosingEvent, Send[Msg]) {
+	return func(event runtime.ClosingEvent, send Send[Msg]) {
+		if handle != nil && handle(event) {
+			return
+		}
+		if message == nil {
+			return
+		}
+		event.Abort()
+		send(message())
+	}
 }
 
 type platformEventWindow struct {
 	*app.Window
-	explorer *internalexplorer.Service
+	explorer   *internalexplorer.Service
+	forceClose func()
 }
 
 // Event forwards native events while allowing the explorer service to observe them.
@@ -139,14 +172,22 @@ func (w *platformEventWindow) Event() event.Event {
 	return value
 }
 
-func runtimeCmd[Msg any](cmd Cmd[Msg], explorerService *internalexplorer.Service) runtime.Cmd[Msg] {
-	if cmd == nil {
-		return nil
+// ForceClose requests a native close without invoking the window close handler.
+func (w *platformEventWindow) ForceClose() {
+	if w.forceClose != nil {
+		w.forceClose()
+		return
 	}
-	return func(effectCtx context.Context, send func(Msg)) error {
-		effectCtx = internalexplorer.WithService(effectCtx, explorerService)
-		return cmd(effectCtx, Send[Msg](send))
+	if w.Window != nil {
+		w.Window.Perform(system.ActionClose)
 	}
+}
+
+// DecorateEffectContext attaches the window's explorer service to the effect
+// context, so every command and subscription can resolve it from the context
+// the runtime hands them.
+func (w *platformEventWindow) DecorateEffectContext(ctx context.Context) context.Context {
+	return internalexplorer.WithService(ctx, w.explorer)
 }
 
 func writeEffectError(w io.Writer, err error) {

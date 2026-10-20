@@ -4,8 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/input"
+	labelpkg "github.com/qianniancn/flowui/widget/label"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -61,121 +69,118 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("input-groups",
-				ui.Box(ui.Column(
-					ui.Text("FlowUI InputGroup").Size(24),
-					ui.Text(status).Size(14),
-					ui.Divider(),
-					ui.Wrap(
-						ui.Column(
-							section("Prefix and suffix",
-								ui.Column(
-									labeledGroup("Email address", "email",
-										ui.InputGroup(boundInput("email", m.Email, "name@email.com", send)).
-											Prefix(ui.Icon(lucide.Mail).Size(16)).
-											FullWidth()),
-									labeledGroup("Website", "website",
-										ui.InputGroup(boundInput("website", m.Website, "heroui", send)).
-											Prefix(ui.Icon(lucide.Globe).Size(16)).
-											Suffix(ui.Text(".com")).
-											FullWidth()),
-									labeledGroup("Price", "price",
-										ui.InputGroup(boundInput("price", m.Price, "10", send).Type(ui.InputNumber)).
-											Prefix(ui.Text("$")).
-											Suffix(ui.Text("USD")).
-											FullWidth()),
-								).Gap(12),
-							),
-							section("Variants",
-								ui.Column(
-									labeledGroup("Primary", "search-primary",
-										ui.InputGroup(boundInput("search-primary", m.Search, "Search projects", send)).
-											Prefix(ui.Icon(lucide.Search).Size(16)).
-											FullWidth()),
-									labeledGroup("Secondary", "search",
-										ui.InputGroup(boundInput("search", m.Search, "Search projects", send)).
-											Prefix(ui.Icon(lucide.Search).Size(16)).
-											Variant(ui.InputSecondary).
-											FullWidth()),
-								).Gap(12),
-							),
-						).Gap(28),
-						ui.Column(
-							section("Text area",
-								labeledGroup("Prompt", "prompt",
-									ui.InputGroupTextArea(
-										boundTextArea("prompt", m.Prompt, "Assign tasks or ask anything", send).Rows(5),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Box(layout.Column(
+				text.New("FlowUI InputGroup").Size(24),
+				text.New(status).Size(14),
+				layout.Divider(),
+				layout.Wrap(
+					layout.Column(
+						section("Prefix and suffix",
+							layout.Column(
+								labeledGroup("Email address", "email",
+									input.Group(boundInput("email", m.Email, "name@email.com", send)).
+										Prefix(icon.New(lucide.Mail).Size(16)).
+										FullWidth()),
+								labeledGroup("Website", "website",
+									input.Group(boundInput("website", m.Website, "flowui.dev", send)).
+										Prefix(icon.New(lucide.Globe).Size(16)).
+										Suffix(text.New(".com")).
+										FullWidth()),
+								labeledGroup("Price", "price",
+									input.Group(boundInput("price", m.Price, "10", send).Type(input.Number)).
+										Prefix(text.New("$")).
+										Suffix(text.New("USD")).
+										FullWidth()),
+							).Gap(12),
+						),
+						section("Variants",
+							layout.Column(
+								labeledGroup("Primary", "search-primary",
+									input.Group(boundInput("search-primary", m.Search, "Search projects", send)).
+										Prefix(icon.New(lucide.Search).Size(16)).
+										FullWidth()),
+								labeledGroup("Secondary", "search",
+									input.Group(boundInput("search", m.Search, "Search projects", send)).
+										Prefix(icon.New(lucide.Search).Size(16)).
+										Variant(input.Secondary).
+										FullWidth()),
+							).Gap(12),
+						),
+					).Gap(28),
+					layout.Column(
+						section("Text area",
+							labeledGroup("Prompt", "prompt",
+								input.GroupTextArea(
+									boundTextArea("prompt", m.Prompt, "Assign tasks or ask anything", send).Rows(5),
+								).
+									Prefix(icon.New(lucide.MessageSquare).Size(16)).
+									SuffixAction(
+										input.GroupAction("send-prompt", "Send prompt").Content(icon.New(lucide.SendHorizontal).Size(16)).
+											Disabled(strings.TrimSpace(m.Prompt) == "").
+											OnClick(func() { send(Msg{Submit: true}) }),
 									).
-										Prefix(ui.Icon(lucide.MessageSquare).Size(16)).
-										SuffixAction(
-											ui.InputGroupAction("send-prompt", "Send prompt", ui.Icon(lucide.SendHorizontal).Size(16)).
-												Disabled(strings.TrimSpace(m.Prompt) == "").
-												OnClick(func() { send(Msg{Submit: true}) }),
-										).
-										SuffixPadding(8, 4).
-										FullWidth(),
-								),
+									FullWidth(),
 							),
-							section("Action suffix",
-								labeledGroup("API token", "token",
-									ui.InputGroup(boundInput("token", m.Token, "flow_live_...", send)).
-										SuffixAction(
-											ui.InputGroupAction("copy-token", "Copy token", ui.Icon(lucide.Copy).Size(16)).
-												OnClick(func() { send(Msg{Copy: true}) }),
-										).
-										SuffixPadding(12, 0).
-										FullWidth(),
-								),
+						),
+						section("Action suffix",
+							labeledGroup("API token", "token",
+								input.Group(boundInput("token", m.Token, "flow_live_...", send)).
+									SuffixAction(
+										input.GroupAction("copy-token", "Copy token").Content(icon.New(lucide.Copy).Size(16)).
+											OnClick(func() { send(Msg{Copy: true}) }),
+									).
+									FullWidth(),
 							),
-							section("States",
-								ui.Column(
-									labeledGroup("Invalid", "invalid",
-										ui.InputGroup(ui.Input("invalid", "invalid-address").Label("Invalid email")).
-											Prefix(ui.Icon(lucide.Mail).Size(16)).
-											Suffix(ui.Icon(lucide.CircleAlert).Size(16)).
-											Invalid(true).
-											FullWidth()),
-									labeledGroup("Disabled", "disabled",
-										ui.InputGroup(ui.Input("disabled", "name@email.com")).
-											Prefix(ui.Icon(lucide.Mail).Size(16)).
-											Disabled(true).
-											FullWidth()),
-								).Gap(12),
-							),
-						).Gap(28),
-					).Gap(28).LineGap(22).AlignStart(),
-				).Gap(22)).Style(ui.Padding(3)),
+						),
+						section("States",
+							layout.Column(
+								labeledGroup("Invalid", "invalid",
+									input.Group(input.New("invalid-address").Label("Invalid email")).
+										Prefix(icon.New(lucide.Mail).Size(16)).
+										Suffix(icon.New(lucide.CircleAlert).Size(16)).
+										Invalid(true).
+										FullWidth()),
+								labeledGroup("Disabled", "disabled",
+									input.Group(input.New("name@email.com")).
+										Prefix(icon.New(lucide.Mail).Size(16)).
+										Disabled(true).
+										FullWidth()),
+							).Gap(12),
+						),
+					).Gap(28),
+				).Gap(28).LineGap(22).AlignStart(),
+			).Gap(22)).Style(style.New().Padding(3)),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func labeledGroup(label, key string, group ui.InputGroupWidget) ui.Widget {
-	return ui.Column(
-		ui.Label(label).For(key),
-		ui.Box(group).Style(ui.Width(320)),
+func labeledGroup(label, key string, group input.GroupWidget) ui.Widget {
+	return layout.Column(
+		labelpkg.New(label).For(key),
+		layout.Box(group).Style(style.New().Width(320)),
 	).Gap(6)
 }
 
-func boundInput(key, value, placeholder string, send ui.Send[Msg]) ui.InputWidget {
-	return ui.Input(key, value).
+func boundInput(key, value, placeholder string, send ui.Send[Msg]) input.Widget {
+	return input.New(value).Key(key).
 		Placeholder(placeholder).
 		OnChange(func(value string) {
 			send(Msg{Field: key, Value: value})
 		})
 }
 
-func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) ui.TextAreaWidget {
-	return ui.TextArea(key, value).
+func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) input.TextAreaWidget {
+	return input.NewTextArea(value).Key(key).
 		Placeholder(placeholder).
 		OnChange(func(value string) {
 			send(Msg{Field: key, Value: value})
@@ -184,7 +189,8 @@ func boundTextArea(key, value, placeholder string, send ui.Send[Msg]) ui.TextAre
 
 func main() {
 	ui.Run(ui.NewProgram(Model{Website: "flowui", Price: "10", Token: "flow_live_7Q4M2"},
-		Update, View), ui.Title("FlowUI InputGroup"),
-		ui.Size(900, 760),
+		Update, View), window.Title("FlowUI InputGroup"),
+		window.Size(900, 760),
+		window.Theme(base.Light()),
 	)
 }

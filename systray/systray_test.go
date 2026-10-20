@@ -28,7 +28,7 @@ func TestMenuItemsReturnsSnapshot(t *testing.T) {
 
 	items := menu.Items()
 	items[0] = nil
-	items = append(items, first)
+	_ = append(items, first)
 
 	got := menu.Items()
 	if len(got) != 2 || got[0] != first {

@@ -7,17 +7,30 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/io/system"
-	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/core"
+	"github.com/qianniancn/flowui/internal/runtime"
+	"github.com/qianniancn/flowui/theme"
+	flowwindow "github.com/qianniancn/flowui/window"
 )
+
+type windowRun func(
+	*app.Window,
+	*windowAppearance,
+	func(),
+	func(WindowState),
+	func(),
+	func(runtime.ClosingEvent) bool,
+	func(),
+) error
 
 // WindowSpec describes one independent FlowUI window.
 type WindowSpec struct {
 	key                 string
 	options             []app.Option
 	initialActions      system.Action
-	run                 func(*app.Window, *windowAppearance, func(), func(WindowState), func()) error
+	run                 windowRun
 	onError             func(error)
-	closeRequestHandler func() WindowCloseDecision
+	closeRequestHandler func() flowwindow.CloseDecision
 }
 
 type retainedWindowModel[M any, Msg any] struct {
@@ -47,29 +60,27 @@ func (state *retainedWindowModel[M, Msg]) save(model M) {
 
 type windowAppearance struct {
 	mu          sync.Mutex
-	theme       *Theme
-	language    Language
+	theme       *theme.Theme
+	language    flowwindow.Language
 	languageSet bool
 }
 
-func (appearance *windowAppearance) setTheme(value Theme) {
-	if MaterialOf(&value) != nil {
-		DetachMaterial(&value)
-	}
-	syncMaterialTheme(&value)
+func (appearance *windowAppearance) setTheme(value theme.Theme) {
+	theme.DetachMaterial(&value)
+	theme.SyncMaterialTheme(&value)
 	appearance.mu.Lock()
 	appearance.theme = &value
 	appearance.mu.Unlock()
 }
 
-func (appearance *windowAppearance) setLanguage(value Language) {
+func (appearance *windowAppearance) setLanguage(value flowwindow.Language) {
 	appearance.mu.Lock()
 	appearance.language = value
 	appearance.languageSet = true
 	appearance.mu.Unlock()
 }
 
-func (appearance *windowAppearance) apply(ctx *Context) {
+func (appearance *windowAppearance) apply(ctx *core.Context) {
 	if appearance == nil {
 		return
 	}
@@ -81,45 +92,12 @@ func (appearance *windowAppearance) apply(ctx *Context) {
 	appearance.languageSet = false
 	appearance.mu.Unlock()
 	if activeTheme != nil {
-		frame.ReplaceTheme(ctx, *activeTheme)
+		core.ReplaceTheme(ctx, *activeTheme)
 	}
 	if languageSet {
-		frame.ReplaceLanguage(ctx, language)
+		core.ReplaceLanguage(ctx, language)
 	}
 }
-
-// WindowAction is a native action requested for one window.
-type WindowAction system.Action
-
-const (
-	// WindowActionMinimize minimizes the native window.
-	WindowActionMinimize WindowAction = WindowAction(system.ActionMinimize)
-	// WindowActionMaximize maximizes the native window.
-	WindowActionMaximize WindowAction = WindowAction(system.ActionMaximize)
-	// WindowActionRestore restores a maximized window.
-	WindowActionRestore WindowAction = WindowAction(system.ActionUnmaximize)
-	// WindowActionFullscreen toggles fullscreen mode.
-	WindowActionFullscreen WindowAction = WindowAction(system.ActionFullscreen)
-	// WindowActionRaise brings the window to the foreground.
-	WindowActionRaise WindowAction = WindowAction(system.ActionRaise)
-	// WindowActionCenter requests native window centering.
-	WindowActionCenter WindowAction = WindowAction(system.ActionCenter)
-)
-
-// WindowCloseDecision controls a close request initiated through FlowUI.
-type WindowCloseDecision uint8
-
-const (
-	// WindowCloseProceed destroys the native window. The application exits
-	// when this was its last window and keep-alive is disabled.
-	WindowCloseProceed WindowCloseDecision = iota
-	// WindowCloseCancel leaves the window open.
-	WindowCloseCancel
-	// WindowCloseKeepAlive destroys the native window and keeps the
-	// application process running so a tray or background service can reopen
-	// it. Call Application.Quit or SetKeepAlive(false) to end keep-alive.
-	WindowCloseKeepAlive
-)
 
 // Key returns the identity used to deduplicate and control the window.
 func (w WindowSpec) Key() string {
@@ -127,7 +105,7 @@ func (w WindowSpec) Key() string {
 }
 
 // NewWindow creates a window from a complete MVU Program.
-func NewWindow[M any, Msg any](key string, program Program[M, Msg], opts ...Option) WindowSpec {
+func NewWindow[M any, Msg any](key string, program Program[M, Msg], opts ...flowwindow.Option) WindowSpec {
 	if program.Init == nil {
 		panic("flowui: nil program init")
 	}
@@ -138,6 +116,7 @@ func NewWindow[M any, Msg any](key string, program Program[M, Msg], opts ...Opti
 		program.Subscriptions,
 		program.View,
 		program.WindowStateMessage,
+		program.CloseRequestMessage,
 		opts,
 	)
 }
@@ -149,7 +128,8 @@ func newWindowSpec[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	view View[M, Msg],
 	windowStateMessage func(WindowState) Msg,
-	opts []Option,
+	closeRequestMessage func() Msg,
+	opts []flowwindow.Option,
 ) WindowSpec {
 	if key == "" {
 		panic("flowui: empty window key")
@@ -160,18 +140,32 @@ func newWindowSpec[M any, Msg any](
 	if view == nil {
 		panic("flowui: nil window view")
 	}
-	cfg := newRunOptions(opts)
+	cfg := flowwindow.Resolve(opts...)
 	var retained *retainedWindowModel[M, Msg]
-	if cfg.retainModel {
+	if cfg.RetainModel {
 		retained = new(retainedWindowModel[M, Msg])
+	}
+	if !cfg.ThemeSet {
+		panic("flowui: window requires an explicit theme; use window.Theme(...)")
+	}
+	if err := theme.ValidateVisualProvider(cfg.InitialTheme); err != nil {
+		panic(err)
 	}
 	return WindowSpec{
 		key:                 key,
-		options:             append([]app.Option(nil), cfg.window...),
-		initialActions:      cfg.initialActions,
-		onError:             cfg.errorHandler,
-		closeRequestHandler: cfg.closeRequestHandler,
-		run: func(window *app.Window, appearance *windowAppearance, onDestroy func(), onWindowState func(WindowState), requestClose func()) error {
+		options:             append([]app.Option(nil), cfg.Native...),
+		initialActions:      cfg.InitialActions,
+		onError:             cfg.ErrorHandler,
+		closeRequestHandler: cfg.CloseRequestHandler,
+		run: func(
+			window *app.Window,
+			appearance *windowAppearance,
+			onDestroy func(),
+			onWindowState func(WindowState),
+			requestClose func(),
+			onClosing func(runtime.ClosingEvent) bool,
+			forceClose func(),
+		) error {
 			var initial M
 			var initialCmd Cmd[Msg]
 			var onExit func(M)
@@ -181,7 +175,37 @@ func newWindowSpec[M any, Msg any](
 			} else {
 				initial, initialCmd = initialize()
 			}
-			return runWindowCmd(window, appearance, cfg.newTheme(), cfg.language, initial, initialCmd, update, subscriptions, view, windowStateMessage, cfg.errorHandler, onDestroy, onWindowState, requestClose, onExit)
+			activeTheme := cfg.InitialTheme
+			for _, apply := range cfg.ThemeOps {
+				apply(&activeTheme)
+			}
+			if err := theme.ValidateVisualProvider(activeTheme); err != nil {
+				return err
+			}
+			if theme.MaterialOf(&activeTheme) == nil {
+				theme.SyncMaterialTheme(&activeTheme)
+			}
+			return runWindowCmd(
+				window,
+				appearance,
+				&activeTheme,
+				cfg.Language,
+				cfg.Translations,
+				initial,
+				initialCmd,
+				update,
+				subscriptions,
+				view,
+				windowStateMessage,
+				closeRequestMessage,
+				cfg.ErrorHandler,
+				onDestroy,
+				onWindowState,
+				requestClose,
+				onClosing,
+				forceClose,
+				onExit,
+			)
 		},
 	}
 }
@@ -297,6 +321,10 @@ func (a *Application) Open(spec WindowSpec) bool {
 			a.windows.update(spec.key, window, state)
 		}, func() {
 			a.RequestClose(spec.key)
+		}, func(event runtime.ClosingEvent) bool {
+			return a.handleClosing(spec.key, window, event)
+		}, func() {
+			a.forceClose(window)
 		})
 		deactivate()
 		spec.report(err)
@@ -314,7 +342,7 @@ func (a *Application) IsOpen(key string) bool {
 }
 
 // Configure applies native window options to an active window.
-func (a *Application) Configure(key string, options ...WindowOption) bool {
+func (a *Application) Configure(key string, options ...flowwindow.Option) bool {
 	if a == nil {
 		return false
 	}
@@ -322,20 +350,18 @@ func (a *Application) Configure(key string, options ...WindowOption) bool {
 	if window == nil {
 		return false
 	}
-	native := make([]app.Option, 0, len(options))
-	for _, option := range options {
-		if option != nil {
-			native = append(native, option.appOption())
-		}
-	}
-	window.Option(native...)
+	cfg := flowwindow.Resolve(options...)
+	window.Option(cfg.Native...)
 	return true
 }
 
 // SetTheme replaces the theme of an active window on its event loop. It
 // returns false when key does not identify an active window.
-func (a *Application) SetTheme(key string, value Theme) bool {
+func (a *Application) SetTheme(key string, value theme.Theme) bool {
 	if a == nil {
+		return false
+	}
+	if theme.ValidateVisualProvider(value) != nil {
 		return false
 	}
 	window, appearance := a.windows.appearance(key)
@@ -349,7 +375,7 @@ func (a *Application) SetTheme(key string, value Theme) bool {
 
 // SetLanguage replaces the language of an active window on its event loop. It
 // returns false when key does not identify an active window.
-func (a *Application) SetLanguage(key string, value Language) bool {
+func (a *Application) SetLanguage(key string, value flowwindow.Language) bool {
 	if a == nil {
 		return false
 	}
@@ -363,7 +389,7 @@ func (a *Application) SetLanguage(key string, value Language) bool {
 }
 
 // Perform requests a native action for an active window.
-func (a *Application) Perform(key string, action WindowAction) bool {
+func (a *Application) Perform(key string, action flowwindow.Action) bool {
 	if a == nil || action == 0 {
 		return false
 	}
@@ -371,7 +397,7 @@ func (a *Application) Perform(key string, action WindowAction) bool {
 	if window == nil {
 		return false
 	}
-	window.Perform(system.Action(action))
+	window.Perform(action)
 	return true
 }
 
@@ -383,14 +409,15 @@ func (a *Application) WindowState(key string) (WindowState, bool) {
 	return a.windows.state(key)
 }
 
-// RequestClose asks a window's configured close-request handler what to do.
-// It returns false when key does not identify an active window. A true result
-// only means the request was delivered; the handler may cancel it.
+// RequestClose asks an active window's configured close-request handler what to
+// do. It returns false when key does not identify an active window. A true
+// result means the request was delivered; the handler may cancel it.
 //
-// WindowCloseKeepAlive closes the native window and enables application
-// keep-alive. Reopen it with Open, and use RetainModelOnClose when the same MVU
-// model should resume. This method cannot intercept native close commands; see
-// OnWindowCloseRequest.
+// CloseKeepAlive closes the native window and enables application keep-alive.
+// Reopen it with Open, and use RetainModelOnClose when the same MVU model should
+// resume. Native close commands use the same handler. When no handler is
+// configured, RequestClose requests the native close, so a
+// Program.CloseRequestMessage hook applies to the resulting closing event.
 func (a *Application) RequestClose(key string) bool {
 	if a == nil {
 		return false
@@ -399,17 +426,20 @@ func (a *Application) RequestClose(key string) bool {
 	if window == nil {
 		return false
 	}
-	decision := WindowCloseProceed
-	if handler != nil {
-		decision = handler()
-	}
-	switch decision {
-	case WindowCloseProceed:
+	if handler == nil {
 		window.Perform(system.ActionClose)
-	case WindowCloseCancel:
+		return true
+	}
+	decision := handler()
+	switch decision {
+	case flowwindow.CloseProceed:
+		a.windows.markCloseIntent(window, closeIntentApproved)
+		window.Perform(system.ActionClose)
+	case flowwindow.CloseCancel:
 		// The handler intentionally left the window open.
-	case WindowCloseKeepAlive:
+	case flowwindow.CloseKeepAlive:
 		a.windows.setKeepAlive(true)
+		a.windows.markCloseIntent(window, closeIntentApproved)
 		window.Perform(system.ActionClose)
 	default:
 		// Unknown decisions fail closed so an invalid handler result cannot
@@ -427,7 +457,7 @@ func (a *Application) Close(key string) bool {
 	if window == nil {
 		return false
 	}
-	window.Perform(system.ActionClose)
+	a.forceClose(window)
 	return true
 }
 
@@ -438,7 +468,7 @@ func (a *Application) CloseAll() {
 		return
 	}
 	for _, window := range a.windows.snapshot() {
-		window.Perform(system.ActionClose)
+		a.forceClose(window)
 	}
 }
 
@@ -452,12 +482,50 @@ func (a *Application) Quit() {
 	a.CloseAll()
 }
 
+// handleClosing applies a native close request. It returns true when a close
+// intent or an explicit close-request handler owns the request, so the caller
+// must not fall back to the close-request message hook. A false result means
+// the window has no handler and the request is still unhandled.
+func (a *Application) handleClosing(key string, window *app.Window, event runtime.ClosingEvent) bool {
+	if a == nil || event == nil {
+		return true
+	}
+	if a.windows.shuttingDown() {
+		return true
+	}
+	if _, ok := a.windows.consumeCloseIntent(window); ok {
+		return true
+	}
+	_, handler := a.windows.closeRequest(key)
+	if handler == nil {
+		return false
+	}
+	switch handler() {
+	case flowwindow.CloseProceed:
+	case flowwindow.CloseKeepAlive:
+		a.windows.setKeepAlive(true)
+	case flowwindow.CloseCancel:
+		event.Abort()
+	default:
+		event.Abort()
+	}
+	return true
+}
+
+func (a *Application) forceClose(window *app.Window) {
+	if a == nil || window == nil {
+		return
+	}
+	a.windows.markCloseIntent(window, closeIntentForced)
+	window.Perform(system.ActionClose)
+}
+
 type windowSet struct {
 	mu            sync.Mutex
 	active        map[string]*app.Window
 	appearances   map[string]*windowAppearance
 	states        map[string]WindowState
-	closeRequests map[string]func() WindowCloseDecision
+	closeRequests map[string]func() flowwindow.CloseDecision
 	done          chan int
 	running       bool
 	starting      bool
@@ -466,7 +534,15 @@ type windowSet struct {
 	failed        bool
 	keepAlive     bool
 	loops         int
+	closeIntents  map[*app.Window]closeIntent
 }
+
+type closeIntent uint8
+
+const (
+	closeIntentApproved closeIntent = iota + 1
+	closeIntentForced
+)
 
 func (s *windowSet) setKeepAlive(enabled bool) {
 	s.mu.Lock()
@@ -498,7 +574,8 @@ func (s *windowSet) begin() <-chan int {
 	s.active = make(map[string]*app.Window)
 	s.appearances = make(map[string]*windowAppearance)
 	s.states = make(map[string]WindowState)
-	s.closeRequests = make(map[string]func() WindowCloseDecision)
+	s.closeRequests = make(map[string]func() flowwindow.CloseDecision)
+	s.closeIntents = make(map[*app.Window]closeIntent)
 	s.done = make(chan int, 1)
 	s.running = true
 	s.starting = true
@@ -509,11 +586,7 @@ func (s *windowSet) begin() <-chan int {
 	return s.done
 }
 
-func (s *windowSet) add(key string, window *app.Window, appearance *windowAppearance) (*app.Window, bool) {
-	return s.addWithCloseRequest(key, window, appearance, nil)
-}
-
-func (s *windowSet) addWithCloseRequest(key string, window *app.Window, appearance *windowAppearance, handler func() WindowCloseDecision) (*app.Window, bool) {
+func (s *windowSet) addWithCloseRequest(key string, window *app.Window, appearance *windowAppearance, handler func() flowwindow.CloseDecision) (*app.Window, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.running || s.quitting || s.closing {
@@ -546,6 +619,7 @@ func (s *windowSet) deactivate(key string, window *app.Window) {
 	delete(s.appearances, key)
 	delete(s.states, key)
 	delete(s.closeRequests, key)
+	delete(s.closeIntents, window)
 }
 
 func (s *windowSet) update(key string, window *app.Window, state WindowState) {
@@ -598,13 +672,47 @@ func (s *windowSet) state(key string) (WindowState, bool) {
 	return state, ok
 }
 
-func (s *windowSet) closeRequest(key string) (*app.Window, func() WindowCloseDecision) {
+func (s *windowSet) shuttingDown() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.quitting || s.closing
+}
+
+func (s *windowSet) closeRequest(key string) (*app.Window, func() flowwindow.CloseDecision) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.quitting || s.closing {
 		return nil, nil
 	}
 	return s.active[key], s.closeRequests[key]
+}
+
+func (s *windowSet) markCloseIntent(window *app.Window, intent closeIntent) {
+	if window == nil || intent == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closeIntents == nil {
+		s.closeIntents = make(map[*app.Window]closeIntent)
+	}
+	s.closeIntents[window] = intent
+}
+
+func (s *windowSet) consumeCloseIntent(window *app.Window) (closeIntent, bool) {
+	if window == nil {
+		return 0, false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	intent, ok := s.closeIntents[window]
+	if ok {
+		delete(s.closeIntents, window)
+	}
+	return intent, ok
 }
 
 func (s *windowSet) snapshot() []*app.Window {

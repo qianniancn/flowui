@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"image/color"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/text"
 )
 
 type demoSection struct {
@@ -94,27 +97,27 @@ func pageTitle(page string) string {
 }
 
 func demoPage(title string, sections ...demoSection) ui.Widget {
-	children := []ui.Widget{ui.Text(title).Size(26), ui.Divider()}
+	children := []ui.Widget{text.New(title).Size(26), layout.Divider()}
 	for index, section := range sections {
 		children = append(children,
-			ui.Column(
-				ui.Text(section.Title).Size(17),
+			layout.Column(
+				text.New(section.Title).Size(17),
 				section.Content,
 			).Gap(12),
 		)
 		if index < len(sections)-1 {
-			children = append(children, ui.Divider())
+			children = append(children, layout.Divider())
 		}
 	}
-	return ui.Column(children...).Gap(20)
+	return layout.Column(children...).Gap(20)
 }
 
 func demoRow(children ...ui.Widget) ui.Widget {
-	return ui.Wrap(children...).Gap(10).LineGap(10).AlignMiddle()
+	return layout.Wrap(children...).Gap(10).LineGap(10).AlignMiddle()
 }
 
 func demoPanel(child ui.Widget) ui.Widget {
-	return ui.Box(child).Style(ui.Padding(18))
+	return layout.Box(child).Style(style.New().Padding(18))
 }
 
 func swatchLabel(value color.NRGBA) string {

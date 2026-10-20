@@ -3,7 +3,13 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/radiogroup"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -49,51 +55,50 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("radio-groups",
-				ui.Column(
-					ui.Text("FlowUI RadioGroup").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Plan",
-						ui.Box(radioGroup("plan", fieldPlan, m.Plan, plans, send)).
-							Style(ui.Width(420)),
-					),
-					section("Variants",
-						ui.Column(
-							ui.Box(radioGroup("billing", fieldBilling, m.Billing, billing, send).
-								Variant(ui.RadioSecondary)).
-								Style(ui.Width(420)),
-							ui.Box(ui.RadioGroup("disabled", "pro", plans).
-								Disabled(true)).
-								Style(ui.Width(420)),
-						).Gap(18),
-					),
-					section("Horizontal",
-						ui.Box(radioGroup("delivery", fieldDelivery, m.Delivery, delivery, send).
-							Horizontal()).
-							Style(ui.Width(520)),
-					),
-					section("Item states",
-						ui.Box(radioGroup("support", fieldSupport, m.Support, support, send)).
-							Style(ui.Width(420)),
-					),
-				).Gap(18),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI RadioGroup").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				section("Plan",
+					layout.Box(radioGroup("plan", fieldPlan, m.Plan, plans, send)).
+						Style(style.New().Width(420)),
+				),
+				section("Variants",
+					layout.Column(
+						layout.Box(radioGroup("billing", fieldBilling, m.Billing, billing, send).
+							Variant(radiogroup.RadioSecondary)).
+							Style(style.New().Width(420)),
+						layout.Box(radiogroup.New(plans).Key("disabled").SelectedKey("pro").
+							Disabled(true)).
+							Style(style.New().Width(420)),
+					).Gap(18),
+				),
+				section("Horizontal",
+					layout.Box(radioGroup("delivery", fieldDelivery, m.Delivery, delivery, send).
+						Horizontal()).
+						Style(style.New().Width(520)),
+				),
+				section("Item states",
+					layout.Box(radioGroup("support", fieldSupport, m.Support, support, send)).
+						Style(style.New().Width(420)),
+				),
+			).Gap(18),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func radioGroup(key string, field Field, selected string, items []ui.RadioItem, send ui.Send[Msg]) ui.RadioGroupWidget {
-	return ui.RadioGroup(key, selected, items).
+func radioGroup(key string, field Field, selected string, items []radiogroup.RadioItem, send ui.Send[Msg]) radiogroup.Widget {
+	return radiogroup.New(items).Key(key).SelectedKey(selected).
 		OnChange(func(selected string) {
 			send(Msg{
 				Field: field,
@@ -102,24 +107,24 @@ func radioGroup(key string, field Field, selected string, items []ui.RadioItem, 
 		})
 }
 
-var plans = []ui.RadioItem{
+var plans = []radiogroup.RadioItem{
 	{Key: "basic", Label: "Basic", Description: "For experiments and small utilities"},
 	{Key: "pro", Label: "Pro", Description: "For production apps and active projects"},
 	{Key: "team", Label: "Team", Description: "Shared workflows for multiple contributors"},
 }
 
-var billing = []ui.RadioItem{
+var billing = []radiogroup.RadioItem{
 	{Key: "monthly", Label: "Monthly", Description: "Flexible billing with no long commitment"},
 	{Key: "yearly", Label: "Yearly", Description: "Lower total cost for long-running projects"},
 }
 
-var delivery = []ui.RadioItem{
+var delivery = []radiogroup.RadioItem{
 	{Key: "standard", Label: "Standard"},
 	{Key: "express", Label: "Express"},
 	{Key: "scheduled", Label: "Scheduled"},
 }
 
-var support = []ui.RadioItem{
+var support = []radiogroup.RadioItem{
 	{Key: "community", Label: "Community", Description: "Public discussion and issue triage"},
 	{Key: "priority", Label: "Priority", Description: "Faster response for launch windows"},
 	{Key: "legacy", Label: "Legacy", Description: "Unavailable for new subscriptions", Disabled: true},
@@ -128,7 +133,8 @@ var support = []ui.RadioItem{
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI RadioGroup"),
-		ui.Size(900, 720),
+		Update, View), window.Title("FlowUI RadioGroup"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

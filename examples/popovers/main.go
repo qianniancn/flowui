@@ -3,7 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/popover"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -50,51 +57,51 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Popover").Size(24),
-				ui.Text(status).Size(16),
-				ui.Divider(),
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Popover").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
 				section("Basic",
-					ui.Row(
+					layout.Row(
 						popoverButton("basic", "Open popover", m, send,
-							ui.Text("Popover content uses the overlay surface, soft shadow, rounded corners, and fade/zoom animation."),
+							text.New("Popover content uses the overlay surface, soft shadow, rounded corners, and fade/zoom animation."),
 						),
 						popoverButton("arrow", "With arrow", m, send,
-							ui.Text("The arrow points back to the trigger.").Size(14),
+							text.New("The arrow points back to the trigger.").Size(14),
 						).Arrow(true),
 					).Gap(12).AlignMiddle(),
 				),
 				section("Placement",
-					ui.Wrap(
-						ui.Box(popoverButton("top", "Top", m, send, placementContent("top")).Placement(ui.PopoverTop).ShouldFlip(false).Arrow(true)),
-						ui.Box(popoverButton("bottom", "Bottom", m, send, placementContent("bottom")).Placement(ui.PopoverBottom).Arrow(true)),
-						ui.Box(popoverButton("left", "Left", m, send, placementContent("left")).Placement(ui.PopoverLeft).ShouldFlip(false).Arrow(true)),
-						ui.Box(popoverButton("right", "Right", m, send, placementContent("right")).Placement(ui.PopoverRight).Arrow(true)),
-						ui.Box(popoverButton("start", "Bottom start", m, send, placementContent("bottom start")).Placement(ui.PopoverBottomStart).Arrow(true)),
-						ui.Box(popoverButton("end", "Bottom end", m, send, placementContent("bottom end")).Placement(ui.PopoverBottomEnd).Arrow(true)),
+					layout.Wrap(
+						layout.Box(popoverButton("top", "Top", m, send, placementContent("top")).Placement(popover.Top).ShouldFlip(false).Arrow(true)),
+						layout.Box(popoverButton("bottom", "Bottom", m, send, placementContent("bottom")).Placement(popover.Bottom).Arrow(true)),
+						layout.Box(popoverButton("left", "Left", m, send, placementContent("left")).Placement(popover.Left).ShouldFlip(false).Arrow(true)),
+						layout.Box(popoverButton("right", "Right", m, send, placementContent("right")).Placement(popover.Right).Arrow(true)),
+						layout.Box(popoverButton("start", "Bottom start", m, send, placementContent("bottom start")).Placement(popover.BottomStart).Arrow(true)),
+						layout.Box(popoverButton("end", "Bottom end", m, send, placementContent("bottom end")).Placement(popover.BottomEnd).Arrow(true)),
 					).Gap(12).LineGap(12).AlignMiddle(),
 				),
 				section("Flip and overflow",
-					ui.Row(
+					layout.Row(
 						popoverButton("flip", "Bottom flips near edge", m, send,
-							ui.Text("This popover requests bottom placement. When the current layout has no room below, it resolves upward."),
-						).Placement(ui.PopoverBottom).Arrow(true),
+							text.New("This popover requests bottom placement. When the current layout has no room below, it resolves upward."),
+						).Placement(popover.Bottom).Arrow(true),
 						popoverButton("no-flip", "Flip disabled", m, send,
-							ui.Text("This popover keeps its requested placement even if space is tight."),
-						).Placement(ui.PopoverBottom).ShouldFlip(false).Arrow(true),
+							text.New("This popover keeps its requested placement even if space is tight."),
+						).Placement(popover.Bottom).ShouldFlip(false).Arrow(true),
 					).Gap(12).AlignMiddle(),
 				),
 				section("Interactive",
-					ui.Row(
+					layout.Row(
 						popoverButton("choices", "Pick one", m, send, choicesContent(m, send)).
 							Heading("Quick action").
 							Arrow(true),
 						popoverButton("locked", "Manual close", m, send,
-							ui.Column(
-								ui.Text("Backdrop clicks are ignored for this popover."),
-								ui.Button("locked-close", ui.Text("Close")).Variant(ui.ButtonSecondary).OnClick(func() {
+							layout.Column(
+								text.New("Backdrop clicks are ignored for this popover."),
+								button.New("Close").Variant(button.Secondary).OnClick(func() {
 									send(Close{})
 								}),
 							).Gap(12),
@@ -105,28 +112,23 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 					).Gap(12).AlignMiddle(),
 				),
 			).Gap(18),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func popoverButton(key, label string, m Model, send ui.Send[Msg], content ui.Widget) ui.PopoverWidget {
-	return ui.Popover(
-		key,
-		m.Active == key,
-		ui.Button("trigger-"+key, ui.Text(label)).
-			Variant(ui.ButtonSecondary).
-			OnClick(func() {
-				send(Toggle{Key: key})
-			}),
-		ui.Box(content).Style(ui.Width(260)),
-	).OnOpenChange(func(open bool) {
+func popoverButton(key, label string, m Model, send ui.Send[Msg], content ui.Widget) popover.Widget {
+	return popover.New(button.New(label).Key("trigger-"+key).
+		Variant(button.Secondary).
+		OnClick(func() {
+			send(Toggle{Key: key})
+		}), layout.Box(content).Style(style.New().Width(260))).Key(key).Open(m.Active == key).OnOpenChange(func(open bool) {
 		if !open {
 			send(Close{})
 		}
@@ -134,7 +136,7 @@ func popoverButton(key, label string, m Model, send ui.Send[Msg], content ui.Wid
 }
 
 func placementContent(name string) ui.Widget {
-	return ui.Text(fmt.Sprintf("This popover is placed on the %s side of its trigger.", name))
+	return text.New(fmt.Sprintf("This popover is placed on the %s side of its trigger.", name))
 }
 
 func choicesContent(m Model, send ui.Send[Msg]) ui.Widget {
@@ -142,13 +144,13 @@ func choicesContent(m Model, send ui.Send[Msg]) ui.Widget {
 	if m.Choice != "" {
 		current = "Current: " + m.Choice
 	}
-	return ui.Column(
-		ui.Text(current),
-		ui.Row(
-			ui.Button("choice-alpha", ui.Text("Alpha")).OnClick(func() {
+	return layout.Column(
+		text.New(current),
+		layout.Row(
+			button.New("Alpha").OnClick(func() {
 				send(Pick{Value: "Alpha"})
 			}),
-			ui.Button("choice-beta", ui.Text("Beta")).Variant(ui.ButtonSecondary).OnClick(func() {
+			button.New("Beta").Variant(button.Secondary).OnClick(func() {
 				send(Pick{Value: "Beta"})
 			}),
 		).Gap(8).AlignMiddle(),
@@ -157,7 +159,8 @@ func choicesContent(m Model, send ui.Send[Msg]) ui.Widget {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Popover"),
-		ui.Size(900, 640),
+		Update, View), window.Title("FlowUI Popover"),
+		window.Size(900, 640),
+		window.Theme(base.Light()),
 	)
 }

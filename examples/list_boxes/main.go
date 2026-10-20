@@ -4,7 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/listbox"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -66,70 +72,69 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("list-boxes",
-				ui.Column(
-					ui.Text("FlowUI ListBox").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Members",
-						ui.Box(listBox("members", fieldMember, m.Member, members, send).FullWidth()).
-							Style(ui.Width(420)),
-					),
-					section("Actions",
-						ui.Box(actionList(send)).
-							Style(ui.Width(420)),
-					),
-					section("Sections",
-						ui.Box(sectionedActionList(send)).
-							Style(ui.Width(420)),
-					),
-					section("States",
-						ui.Column(
-							ui.Box(listBox("tools", fieldTool, m.Tool, tools, send).
-								DisabledKeys([]string{"eraser"}).
-								FullWidth()).
-								Style(ui.Width(420)),
-							ui.Box(ui.ListBox("disabled-tools", "brush", tools).
-								DisabledKeys([]string{"eraser"}).
-								FullWidth().
-								Disabled(true)).
-								Style(ui.Width(420)),
-						).Gap(12),
-					),
-					section("Multiple",
-						ui.Box(multiListBox("roles", fieldRoles, m.Roles, roles, send).
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI ListBox").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				section("Members",
+					layout.Box(listBox("members", fieldMember, m.Member, members, send).FullWidth()).
+						Style(style.New().Width(420)),
+				),
+				section("Actions",
+					layout.Box(actionList(send)).
+						Style(style.New().Width(420)),
+				),
+				section("Sections",
+					layout.Box(sectionedActionList(send)).
+						Style(style.New().Width(420)),
+				),
+				section("States",
+					layout.Column(
+						layout.Box(listBox("tools", fieldTool, m.Tool, tools, send).
+							DisabledKeys([]string{"eraser"}).
 							FullWidth()).
-							Style(ui.Width(420)),
-					),
-					section("Scrollable",
-						ui.Box(listBox("cities", fieldCity, m.City, cities, send).
+							Style(style.New().Width(420)),
+						layout.Box(listbox.New(tools).Key("disabled-tools").SelectedKey("brush").
+							DisabledKeys([]string{"eraser"}).
 							FullWidth().
-							MaxHeight(160)).
-							Style(ui.Width(420)),
-					),
-					section("Empty",
-						ui.Box(ui.ListBox("empty", "", nil).
-							EmptyText("No matching items").
-							FullWidth()).
-							Style(ui.Width(420)),
-					),
-				).Gap(18),
+							Disabled(true)).
+							Style(style.New().Width(420)),
+					).Gap(12),
+				),
+				section("Multiple",
+					layout.Box(multiListBox("roles", fieldRoles, m.Roles, roles, send).
+						FullWidth()).
+						Style(style.New().Width(420)),
+				),
+				section("Scrollable",
+					layout.Box(listBox("cities", fieldCity, m.City, cities, send).
+						FullWidth().
+						MaxHeight(160)).
+						Style(style.New().Width(420)),
+				),
+				section("Empty",
+					layout.Box(listbox.New(nil).Key("empty").
+						EmptyText("No matching items").
+						FullWidth()).
+						Style(style.New().Width(420)),
+				),
+			).Gap(18),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func listBox(key string, field Field, selected string, items []ui.ListBoxItem, send ui.Send[Msg]) ui.ListBoxWidget {
-	return ui.ListBox(key, selected, items).
+func listBox(key string, field Field, selected string, items []listbox.Item, send ui.Send[Msg]) listbox.Widget {
+	return listbox.New(items).Key(key).SelectedKey(selected).
 		AllowEmptySelection().
 		OnChange(func(selected string) {
 			send(Msg{
@@ -139,9 +144,9 @@ func listBox(key string, field Field, selected string, items []ui.ListBoxItem, s
 		})
 }
 
-func actionList(send ui.Send[Msg]) ui.ListBoxWidget {
-	return ui.ListBox("actions", "", actions).
-		SelectionMode(ui.ListBoxSelectionNone).
+func actionList(send ui.Send[Msg]) listbox.Widget {
+	return listbox.New(actions).Key("actions").
+		SelectionMode(listbox.SelectionNone).
 		HideIndicator().
 		OnAction(func(action string) {
 			send(Msg{
@@ -151,9 +156,9 @@ func actionList(send ui.Send[Msg]) ui.ListBoxWidget {
 		})
 }
 
-func sectionedActionList(send ui.Send[Msg]) ui.ListBoxWidget {
-	return ui.ListBoxSections("sectioned-actions", "", actionSections).
-		SelectionMode(ui.ListBoxSelectionNone).
+func sectionedActionList(send ui.Send[Msg]) listbox.Widget {
+	return listbox.Sections("sectioned-actions", "", actionSections).
+		SelectionMode(listbox.SelectionNone).
 		HideIndicator().
 		OnAction(func(action string) {
 			send(Msg{
@@ -163,8 +168,8 @@ func sectionedActionList(send ui.Send[Msg]) ui.ListBoxWidget {
 		})
 }
 
-func multiListBox(key string, field Field, selected []string, items []ui.ListBoxItem, send ui.Send[Msg]) ui.ListBoxWidget {
-	return ui.ListBoxMultiple(key, selected, items).
+func multiListBox(key string, field Field, selected []string, items []listbox.Item, send ui.Send[Msg]) listbox.Widget {
+	return listbox.New(items).Key(key).SelectedKeys(selected).
 		OnSelectionChange(func(selected []string) {
 			send(Msg{
 				Field: field,
@@ -174,60 +179,60 @@ func multiListBox(key string, field Field, selected []string, items []ui.ListBox
 }
 
 func avatar(letter string) ui.Widget {
-	return ui.Box(ui.Text(letter).Size(14)).
-		Style(ui.Width(28).Height(28)).
-		Align(ui.AlignCenter)
+	return layout.Box(text.New(letter).Size(14)).
+		Style(style.New().Width(28).Height(28)).
+		Align(layout.AlignCenter)
 }
 
 func statusIndicator(selected bool) ui.Widget {
 	if !selected {
 		return nil
 	}
-	return ui.Text("on").Size(11)
+	return text.New("on").Size(11)
 }
 
-var members = []ui.ListBoxItem{
+var members = []listbox.Item{
 	{Key: "bob", Label: "Bob", Description: "bob@flowui.dev", Leading: avatar("B")},
 	{Key: "fred", Label: "Fred", Description: "fred@flowui.dev", Leading: avatar("F")},
 	{Key: "martha", Label: "Martha", Description: "martha@flowui.dev", Leading: avatar("M")},
 }
 
-var actions = []ui.ListBoxItem{
-	{Key: "new-file", Label: "New file", Description: "Create a new file", Trailing: ui.Text("Ctrl+N").Size(12)},
-	{Key: "edit-file", Label: "Edit file", Description: "Make changes", Trailing: ui.Text("Ctrl+E").Size(12)},
-	{Key: "delete-file", Label: "Delete file", Description: "Move to trash", Trailing: ui.Text("Ctrl+Shift+D").Size(12), Variant: ui.ListBoxItemDanger},
+var actions = []listbox.Item{
+	{Key: "new-file", Label: "New file", Description: "Create a new file", Trailing: text.New("Ctrl+N").Size(12)},
+	{Key: "edit-file", Label: "Edit file", Description: "Make changes", Trailing: text.New("Ctrl+E").Size(12)},
+	{Key: "delete-file", Label: "Delete file", Description: "Move to trash", Trailing: text.New("Ctrl+Shift+D").Size(12), Variant: listbox.ItemDanger},
 }
 
-var actionSections = []ui.ListBoxSection{
+var actionSections = []listbox.Section{
 	{
 		Title: "Actions",
-		Items: []ui.ListBoxItem{
-			{Key: "new-file", Label: "New file", Description: "Create a new file", Trailing: ui.Text("Ctrl+N").Size(12)},
-			{Key: "edit-file", Label: "Edit file", Description: "Make changes", Trailing: ui.Text("Ctrl+E").Size(12)},
+		Items: []listbox.Item{
+			{Key: "new-file", Label: "New file", Description: "Create a new file", Trailing: text.New("Ctrl+N").Size(12)},
+			{Key: "edit-file", Label: "Edit file", Description: "Make changes", Trailing: text.New("Ctrl+E").Size(12)},
 		},
 	},
 	{
 		Title: "Danger zone",
-		Items: []ui.ListBoxItem{
-			{Key: "delete-file", Label: "Delete file", Description: "Move to trash", Trailing: ui.Text("Ctrl+Shift+D").Size(12), Variant: ui.ListBoxItemDanger},
+		Items: []listbox.Item{
+			{Key: "delete-file", Label: "Delete file", Description: "Move to trash", Trailing: text.New("Ctrl+Shift+D").Size(12), Variant: listbox.ItemDanger},
 		},
 	},
 }
 
-var tools = []ui.ListBoxItem{
+var tools = []listbox.Item{
 	{Key: "brush", Label: "Brush"},
 	{Key: "eraser", Label: "Eraser"},
 	{Key: "legacy", Label: "Legacy tool", Description: "Unavailable for this document", Disabled: true},
 }
 
-var roles = []ui.ListBoxItem{
+var roles = []listbox.Item{
 	{Key: "read", Label: "Read", Description: "View project content", Indicator: statusIndicator},
 	{Key: "comment", Label: "Comment", Description: "Discuss changes", Indicator: statusIndicator},
 	{Key: "write", Label: "Write", Description: "Create and edit content", Indicator: statusIndicator},
-	{Key: "admin", Label: "Admin", Description: "Manage access", Variant: ui.ListBoxItemDanger, Indicator: statusIndicator},
+	{Key: "admin", Label: "Admin", Description: "Manage access", Variant: listbox.ItemDanger, Indicator: statusIndicator},
 }
 
-var cities = []ui.ListBoxItem{
+var cities = []listbox.Item{
 	{Key: "beijing", Label: "Beijing", Description: "China north region"},
 	{Key: "shanghai", Label: "Shanghai", Description: "China east region"},
 	{Key: "shenzhen", Label: "Shenzhen", Description: "China south region"},
@@ -245,7 +250,8 @@ func main() {
 		City:   "shanghai",
 		Roles:  []string{"read", "comment"},
 	},
-		Update, View), ui.Title("FlowUI ListBox"),
-		ui.Size(900, 720),
+		Update, View), window.Title("FlowUI ListBox"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

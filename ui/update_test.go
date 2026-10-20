@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 
 	internalexplorer "github.com/qianniancn/flowui/internal/explorer"
@@ -32,17 +34,11 @@ func TestDoContextReturnsError(t *testing.T) {
 	}
 }
 
-func TestRuntimeCmdBindsWindowExplorerService(t *testing.T) {
+func TestEventWindowDecoratesEffectContextWithExplorerService(t *testing.T) {
 	service := internalexplorer.New(nil)
-	var got *internalexplorer.Service
-	cmd := runtimeCmd(func(ctx context.Context, _ Send[struct{}]) error {
-		got = internalexplorer.FromContext(ctx)
-		return nil
-	}, service)
-	if err := cmd(context.Background(), func(struct{}) {}); err != nil {
-		t.Fatal(err)
-	}
-	if got != service {
+	window := &platformEventWindow{explorer: service}
+	ctx := window.DecorateEffectContext(context.Background())
+	if got := internalexplorer.FromContext(ctx); got != service {
 		t.Fatalf("explorer service = %p, want %p", got, service)
 	}
 }
@@ -82,6 +78,76 @@ func TestMapCmdPreservesNilAndRejectsNilMapper(t *testing.T) {
 		}
 	}()
 	MapCmd(Do(func(Send[int]) {}), (func(int) string)(nil))
+}
+
+type batchContextKey struct{}
+
+func TestBatchRunsCommandsAndPreservesErrors(t *testing.T) {
+	ctx := context.WithValue(context.Background(), batchContextKey{}, "batch")
+	var got []int
+	var mu sync.Mutex
+	batch := Batch(
+		DoContext(func(gotCtx context.Context, send Send[int]) error {
+			if gotCtx.Value(batchContextKey{}) != "batch" {
+				t.Errorf("batch context was not preserved")
+			}
+			send(1)
+			return nil
+		}),
+		DoContext(func(_ context.Context, send Send[int]) error {
+			send(2)
+			return errors.New("batch failed")
+		}),
+	)
+	err := batch(ctx, func(value int) {
+		mu.Lock()
+		got = append(got, value)
+		mu.Unlock()
+	})
+	if err == nil || err.Error() != "batch failed" {
+		t.Fatalf("batch error = %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("batch messages = %v, want two messages", got)
+	}
+}
+
+func TestBatchIgnoresNilCommands(t *testing.T) {
+	if Batch[int]() != nil || Batch[int](nil, nil) != nil {
+		t.Fatal("empty batch was not nil")
+	}
+	command := Do(func(Send[int]) {})
+	if Batch[int](nil, command) == nil {
+		t.Fatal("single active command was discarded")
+	}
+}
+
+func TestMapSubscriptionMapsMessagesAndPreservesKey(t *testing.T) {
+	child := Subscribe("events", func(_ context.Context, send Send[int]) error {
+		send(7)
+		return errors.New("subscription failed")
+	})
+	parent := MapSubscription(child, func(value int) string { return fmt.Sprintf("value=%d", value) })
+	if parent.Key != "events" {
+		t.Fatalf("mapped subscription key = %q", parent.Key)
+	}
+	var got string
+	err := parent.Run(context.Background(), func(value string) { got = value })
+	if got != "value=7" || err == nil || err.Error() != "subscription failed" {
+		t.Fatalf("mapped subscription = %q, %v", got, err)
+	}
+}
+
+func TestMapSubscriptionPreservesZeroAndRejectsNilMapper(t *testing.T) {
+	if mapped := MapSubscription[int, string](Subscription[int]{}, nil); mapped.Run != nil || mapped.Key != "" {
+		t.Fatal("zero subscription was not preserved")
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("nil subscription mapper did not panic")
+		}
+	}()
+	MapSubscription(Subscribe("events", func(context.Context, Send[int]) error { return nil }), (func(int) string)(nil))
 }
 
 func TestSubscribeValidatesDefinition(t *testing.T) {

@@ -6,7 +6,15 @@ import (
 	"runtime"
 
 	"gioui.org/font"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/card"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 //go:embed font/subset/SourceHanSansSC-Regular-Subset.otf
@@ -30,7 +38,7 @@ type Msg any
 
 type ToggleFont struct{}
 
-func update(application *ui.Application, systemTheme, customTheme ui.Theme) ui.Update[Model, Msg] {
+func update(application *ui.Application, systemTheme, customTheme theme.Theme) ui.Update[Model, Msg] {
 	return func(model *Model, msg Msg) ui.Cmd[Msg] {
 		switch msg.(type) {
 		case ToggleFont:
@@ -51,98 +59,96 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		fontStatus = "bundled Source Han Sans SC"
 	}
 
-	return ui.Scroll(
-		"font-example",
-		ui.Box(
-			ui.Column(
-				ui.Row(
-					ui.Expanded(ui.Column(
-						ui.Text("FlowUI Font Example").Size(26).Weight(font.Bold),
-						ui.Text(fmt.Sprintf("Current font: %s", fontStatus)).Size(14),
-					).Gap(4)),
-					ui.Button("toggle", ui.Text("Toggle font source")).
-						OnClick(func() {
-							send(ToggleFont{})
-						}).
-						Variant(ui.ButtonPrimary),
-				).AlignMiddle(),
-				ui.Divider(),
-				ui.Text("Weight samples").Size(18).Weight(font.Bold),
-				ui.Grid(3,
-					weightCard("Regular", font.Normal, "中文文本示例：常规字重。"),
-					weightCard("Medium", font.Medium, "中文文本示例：中等字重。"),
-					weightCard("Bold", font.Bold, "中文文本示例：加粗字重。"),
-				).Gap(12),
-				ui.Text("Font size samples").Size(18).Weight(font.Bold),
-				ui.Grid(3,
-					sizeCard("12 sp", 12),
-					sizeCard("14 sp", 14),
-					sizeCard("16 sp", 16),
-					sizeCard("20 sp", 20),
-					sizeCard("24 sp", 24),
-					sizeCard("32 sp", 32),
-				).Gap(12),
-				ui.Text("Latin and symbols: FlowUI 123 !? … → ✓ ©").
-					Size(14).
-					Align(ui.TextAlignCenter),
-				ui.Text("Chinese text is included only to verify CJK glyph coverage.").
-					Size(14).
-					Align(ui.TextAlignCenter),
-			).Gap(16),
-		).Style(ui.FillWidth().MaxWidth(1040).Padding(24)),
+	return layout.Scroll(layout.Box(
+		layout.Column(
+			layout.Row(
+				layout.Expanded(layout.Column(
+					text.New("FlowUI Font Example").Size(26).Weight(font.Bold),
+					text.New(fmt.Sprintf("Current font: %s", fontStatus)).Size(14),
+				).Gap(4)),
+				button.New("Toggle font source").
+					OnClick(func() {
+						send(ToggleFont{})
+					}).
+					Variant(button.Primary),
+			).AlignMiddle(),
+			layout.Divider(),
+			text.New("Weight samples").Size(18).Weight(font.Bold),
+			layout.Grid(3,
+				weightCard("Regular", font.Normal, "中文文本示例：常规字重。"),
+				weightCard("Medium", font.Medium, "中文文本示例：中等字重。"),
+				weightCard("Bold", font.Bold, "中文文本示例：加粗字重。"),
+			).Gap(12),
+			text.New("Font size samples").Size(18).Weight(font.Bold),
+			layout.Grid(3,
+				sizeCard("12 sp", 12),
+				sizeCard("14 sp", 14),
+				sizeCard("16 sp", 16),
+				sizeCard("20 sp", 20),
+				sizeCard("24 sp", 24),
+				sizeCard("32 sp", 32),
+			).Gap(12),
+			text.New("Latin and symbols: FlowUI 123 !? … → ✓ ©").
+				Size(14).
+				Align(text.AlignCenter),
+			text.New("Chinese text is included only to verify CJK glyph coverage.").
+				Size(14).
+				Align(text.AlignCenter),
+		).Gap(16),
+	).Style(style.New().FillWidth().MaxWidth(1040).Padding(24)),
 	).Vertical()
 }
 
 func weightCard(label string, weight font.Weight, chinese string) ui.Widget {
-	return ui.Card(
-		ui.Column(
-			ui.Text(label+" weight").Size(17).Weight(weight),
-			ui.Text("The quick brown fox jumps over the lazy dog.").Size(15).Weight(weight),
-			ui.Text(chinese).Size(15).Weight(weight),
+	return card.New(
+		layout.Column(
+			text.New(label+" weight").Size(17).Weight(weight),
+			text.New("The quick brown fox jumps over the lazy dog.").Size(15).Weight(weight),
+			text.New(chinese).Size(15).Weight(weight),
 		).Gap(8),
-	).Variant(ui.CardSecondary)
+	).Variant(card.Secondary)
 }
 
 func sizeCard(label string, size float32) ui.Widget {
-	return ui.Card(
-		ui.Column(
-			ui.Text(label).Size(13),
-			ui.Text("FlowUI typography").Size(size),
+	return card.New(
+		layout.Column(
+			text.New(label).Size(13),
+			text.New("FlowUI typography").Size(size),
 		).Gap(8),
-	).Variant(ui.CardSecondary)
+	).Variant(card.Secondary)
 }
 
-func systemTheme() ui.Theme {
-	theme := ui.DefaultTheme()
+func systemTheme() theme.Theme {
+	result := base.Light()
 	if runtime.GOOS == "windows" {
 		// Keep Windows UI text consistent with the system Chinese interface.
-		theme.Typography.Typeface = "Microsoft YaHei, Segoe UI, sans-serif"
+		result.Typography.Typeface = "Microsoft YaHei, Segoe UI, sans-serif"
 	}
-	ui.SyncMaterialTheme(&theme)
-	return theme
+	theme.SyncMaterialTheme(&result)
+	return result
 }
 
 func main() {
 	// Parse the bundled Regular face once and share it with the custom theme.
-	regularFaces, err := ui.ParseFontCollection(regularFont)
+	regularFaces, err := style.ParseFontCollection(regularFont)
 	if err != nil {
 		panic(fmt.Sprintf("failed to parse regular font: %v", err))
 	}
 
 	/*
-		mediumFaces, err := ui.ParseFontCollection(mediumFont)
+		mediumFaces, err := style.ParseFontCollection(mediumFont)
 		if err != nil {
 			panic(fmt.Sprintf("failed to parse medium font: %v", err))
 		}
 
-		boldFaces, err := ui.ParseFontCollection(boldFont)
+		boldFaces, err := style.ParseFontCollection(boldFont)
 		if err != nil {
 			panic(fmt.Sprintf("failed to parse bold font: %v", err))
 		}
 	*/
 
 	systemFontTheme := systemTheme()
-	customTheme := ui.DefaultTheme()
+	customTheme := base.Light()
 
 	// Configure the subset font collection and keep the sample deterministic.
 	customTheme.Fonts.Collection = regularFaces
@@ -161,9 +167,9 @@ func main() {
 	application.Run(ui.NewWindow(
 		"fonts",
 		program,
-		ui.Title("FlowUI Font Example"),
-		ui.Size(900, 700),
-		ui.WithTheme(customTheme),
-		ui.CenterOnStart(),
+		window.Title("FlowUI Font Example"),
+		window.Size(900, 700),
+		window.Theme(customTheme),
+		window.CenterOnStart(),
 	))
 }

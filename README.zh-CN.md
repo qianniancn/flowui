@@ -9,14 +9,21 @@
 [![License](https://img.shields.io/github/license/qianniancn/flowui)](LICENSE)
 
 FlowUI 是一个基于 [Gio](https://gioui.org/) 构建的 Go 桌面 UI 框架。
-它通过统一的公开 `ui` 包，提供类型化 MVU 应用模型、完整组件集、声明式样式、
+它通过职责清晰的公开包，提供类型化 MVU 运行时、官方组件、布局原语、声明式样式、
 窗口管理、异步副作用以及可重复的 UI 测试能力。
 
 ```go
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/window"
+)
 ```
 
-![FlowUI 组件总览](docs/assets/components-gallery.png)
+![FlowUI 组件展示](docs/assets/showcase-light.png)
 
 ## 核心能力
 
@@ -48,7 +55,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -74,15 +86,15 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Column(
-			ui.Text("FlowUI Counter").Size(24),
-			ui.Text(fmt.Sprintf("Count: %d", model.Count)),
-			ui.Row(
-				ui.Button("decrement", ui.Text("-1")).OnClick(func() {
+	return layout.Center(
+		layout.Column(
+			text.New("FlowUI Counter").Size(24),
+			text.New(fmt.Sprintf("Count: %d", model.Count)),
+			layout.Row(
+				button.New("-1").OnClick(func() {
 					send(Dec{})
 				}),
-				ui.Button("increment", ui.Text("+1")).OnClick(func() {
+				button.New("+1").OnClick(func() {
 					send(Inc{})
 				}),
 			).Gap(8),
@@ -92,8 +104,9 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{}, Update, View),
-		ui.Title("FlowUI Counter"),
-		ui.Size(640, 480),
+		window.Theme(base.Light()),
+		window.Title("FlowUI Counter"),
+		window.Size(640, 480),
 	)
 }
 ```
@@ -104,7 +117,6 @@ func main() {
 go run .
 ```
 
-仓库内的同款应用位于 [`examples/counter`](examples/counter)。
 需要分步讲解时，请阅读[快速开始](https://qianniancn.github.io/flowui/guide/01-快速开始/)。
 
 ## 核心模型
@@ -132,69 +144,73 @@ Command 在事件循环外执行，并通过 `ui.Send` 返回结果。订阅用�
 
 | 分类 | 包含的 API |
 | --- | --- |
-| 内容 | `Text`、`Label`、`Description`、`Image`、`Avatar`、`Badge`、`Chip` |
-| 操作 | `Button`、`ButtonGroup`、`ToggleButton`、`CloseButton`、`Action` |
-| 表单 | `Input`、`TextArea`、`Checkbox`、`Switch`、`RadioGroup`、`Select`、`ComboBox`、日期和颜色选择器 |
-| 导航 | `Tabs`、`Sidebar`、`Tree`、`Menu`、`Menubar`、`Pagination`、`Toolbar` |
-| 浮层 | `Dropdown`、`ContextMenu`、`Popover`、`Tooltip`、`Modal`、`AlertDialog`、`Toast` |
-| 数据与反馈 | `Table`、`ProgressBar`、`ProgressCircle`、`Meter`、`Spinner`、`Slider`、图表、`Heatmap`、`GanttChart` |
-| 布局 | `Box`、`Surface`、`Card`、`Row`、`Column`、`Grid`、`Scroll`、`SplitPane`、`Stack`、`Overlay` |
+| 内容 | `text.New`、`label.New`、`description.New`、`image.New`、`avatar.New`、`badge.New`、`chip.New` |
+| 操作 | `button.New`、`button.Group`、`togglebutton.New`、`closebutton.New` |
+| 表单 | `input.New`、`input.NewTextArea`、`checkbox.New`、`switchcontrol.New`、`radiogroup.New`、`selectfield.New`、`combobox.New`、日期和颜色选择器 |
+| 导航 | `tabs.New`、`sidebar.New`、`tree.New`、`menu.New`、`menubar.New`、`pagination.New`、`toolbar.New` |
+| 浮层 | `dropdown.New`、`menu.ContextMenu`、`popover.New`、`tooltip.New`、`modal.New`、`alertdialog.New`、`toast.NewItem` |
+| 数据与反馈 | `table.New`、`progress.Bar`、`progress.Circle`、`progress.Meter`、`spinner.New`、`slider.New`、图表、`heatmap.New`、`gantt.New` |
+| 布局 | `layout.Box`、`surface.New`、`card.New`、`layout.Row`、`layout.Column`、`layout.Grid`、`layout.Scroll`、`layout.SplitPane`、`layout.Stack`、`layout.Overlay` |
 
 可以阅读[组件一览](https://qianniancn.github.io/flowui/guide/06-组件一览/)，
-或直接运行组件总览：
-
-```bash
-go run ./examples/components
-```
+了解完整的组件目录。
 
 ## 样式与主题
 
-Style 是不可变声明，可以使用主题令牌并响应运行时状态。同一份声明会自动适配当前的
+Style 是不可变声明，从当前主题取值并响应运行时状态。同一份声明会自动适配当前的
 浅色或深色主题：
 
 ```go
-primary := ui.Background(ui.TokenAccent).
-	TextColor(ui.TokenAccentForeground).
-	Radius(8).
-	Cursor(ui.CursorPointer).
-	When(ui.Hovered, ui.Background(ui.TokenAccentHover)).
-	When(ui.Pressed, ui.Background(ui.TokenAccentPressed).Scale(0.96, 0.96))
+activeTheme := base.Light()
 
-save := ui.Button("save", ui.Text("Save")).Style(primary)
+primary := style.New().
+	Background(style.Solid(activeTheme.Palette.Accent)).
+	TextColor(style.Solid(activeTheme.Palette.AccentForeground)).
+	Radius(8).
+	Cursor(style.CursorPointer).
+	On(style.Hovered, style.New().Background(style.Solid(activeTheme.Palette.AccentHover))).
+	On(style.Pressed, style.New().Background(style.Solid(activeTheme.Palette.AccentPressed)).Scale(0.96))
+
+save := button.New("Save").Style(primary)
 ```
 
-运行时默认使用 `ui.DefaultTheme()`。通过 `ui.WithTheme(ui.DarkTheme())` 替换主题，
-或用 `ui.CustomizeTheme` 做局部调整。复合控件通过 `PartContent`、`PartTrack`、
-`PartIndicator`、`PartPanel` 等命名部件提供精确样式入口。FlowUI 内置中英文组件
-文案，`ui.LanguageAuto` 会跟随系统语言。
+运行时必须显式选择实现了完整 Style Provider 的主题，例如
+`window.Theme(base.Light())` 或 `window.Theme(base.Dark())`；选定主题后可以用
+`window.CustomizeTheme` 做局部调整。复合控件通过 `style.PartContent`、
+`style.PartTrack`、`style.PartIndicator`、`style.PartPanel` 等命名部件提供精确样式入口。FlowUI 内置中英文组件
+文案，`window.LanguageAuto` 会跟随系统语言。
 
 [样式与主题](https://qianniancn.github.io/flowui/guide/05-样式与主题/)介绍了优先级、
 命名部件、颜色、几何、过渡动画和字体配置。
 
 FlowUI 默认使用系统字体回退。需要固定渲染结果时，可以用
-`ui.ParseFontCollection` 解析随程序打包的 TTF、OTF 或 TTC，再放入
+`style.ParseFontCollection` 解析随程序打包的 TTF、OTF 或 TTC，再放入
 `theme.Fonts.Collection`，并将 `theme.Fonts.SystemFonts` 设为 `false`。
 
-## 示例
+核心只维护 `theme/base` 一套默认设计，支持明暗两种模式。
+应用可以直接使用 `base.Light()` / `base.Dark()`，也可以基于公开的主题 API 构建外部 Provider。
 
-下列目录都是可以直接运行的程序：
+## 公开包
 
-| 示例 | 内容 |
+| 包 | 职责 |
 | --- | --- |
-| [`examples/counter`](examples/counter) | 最小的类型化 MVU 应用 |
-| [`examples/form`](examples/form) | 表单控件与验证 |
-| [`examples/async`](examples/async) | Command 和异步结果 |
-| [`examples/components`](examples/components) | 组件总览 |
-| [`examples/grid_layout`](examples/grid_layout) | 固定列数和响应式网格布局 |
-| [`examples/fonts`](examples/fonts) | 系统字体、自定义字体与字重 |
-| [`examples/custom_widgets`](examples/custom_widgets) | 自定义复合组件和画布组件 |
-| [`examples/multi_windows`](examples/multi_windows) | 由应用管理的多窗口 |
-| [`examples/file_dialogs`](examples/file_dialogs) | 原生打开和保存文件对话框 |
-| [`examples/notifications`](examples/notifications) | 原生桌面通知 |
-| [`examples/systray_ui`](examples/systray_ui) | FlowUI 窗口与原生系统托盘 |
+| `ui` | MVU 程序、上下文、Widget 契约和应用生命周期 |
+| `widget/<component>` | 官方完整组件 |
+| `layout` | 布局容器和通用盒子宿主 |
+| `style` | 不可变样式声明、级联和令牌 |
+| `theme/base` | 默认明暗主题与完整 Provider |
+| `theme` | 主题值、视觉协议与扩展 API |
+| `draw` | 底层画刷、边框、阴影、路径和变换 |
+| `animation` | 可复用的补间、弹簧和时间线原语 |
+| `window` | 原生窗口选项和本地化配置 |
+| `uitest` | 确定性的组件和应用测试工具 |
 
-[`examples/`](examples/) 中还有图表、动画、菜单、浮层、布局、窗口外壳以及单个控件的
-专项示例。
+推荐先运行[全部组件展示](examples/showcase/README.md)：`go run ./examples/showcase`。
+65 个页面覆盖全部公开 widget 包，支持搜索、交互、用法代码、明暗主题和窄窗目录。
+
+默认主题的专项示例位于当前 module：`go run ./examples/counter`、
+`go run ./examples/buttons`、`go run ./examples/inputs`、`go run ./examples/style-gallery`，
+以及演示原生关窗确认的 `go run ./examples/close_guard`。
 
 ## 文档
 
@@ -208,8 +224,8 @@ FlowUI 默认使用系统字体回退。需要固定渲染结果时，可以用
 | [`systray/README.md`](systray/README.md) | 跨平台托盘生命周期与原生菜单 |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 开发流程和贡献规范 |
 
-应用使用 `github.com/qianniancn/flowui/ui` 构建界面和 MVU 运行时；
-`explorer`、`notify`、`systray` 是可选平台服务。应用不得直接使用 `internal`
+应用使用 `ui` 构建 MVU 和运行时，按职责组合 `widget/<component>`、`layout`、`style`、`draw`、
+`window`。`explorer`、`notify`、`systray` 是可选平台服务。应用不得直接使用 `internal`
 下的包。仓库根目录有意不提供 Go package。
 
 ## 测试

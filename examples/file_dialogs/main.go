@@ -7,7 +7,15 @@ import (
 	"io"
 
 	"github.com/qianniancn/flowui/explorer"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/input"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 const maxFileSize = 4 << 20
@@ -123,29 +131,29 @@ func finishDialog(send ui.Send[Msg], operation string, err error) error {
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	busy := model.Operation != ""
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("Native File Dialogs").Size(24),
-				ui.Description(model.Status),
-				ui.TextArea("content", model.Content).
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("Native File Dialogs").Size(24),
+				description.New(model.Status),
+				input.NewTextArea(model.Content).Key("content").
 					Rows(12).
 					FullWidth().
 					Placeholder("Document content").
 					OnChange(func(value string) { send(EditContent(value)) }),
-				ui.Row(
-					ui.Button("open", ui.Text("Open file")).
-						Variant(ui.ButtonSecondary).
+				layout.Row(
+					button.New("Open file").
+						Variant(button.Secondary).
 						Disabled(busy).
 						Loading(model.Operation == "open").
 						OnClick(func() { send(OpenFile{}) }),
-					ui.Button("save", ui.Text("Save as")).
+					button.New("Save as").
 						Disabled(busy).
 						Loading(model.Operation == "save").
 						OnClick(func() { send(SaveFile{}) }),
 				).Gap(10),
 			).Gap(14),
-		).Style(ui.Width(620).Padding(24)),
+		).Style(style.New().Width(620).Padding(24)),
 	)
 }
 
@@ -154,7 +162,8 @@ func main() {
 		Content: "FlowUI native file dialogs are bound to this window.",
 		Status:  "Ready",
 	}, Update,
-		View), ui.Title("FlowUI Explorer"),
-		ui.Size(760, 620),
+		View), window.Title("FlowUI Explorer"),
+		window.Size(760, 620),
+		window.Theme(base.Light()),
 	)
 }

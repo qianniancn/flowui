@@ -1,0 +1,224 @@
+package core
+
+import (
+	"image"
+	"runtime"
+	"testing"
+	"time"
+
+	"gioui.org/io/event"
+	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/widget"
+)
+
+func TestPressSnapshotDistinguishesPointerClicks(t *testing.T) {
+	start := time.Unix(1, 0)
+	completed := widget.Press{Position: image.Pt(10, 12), Start: start, End: start.Add(time.Millisecond)}
+	tests := []struct {
+		name    string
+		before  []widget.Press
+		after   []widget.Press
+		visible bool
+	}{
+		{name: "programmatic", visible: true},
+		{name: "keyboard after old pointer", before: []widget.Press{completed}, after: []widget.Press{completed}, visible: true},
+		{name: "pointer release", before: []widget.Press{{Position: completed.Position, Start: start}}, after: []widget.Press{completed}},
+		{name: "batched pointer click", after: []widget.Press{completed}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			snapshot := SnapshotPresses(test.before)
+			if got := snapshot.ClickFocusVisible(test.after); got != test.visible {
+				t.Fatalf("focus visible = %v, want %v", got, test.visible)
+			}
+		})
+	}
+}
+
+func BenchmarkPressSnapshot(b *testing.B) {
+	start := time.Unix(1, 0)
+	completed := widget.Press{Position: image.Pt(10, 12), Start: start, End: start.Add(time.Millisecond)}
+	for _, benchmark := range []struct {
+		name   string
+		before []widget.Press
+		after  []widget.Press
+	}{
+		{name: "programmatic"},
+		{name: "keyboard", before: []widget.Press{completed}, after: []widget.Press{completed}},
+		{name: "pointer-release", before: []widget.Press{{Position: completed.Position, Start: start}}, after: []widget.Press{completed}},
+		{name: "batched-pointer", after: []widget.Press{completed}},
+	} {
+		b.Run(benchmark.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				snapshot := SnapshotPresses(benchmark.before)
+				runtime.KeepAlive(snapshot.ClickFocusVisible(benchmark.after))
+			}
+		})
+	}
+}
+
+func TestFocusPreserveLastsOnlyForCurrentFrame(t *testing.T) {
+	var focus Focus
+	focus.BeginFrame()
+	focus.Preserve()
+	focus.Preserve()
+	if !focus.preserve {
+		t.Fatal("Preserve did not retain focus for the current frame")
+	}
+
+	focus.BeginFrame()
+	if focus.preserve {
+		t.Fatal("focus preservation leaked into the next frame")
+	}
+}
+
+func TestFocusPreservePreventsPointerFocusClear(t *testing.T) {
+	tests := []struct {
+		name     string
+		preserve bool
+		focused  bool
+	}{
+		{name: "preserved", preserve: true, focused: true},
+		{name: "not preserved", focused: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tag := new(int)
+			router := new(input.Router)
+			registerFocusTestTarget(router, tag, nil)
+			router.Source().Execute(key.FocusCmd{Tag: tag})
+			if !router.Source().Focused(tag) {
+				t.Fatal("failed to establish initial focus")
+			}
+
+			var focus Focus
+			focus.BeginFrame()
+			focus.pointerPress = true
+			if test.preserve {
+				focus.Preserve()
+			}
+			registerFocusTestTarget(router, tag, &focus)
+			if got := router.Source().Focused(tag); got != test.focused {
+				t.Fatalf("focused = %v, want %v", got, test.focused)
+			}
+		})
+	}
+}
+
+func TestPointerFocusOriginSurvivesDelayedFocus(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.Request(tag, FocusOriginPointer)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if focus.Observe(tag, true) {
+		t.Fatal("delayed pointer focus was reported as keyboard-visible")
+	}
+	focus.CommitObservations()
+}
+
+func TestFocusOnPressRecordsPointerOrigin(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.OnPress(tag, []widget.Press{{}}, 0)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if focus.Observe(tag, true) {
+		t.Fatal("pointer press focus was reported as keyboard-visible")
+	}
+	focus.CommitObservations()
+}
+
+func TestKeyboardFocusOriginRemainsVisible(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.Request(tag, FocusOriginKeyboard)
+	for range 4 {
+		focus.BeginFrame()
+	}
+	if !focus.Observe(tag, true) {
+		t.Fatal("delayed keyboard focus was hidden")
+	}
+	focus.CommitObservations()
+}
+
+func TestDifferentFocusedTargetClearsStaleOrigin(t *testing.T) {
+	var focus Focus
+	pointerTarget := new(int)
+	keyboardTarget := new(int)
+	focus.Request(pointerTarget, FocusOriginPointer)
+	focus.ApplyFrameCommands(layout.Context{Ops: new(op.Ops)})
+	focus.BeginFrame()
+	if !focus.Observe(keyboardTarget, true) {
+		t.Fatal("unrequested focus did not default to keyboard-visible")
+	}
+	focus.CommitObservations()
+	focus.BeginFrame()
+	focus.Observe(keyboardTarget, false)
+	if !focus.Observe(pointerTarget, true) {
+		t.Fatal("stale pointer origin hid a later native keyboard focus")
+	}
+	focus.CommitObservations()
+}
+
+func TestCurrentlyFocusedTargetDoesNotClearNewRequest(t *testing.T) {
+	var focus Focus
+	current := new(int)
+	next := new(int)
+	focus.BeginFrame()
+	focus.Observe(current, true)
+	focus.CommitObservations()
+	focus.Request(next, FocusOriginPointer)
+	if !focus.Observe(current, true) {
+		t.Fatal("current keyboard focus changed before the pending command applied")
+	}
+	if focus.Observe(next, true) {
+		t.Fatal("current focus cleared the pending pointer origin")
+	}
+	focus.CommitObservations()
+}
+
+func TestCommitObservationsClearsLostFocus(t *testing.T) {
+	var focus Focus
+	tag := new(int)
+	focus.BeginFrame()
+	focus.Observe(tag, true)
+	focus.CommitObservations()
+	focus.BeginFrame()
+	if focus.Observe(tag, false) {
+		t.Fatal("unfocused target reported a visible focus ring")
+	}
+	focus.CommitObservations()
+	if focus.active.tag != nil {
+		t.Fatal("lost focus remained active after observations were committed")
+	}
+	focus.active = focusTarget{tag: tag, origin: FocusOriginPointer}
+	focus.CommitObservations()
+	if focus.active.tag != tag {
+		t.Fatal("committing the same observations twice changed focus again")
+	}
+}
+
+func registerFocusTestTarget(router *input.Router, tag event.Tag, focus *Focus) {
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Exact(image.Pt(100, 100)),
+		Source:      router.Source(),
+		Ops:         &ops,
+	}
+	event.Op(gtx.Ops, tag)
+	gtx.Event(key.FocusFilter{Target: tag})
+	if focus != nil {
+		focus.ApplyFrameCommands(gtx)
+	}
+	router.Frame(&ops)
+}

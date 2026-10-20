@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/qianniancn/flowui/layout"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
 )
 
 type Model struct {
@@ -47,14 +50,14 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Text(fmt.Sprintf("Count: %d", model.Count)).Size(24),
-		ui.Row(
-			ui.Button("increment", ui.Text("Increment")).OnClick(func() {
+	return layout.Column(
+		text.New(fmt.Sprintf("Count: %d", model.Count)).Size(24),
+		layout.Row(
+			button.New("Increment").OnClick(func() {
 				send(Increment{})
 			}),
-			ui.Button("load", ui.Text("Load saved value")).
-				Variant(ui.ButtonSecondary).
+			button.New("Load saved value").
+				Variant(button.Secondary).
 				Loading(model.Loading).
 				OnClick(func() {
 					send(Load{})

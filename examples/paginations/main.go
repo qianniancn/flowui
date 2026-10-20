@@ -1,6 +1,14 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/pagination"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct {
 	Page int
@@ -18,38 +26,39 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Pagination").Size(24),
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Pagination").Size(24),
 				section("Controlled with summary",
-					ui.Pagination("controlled", model.Page, 12).
-						Summary(ui.Text("61 to 72 of 144 results").Size(14)).
+					pagination.New("controlled", model.Page, 12).
+						Summary(text.New("61 to 72 of 144 results").Size(14)).
 						OnChange(func(page int) { send(Msg{Page: page}) }),
 				),
 				section("Small",
-					ui.Pagination("small", model.Page, 12).
-						Size(ui.PaginationSmall).
+					pagination.New("small", model.Page, 12).
+						Size(pagination.SizeSmall).
 						OnChange(func(page int) { send(Msg{Page: page}) }),
 				),
 				section("Large",
-					ui.Pagination("large", model.Page, 12).
-						Size(ui.PaginationLarge).
+					pagination.New("large", model.Page, 12).
+						Size(pagination.SizeLarge).
 						OnChange(func(page int) { send(Msg{Page: page}) }),
 				),
-				section("Disabled", ui.Pagination("disabled", 3, 8).Disabled(true)),
+				section("Disabled", pagination.New("disabled", 3, 8).Disabled(true)),
 			).Gap(24),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(10)
+	return layout.Column(text.New(title).Size(18), child).Gap(10)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{Page: 6},
-		Update, View), ui.Title("FlowUI Pagination"),
-		ui.Size(900, 620),
+		Update, View), window.Title("FlowUI Pagination"),
+		window.Size(900, 620),
+		window.Theme(base.Light()),
 	)
 }

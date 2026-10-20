@@ -3,7 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/input"
+	"github.com/qianniancn/flowui/widget/label"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -70,81 +77,84 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	}
 	emailInvalid := m.Email != "" && !containsAt(m.Email)
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("inputs", ui.Column(
-				ui.Text("FlowUI Input").Size(24),
-				ui.Text(status).Size(16),
-				ui.Divider(),
-				ui.Wrap(
-					ui.Column(
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Input").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				layout.Wrap(
+					layout.Column(
 						section("Variants",
-							ui.Column(
+							layout.Column(
 								labeledInput("Primary", "primary",
-									input("primary", fieldName, m.Name, "Primary input", send)),
+									textField("primary", fieldName, m.Name, "Primary input", send)),
 								labeledInput("Secondary", "secondary",
-									input("secondary", fieldSearch, m.Search, "Secondary input", send).
-										Variant(ui.InputSecondary)),
+									textField("secondary", fieldSearch, m.Search, "Secondary input", send).
+										Variant(input.Secondary)),
 							).Gap(12),
 						),
 						section("Input types",
-							ui.Column(
+							layout.Column(
 								labeledInput("Email", "email",
-									input("email", fieldEmail, m.Email, "jane@example.com", send).
-										Type(ui.InputEmail).
+									textField("email", fieldEmail, m.Email, "jane@example.com", send).
+										Type(input.Email).
 										Invalid(emailInvalid)),
 								labeledInput("Age", "age",
-									input("age", fieldAge, m.Age, "30", send).
-										Type(ui.InputNumber).
+									textField("age", fieldAge, m.Age, "30", send).
+										Type(input.Number).
 										MaxLength(3)),
 								labeledInput("Password", "password",
-									input("password", fieldPass, m.Password, "Enter password", send).
-										Type(ui.InputPassword).
+									textField("password", fieldPass, m.Password, "Enter password", send).
+										Type(input.Password).
 										MaxLength(32)),
 							).Gap(12),
 						),
 					).Gap(18),
-					ui.Column(
+					layout.Column(
 						section("States",
-							ui.Column(
+							layout.Column(
+								labeledInput("Default value", "default-value",
+									input.New("").DefaultValue("Initial value")),
 								labeledInput("Read only", "read-only",
-									ui.Input("read-only", "Read-only value").ReadOnly(true)),
+									input.New("Read-only value").ReadOnly(true)),
 								labeledInput("Disabled", "disabled",
-									ui.Input("disabled", "Disabled value").Disabled(true)),
+									input.New("Disabled value").Disabled(true)),
 								labeledInput("Invalid", "invalid",
-									ui.Input("invalid", "Invalid value").Invalid(true)),
+									input.New("Invalid value").Invalid(true)),
 							).Gap(12),
 						),
 						section("Full width",
-							ui.Box(
-								input("full-width", fieldFull, m.Full, "Full width input", send).
-									Variant(ui.InputSecondary).
+							layout.Box(
+								textField("full-width", fieldFull, m.Full, "Full width input", send).
+									Variant(input.Secondary).
 									FullWidth(),
-							).Style(ui.Width(320)),
+							).Style(style.New().Width(320)),
 						),
 					).Gap(18),
 				).Gap(32).LineGap(24).AlignStart(),
-			).Gap(18)).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+			).Gap(18),
+			).Vertical(),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func labeledInput(label, key string, field ui.InputWidget) ui.Widget {
-	return ui.Column(
-		ui.Label(label).For(key),
-		ui.Box(field).Style(ui.Width(320)),
+func labeledInput(title, key string, field input.Widget) ui.Widget {
+	return layout.Column(
+		label.New(title).For(key),
+		layout.Box(field).Style(style.New().Width(320)),
 	).Gap(6)
 }
 
-func input(key string, field Field, value string, hint string, send ui.Send[Msg]) ui.InputWidget {
-	return ui.Input(key, value).
+func textField(key string, field Field, value string, hint string, send ui.Send[Msg]) input.Widget {
+	return input.New(value).Key(key).
 		Placeholder(hint).
 		OnChange(func(text string) {
 			send(Msg{
@@ -162,8 +172,8 @@ func input(key string, field Field, value string, hint string, send ui.Send[Msg]
 		})
 }
 
-func containsAt(text string) bool {
-	for _, r := range text {
+func containsAt(value string) bool {
+	for _, r := range value {
 		if r == '@' {
 			return true
 		}
@@ -173,9 +183,10 @@ func containsAt(text string) bool {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{
-		Password: "heroui",
+		Password: "flowui",
 	},
-		Update, View), ui.Title("FlowUI Inputs"),
-		ui.Size(900, 760),
+		Update, View), window.Title("FlowUI Inputs"),
+		window.Size(900, 760),
+		window.Theme(base.Light()),
 	)
 }

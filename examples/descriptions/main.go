@@ -1,6 +1,19 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/combobox"
+	descriptionpkg "github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/input"
+	labelpkg "github.com/qianniancn/flowui/widget/label"
+	"github.com/qianniancn/flowui/widget/selectfield"
+	"github.com/qianniancn/flowui/widget/switchcontrol"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct {
 	Email     string
@@ -31,90 +44,89 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("descriptions",
-				ui.Column(
-					ui.Text("FlowUI Description").Size(24),
-					ui.Divider(),
-					section("States",
-						ui.Wrap(
-							ui.Box(ui.Description("Muted supporting text for a field.")).Style(ui.Width(300)),
-							ui.Box(ui.Description("Disabled supporting text.").Disabled(true)).Style(ui.Width(300)),
-							ui.Box(ui.Description("Long descriptions wrap naturally when the available field width becomes constrained.")).Style(ui.Width(300)),
-						).Gap(16).LineGap(12),
-					),
-					section("Field association",
-						ui.Wrap(
-							field(
-								ui.Label("Email").For("email"),
-								ui.Input("email", model.Email).
-									Hint("name@example.com").
-									OnChange(func(value string) { send(SetEmail(value)) }).
-									FullWidth(),
-								ui.Description("Used for account notifications.").For("email"),
-							),
-							field(
-								ui.Label("Language").For("language"),
-								ui.ComboBox("language", model.Language, languages()).
-									Hint("Choose a language").
-									OnChange(func(key string) { send(SetLanguage(key)) }).
-									FullWidth(),
-								ui.Description("Search or choose from the available languages.").For("language"),
-							),
-							field(
-								ui.Label("State").For("state"),
-								ui.Select("state", model.State, states()).
-									Placeholder("Select a state").
-									OnChange(func(key string) { send(SetState(key)) }).
-									FullWidth(),
-								ui.Description("Used to determine regional availability.").For("state"),
-							),
-						).Gap(16).LineGap(16),
-					),
-					section("Component compatibility",
-						ui.Wrap(
-							ui.Box(
-								ui.Select("select-description", model.State, states()).
-									Label("Select description").
-									Description("Rendered by the shared Description component.").
-									OnChange(func(key string) { send(SetState(key)) }).
-									FullWidth(),
-							).Style(ui.Width(300)),
-							ui.Box(
-								ui.Switch("marketing", model.Marketing, "Marketing updates").
-									Description("Receive occasional product announcements.").
-									OnChange(func(value bool) { send(SetMarketing(value)) }),
-							).Style(ui.Width(300)),
-						).Gap(16).LineGap(16),
-					),
-				).Gap(20),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Description").Size(24),
+				layout.Divider(),
+				section("States",
+					layout.Wrap(
+						layout.Box(descriptionpkg.New("Muted supporting text for a field.")).Style(style.New().Width(300)),
+						layout.Box(descriptionpkg.New("Disabled supporting text.").Disabled(true)).Style(style.New().Width(300)),
+						layout.Box(descriptionpkg.New("Long descriptions wrap naturally when the available field width becomes constrained.")).Style(style.New().Width(300)),
+					).Gap(16).LineGap(12),
+				),
+				section("Field association",
+					layout.Wrap(
+						field(
+							labelpkg.New("Email").For("email"),
+							input.New(model.Email).Key("email").
+								Hint("name@example.com").
+								OnChange(func(value string) { send(SetEmail(value)) }).
+								FullWidth(),
+							descriptionpkg.New("Used for account notifications.").For("email"),
+						),
+						field(
+							labelpkg.New("Language").For("language"),
+							combobox.New(languages()).Key("language").SelectedKey(model.Language).
+								Hint("Choose a language").
+								OnChange(func(key string) { send(SetLanguage(key)) }).
+								FullWidth(),
+							descriptionpkg.New("Search or choose from the available languages.").For("language"),
+						),
+						field(
+							labelpkg.New("State").For("state"),
+							selectfield.New(states()).Key("state").SelectedKey(model.State).
+								Placeholder("Select a state").
+								OnChange(func(key string) { send(SetState(key)) }).
+								FullWidth(),
+							descriptionpkg.New("Used to determine regional availability.").For("state"),
+						),
+					).Gap(16).LineGap(16),
+				),
+				section("Component compatibility",
+					layout.Wrap(
+						layout.Box(
+							selectfield.New(states()).Key("select-description").SelectedKey(model.State).
+								Label("Select description").
+								Description("Rendered by the shared Description component.").
+								OnChange(func(key string) { send(SetState(key)) }).
+								FullWidth(),
+						).Style(style.New().Width(300)),
+						layout.Box(
+							switchcontrol.New("Marketing updates").Key("marketing").Checked(model.Marketing).
+								Description("Receive occasional product announcements.").
+								OnChange(func(value bool) { send(SetMarketing(value)) }),
+						).Style(style.New().Width(300)),
+					).Gap(16).LineGap(16),
+				),
+			).Gap(20),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
 func field(label, control, description ui.Widget) ui.Widget {
-	return ui.Box(ui.Column(label, control, description).Gap(6)).Style(ui.Width(300))
+	return layout.Box(layout.Column(label, control, description).Gap(6)).Style(style.New().Width(300))
 }
 
-func languages() []ui.ComboBoxItem {
-	return []ui.ComboBoxItem{
+func languages() []combobox.Item {
+	return []combobox.Item{
 		{Key: "go", Label: "Go"},
 		{Key: "rust", Label: "Rust"},
 		{Key: "typescript", Label: "TypeScript"},
 	}
 }
 
-func states() []ui.SelectItem {
-	return []ui.SelectItem{
+func states() []selectfield.SelectItem {
+	return []selectfield.SelectItem{
 		{Key: "california", Label: "California"},
 		{Key: "new-york", Label: "New York"},
 		{Key: "texas", Label: "Texas"},
@@ -123,7 +135,8 @@ func states() []ui.SelectItem {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Descriptions"),
-		ui.Size(900, 680),
+		Update, View), window.Title("FlowUI Descriptions"),
+		window.Size(900, 680),
+		window.Theme(base.Light()),
 	)
 }

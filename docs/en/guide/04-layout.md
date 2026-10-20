@@ -13,11 +13,11 @@ on `Row`, `Column`, or another container.
 ## Common containers
 
 ```go
-ui.Column(
-	ui.Text("Title").Size(20),
-	ui.Row(
-		ui.Button("cancel", ui.Text("Cancel")),
-		ui.Button("save", ui.Text("Save")),
+layout.Column(
+	text.New("Title").Size(20),
+	layout.Row(
+		button.New("Cancel"),
+		button.New("Save"),
 	).Gap(8),
 ).Gap(12)
 ```
@@ -26,9 +26,9 @@ ui.Column(
 available constraints. `Expanded` and `Flexible` distribute remaining space.
 
 ```go
-ui.Row(
-	ui.Sidebar("navigation", "home", items),
-	ui.Expanded(ui.Scroll("content", ui.Column(/* content */))),
+layout.Row(
+	sidebar.New("navigation", "home", items),
+	layout.Expanded(layout.Scroll(layout.Column(/* content */))),
 )
 ```
 
@@ -38,10 +38,18 @@ ui.Row(
 `AutoGrid` chooses columns from a minimum column width.
 
 ```go
-ui.Scroll("content", ui.Column(/* many children */).Gap(8))
+layout.Scroll(layout.Column(/* many children */).Gap(8))
 
-ui.Grid(3, cardA, cardB, cardC).Gap(16)
-ui.AutoGrid(190, cardA, cardB, cardC).ColumnGap(16).RowGap(12)
+layout.Grid(3, cardA, cardB, cardC).Gap(16)
+layout.AutoGrid(190, cardA, cardB, cardC).ColumnGap(16).RowGap(12)
+```
+
+`Scroll` reserves a scrollbar gutter only when its content overflows. On a
+page whose height changes, such as settings tabs, switch to an overlay
+scrollbar so the content width stays put when a short page follows a long one:
+
+```go
+layout.Scroll(content).Overlay()
 ```
 
 ### Visual outset and clipping
@@ -54,22 +62,22 @@ An explicit `OverflowHidden` box remains a local clip boundary; child paint
 already clipped there does not affect an outer viewport.
 
 For custom paint that extends beyond its box, declare a minimum range with
-`VisualOutset`, or use `LayoutVisualOutset` when there is no Style shell:
+`style.VisualOutset`, or use `layout.VisualOutset` when there is no Style shell:
 
 ```go
-ui.Box(customCanvas).Style(
-	ui.VisualOutset(6, 8, 10, 8),
+layout.Box(customCanvas).Style(
+	style.New().VisualOutset(6, 8, 10, 8),
 )
 
 // top, right, bottom, left for direct custom paint.
-ui.LayoutVisualOutset(ctx, gtx, customCanvas, 6, 8, 10, 8)
+layout.VisualOutset(ctx, gtx, customCanvas, 6, 8, 10, 8)
 ```
 
 When a new extent is discovered, the viewport requests another frame to settle
 the safe padding. It never lets that paint escape the scroll viewport or window.
 
-The runnable [`examples/grid_layout`](https://github.com/qianniancn/flowui/tree/main/examples/grid_layout) compares
-fixed columns, responsive columns, and independent row/column gaps.
+Run `go run ./examples/style-gallery` from the repository root for a runnable
+layout composition. The grid code above is a usage snippet.
 
 Other useful containers include `Wrap`, `Stack`, `SplitPane`, `Surface`, and
 `Card`. See the [component guide](06-components.md) for the full list.
@@ -79,10 +87,10 @@ Other useful containers include `Wrap`, `Stack`, `SplitPane`, `Surface`, and
 Declare dimensions on a style and apply it to a box or component:
 
 ```go
-ui.Box(ui.Input("name", m.Name)).Style(ui.Width(320))
+layout.Box(input.New(m.Name)).Style(style.New().Width(320))
 
-ui.Box(child).Style(
-	ui.Width(200).
+layout.Box(child).Style(
+	style.New().Width(200).
 		Height(40).
 		MinWidth(120).
 		MaxWidth(400).
@@ -94,7 +102,7 @@ ui.Box(child).Style(
 Use `AspectRatio` for a fixed width-to-height ratio:
 
 ```go
-ui.AspectRatio(1, ui.Box(ui.Text("Square content")))
+layout.AspectRatio(1, layout.Box(text.New("Square content")))
 ```
 
 Parents provide maximum constraints. Children choose a size inside those
@@ -104,16 +112,17 @@ constraints, and containers decide how children are placed.
 
 ```go
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.WindowTitleBar("title", "FlowUI", menu),
-		ui.Expanded(ui.Row(
-			ui.Sidebar("sidebar", m.Selected, items),
-			ui.Expanded(ui.Scroll("page", content)),
+	return layout.Column(
+		titlebar.NewPlatform("title", "FlowUI", menu),
+		layout.Expanded(layout.Row(
+			sidebar.New("sidebar", m.Selected, items),
+			layout.Expanded(layout.Scroll(content)),
 		)),
-		ui.StatusBar(left, right),
+		statusbar.New(left, right),
 	)
 }
 ```
 
 Build widgets every frame, keep keys stable, and use business IDs for list
 items whose order can change.
+

@@ -3,7 +3,13 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/switchcontrol"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -73,68 +79,67 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("switches",
-				ui.Column(
-					ui.Text("FlowUI Switch").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Account",
-						ui.Column(
-							switchField("notifications", fieldNotifications, m.Notifications, "Enable notifications", send).
-								Description("Receive product, security, and billing updates"),
-							switchField("newsletter", fieldNewsletter, m.Newsletter, "Subscribe to newsletter", send),
-							switchField("public-profile", fieldPublicProfile, m.PublicProfile, "Public profile", send).
-								Description("Allow others to see your public profile information"),
-						).Gap(14),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Switch").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				section("Account",
+					layout.Column(
+						switchField("notifications", fieldNotifications, m.Notifications, "Enable notifications", send).
+							Description("Receive product, security, and billing updates"),
+						switchField("newsletter", fieldNewsletter, m.Newsletter, "Subscribe to newsletter", send),
+						switchField("public-profile", fieldPublicProfile, m.PublicProfile, "Public profile", send).
+							Description("Allow others to see your public profile information"),
+					).Gap(14),
+				),
+				section("SwitchGroup",
+					switchcontrol.SwitchGroup(
+						switchField("marketing", fieldMarketing, m.Marketing, "Marketing emails", send),
+						switchField("social", fieldSocial, m.Social, "Social updates", send),
+						switchField("sound", fieldSound, m.Sound, "Sound alerts", send),
 					),
-					section("SwitchGroup",
-						ui.SwitchGroup(
-							switchField("marketing", fieldMarketing, m.Marketing, "Marketing emails", send),
-							switchField("social", fieldSocial, m.Social, "Social updates", send),
-							switchField("sound", fieldSound, m.Sound, "Sound alerts", send),
-						),
-					),
-					section("Horizontal group",
-						ui.SwitchGroup(
-							switchField("small", fieldSmall, m.Small, "Small", send).Size(ui.SwitchSmall),
-							switchField("medium", fieldMedium, m.Medium, "Medium", send),
-							switchField("large", fieldLarge, m.Large, "Large", send).Size(ui.SwitchLarge),
-						).Horizontal(),
-					),
-					section("States",
-						ui.Column(
-							switchField("power", fieldPower, m.Power, "Power", send).
-								Thumb(powerThumb).
-								LabelBefore(),
-							switchField("required", fieldNotifications, m.Notifications, "Required notifications", send).
-								Invalid(!m.Notifications).
-								Description("Turn this on before continuing"),
-							ui.Switch("disabled-on", true, "Disabled selected").Disabled(true),
-							ui.Switch("disabled-off", false, "Disabled").Disabled(true),
-							ui.Row(
-								switchField("control-only", fieldPower, m.Power, "", send).
-									Thumb(powerThumb),
-								ui.Text("Control only").Size(14),
-							).Gap(12).AlignMiddle(),
-						).Gap(14),
-					),
-				).Gap(18),
+				),
+				section("Horizontal group",
+					switchcontrol.SwitchGroup(
+						switchField("small", fieldSmall, m.Small, "Small", send).Size(switchcontrol.SwitchSmall),
+						switchField("medium", fieldMedium, m.Medium, "Medium", send),
+						switchField("large", fieldLarge, m.Large, "Large", send).Size(switchcontrol.SwitchLarge),
+					).Horizontal(),
+				),
+				section("States",
+					layout.Column(
+						switchField("power", fieldPower, m.Power, "Power", send).
+							Thumb(powerThumb).
+							LabelBefore(),
+						switchField("required", fieldNotifications, m.Notifications, "Required notifications", send).
+							Invalid(!m.Notifications).
+							Description("Turn this on before continuing"),
+						switchcontrol.New("Disabled selected").Key("disabled-on").Checked(true).Disabled(true),
+						switchcontrol.New("Disabled").Key("disabled-off").Checked(false).Disabled(true),
+						layout.Row(
+							switchField("control-only", fieldPower, m.Power, "", send).
+								Thumb(powerThumb),
+							text.New("Control only").Size(14),
+						).Gap(12).AlignMiddle(),
+					).Gap(14),
+				),
+			).Gap(18),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func switchField(key string, field Field, checked bool, label string, send ui.Send[Msg]) ui.SwitchWidget {
-	return ui.Switch(key, checked, label).
+func switchField(key string, field Field, checked bool, label string, send ui.Send[Msg]) switchcontrol.Widget {
+	return switchcontrol.New(label).Key(key).Checked(checked).
 		OnChange(func(checked bool) {
 			send(Msg{
 				Field:   field,
@@ -145,9 +150,9 @@ func switchField(key string, field Field, checked bool, label string, send ui.Se
 
 func powerThumb(checked bool) ui.Widget {
 	if checked {
-		return ui.Text("I").Size(10)
+		return text.New("I").Size(10)
 	}
-	return ui.Text("O").Size(10)
+	return text.New("O").Size(10)
 }
 
 func switchStateText(checked bool) string {
@@ -165,7 +170,8 @@ func main() {
 		Medium:        true,
 		Power:         true,
 	},
-		Update, View), ui.Title("FlowUI Switch"),
-		ui.Size(900, 720),
+		Update, View), window.Title("FlowUI Switch"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

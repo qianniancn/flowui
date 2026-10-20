@@ -8,7 +8,7 @@ import (
 
 // Send dispatches a message to Update. It is safe for concurrent commands to
 // call Send; the messages are queued for a later frame.
-type Send[Msg any] func(Msg)
+type Send[Msg any] = runtime.Send[Msg]
 
 // A Cmd returned by Update runs in its own goroutine after Update returns
 // and may send messages back later. Its context is canceled when the window
@@ -18,36 +18,33 @@ type Send[Msg any] func(Msg)
 // snapshots prepared by Update, must not retain or access the model pointer
 // or a Context, and must report model-facing results through Send. Copy slices,
 // maps, and other reference-backed model data before capturing them.
-type Cmd[Msg any] func(context.Context, Send[Msg]) error
+type Cmd[Msg any] = runtime.Cmd[Msg]
+
+// Update applies a message and may return a command to run. It must finish
+// all model mutation before returning; a returned Cmd must follow the Cmd
+// capture rules.
+type Update[M any, Msg any] = runtime.Update[M, Msg]
+
+// Subscription is long-lived asynchronous work with a stable identity. This is
+// the same type the runtime consumes, so a subscription set may be built with
+// Subscribe, MapSubscription, or a struct literal.
+type Subscription[Msg any] = runtime.Subscription[Msg]
+
+// Subscriptions derives the active subscription set from the current model.
+type Subscriptions[M any, Msg any] = runtime.Subscriptions[M, Msg]
 
 // LatestCmd cancels an older command with the same key and drops messages from
 // an older generation. It is intended for search, preview, and autocomplete
 // workflows where only the newest result is useful.
 func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
-	wrapped := runtime.LatestCmd(key, func(ctx context.Context, send func(Msg)) error {
-		if cmd == nil {
-			return nil
-		}
-		return cmd(ctx, Send[Msg](send))
-	})
-	return func(ctx context.Context, send Send[Msg]) error {
-		return wrapped(ctx, func(msg Msg) { send(msg) })
-	}
+	return runtime.LatestCmd(key, cmd)
 }
 
 // CancelLatestCmd cancels the active LatestCmd with key and invalidates its
 // queued messages.
 func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
-	wrapped := runtime.CancelLatestCmd[Msg](key)
-	return func(ctx context.Context, send Send[Msg]) error {
-		return wrapped(ctx, func(msg Msg) { send(msg) })
-	}
+	return runtime.CancelLatestCmd[Msg](key)
 }
-
-// Update applies a message and may return a command to run. It must finish
-// all model mutation before returning; a returned Cmd must follow the Cmd
-// capture rules.
-type Update[M any, Msg any] func(*M, Msg) Cmd[Msg]
 
 // Do turns a context-free function into a command. Use DoContext for work that
 // blocks, can fail, or must respond promptly to application shutdown.
@@ -83,6 +80,12 @@ func MapCmd[ChildMsg any, ParentMsg any](cmd Cmd[ChildMsg], mapMsg func(ChildMsg
 	}
 }
 
+// Batch combines commands so Update can start several independent effects at
+// once. Nil commands are ignored; a batch with no commands returns nil.
+func Batch[Msg any](cmds ...Cmd[Msg]) Cmd[Msg] {
+	return runtime.Batch(cmds...)
+}
+
 // EffectKind identifies the source of asynchronous work managed by FlowUI.
 type EffectKind = runtime.EffectKind
 
@@ -97,35 +100,28 @@ const (
 type EffectError = runtime.EffectError
 
 // RuntimePhase identifies the runtime phase in which a failure occurred.
-type RuntimePhase = runtime.RuntimePhase
+type RuntimePhase = runtime.Phase
 
 // RuntimePanicError describes a panic recovered from a synchronous callback.
-type RuntimePanicError = runtime.RuntimePanicError
+type RuntimePanicError = runtime.PanicError
 
 // QueueOverflowError reports that the runtime message queue exceeded its bound.
 type QueueOverflowError = runtime.QueueOverflowError
 
 const (
 	// RuntimePhaseUpdate identifies Update execution.
-	RuntimePhaseUpdate = runtime.RuntimePhaseUpdate
+	RuntimePhaseUpdate = runtime.PhaseUpdate
 	// RuntimePhaseSubscriptions identifies subscription reconciliation.
-	RuntimePhaseSubscriptions = runtime.RuntimePhaseSubscriptions
+	RuntimePhaseSubscriptions = runtime.PhaseSubscriptions
 	// RuntimePhaseView identifies View execution.
-	RuntimePhaseView = runtime.RuntimePhaseView
+	RuntimePhaseView = runtime.PhaseView
+	// RuntimePhaseClose identifies a native close-request handler.
+	RuntimePhaseClose = runtime.PhaseClose
 )
 
 // ErrEffectShutdownTimeout is reported when asynchronous work does not stop
 // within the runtime's bounded shutdown period.
 var ErrEffectShutdownTimeout = runtime.ErrEffectShutdownTimeout
-
-// Subscription is long-lived asynchronous work with a stable identity.
-type Subscription[Msg any] struct {
-	key string
-	run func(context.Context, Send[Msg]) error
-}
-
-// Subscriptions derives the active subscription set from the current model.
-type Subscriptions[M any, Msg any] func(M) []Subscription[Msg]
 
 // Subscribe creates a subscription. The key is its lifecycle identity: keep it
 // stable to retain the running subscription and change it to restart with new
@@ -139,5 +135,24 @@ func Subscribe[Msg any](key string, run func(context.Context, Send[Msg]) error) 
 	if run == nil {
 		panic("flowui: nil subscription")
 	}
-	return Subscription[Msg]{key: key, run: run}
+	return Subscription[Msg]{Key: key, Run: run}
+}
+
+// MapSubscription adapts a child subscription to a parent message type while
+// preserving the child's lifecycle key and cancellation behavior.
+func MapSubscription[ChildMsg any, ParentMsg any](subscription Subscription[ChildMsg], mapMsg func(ChildMsg) ParentMsg) Subscription[ParentMsg] {
+	if subscription.Run == nil {
+		return Subscription[ParentMsg]{}
+	}
+	if mapMsg == nil {
+		panic("flowui: nil subscription mapper")
+	}
+	return Subscription[ParentMsg]{
+		Key: subscription.Key,
+		Run: func(ctx context.Context, send Send[ParentMsg]) error {
+			return subscription.Run(ctx, func(msg ChildMsg) {
+				send(mapMsg(msg))
+			})
+		},
+	}
 }

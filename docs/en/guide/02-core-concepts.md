@@ -31,11 +31,11 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Input("name", m.Name).OnChange(func(value string) {
+	return layout.Column(
+		input.New(m.Name).OnChange(func(value string) {
 			send(NameChanged{Value: value})
 		}),
-		ui.Text("Hello, "+m.Name),
+		text.New("Hello, "+m.Name),
 	).Gap(12)
 }
 ```
@@ -50,8 +50,8 @@ or stateful widget a stable key derived from the business identity, not from a
 temporary position in a slice.
 
 ```go
-ui.Input("email", m.Email)
-ui.Button("save", ui.Text("Save"))
+input.New(m.Email)
+button.New("Save")
 ```
 
 Changing a key intentionally creates a new interaction state. Reusing one key

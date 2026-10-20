@@ -11,11 +11,11 @@ func main() {
 
 	counter := ui.NewWindow("counter", ui.NewProgram(
 		CounterModel{}, counterUpdate, counterView,
-	), ui.Title("Counter"), ui.Size(400, 300))
+	), window.Title("Counter"), window.Size(400, 300))
 
 	mainWindow := ui.NewWindow("main", ui.NewProgram(
 		MainModel{}, mainUpdate, mainView,
-	), ui.Title("Main"), ui.Size(640, 480))
+	), window.Title("Main"), window.Size(640, 480))
 
 	application.Run(mainWindow)
 	_ = counter
@@ -42,8 +42,8 @@ Apply changes through the application so they reach the target window's event
 loop:
 
 ```go
-application.SetTheme("main", ui.DarkTheme())
-application.SetLanguage("main", ui.LanguageChinese)
+application.SetTheme("main", base.Dark())
+application.SetLanguage("main", window.LanguageChinese)
 ```
 
 Do not mutate a window's theme from an arbitrary goroutine.
@@ -57,10 +57,70 @@ maximize, restore, fullscreen, raise, or center.
 
 ## Close lifecycle
 
-`OnWindowCloseRequest` handles FlowUI close requests. `WindowCloseCancel` keeps
-the window open; `WindowCloseKeepAlive` closes the native window while keeping
-the process alive for a tray or background service. Native window manager close
-events cannot all be intercepted on every platform.
+Gio reports a native window-close request as `app.ClosingEvent` on Windows,
+macOS, Wayland, and X11. FlowUI handles the event on the window event loop and
+applies the configured close policy before the platform closes the window.
 
-See [`examples/multi_windows`](https://github.com/qianniancn/flowui/tree/main/examples/multi_windows) and
-[`examples/systray_ui`](https://github.com/qianniancn/flowui/tree/main/examples/systray_ui).
+Use `window.OnWindowCloseRequest` for a synchronous decision:
+
+```go
+window.OnWindowCloseRequest(func() window.CloseDecision {
+	if dirty {
+		return window.CloseCancel
+	}
+	return window.CloseProceed
+})
+```
+
+`CloseCancel` aborts the native request, `CloseProceed` lets it happen, and
+`CloseKeepAlive` lets the native window close while keeping the process alive
+for a tray or background service. An unknown decision fails closed.
+`Close`, `CloseAll`, and `Quit` are force-close paths and bypass the handler.
+The handler runs on the window event-loop goroutine, so it should return
+promptly.
+
+The handler has no `ui.Send`, so it cannot open an in-app confirmation dialog.
+For a native close that must ask the user, set `Program.CloseRequestMessage`;
+FlowUI aborts the request and queues the returned message instead:
+
+```go
+var application *ui.Application
+
+program := ui.Program[Model, Msg]{
+	// ...
+	CloseRequestMessage: func() Msg { return CloseRequested{} },
+}
+
+func update(m *Model, msg Msg) ui.Cmd[Msg] {
+	switch msg.(type) {
+	case CloseRequested:
+		if m.Dirty {
+			m.ConfirmClose = true
+		} else {
+			application.Close("main")
+		}
+	case DiscardAndClose:
+		m.ConfirmClose = false
+		application.Close("main")
+	}
+	return nil
+}
+
+application = ui.NewApplication()
+application.Run(ui.NewWindow("main", program, window.Theme(base.Light())))
+```
+
+The message hook applies only when no `OnWindowCloseRequest` handler is
+configured; an explicit handler wins. When no handler is set,
+`RequestClose` requests the native close, so application-side close controls
+such as the title bar reach the hook as well. `Close` is the final forced close
+and does not re-enter the hook. `ui.Run` rejects a program that sets
+`CloseRequestMessage`, because it keeps its `Application` private; use
+`ui.NewApplication` and `Application.Run` directly so `Update` can call
+`Application.Close`. A `nil` hook leaves the native close alone.
+
+macOS application termination can destroy a window without a `ClosingEvent`, so
+that path cannot be vetoed through this contract.
+
+See the multiple-windows and system-tray programs in the separate `examples`
+module.

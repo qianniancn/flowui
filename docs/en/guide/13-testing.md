@@ -3,7 +3,10 @@
 The `uitest` package tests FlowUI without opening a real window:
 
 ```go
-import "github.com/qianniancn/flowui/uitest"
+import (
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/uitest"
+)
 ```
 
 Applications do not need `uitest` at runtime.
@@ -13,11 +16,14 @@ Applications do not need `uitest` at runtime.
 `uitest.Harness` drives layout frames, a fixed viewport, pointer and keyboard
 events, a controllable clock, and state cleanup:
 
+The harness requires an explicit theme with a complete Style Provider. A nil
+or incomplete theme is rejected so tests cannot inherit a hidden appearance.
+
 ```go
 func TestButtonClick(t *testing.T) {
-	h := uitest.New(image.Pt(400, 300))
+	h := uitest.New(image.Pt(400, 300), base.Light())
 	clicked := false
-	root := ui.Button("ok", ui.Text("OK")).OnClick(func() {
+	root := button.New("OK").OnClick(func() {
 		clicked = true
 	})
 
@@ -46,4 +52,4 @@ It is suited to testing loading success/failure and lifecycle behavior.
 5. Keep external IO behind command boundaries and inject test doubles.
 
 See the tests under [`uitest`](https://github.com/qianniancn/flowui/tree/main/uitest) and the component tests under
-`internal/components/*`.
+`widget/*`.

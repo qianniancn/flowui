@@ -5,7 +5,15 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	buttonpkg "github.com/qianniancn/flowui/widget/button"
+	checkboxpkg "github.com/qianniancn/flowui/widget/checkbox"
+	inputpkg "github.com/qianniancn/flowui/widget/input"
+	textpkg "github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -70,37 +78,37 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	canAdd := strings.TrimSpace(m.Draft) != ""
 	children := []ui.Widget{
-		ui.Text("FlowUI Todo").Size(24),
+		textpkg.New("FlowUI Todo").Size(24),
 		addControls(m, canAdd, send),
 	}
 
 	if len(m.Items) == 0 {
 		children = append(children,
-			ui.Box(
-				ui.Text("No todos yet.").Size(16),
-			).Style(ui.FillWidth().Height(160)).Align(ui.AlignCenter),
+			layout.Box(
+				textpkg.New("No todos yet.").Size(16),
+			).Style(style.New().FillWidth().Height(160)).Align(layout.AlignCenter),
 		)
 	} else {
 		children = append(children,
-			ui.Box(
-				ui.List("todos", len(m.Items), func(i int) ui.Widget {
+			layout.Box(
+				layout.List(len(m.Items), func(i int) ui.Widget {
 					item := m.Items[i]
-					return ui.Key(fmt.Sprintf("todo:%d", item.ID), todoRow(item, send))
+					return layout.Key(fmt.Sprintf("todo:%d", item.ID), todoRow(item, send))
 				}).Gap(12),
-			).Style(ui.Height(360)),
+			).Style(style.New().Height(360)),
 		)
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Column(children...).Gap(12),
-		).Style(ui.FillWidth().MaxWidth(640).Padding(24)),
+	return layout.Center(
+		layout.Box(
+			layout.Column(children...).Gap(12),
+		).Style(style.New().FillWidth().MaxWidth(640).Padding(24)),
 	)
 }
 
 func addControls(m Model, canAdd bool, send ui.Send[Msg]) ui.Widget {
-	input := ui.Box(
-		ui.Input("draft", m.Draft).
+	input := layout.Box(
+		inputpkg.New(m.Draft).Key("draft").
 			Hint("What needs to be done?").
 			OnChange(func(text string) {
 				send(DraftChanged{Text: text})
@@ -108,40 +116,41 @@ func addControls(m Model, canAdd bool, send ui.Send[Msg]) ui.Widget {
 			OnSubmit(func(string) {
 				send(Add{})
 			}),
-	).Style(ui.FillWidth())
+	).Style(style.New().FillWidth())
 
-	button := ui.Button("add", ui.Text("Add")).
+	button := buttonpkg.New("Add").
 		Disabled(!canAdd).
 		OnClick(func() {
 			send(Add{})
 		})
 
-	return ui.Row(
-		ui.Expanded(input),
-		ui.Box(button).Style(ui.Width(100)),
+	return layout.Row(
+		layout.Expanded(input),
+		layout.Box(button).Style(style.New().Width(100)),
 	).Gap(12).AlignMiddle()
 }
 
 func todoRow(item Item, send ui.Send[Msg]) ui.Widget {
-	checkbox := ui.Box(
-		ui.Checkbox("done", item.Done, item.Text).OnChange(func(done bool) {
+	checkbox := layout.Box(
+		checkboxpkg.New(item.Text).Key("done").Checked(item.Done).OnChange(func(done bool) {
 			send(SetDone{ID: item.ID, Done: done})
 		}),
-	).Style(ui.FillWidth())
+	).Style(style.New().FillWidth())
 
-	button := ui.Button("delete", ui.Text("Delete")).OnClick(func() {
+	button := buttonpkg.New("Delete").OnClick(func() {
 		send(Delete{ID: item.ID})
-	}).Variant(ui.ButtonDangerSoft)
+	}).Variant(buttonpkg.DangerSoft)
 
-	return ui.Row(
-		ui.Expanded(checkbox),
-		ui.Box(button).Style(ui.Width(100)),
+	return layout.Row(
+		layout.Expanded(checkbox),
+		layout.Box(button).Style(style.New().Width(100)),
 	).Gap(12).AlignMiddle()
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{NextID: 1},
-		Update, View), ui.Title("FlowUI Todo"),
-		ui.Size(900, 600),
+		Update, View), window.Title("FlowUI Todo"),
+		window.Size(900, 600),
+		window.Theme(base.Light()),
 	)
 }

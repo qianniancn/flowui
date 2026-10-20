@@ -1,0 +1,10 @@
+package alertdialog
+
+import "github.com/qianniancn/flowui/internal/computed"
+
+func (c *alertDialogVisualCache) stats() computed.ProviderCacheStats {
+	if c == nil {
+		return computed.ProviderCacheStats{}
+	}
+	return c.cache.Stats()
+}

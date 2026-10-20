@@ -71,6 +71,7 @@ nav:
       - Multiple windows: guide/11-multiple-windows.md
       - Animation: guide/12-animation.md
       - Testing: guide/13-testing.md
+      - Design Styles: guide/18-design-styles.md
   - FAQ: guide/14-faq.md
 
 plugins:

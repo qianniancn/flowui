@@ -1,6 +1,17 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/alert"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/closebutton"
+	"github.com/qianniancn/flowui/widget/spinner"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct {
 	Last        string
@@ -26,82 +37,82 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	}
 
 	alerts := []ui.Widget{
-		ui.Alert(
+		alert.New(
 			"New features available",
 			"Check out the latest updates including dark mode support and improved accessibility features.",
 		),
-		ui.Alert(
+		alert.New(
 			"Update available",
 			"A new application version is available. Refresh to get the latest fixes.",
 		).
-			Status(ui.AlertAccent).
-			Action(alertButton("refresh", "Refresh", ui.ButtonPrimary, send)),
-		ui.Alert(
+			Status(alert.Accent).
+			Action(alertButton("refresh", "Refresh", button.Primary, send)),
+		alert.New(
 			"Payment successful",
 			"Your payment has been processed and a confirmation email was sent.",
 		).
-			Status(ui.AlertSuccess).
-			Action(alertButton("receipt", "View receipt", ui.ButtonSecondary, send)),
-		ui.Alert(
+			Status(alert.Success).
+			Action(alertButton("receipt", "View receipt", button.Secondary, send)),
+		alert.New(
 			"Storage almost full",
 			"You are using 90% of your storage quota. Remove unused files to avoid interruption.",
 		).
-			Status(ui.AlertWarning).
-			Action(alertButton("storage", "Manage", ui.ButtonSecondary, send)),
-		ui.Alert("Unable to connect to server", "").
-			Status(ui.AlertDanger).
+			Status(alert.Warning).
+			Action(alertButton("storage", "Manage", button.Secondary, send)),
+		alert.New("Unable to connect to server", "").
+			Status(alert.Danger).
 			Content(
-				ui.Column(
-					ui.Text("Check your internet connection, then retry the request."),
-					ui.Text("The service status page may contain more details.").Size(13),
+				layout.Column(
+					text.New("Check your internet connection, then retry the request."),
+					text.New("The service status page may contain more details.").Size(13),
 				).Gap(4),
 			).
-			Action(alertButton("retry", "Retry", ui.ButtonDanger, send)),
-		ui.Alert(
+			Action(alertButton("retry", "Retry", button.Danger, send)),
+		alert.New(
 			"Processing your request",
 			"Please wait while we sync your data. This may take a few moments.",
 		).
-			Status(ui.AlertAccent).
-			Indicator(ui.Spinner().Color(ui.SpinnerCurrent).Size(ui.SpinnerSmall)),
+			Status(alert.Accent).
+			Indicator(spinner.New().Color(spinner.Current).Size(spinner.Small)),
 	}
 	if m.ShowProfile {
 		alerts = append(alerts,
-			ui.Alert("Profile updated successfully", "").
-				Status(ui.AlertSuccess).
+			alert.New("Profile updated successfully", "").
+				Status(alert.Success).
 				Action(
-					ui.CloseButton("dismiss-profile").
+					closebutton.New("dismiss-profile").
 						Label("Dismiss profile update").
 						OnClick(func() { send(Msg{Action: "Dismissed profile update"}) }),
 				),
 		)
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("alerts",
-				ui.Box(
-					ui.Column(
-						ui.Text("FlowUI Alert").Size(24),
-						ui.Text(status).Size(14),
-						ui.Divider(),
-						ui.Column(alerts...).Gap(16),
-					).Gap(20),
-				).Style(ui.Padding(3)),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Box(
+				layout.Column(
+					text.New("FlowUI Alert").Size(24),
+					text.New(status).Size(14),
+					layout.Divider(),
+					layout.Column(alerts...).Gap(16),
+				).Gap(20),
+			).Style(style.New().Padding(3)),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(680)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(680).Padding(24)),
 	)
 }
 
-func alertButton(key, label string, variant ui.ButtonVariant, send ui.Send[Msg]) ui.ButtonWidget {
-	return ui.Button(key, ui.Text(label)).
+func alertButton(key, label string, variant button.Variant, send ui.Send[Msg]) button.Widget {
+	return button.New(label).Key(key).
 		Variant(variant).
-		Size(ui.ButtonSmall).
+		Size(button.Small).
 		OnClick(func() { send(Msg{Action: label}) })
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{ShowProfile: true},
-		Update, View), ui.Title("FlowUI Alerts"),
-		ui.Size(860, 820),
+		Update, View), window.Title("FlowUI Alerts"),
+		window.Size(860, 820),
+		window.Theme(base.Light()),
 	)
 }

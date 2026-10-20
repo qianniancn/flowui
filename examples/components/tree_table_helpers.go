@@ -5,10 +5,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/table"
+	"github.com/qianniancn/flowui/widget/tree"
 )
 
-func catalogTreeCanDrop(items []ui.TreeItem, event ui.TreeDropEvent) bool {
+func catalogTreeCanDrop(items []tree.Item, event tree.DropEvent) bool {
 	if event.TargetKey == "" || len(event.SourceKeys) == 0 {
 		return false
 	}
@@ -16,7 +17,7 @@ func catalogTreeCanDrop(items []ui.TreeItem, event ui.TreeDropEvent) bool {
 	if !ok || target.Disabled {
 		return false
 	}
-	if event.Position == ui.TreeDropInside && !catalogTreeAcceptsChildren(*target) {
+	if event.Position == tree.DropInside && !catalogTreeAcceptsChildren(*target) {
 		return false
 	}
 	for _, sourceKey := range event.SourceKeys {
@@ -31,15 +32,15 @@ func catalogTreeCanDrop(items []ui.TreeItem, event ui.TreeDropEvent) bool {
 	return true
 }
 
-func catalogTreeMove(items *[]ui.TreeItem, event ui.TreeDropEvent) bool {
+func catalogTreeMove(items *[]tree.Item, event tree.DropEvent) bool {
 	if items == nil || !catalogTreeCanDrop(*items, event) {
 		return false
 	}
-	working := append([]ui.TreeItem(nil), (*items)...)
-	var moved ui.TreeItem
+	working := append([]tree.Item(nil), (*items)...)
+	var moved tree.Item
 	var removed bool
 	for _, sourceKey := range event.SourceKeys {
-		var item ui.TreeItem
+		var item tree.Item
 		working, item, removed = catalogTreeRemove(working, sourceKey)
 		if !removed {
 			return false
@@ -56,9 +57,9 @@ func catalogTreeMove(items *[]ui.TreeItem, event ui.TreeDropEvent) bool {
 	return true
 }
 
-func catalogTreeRemove(items []ui.TreeItem, key string) ([]ui.TreeItem, ui.TreeItem, bool) {
-	result := make([]ui.TreeItem, 0, len(items))
-	var removed ui.TreeItem
+func catalogTreeRemove(items []tree.Item, key string) ([]tree.Item, tree.Item, bool) {
+	result := make([]tree.Item, 0, len(items))
+	var removed tree.Item
 	found := false
 	for index := range items {
 		item := items[index]
@@ -80,18 +81,18 @@ func catalogTreeRemove(items []ui.TreeItem, key string) ([]ui.TreeItem, ui.TreeI
 	return result, removed, found
 }
 
-func catalogTreeInsert(items []ui.TreeItem, moved ui.TreeItem, targetKey string, position ui.TreeDropPosition) ([]ui.TreeItem, bool) {
-	result := make([]ui.TreeItem, 0, len(items)+1)
+func catalogTreeInsert(items []tree.Item, moved tree.Item, targetKey string, position tree.DropPosition) ([]tree.Item, bool) {
+	result := make([]tree.Item, 0, len(items)+1)
 	for index := range items {
 		item := items[index]
 		if item.Key == targetKey {
 			switch position {
-			case ui.TreeDropBefore:
+			case tree.DropBefore:
 				result = append(result, moved, item)
-			case ui.TreeDropAfter:
+			case tree.DropAfter:
 				result = append(result, item, moved)
-			case ui.TreeDropInside:
-				item.Children = append(append([]ui.TreeItem(nil), item.Children...), moved)
+			case tree.DropInside:
+				item.Children = append(append([]tree.Item(nil), item.Children...), moved)
 				result = append(result, item)
 			default:
 				return items, false
@@ -111,7 +112,7 @@ func catalogTreeInsert(items []ui.TreeItem, moved ui.TreeItem, targetKey string,
 	return result, false
 }
 
-func catalogTreeItem(items []ui.TreeItem, key string) (*ui.TreeItem, bool) {
+func catalogTreeItem(items []tree.Item, key string) (*tree.Item, bool) {
 	for index := range items {
 		if items[index].Key == key {
 			return &items[index], true
@@ -123,12 +124,12 @@ func catalogTreeItem(items []ui.TreeItem, key string) (*ui.TreeItem, bool) {
 	return nil, false
 }
 
-func catalogTreeIsAncestor(items []ui.TreeItem, ancestorKey, targetKey string) bool {
+func catalogTreeIsAncestor(items []tree.Item, ancestorKey, targetKey string) bool {
 	item, ok := catalogTreeItem(items, ancestorKey)
 	return ok && catalogTreeHasKey(item.Children, targetKey)
 }
 
-func catalogTreeHasKey(items []ui.TreeItem, key string) bool {
+func catalogTreeHasKey(items []tree.Item, key string) bool {
 	for _, item := range items {
 		if item.Key == key || catalogTreeHasKey(item.Children, key) {
 			return true
@@ -137,17 +138,17 @@ func catalogTreeHasKey(items []ui.TreeItem, key string) bool {
 	return false
 }
 
-func catalogTreeAcceptsChildren(item ui.TreeItem) bool {
+func catalogTreeAcceptsChildren(item tree.Item) bool {
 	return item.AcceptsChildren || len(item.Children) > 0
 }
 
-func treeDropPositionLabel(position ui.TreeDropPosition) string {
+func treeDropPositionLabel(position tree.DropPosition) string {
 	switch position {
-	case ui.TreeDropBefore:
+	case tree.DropBefore:
 		return "before"
-	case ui.TreeDropInside:
+	case tree.DropInside:
 		return "inside"
-	case ui.TreeDropAfter:
+	case tree.DropAfter:
 		return "after"
 	default:
 		return "near"
@@ -158,8 +159,8 @@ func containsCatalogTreeKey(keys []string, key string) bool {
 	return slices.Contains(keys, key)
 }
 
-func sortedCatalogTableRows(descriptor ui.TableSortDescriptor) []ui.TableRow {
-	rows := append([]ui.TableRow(nil), catalogTableRows...)
+func sortedCatalogTableRows(descriptor table.SortDescriptor) []table.Row {
+	rows := append([]table.Row(nil), catalogTableRows...)
 	if descriptor.Column == "" {
 		return rows
 	}
@@ -167,7 +168,7 @@ func sortedCatalogTableRows(descriptor ui.TableSortDescriptor) []ui.TableRow {
 		first := catalogTableSortValue(rows[left], descriptor.Column)
 		second := catalogTableSortValue(rows[right], descriptor.Column)
 		comparison := strings.Compare(first, second)
-		if descriptor.Direction == ui.TableSortDescending {
+		if descriptor.Direction == table.SortDescending {
 			return comparison > 0
 		}
 		return comparison < 0
@@ -175,7 +176,7 @@ func sortedCatalogTableRows(descriptor ui.TableSortDescriptor) []ui.TableRow {
 	return rows
 }
 
-func catalogTableSortValue(row ui.TableRow, column string) string {
+func catalogTableSortValue(row table.Row, column string) string {
 	switch column {
 	case "name", "category", "status":
 		index := 0

@@ -44,8 +44,8 @@ Use `NewProgram` when the initial model is a fixed value:
 
 ```go
 ui.Run(ui.NewProgram(Model{}, Update, View),
-	ui.Title("FlowUI app"),
-	ui.Size(800, 600),
+	window.Title("FlowUI app"),
+	window.Size(800, 600),
 )
 ```
 
@@ -67,7 +67,8 @@ ui.Run(ui.Program[Model, Msg]{
 
 Child modules can keep their own model and messages. The parent wraps child
 messages with `ui.MapCmd` and maps the child's `Send` callback into a parent
-message. The complete pattern is shown in [`examples/modules`](https://github.com/qianniancn/flowui/tree/main/examples/modules).
+message. A complete runnable pattern is maintained in the separate `examples`
+module.
 
 ## Actions and commands
 

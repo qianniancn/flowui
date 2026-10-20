@@ -7,17 +7,17 @@ renders nodes, ports, and edges, then reports viewport changes to the model.
 ## Graph data
 
 ```go
-graph := ui.NodeGraphData{
-	Nodes: []ui.NodeGraphNode{
-		ui.NewNodeGraphNode("request", "HTTP Request", ui.NodeGraphPoint{X: 80, Y: 140}).
-			Outputs(ui.NewNodeGraphPort("body", "Body")),
-		ui.NewNodeGraphNode("parse", "Parse JSON", ui.NodeGraphPoint{X: 380, Y: 92}).
-			Inputs(ui.NewNodeGraphPort("input", "Input")),
+graph := nodegraph.Graph{
+	Nodes: []nodegraph.Node{
+		nodegraph.NewNode("request", "HTTP Request", nodegraph.Point{X: 80, Y: 140}).
+			Outputs(nodegraph.NewPort("body", "Body")),
+		nodegraph.NewNode("parse", "Parse JSON", nodegraph.Point{X: 380, Y: 92}).
+			Inputs(nodegraph.NewPort("input", "Input")),
 	},
-	Edges: []ui.NodeGraphEdge{
-		ui.NewNodeGraphEdge("request-body",
-			ui.NewNodeGraphEndpoint("request", "body"),
-			ui.NewNodeGraphEndpoint("parse", "input")),
+	Edges: []nodegraph.Edge{
+		nodegraph.NewEdge("request-body",
+			nodegraph.NewEndpoint("request", "body"),
+			nodegraph.NewEndpoint("parse", "input")),
 	},
 }
 ```
@@ -32,10 +32,10 @@ back to `NodeGraph`. NodeGraph does not mutate graph data internally:
 ```go
 nextID := len(model.Nodes) + 1
 model.Nodes = append(model.Nodes,
-	ui.NewNodeGraphNode("node-"+strconv.Itoa(nextID), title,
-		ui.NodeGraphPoint{X: 80, Y: 96}).
-		Inputs(ui.NewNodeGraphPort("in", "In")).
-		Outputs(ui.NewNodeGraphPort("out", "Out")),
+	nodegraph.NewNode("node-"+strconv.Itoa(nextID), title,
+		nodegraph.Point{X: 80, Y: 96}).
+		Inputs(nodegraph.NewPort("in", "In")).
+		Outputs(nodegraph.NewPort("out", "Out")),
 )
 ```
 
@@ -49,20 +49,25 @@ nodes gain a subtle shadow;
 dots:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	Grid(true).
-	GridPattern(ui.NodeGraphGridDots)
+	GridPattern(nodegraph.GridDots)
 ```
 
-`GridColor` and `GridOpacity` override those values for one graph without
-changing the application theme:
+To override the grid color and opacity for one graph without changing the
+application theme, pass a provider-owned override:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	GridPattern(ui.NodeGraphGridDots).
-	GridColor(color.NRGBA{R: 0x32, G: 0x78, B: 0xc8, A: 0xff}).
-	GridOpacity(.35)
+gridColor := color.NRGBA{R: 0x32, G: 0x78, B: 0xc8, A: 0xff}
+gridOpacity := float32(.35)
+nodegraph.StyledWithOverride(
+	nodegraph.New("workflow", graph).GridPattern(nodegraph.GridDots),
+	theme.NodeGraphOverride{GridColor: &gridColor, GridOpacity: &gridOpacity},
+)
 ```
+
+Grid color and opacity are provider-owned overrides; visual configuration does
+not belong on the behavior widget.
 draggable nodes use a grab cursor and connectable ports use a crosshair.
 
 The canvas, grid, nodes, ports, edges, and selection state use the dedicated
@@ -70,11 +75,11 @@ tokens in `Theme.Components.NodeGraph`. Applications can override individual
 values:
 
 ```go
-ui.CustomizeTheme(func(theme *ui.Theme) {
-	theme.Components.NodeGraph.CanvasBackground = color.NRGBA{R: 0xf8, G: 0xfa, B: 0xfc, A: 0xff}
-	theme.Components.NodeGraph.CanvasBorder = color.NRGBA{R: 0xd9, G: 0xe1, B: 0xeb, A: 0xff}
-	theme.Components.NodeGraph.GridColor = color.NRGBA{R: 0xd9, G: 0xe1, B: 0xeb, A: 0xff}
-	theme.Components.NodeGraph.GridOpacity = .65
+window.CustomizeTheme(func(t *theme.Theme) {
+	t.Components.NodeGraph.CanvasBackground = color.NRGBA{R: 0xf8, G: 0xfa, B: 0xfc, A: 0xff}
+	t.Components.NodeGraph.CanvasBorder = color.NRGBA{R: 0xd9, G: 0xe1, B: 0xeb, A: 0xff}
+	t.Components.NodeGraph.GridColor = color.NRGBA{R: 0xd9, G: 0xe1, B: 0xeb, A: 0xff}
+	t.Components.NodeGraph.GridOpacity = .65
 })
 ```
 
@@ -89,14 +94,14 @@ exactly where a user interacts. Node and edge callbacks carry the target ID;
 hover callbacks fire when the pointer enters or leaves a target:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	OnCanvasDoubleClick(func(event ui.NodeGraphCanvasEvent) {
+nodegraph.New("workflow", graph).
+	OnCanvasDoubleClick(func(event nodegraph.CanvasEvent) {
 		addNode(event.Position)
 	}).
-	OnNodeContextMenu(func(event ui.NodeGraphNodeEvent) {
+	OnNodeContextMenu(func(event nodegraph.NodeEvent) {
 		openNodeMenu(event.NodeID, event.Position)
 	}).
-	OnEdgeHover(func(event ui.NodeGraphEdgeEvent) {
+	OnEdgeHover(func(event nodegraph.EdgeEvent) {
 		setInspectedEdge(event.EdgeID)
 	})
 ```
@@ -109,9 +114,9 @@ For data from an external Gio drag source, declare each accepted MIME type and
 handle the copied payload in `OnDrop`:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	DropTypes("application/x-flowui-node").
-	OnDrop(func(event ui.NodeGraphDropEvent) {
+	OnDrop(func(event nodegraph.DropEvent) {
 		addNodeFromPayload(event.Position, event.Data)
 	})
 ```
@@ -125,10 +130,10 @@ payload to 1 MiB, and reports the graph-coordinate drop position.
 Keep the viewport in the model and apply change requests through messages:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	Height(520).
 	Viewport(model.Viewport).
-	OnViewportChange(func(next ui.NodeGraphViewport) {
+	OnViewportChange(func(next nodegraph.Viewport) {
 		send(ViewportChanged{Viewport: next})
 	})
 ```
@@ -151,11 +156,11 @@ controlled viewport receives that calculated value through
 `0.1`. To request another fit, toggle `FitView` from `false` to `true`:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	Viewport(model.Viewport).
 	FitView(model.RequestFit).
 	FitViewPadding(.1).
-	OnViewportChange(func(next ui.NodeGraphViewport) {
+	OnViewportChange(func(next nodegraph.Viewport) {
 		send(ViewportChanged{Viewport: next})
 	})
 ```
@@ -166,11 +171,11 @@ Minimap centers the viewport there, and dragging its viewport frame pans
 continuously:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	Viewport(model.Viewport).
 	Minimap(true).
 	Controls(true).
-	OnViewportChange(func(next ui.NodeGraphViewport) {
+	OnViewportChange(func(next nodegraph.Viewport) {
 		send(ViewportChanged{Viewport: next})
 	})
 ```
@@ -183,11 +188,11 @@ in graph coordinates, equivalent to ViewportPortal, and follows pan and zoom.
 Both scope state by the NodeGraph key and their own key:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	Panel("actions", ui.NodeGraphPanelTopRight,
-		ui.Button("fit", "Fit")).
-	ViewportOverlay("annotation", ui.NodeGraphPoint{X: 240, Y: 128},
-		ui.Text("Inspect this node"))
+nodegraph.New("workflow", graph).
+	Panel("actions", nodegraph.PanelTopRight,
+		button.New("Fit")).
+	ViewportOverlay("annotation", nodegraph.Point{X: 240, Y: 128},
+		text.New("Inspect this node"))
 ```
 
 `NodeGraphNodesBounds`, `NodeGraphIntersectingNodes`,
@@ -204,12 +209,12 @@ Selection and position requests are returned through `OnNodesChange`.
 `ApplyNodeGraphChanges` is a pure helper for the common Model update:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	SelectionMode(ui.NodeGraphSelectionMultiple).
+nodegraph.New("workflow", graph).
+	SelectionMode(nodegraph.SelectionMultiple).
 	SnapToGrid(true).
 	SnapGrid(16, 16).
-	OnNodesChange(func(changes []ui.NodeGraphNodeChange) {
-		send(NodesChanged{Nodes: ui.ApplyNodeGraphChanges(model.Nodes, changes)})
+	OnNodesChange(func(changes []nodegraph.NodeChange) {
+		send(NodesChanged{Nodes: nodegraph.ApplyNodeChanges(model.Nodes, changes)})
 	})
 ```
 
@@ -227,22 +232,22 @@ An individual node can override it with `Resizable(true)` or
 constrains the interactive dimensions:
 
 ```go
-node := ui.NewNodeGraphNode("transform", "Transform", ui.NodeGraphPoint{X: 80, Y: 80}).
+node := nodegraph.NewNode("transform", "Transform", nodegraph.Point{X: 80, Y: 80}).
 	WithSize(180, 100).
 	Resizable(true).
 	SizeRange(120, 72, 480, 360)
 ```
 
-The default remains the lower-right handle for compatibility. Use
-`ResizeHandles(ui.NodeGraphResizeHandleAll)` for four edges and four corners;
+The default resize handle is the lower-right corner. Use
+`ResizeHandles(nodegraph.ResizeHandleAll)` for four edges and four corners;
 an individual node can override that set with `ResizeHandles`. Resizing from
 the left or top reports both a position and a size request, which
 `ApplyNodeGraphChanges` applies directly:
 
 ```go
-ui.NodeGraph("workflow", graph).
+nodegraph.New("workflow", graph).
 	NodesResizable(true).
-	ResizeHandles(ui.NodeGraphResizeHandleAll)
+	ResizeHandles(nodegraph.ResizeHandleAll)
 ```
 
 ## Groups and Parent Nodes
@@ -254,9 +259,9 @@ minimap. Moving a parent therefore needs only the parent position update; the
 child model data is not changed a second time:
 
 ```go
-group := ui.NewNodeGraphNode("extract", "Extract", ui.NodeGraphPoint{X: 120, Y: 80}).
+group := nodegraph.NewNode("extract", "Extract", nodegraph.Point{X: 120, Y: 80}).
 	WithSize(440, 300)
-child := ui.NewNodeGraphNode("parse", "Parse", ui.NodeGraphPoint{X: 32, Y: 64}).
+child := nodegraph.NewNode("parse", "Parse", nodegraph.Point{X: 32, Y: 64}).
 	Parent("extract").
 	ConstrainToParent(true)
 ```
@@ -284,13 +289,13 @@ history; call `Commit` only for completed operations such as a drag or resize
 release:
 
 ```go
-history := ui.NewNodeGraphHistory(model.Graph).Limit(100)
+history := nodegraph.NewHistory(model.Graph).Limit(100)
 
-ui.NodeGraph("workflow", model.Graph).
-	OnPaste(func(fragment ui.NodeGraphFragment, offset ui.NodeGraphPoint) {
-		next := ui.PasteNodeGraphFragment(model.Graph, fragment,
-			func(node ui.NodeGraphNode) string { return newNodeID(node) },
-			func(edge ui.NodeGraphEdge) string { return newEdgeID(edge) },
+nodegraph.New("workflow", model.Graph).
+	OnPaste(func(fragment nodegraph.Fragment, offset nodegraph.Point) {
+		next := nodegraph.PasteFragment(model.Graph, fragment,
+			func(node nodegraph.Node) string { return newNodeID(node) },
+			func(edge nodegraph.Edge) string { return newEdgeID(edge) },
 			offset,
 		)
 		send(GraphReplaced{Graph: next})
@@ -321,9 +326,9 @@ edge selection independently; otherwise `Edge.Selected` is the source.
 `ApplyNodeGraphEdgeChanges` can write them back to the model:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	OnEdgesChange(func(changes []ui.NodeGraphEdgeChange) {
-		send(EdgesChanged{Edges: ui.ApplyNodeGraphEdgeChanges(model.Edges, changes)})
+nodegraph.New("workflow", graph).
+	OnEdgesChange(func(changes []nodegraph.EdgeChange) {
+		send(EdgesChanged{Edges: nodegraph.ApplyEdgeChanges(model.Edges, changes)})
 	})
 ```
 
@@ -336,7 +341,7 @@ Removing a node also requests removal of every connected edge.
 
 With `SelectionOnDrag(true)`, primary-button dragging on empty space selects
 nodes while middle-button dragging continues to pan. Use
-`SelectionBoxMode(ui.NodeGraphSelectionBoxPartial)` for intersecting nodes, or
+`SelectionBoxMode(nodegraph.SelectionBoxPartial)` for intersecting nodes, or
 `NodeGraphSelectionBoxFull` to require full containment.
 
 Dragging from an output port to an input port shows a connection preview.
@@ -344,11 +349,11 @@ Dragging from an output port to an input port shows a connection preview.
 on a valid input delivers `OnConnect`:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	IsValidConnection(func(connection ui.NodeGraphConnection) bool {
+nodegraph.New("workflow", graph).
+	IsValidConnection(func(connection nodegraph.Connection) bool {
 		return connection.Source.NodeID != connection.Target.NodeID
 	}).
-	OnConnect(func(connection ui.NodeGraphConnection) {
+	OnConnect(func(connection nodegraph.Connection) {
 		// Create an Edge in Update, then render it through graph.Edges.
 	})
 ```
@@ -362,8 +367,8 @@ limits a port to one connection. Existing edges count against the limit, while
 the edge being reconnected is excluded:
 
 ```go
-source := ui.NewNodeGraphPort("payload", "Payload").Type("json")
-target := ui.NewNodeGraphPort("input", "Input").Type("json").MaxConnections(1)
+source := nodegraph.NewPort("payload", "Payload").Type("json")
+target := nodegraph.NewPort("input", "Input").Type("json").MaxConnections(1)
 ```
 
 ## Edge reconnection
@@ -375,10 +380,10 @@ old edge and complete replacement connection. `ReconnectNodeGraphEdge` is a
 pure helper that writes the change back while retaining the edge ID:
 
 ```go
-ui.NodeGraph("workflow", graph).
-	OnReconnect(func(oldEdge ui.NodeGraphEdge, connection ui.NodeGraphConnection) {
+nodegraph.New("workflow", graph).
+	OnReconnect(func(oldEdge nodegraph.Edge, connection nodegraph.Connection) {
 		send(EdgeReconnected{
-			Edges: ui.ReconnectNodeGraphEdge(oldEdge, connection, model.Edges),
+			Edges: nodegraph.ReconnectEdge(oldEdge, connection, model.Edges),
 		})
 	})
 ```
@@ -387,10 +392,10 @@ Both endpoints are reconnectable by default. `EdgesReconnectable(false)`
 disables that default, while an individual edge can limit its range:
 
 ```go
-sourceOnly := ui.NewNodeGraphEdge("source-only", source, target).
-	Reconnectable(ui.NodeGraphReconnectSource)
-targetOnly := ui.NewNodeGraphEdge("target-only", source, target).
-	Reconnectable(ui.NodeGraphReconnectTarget)
+sourceOnly := nodegraph.NewEdge("source-only", source, target).
+	Reconnectable(nodegraph.ReconnectSource)
+targetOnly := nodegraph.NewEdge("target-only", source, target).
+	Reconnectable(nodegraph.ReconnectTarget)
 ```
 
 `NodeGraphReconnectBoth` permits both endpoints and
@@ -404,11 +409,11 @@ Edges use Bezier curves by default, and can switch to straight, stepped, or
 rounded stepped geometry. Drawing and hit testing share the same geometry:
 
 ```go
-edge := ui.NewNodeGraphEdge("request-body", source, target).
-	Type(ui.NodeGraphEdgeSmoothStep).
+edge := nodegraph.NewEdge("request-body", source, target).
+	Type(nodegraph.EdgeSmoothStep).
 	Width(1.5).
 	Dashed(true).
-	Markers(ui.NodeGraphMarkerNone, ui.NodeGraphMarkerArrow).
+	Markers(nodegraph.MarkerNone, nodegraph.MarkerArrow).
 	Label("JSON")
 ```
 
@@ -421,8 +426,8 @@ scoped by graph and edge ID, making it appropriate for interactive buttons,
 toggles, and other inline controls:
 
 ```go
-edge := ui.NewNodeGraphEdge("request-body", source, target).
-	LabelContent(ui.Button("edge-action", "Inspect"))
+edge := nodegraph.NewEdge("request-body", source, target).
+	LabelContent(button.New("Inspect"))
 ```
 
 ## Custom node content and handles
@@ -434,12 +439,12 @@ explicit dimensions still take precedence:
 
 ```go
 content := ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
-	return ui.Text("Running").Layout(ctx, gtx)
+	return text.New("Running").Layout(ctx, gtx)
 })
-node := ui.NewNodeGraphNode("worker", "Worker", ui.NodeGraphPoint{X: 120, Y: 80}).
+node := nodegraph.NewNode("worker", "Worker", nodegraph.Point{X: 120, Y: 80}).
 	Content(content).
-	Inputs(ui.NewNodeGraphPort("request", "Request").Position(ui.NodeGraphHandleTop)).
-	Outputs(ui.NewNodeGraphPort("result", "Result").Position(ui.NodeGraphHandleBottom))
+	Inputs(nodegraph.NewPort("request", "Request").Position(nodegraph.HandleTop)).
+	Outputs(nodegraph.NewPort("result", "Result").Position(nodegraph.HandleBottom))
 ```
 
 Inputs default to the left side and outputs to the right. `Port.Position` can
@@ -451,4 +456,5 @@ NodeGraph.
 
 Graph mutations remain controlled callbacks owned by the application model.
 
-See `examples/node_graph` for a runnable program.
+See the component tests under `widget/nodegraph` for interaction coverage.
+The code in this chapter is intended to be combined with an application.

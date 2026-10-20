@@ -2,7 +2,6 @@
 package uitest
 
 import (
-	"encoding/json"
 	"image"
 	"time"
 
@@ -13,19 +12,22 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/i18n"
+	"github.com/qianniancn/flowui/internal/core"
 	internalocale "github.com/qianniancn/flowui/internal/locale"
-	internaltheme "github.com/qianniancn/flowui/internal/theme"
+	"github.com/qianniancn/flowui/theme"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/window"
 )
 
-// Config controls a Harness. Size must be positive. A nil Theme uses the
-// default theme, LanguageAuto selects English, a zero Metric uses one physical
-// pixel per dp and sp, and a zero Now starts from a deterministic non-zero time.
+// Config controls a Harness. Size must be positive and Theme must provide a
+// complete component visual provider. LanguageAuto selects English, a zero
+// Metric uses one physical pixel per dp and sp, and a zero Now starts from a
+// deterministic non-zero time.
 type Config struct {
 	Size     image.Point
-	Theme    *ui.Theme
-	Language ui.Language
+	Theme    *theme.Theme
+	Language window.Language
 	Metric   unit.Metric
 	Now      time.Time
 }
@@ -40,31 +42,37 @@ type Harness struct {
 	now    time.Time
 }
 
-// New creates a one-to-one pixel harness using the default theme and English.
-func New(size image.Point) *Harness {
-	return NewWithConfig(Config{Size: size, Language: ui.LanguageEnglish})
+// New creates a one-to-one pixel harness using an explicit theme and English.
+func New(size image.Point, activeTheme theme.Theme) *Harness {
+	return NewWithConfig(Config{Size: size, Theme: &activeTheme, Language: window.LanguageEnglish})
 }
 
 // NewWithConfig creates a harness with explicit test configuration.
 func NewWithConfig(config Config) *Harness {
 	validateSize(config.Size)
-	activeTheme := ui.DefaultTheme()
-	if config.Theme != nil {
-		activeTheme = *config.Theme
+	if config.Theme == nil {
+		panic(theme.ErrMissingVisualProvider)
 	}
-	nativeTheme := exportTheme(activeTheme)
-	internaltheme.DetachMaterial(nativeTheme)
-	internaltheme.SyncMaterialTheme(nativeTheme)
+	if err := theme.ValidateVisualProvider(*config.Theme); err != nil {
+		panic(err)
+	}
+	activeTheme := *config.Theme
+	theme.DetachMaterial(&activeTheme)
+	theme.SyncMaterialTheme(&activeTheme)
 	now := config.Now
 	if now.IsZero() {
 		now = time.Unix(1, 0)
 	}
 	language := config.Language
-	if language == ui.LanguageAuto {
-		language = ui.LanguageEnglish
+	if language == window.LanguageAuto {
+		language = window.LanguageEnglish
+	}
+	ctx, err := core.NewWithCatalogStrict(nil, &activeTheme, internalocale.Language(language), i18n.Catalog{})
+	if err != nil {
+		panic(err)
 	}
 	return &Harness{
-		ctx:    (*ui.Context)(frame.New(nil, nativeTheme, internalocale.Language(language))),
+		ctx:    (*ui.Context)(ctx),
 		size:   config.Size,
 		metric: config.Metric,
 		now:    now,
@@ -92,29 +100,17 @@ func (h *Harness) Frame(root ui.Widget) layout.Dimensions {
 		Source:      h.router.Source(),
 		Ops:         &ops,
 	}
-	frameCtx := (*frame.Context)(h.ctx)
-	frame.BeginFrameWithViewport(frameCtx, h.size)
+	frameCtx := (*core.Context)(h.ctx)
+	core.BeginFrameWithViewport(frameCtx, h.size)
 	dimensions := layout.Dimensions{}
 	if root != nil {
 		dimensions = root.Layout(h.ctx, gtx)
 	}
-	frame.LayoutOverlays(frameCtx, gtx)
-	frame.ApplyFrameCommands(frameCtx, gtx)
-	frame.EndFrame(frameCtx)
+	core.LayoutOverlays(frameCtx, gtx)
+	core.ApplyFrameCommands(frameCtx, gtx)
+	core.EndFrame(frameCtx)
 	h.router.Frame(&ops)
 	return dimensions
-}
-
-func exportTheme(value ui.Theme) *internaltheme.Theme {
-	data, err := json.Marshal(value)
-	if err != nil {
-		panic("flowui/uitest: encode theme: " + err.Error())
-	}
-	var native internaltheme.Theme
-	if err := json.Unmarshal(data, &native); err != nil {
-		panic("flowui/uitest: decode theme: " + err.Error())
-	}
-	return &native
 }
 
 // Click queues a primary mouse press and release for the next frame.
@@ -142,6 +138,45 @@ func (h *Harness) Key(name key.Name, modifiers key.Modifiers) {
 		key.Event{Name: name, Modifiers: modifiers, State: key.Press},
 		key.Event{Name: name, Modifiers: modifiers, State: key.Release},
 	)
+}
+
+// touchPointerID keeps touch input on an identity distinct from the id Click
+// uses, so a test that mixes mouse and touch cannot continue one gesture with
+// the other by accident.
+const touchPointerID pointer.ID = 2
+
+// TouchDown queues a touch press. Pair it with TouchMove and TouchUp to build a
+// gesture, calling Frame between events so the component observes each step.
+func (h *Harness) TouchDown(position f32.Point) {
+	h.Touch(touchPointerID, pointer.Press, position)
+}
+
+// TouchMove queues a touch move.
+func (h *Harness) TouchMove(position f32.Point) {
+	h.Touch(touchPointerID, pointer.Move, position)
+}
+
+// TouchUp queues a touch release.
+func (h *Harness) TouchUp(position f32.Point) {
+	h.Touch(touchPointerID, pointer.Release, position)
+}
+
+// TouchTap queues a touch press and release for the next frame.
+func (h *Harness) TouchTap(position f32.Point) {
+	h.Touch(touchPointerID, pointer.Press, position)
+	h.Touch(touchPointerID, pointer.Release, position)
+}
+
+// Touch queues one raw touch pointer event. Pass an explicit id to drive
+// concurrent pointers; single-gesture tests should prefer TouchDown, TouchMove,
+// TouchUp, and TouchTap.
+func (h *Harness) Touch(id pointer.ID, kind pointer.Kind, position f32.Point) {
+	h.router.Queue(pointer.Event{
+		Kind:      kind,
+		Source:    pointer.Touch,
+		PointerID: id,
+		Position:  position,
+	})
 }
 
 // Advance moves the deterministic frame clock forward.

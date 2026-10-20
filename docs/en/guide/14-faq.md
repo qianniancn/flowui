@@ -34,13 +34,13 @@ avoid hard-coded colors when a semantic token is available.
 
 ## How should a custom widget handle drawing and pointer input?
 
-Use `ResolveColor` or `ResolveBrush` for theme-backed values, `DrawBrush` for
+Use `resolve.Color` or `resolve.Brush` for theme-backed values, `draw.Fill` for
 gradient fills, and `MeasureText` for a measurement pass. Low-level pointer
 controls can use `AddPointerArea`, `NextPointerEvent`,
-`IsPrimaryPointerPress`, and `GrabPointer`. `LayoutVisualOverflow` is for a
+`IsPrimaryPointerPress`, and `GrabPointer`. `layout.VisualOverflow` is for a
 local ripple or focus decoration; use `Popover`, `Portal`, or another overlay
 component for content that is not part of the local layout. Use
-`LayoutVisualOutset` or `VisualOutset` when local paint also needs safe space
+`layout.VisualOutset` or `style.VisualOutset` when local paint also needs safe space
 inside an ancestor scroll or split viewport.
 
 ## Minimum Go version
@@ -49,20 +49,8 @@ FlowUI currently requires Go 1.26.2 or newer, as declared by `go.mod`.
 
 ## Where are the examples?
 
-```text
-examples/counter          Minimal MVU
-examples/form             Controlled fields
-examples/async            Commands and subscriptions
-examples/components       Component gallery
-examples/fonts            System and bundled fonts
-examples/grid_layout      Fixed and responsive grids
-examples/multi_windows    Application lifecycle
-examples/systray_ui       System tray integration
-examples/profiling        Rendering and memory profiles
-```
-
-Run one from the repository root, for example:
-
-```bash
-go run ./examples/components
-```
+Default-theme examples live in this module. From the repository root, run
+`go run ./examples/counter`, `go run ./examples/buttons`,
+`go run ./examples/inputs`, or `go run ./examples/style-gallery`. Other design
+systems and their examples live in the external themes module; see
+[Default theme and external styles](18-design-styles.md).

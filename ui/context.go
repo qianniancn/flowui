@@ -1,23 +1,23 @@
 package ui
 
-import "github.com/qianniancn/flowui/internal/frame"
+import "github.com/qianniancn/flowui/internal/core"
 
 // Context provides per-frame services to FlowUI widgets.
-type Context = frame.Context
+type Context = core.Context
 
 // WindowState describes the latest native window configuration.
-type WindowState = frame.WindowState
+type WindowState = core.WindowState
 
 // WindowMode identifies the current native window mode.
-type WindowMode = frame.WindowMode
+type WindowMode = core.WindowMode
 
 const (
 	// WindowModeWindowed is the normal resizable window mode.
-	WindowModeWindowed = frame.Windowed
+	WindowModeWindowed = core.Windowed
 	// WindowModeFullscreen indicates a borderless fullscreen window.
-	WindowModeFullscreen = frame.Fullscreen
+	WindowModeFullscreen = core.Fullscreen
 	// WindowModeMinimized indicates that the native window is minimized.
-	WindowModeMinimized = frame.Minimized
+	WindowModeMinimized = core.Minimized
 	// WindowModeMaximized indicates that the native window is maximized.
-	WindowModeMaximized = frame.Maximized
+	WindowModeMaximized = core.Maximized
 )

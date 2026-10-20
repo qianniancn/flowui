@@ -18,7 +18,7 @@ func TestSubscriptionSetStartsOnceAndCancelsWhenRemoved(t *testing.T) {
 	sent := make(chan int, 1)
 	subscription := Subscription[int]{
 		Key: "clock",
-		Run: func(ctx context.Context, send func(int)) error {
+		Run: func(ctx context.Context, send Send[int]) error {
 			starts.Add(1)
 			close(started)
 			<-ctx.Done()
@@ -59,7 +59,7 @@ func TestSubscriptionSetReportsKeyedError(t *testing.T) {
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "updates",
-			Run: func(context.Context, func(int)) error {
+			Run: func(context.Context, Send[int]) error {
 				return want
 			},
 		},
@@ -89,7 +89,7 @@ func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T)
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "old",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				oldContext = ctx
 				close(oldStarted)
 				<-ctx.Done()
@@ -102,7 +102,7 @@ func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T)
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "new",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				if oldContext.Err() == nil {
 					t.Error("replacement started before removed subscription was canceled")
 				}
@@ -116,7 +116,7 @@ func TestSubscriptionSetCancelsRemovedKeyBeforeStartingReplacement(t *testing.T)
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "new",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				if oldContext.Err() == nil {
 					t.Error("replacement started before removed subscription was canceled")
 				}
@@ -141,7 +141,7 @@ func TestSubscriptionSetStartsUnrelatedKeyWhileAnotherIsStopping(t *testing.T) {
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "old",
-			Run: func(context.Context, func(int)) error {
+			Run: func(context.Context, Send[int]) error {
 				close(oldStarted)
 				<-releaseOld
 				return nil
@@ -153,7 +153,7 @@ func TestSubscriptionSetStartsUnrelatedKeyWhileAnotherIsStopping(t *testing.T) {
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "new",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				close(newStarted)
 				<-ctx.Done()
 				return ctx.Err()
@@ -180,7 +180,7 @@ func TestSubscriptionSetSameKeyWaitsForStopGrace(t *testing.T) {
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "same",
-			Run: func(context.Context, func(int)) error {
+			Run: func(context.Context, Send[int]) error {
 				close(oldStarted)
 				<-releaseOld
 				return nil
@@ -194,7 +194,7 @@ func TestSubscriptionSetSameKeyWaitsForStopGrace(t *testing.T) {
 	desired := []Subscription[int]{
 		{
 			Key: "same",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				close(newStarted)
 				<-ctx.Done()
 				return ctx.Err()
@@ -231,7 +231,7 @@ func TestLoopCoreDropsQueuedMessageFromStoppedSubscription(t *testing.T) {
 	set.reconcile(root, []Subscription[int]{
 		{
 			Key: "events",
-			Run: func(ctx context.Context, _ func(int)) error {
+			Run: func(ctx context.Context, _ Send[int]) error {
 				close(started)
 				<-ctx.Done()
 				return ctx.Err()
@@ -264,7 +264,7 @@ func TestSubscriptionSetRejectsDuplicateKeys(t *testing.T) {
 	}()
 	var set subscriptionSet[int]
 	var effects effectGroup
-	run := func(context.Context, func(int)) error { return nil }
+	run := func(context.Context, Send[int]) error { return nil }
 	set.reconcile(context.Background(), []Subscription[int]{
 		{Key: "events", Run: run},
 		{Key: "events", Run: run},
@@ -278,7 +278,7 @@ func TestCompletedSubscriptionIsRetainedUntilRemoved(t *testing.T) {
 	completed := make(chan struct{})
 	subscription := Subscription[int]{
 		Key: "one-shot",
-		Run: func(context.Context, func(int)) error {
+		Run: func(context.Context, Send[int]) error {
 			starts.Add(1)
 			close(completed)
 			return nil

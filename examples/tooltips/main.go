@@ -1,6 +1,15 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/tooltip"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct{}
 type Msg any
@@ -8,66 +17,54 @@ type Msg any
 func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Tooltips").Size(24),
-				ui.Divider(),
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Tooltips").Size(24),
+				layout.Divider(),
 				section("Basic",
-					ui.Row(
+					layout.Row(
 						tooltipButton("basic", "Hover me", "Tooltip content"),
 						tooltipButton("arrow", "With arrow", "Tooltip content").Arrow(true),
-						ui.Tooltip("disabled",
-							ui.Button("disabled-trigger", ui.Text("Disabled tooltip")).Variant(ui.ButtonSecondary),
-							ui.Text("This tooltip is disabled"),
-						).Delay(0).Disabled(true),
+						tooltip.New("disabled", button.New("Disabled tooltip").Variant(button.Secondary), "This tooltip is disabled").Delay(0).Disabled(true),
 					).Gap(12).AlignMiddle(),
 				),
 				section("Placement",
-					ui.Wrap(
-						ui.Box(tooltipButton("top", "Top", "Placed above").Placement(ui.TooltipTop).Arrow(true)),
-						ui.Box(tooltipButton("bottom", "Bottom", "Placed below").Placement(ui.TooltipBottom).Arrow(true)),
-						ui.Box(tooltipButton("left", "Left", "Placed on the left").Placement(ui.TooltipLeft).Arrow(true)),
-						ui.Box(tooltipButton("right", "Right", "Placed on the right").Placement(ui.TooltipRight).Arrow(true)),
-						ui.Box(tooltipButton("top-start", "Top start", "Aligned to the start").Placement(ui.TooltipTopStart).Arrow(true)),
-						ui.Box(tooltipButton("bottom-end", "Bottom end", "Aligned to the end").Placement(ui.TooltipBottomEnd).Arrow(true)),
+					layout.Wrap(
+						layout.Box(tooltipButton("top", "Top", "Placed above").Placement(tooltip.Top).Arrow(true)),
+						layout.Box(tooltipButton("bottom", "Bottom", "Placed below").Placement(tooltip.Bottom).Arrow(true)),
+						layout.Box(tooltipButton("left", "Left", "Placed on the left").Placement(tooltip.Left).Arrow(true)),
+						layout.Box(tooltipButton("right", "Right", "Placed on the right").Placement(tooltip.Right).Arrow(true)),
+						layout.Box(tooltipButton("top-start", "Top start", "Aligned to the start").Placement(tooltip.TopStart).Arrow(true)),
+						layout.Box(tooltipButton("bottom-end", "Bottom end", "Aligned to the end").Placement(tooltip.BottomEnd).Arrow(true)),
 					).Gap(12).LineGap(12).AlignMiddle(),
 				),
 				section("Delay",
-					ui.Row(
-						ui.Tooltip("default-delay",
-							ui.Button("default-delay-trigger", ui.Text("Default delay")).Variant(ui.ButtonSecondary),
-							ui.Text("HeroUI default delay"),
-						).Arrow(true),
-						ui.Tooltip("instant",
-							ui.Button("instant-trigger", ui.Text("No delay")).Variant(ui.ButtonSecondary),
-							ui.Text("Opens immediately"),
-						).Delay(0).CloseDelay(0).Arrow(true),
+					layout.Row(
+						tooltip.New("default-delay", button.New("Default delay").Variant(button.Secondary), "Standard delay").Arrow(true),
+						tooltip.New("instant", button.New("No delay").Variant(button.Secondary), "Opens immediately").Delay(0).CloseDelay(0).Arrow(true),
 					).Gap(12).AlignMiddle(),
 				),
 			).Gap(20),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
-func tooltipButton(key, label, content string) ui.TooltipWidget {
-	return ui.Tooltip(
-		key,
-		ui.Button(key+"-trigger", ui.Text(label)).Variant(ui.ButtonSecondary),
-		ui.Text(content),
-	).Delay(0)
+func tooltipButton(key, label, content string) tooltip.Widget {
+	return tooltip.New(key, button.New(label).Key(key+"-trigger").Variant(button.Secondary), content).Delay(0)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(12)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Tooltips"),
-		ui.Size(860, 560),
+		Update, View), window.Title("FlowUI Tooltips"),
+		window.Size(860, 560),
+		window.Theme(base.Light()),
 	)
 }

@@ -3,28 +3,36 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	toastpkg "github.com/qianniancn/flowui/widget/toast"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
 	next      int
-	toasts    []ui.ToastItem
-	placement ui.ToastPlacement
+	toasts    []toastpkg.Item
+	placement toastpkg.Placement
 	lastEvent string
 }
 
 type ShowToast struct {
 	title       string
 	description string
-	variant     ui.ToastVariant
+	variant     toastpkg.Variant
 	action      string
 	loading     bool
 	persistent  bool
+	compact     bool
 }
 
 type CloseToast struct{ key string }
 type ToastAction struct{ key string }
-type SetPlacement struct{ placement ui.ToastPlacement }
+type SetPlacement struct{ placement toastpkg.Placement }
 type ClearToasts struct{}
 
 func Update(model *Model, msg any) ui.Cmd[any] {
@@ -32,7 +40,7 @@ func Update(model *Model, msg any) ui.Cmd[any] {
 	case ShowToast:
 		model.next++
 		key := fmt.Sprintf("toast-%d", model.next)
-		item := ui.Toast(key, msg.title).
+		item := toastpkg.NewItem(key, msg.title).
 			Description(msg.description).
 			Variant(msg.variant).
 			Loading(msg.loading)
@@ -42,7 +50,10 @@ func Update(model *Model, msg any) ui.Cmd[any] {
 		if msg.persistent {
 			item = item.Timeout(0)
 		}
-		model.toasts = append([]ui.ToastItem{item}, model.toasts...)
+		if msg.compact {
+			item = item.Compact(true)
+		}
+		model.toasts = append([]toastpkg.Item{item}, model.toasts...)
 	case CloseToast:
 		model.toasts = removeToast(model.toasts, msg.key)
 		model.lastEvent = "Closed " + msg.key
@@ -59,43 +70,50 @@ func Update(model *Model, msg any) ui.Cmd[any] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[any]) ui.Widget {
-	return ui.Stack(
-		ui.Stacked(ui.Center(
-			ui.Box(
-				ui.Column(
-					ui.Text("FlowUI Toasts").Size(24),
-					ui.Divider(),
+	return layout.Stack(
+		layout.Stacked(layout.Center(
+			layout.Box(
+				layout.Column(
+					text.New("FlowUI Toasts").Size(24),
+					layout.Divider(),
 					section("Variants",
-						ui.Wrap(
+						layout.Wrap(
 							showButton("default", "Default", ShowToast{title: "Team invitation", description: "Bob invited you to join the FlowUI team"}, send),
-							showButton("accent", "Accent", ShowToast{title: "2 credits left", description: "Upgrade for more credits", variant: ui.ToastAccent, action: "Upgrade"}, send),
-							showButton("success", "Success", ShowToast{title: "Plan upgraded", description: "You can continue using FlowUI", variant: ui.ToastSuccess}, send),
-							showButton("warning", "Warning", ShowToast{title: "No credits left", description: "Upgrade to continue", variant: ui.ToastWarning, action: "Upgrade"}, send),
-							showButton("danger", "Danger", ShowToast{title: "Storage is full", description: "Remove files to release space", variant: ui.ToastDanger, action: "Remove"}, send),
+							showButton("accent", "Accent", ShowToast{title: "2 credits left", description: "Upgrade for more credits", variant: toastpkg.Accent, action: "Upgrade"}, send),
+							showButton("success", "Success", ShowToast{title: "Plan upgraded", description: "You can continue using FlowUI", variant: toastpkg.Success}, send),
+							showButton("warning", "Warning", ShowToast{title: "No credits left", description: "Upgrade to continue", variant: toastpkg.Warning, action: "Upgrade"}, send),
+							showButton("danger", "Danger", ShowToast{title: "Storage is full", description: "Remove files to release space", variant: toastpkg.Danger, action: "Remove"}, send),
 						).Gap(10).LineGap(10),
 					),
 					section("States",
-						ui.Row(
+						layout.Row(
 							showButton("loading", "Loading", ShowToast{title: "Uploading file...", description: "Please wait while the file is uploaded", loading: true, persistent: true}, send),
 							showButton("persistent", "Persistent", ShowToast{title: "Important notification", description: "This stays open until dismissed", persistent: true}, send),
-							ui.Button("clear", ui.Text("Clear")).Variant(ui.ButtonTertiary).OnClick(func() { send(ClearToasts{}) }),
+							button.New("Clear").Variant(button.Tertiary).OnClick(func() { send(ClearToasts{}) }),
 						).Gap(10).AlignMiddle(),
 					),
-					section("Placement",
-						ui.Wrap(
-							placementButton("bottom-start", "Bottom start", ui.ToastBottomStart, send),
-							placementButton("bottom", "Bottom", ui.ToastBottom, send),
-							placementButton("bottom-end", "Bottom end", ui.ToastBottomEnd, send),
-							placementButton("top-start", "Top start", ui.ToastTopStart, send),
-							placementButton("top", "Top", ui.ToastTop, send),
-							placementButton("top-end", "Top end", ui.ToastTopEnd, send),
+					section("Messages",
+						layout.Wrap(
+							showButton("message-success", "Success message", ShowToast{title: "Saved", variant: toastpkg.Success, compact: true}, send),
+							showButton("message-warning", "Warning message", ShowToast{title: "Check your connection", variant: toastpkg.Warning, compact: true}, send),
+							showButton("message-danger", "Error message", ShowToast{title: "Upload failed", variant: toastpkg.Danger, compact: true}, send),
 						).Gap(10).LineGap(10),
 					),
-					ui.Text(model.lastEvent).Size(12),
+					section("Placement",
+						layout.Wrap(
+							placementButton("bottom-start", "Bottom start", toastpkg.BottomStart, send),
+							placementButton("bottom", "Bottom", toastpkg.Bottom, send),
+							placementButton("bottom-end", "Bottom end", toastpkg.BottomEnd, send),
+							placementButton("top-start", "Top start", toastpkg.TopStart, send),
+							placementButton("top", "Top", toastpkg.Top, send),
+							placementButton("top-end", "Top end", toastpkg.TopEnd, send),
+						).Gap(10).LineGap(10),
+					),
+					text.New(model.lastEvent).Size(12),
 				).Gap(20),
-			).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+			).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 		)),
-		ui.Overlay(ui.ToastProvider("notifications", model.toasts).
+		layout.Overlay(toastpkg.New("notifications", model.toasts).
 			Placement(model.placement).
 			OnAction(func(key string) { send(ToastAction{key: key}) }).
 			OnClose(func(key string) { send(CloseToast{key: key}) })).Expanded(),
@@ -103,24 +121,24 @@ func View(_ *ui.Context, model Model, send ui.Send[any]) ui.Widget {
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(12)
+	return layout.Column(text.New(title).Size(18), child).Gap(12)
 }
 
 func showButton(key, label string, toast ShowToast, send ui.Send[any]) ui.Widget {
-	return ui.Button(key, ui.Text(label)).Variant(ui.ButtonSecondary).Size(ui.ButtonSmall).OnClick(func() {
+	return button.New(label).Key(key).Variant(button.Secondary).Size(button.Small).OnClick(func() {
 		send(toast)
 	})
 }
 
-func placementButton(key, label string, placement ui.ToastPlacement, send ui.Send[any]) ui.Widget {
-	return ui.Button(key, ui.Text(label)).Variant(ui.ButtonTertiary).Size(ui.ButtonSmall).OnClick(func() {
+func placementButton(key, label string, placement toastpkg.Placement, send ui.Send[any]) ui.Widget {
+	return button.New(label).Key(key).Variant(button.Tertiary).Size(button.Small).OnClick(func() {
 		send(SetPlacement{placement: placement})
 		send(ShowToast{title: label, description: "Toast placement preview"})
 	})
 }
 
-func removeToast(items []ui.ToastItem, key string) []ui.ToastItem {
-	result := make([]ui.ToastItem, 0, len(items))
+func removeToast(items []toastpkg.Item, key string) []toastpkg.Item {
+	result := make([]toastpkg.Item, 0, len(items))
 	for _, item := range items {
 		if item.Key() != key {
 			result = append(result, item)
@@ -130,9 +148,10 @@ func removeToast(items []ui.ToastItem, key string) []ui.ToastItem {
 }
 
 func main() {
-	ui.Run(ui.NewProgram(Model{placement: ui.ToastBottom},
-		Update, View), ui.Title("FlowUI Toasts"),
-		ui.Size(940, 680),
-		ui.OnError(func(err error) { fmt.Println(err) }),
+	ui.Run(ui.NewProgram(Model{placement: toastpkg.Top},
+		Update, View), window.Title("FlowUI Toasts"),
+		window.Size(940, 680),
+		window.OnError(func(err error) { fmt.Println(err) }),
+		window.Theme(base.Light()),
 	)
 }

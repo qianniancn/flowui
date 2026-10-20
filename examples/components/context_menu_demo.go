@@ -12,17 +12,22 @@ import (
 	"gioui.org/op/paint"
 
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
 )
 
 func contextMenuTrigger() ui.Widget {
 	return ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
-		trigger := ui.Surface(
-			ui.Box(ui.Row(
-				ui.Icon(lucide.MouseRight).Size(18),
-				ui.Text("Right-click here").Size(14),
-			).AlignMiddle().Gap(9)).Style(ui.Width(300).Padding(18)),
-		).Variant(ui.SurfaceSecondary).Style(ui.Radius(10).BorderWidth(0))
+		trigger := (surface.New(
+			flowlayout.Box(flowlayout.Row(
+				icon.New(lucide.MouseRight).Size(18),
+				text.New("Right-click here").Size(14),
+			).AlignMiddle().Gap(9)).Style(style.New().Width(300).Padding(18)),
+		).Variant(surface.Secondary)).Style(style.New().Radius(10).BorderWidth(0))
 
 		macro := op.Record(gtx.Ops)
 		dims := trigger.Layout(ctx, gtx)

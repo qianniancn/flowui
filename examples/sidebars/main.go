@@ -3,8 +3,21 @@ package main
 import (
 	"image/color"
 
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	avatarpkg "github.com/qianniancn/flowui/widget/avatar"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/card"
+	"github.com/qianniancn/flowui/widget/chip"
+	iconpkg "github.com/qianniancn/flowui/widget/icon"
+	sidebarpkg "github.com/qianniancn/flowui/widget/sidebar"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/tooltip"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -33,7 +46,7 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 
 func View(ctx *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	muted := ctx.Theme().Palette.MutedForeground
-	sidebar := ui.SidebarSections("workspace-navigation", model.selected, navigationSections()).
+	sidebar := sidebarpkg.NewSections("workspace-navigation", model.selected, navigationSections()).
 		Header(sidebarHeader(model.collapsed, muted)).
 		Footer(sidebarFooter(model.collapsed, muted)).
 		Collapsed(model.collapsed).
@@ -43,48 +56,48 @@ func View(ctx *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		OnChange(func(key string) { send(Navigate(key)) }).
 		OnOpenChange(func(keys []string) { send(SetSidebarOpenKeys(keys)) })
 
-	content := ui.Stack(
-		ui.Stacked(workspace(model.selected, muted)),
-		ui.Overlay(
-			ui.Stack(
-				ui.Overlay(sidebarBoundaryToggle(model.collapsed, send)).Align(ui.AlignTopStart),
+	content := layout.Stack(
+		layout.Stacked(workspace(model.selected, muted)),
+		layout.Overlay(
+			layout.Stack(
+				layout.Overlay(sidebarBoundaryToggle(model.collapsed, send)).Align(layout.AlignTopStart),
 			),
 		).Expanded().Offset(-16, 10),
 	)
-	return ui.Surface(ui.Row(sidebar, ui.Expanded(content))).Variant(ui.SurfaceSecondary)
+	return surface.New(layout.Row(sidebar, layout.Expanded(content))).Variant(surface.Secondary)
 }
 
-func navigationSections() []ui.SidebarSection {
-	return []ui.SidebarSection{
+func navigationSections() []sidebarpkg.Section {
+	return []sidebarpkg.Section{
 		{
 			Title: "Workspace",
-			Items: []ui.SidebarItem{
-				{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutDashboard).Size(18)},
+			Items: []sidebarpkg.Item{
+				{Key: "overview", Label: "Overview", Leading: iconpkg.New(lucide.LayoutDashboard).Size(18)},
 				{
 					Key:      "projects",
 					Label:    "Projects",
-					Leading:  ui.Icon(lucide.FolderKanban).Size(18),
-					Trailing: ui.Chip("8").Variant(ui.ChipSoft).Size(ui.ChipSmall),
-					Children: []ui.SidebarItem{
-						{Key: "roadmap", Label: "Roadmap", Leading: ui.Icon(lucide.Map).Size(16)},
-						{Key: "releases", Label: "Releases", Leading: ui.Icon(lucide.Rocket).Size(16)},
+					Leading:  iconpkg.New(lucide.FolderKanban).Size(18),
+					Trailing: chip.New("8").Variant(chip.VariantSoft).Size(chip.SizeSmall),
+					Children: []sidebarpkg.Item{
+						{Key: "roadmap", Label: "Roadmap", Leading: iconpkg.New(lucide.Map).Size(16)},
+						{Key: "releases", Label: "Releases", Leading: iconpkg.New(lucide.Rocket).Size(16)},
 					},
 				},
-				{Key: "calendar", Label: "Calendar", Leading: ui.Icon(lucide.CalendarDays).Size(18)},
+				{Key: "calendar", Label: "Calendar", Leading: iconpkg.New(lucide.CalendarDays).Size(18)},
 			},
 		},
 		{
 			Title: "Insights",
-			Items: []ui.SidebarItem{
-				{Key: "reports", Label: "Reports", Leading: ui.Icon(lucide.ChartNoAxesCombined).Size(18)},
-				{Key: "activity", Label: "Activity", Leading: ui.Icon(lucide.ClipboardList).Size(18)},
+			Items: []sidebarpkg.Item{
+				{Key: "reports", Label: "Reports", Leading: iconpkg.New(lucide.ChartNoAxesCombined).Size(18)},
+				{Key: "activity", Label: "Activity", Leading: iconpkg.New(lucide.ClipboardList).Size(18)},
 			},
 		},
 		{
 			Title: "Account",
-			Items: []ui.SidebarItem{
-				{Key: "team", Label: "Team", Leading: ui.Icon(lucide.Users).Size(18)},
-				{Key: "settings", Label: "Settings", Leading: ui.Icon(lucide.Settings).Size(18)},
+			Items: []sidebarpkg.Item{
+				{Key: "team", Label: "Team", Leading: iconpkg.New(lucide.Users).Size(18)},
+				{Key: "settings", Label: "Settings", Leading: iconpkg.New(lucide.Settings).Size(18)},
 			},
 		},
 	}
@@ -92,13 +105,13 @@ func navigationSections() []ui.SidebarSection {
 
 func sidebarHeader(collapsed bool, muted color.NRGBA) ui.Widget {
 	if collapsed {
-		return ui.Center(ui.Icon(lucide.LayoutDashboard).Size(22))
+		return layout.Center(iconpkg.New(lucide.LayoutDashboard).Size(22))
 	}
-	return ui.Row(
-		ui.Icon(lucide.LayoutDashboard).Size(22),
-		ui.Expanded(ui.Column(
-			ui.Text("Northstar").Size(15),
-			ui.Text("Product workspace").Size(12).Color(muted),
+	return layout.Row(
+		iconpkg.New(lucide.LayoutDashboard).Size(22),
+		layout.Expanded(layout.Column(
+			text.New("Northstar").Size(15),
+			text.New("Product workspace").Size(12).Color(muted),
 		)),
 	).AlignMiddle().Gap(10)
 }
@@ -110,27 +123,23 @@ func sidebarBoundaryToggle(collapsed bool, send ui.Send[Msg]) ui.Widget {
 		icon = lucide.CircleChevronRight
 		label = "Expand sidebar"
 	}
-	return ui.Tooltip(
-		"sidebar-toggle-tip",
-		ui.Button("sidebar-toggle", ui.Icon(icon).Size(18)).
-			Variant(ui.ButtonGhost).
-			Size(ui.ButtonSmall).
-			IconOnly().
-			OnClick(func() { send(ToggleSidebar{}) }),
-		ui.Text(label),
-	).Placement(ui.TooltipRight)
+	return tooltip.New("sidebar-toggle-tip", button.New("").Content(iconpkg.New(icon).Size(18)).
+		Variant(button.Ghost).
+		Size(button.Small).
+		IconOnly().
+		OnClick(func() { send(ToggleSidebar{}) }), label).Placement(tooltip.Right)
 }
 
 func sidebarFooter(collapsed bool, muted color.NRGBA) ui.Widget {
-	avatar := ui.Avatar("QN").Variant(ui.AvatarSoft).Size(ui.AvatarSmall)
+	avatar := avatarpkg.New("QN").Variant(avatarpkg.VariantSoft).Size(avatarpkg.SizeSmall)
 	if collapsed {
-		return ui.Center(avatar)
+		return layout.Center(avatar)
 	}
-	return ui.Row(
+	return layout.Row(
 		avatar,
-		ui.Expanded(ui.Column(
-			ui.Text("Qian Nian").Size(14),
-			ui.Text("Administrator").Size(12).Color(muted),
+		layout.Expanded(layout.Column(
+			text.New("Qian Nian").Size(14),
+			text.New("Administrator").Size(12).Color(muted),
 		)),
 	).AlignMiddle().Gap(10)
 }
@@ -149,59 +158,60 @@ func workspace(selected string, muted color.NRGBA) ui.Widget {
 	if title == "" {
 		title = "Overview"
 	}
-	return ui.Surface(
-		ui.Box(
-			ui.Column(
-				ui.Row(
-					ui.Expanded(ui.Column(
-						ui.Text(title).Size(26),
-						ui.Text("Monday, July 14").Size(13).Color(muted),
+	return surface.New(
+		layout.Box(
+			layout.Column(
+				layout.Row(
+					layout.Expanded(layout.Column(
+						text.New(title).Size(26),
+						text.New("Monday, July 14").Size(13).Color(muted),
 					)),
-					ui.Button("new-project", ui.Text("New project")),
+					button.New("New project"),
 				).AlignMiddle(),
-				ui.Grid(3,
+				layout.Grid(3,
 					metricCard("Active projects", "12", "Across four teams", muted),
 					metricCard("Tasks due", "27", "Five due today", muted),
 					metricCard("Team members", "36", "Three currently away", muted),
 				).Gap(12),
-				ui.Card(
-					ui.Column(
-						ui.Text("Upcoming milestones").Size(16),
-						ui.Text("Delivery dates across active projects").Size(13).Color(muted),
+				card.New(
+					layout.Column(
+						text.New("Upcoming milestones").Size(16),
+						text.New("Delivery dates across active projects").Size(13).Color(muted),
 					).Gap(4),
-					ui.Column(
+					layout.Column(
 						milestone("Desktop navigation", "Today", muted),
-						ui.Divider(),
+						layout.Divider(),
 						milestone("Workspace permissions", "Jul 18", muted),
-						ui.Divider(),
+						layout.Divider(),
 						milestone("Quarterly review", "Jul 25", muted),
 					).Gap(12),
-				).Variant(ui.CardSecondary),
+				).Variant(card.Secondary),
 			).Gap(20),
-		).Style(ui.FillWidth()).Style(ui.FillHeight()).Style(ui.Padding(28)),
-	).Variant(ui.SurfaceSecondary)
+		).Style(style.New().FillWidth().FillHeight().Padding(28)),
+	).Variant(surface.Secondary)
 }
 
 func metricCard(label, value, detail string, muted color.NRGBA) ui.Widget {
-	return ui.Card(
-		ui.Column(
-			ui.Text(label).Size(13).Color(muted),
-			ui.Text(value).Size(28),
-			ui.Text(detail).Size(12).Color(muted),
+	return card.New(
+		layout.Column(
+			text.New(label).Size(13).Color(muted),
+			text.New(value).Size(28),
+			text.New(detail).Size(12).Color(muted),
 		).Gap(6),
-	).Variant(ui.CardSecondary)
+	).Variant(card.Secondary)
 }
 
 func milestone(name, date string, muted color.NRGBA) ui.Widget {
-	return ui.Row(
-		ui.Expanded(ui.Text(name).Size(14)),
-		ui.Text(date).Size(13).Color(muted),
+	return layout.Row(
+		layout.Expanded(text.New(name).Size(14)),
+		text.New(date).Size(13).Color(muted),
 	).AlignMiddle()
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{selected: "overview", openKeys: []string{"projects"}},
-		Update, View), ui.Title("FlowUI Sidebar"),
-		ui.Size(1080, 700),
+		Update, View), window.Title("FlowUI Sidebar"),
+		window.Size(1080, 700),
+		window.Theme(base.Light()),
 	)
 }

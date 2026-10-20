@@ -43,6 +43,14 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 Commands may send zero, one, or several messages. They should stop when their
 context is canceled.
 
+Use `ui.Batch` when one update starts independent effects that can run in
+parallel. Nil commands are ignored and the first returned error is reported
+after all active commands finish:
+
+```go
+return ui.Batch(loadProfileCmd(id), loadPermissionsCmd(id))
+```
+
 ## Latest command
 
 For search or other replaceable work, use `LatestCmd` with a stable workflow
@@ -81,11 +89,15 @@ Subscriptions: func(m Model) []ui.Subscription[Msg] {
 Subscription keys are retained after a run ends; change the requested set to
 restart work intentionally.
 
+Nested modules can adapt a child subscription with `ui.MapSubscription`. It
+preserves the child's lifecycle key while mapping emitted messages to the
+parent type.
+
 ## Errors and shutdown
 
-Use `ui.OnError` to receive effect, runtime, and window lifecycle errors. The
+Use `window.OnError` to receive effect, runtime, and window lifecycle errors. The
 window context is canceled when that window closes, which stops its commands
 and subscriptions.
 
-See [`examples/async`](https://github.com/qianniancn/flowui/tree/main/examples/async) and continue with
+Combine these command snippets with your application and continue with
 [Multiple windows](11-multiple-windows.md).

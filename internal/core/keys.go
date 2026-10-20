@@ -1,0 +1,275 @@
+package core
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+type Kind string
+
+const (
+	KindClickable        Kind = "clickable"
+	KindDraggable        Kind = "draggable"
+	KindCustom           Kind = "custom"
+	KindEditor           Kind = "editor"
+	KindSelectableText   Kind = "selectable-text"
+	KindInput            Kind = "input"
+	KindComboBox         Kind = "combobox"
+	KindSelect           Kind = "select"
+	KindDatePicker       Kind = "datepicker"
+	KindCheckbox         Kind = "checkbox"
+	KindSwitch           Kind = "switch"
+	KindRadioGroup       Kind = "radio-group"
+	KindProgressBar      Kind = "progress-bar"
+	KindProgressCircle   Kind = "progress-circle"
+	KindSlider           Kind = "slider"
+	KindListBox          Kind = "listbox"
+	KindTree             Kind = "tree"
+	KindSidebar          Kind = "sidebar"
+	KindTable            Kind = "table"
+	KindPagination       Kind = "pagination"
+	KindMenu             Kind = "menu"
+	KindContextMenu      Kind = "context-menu"
+	KindDropdown         Kind = "dropdown"
+	KindMenubar          Kind = "menubar"
+	KindLineChart        Kind = "line-chart"
+	KindBarChart         Kind = "bar-chart"
+	KindPieChart         Kind = "pie-chart"
+	KindCandlestickChart Kind = "candlestick-chart"
+	KindHeatmap          Kind = "heatmap"
+	KindGanttChart       Kind = "gantt-chart"
+	KindNodeGraph        Kind = "node-graph"
+	KindTween            Kind = "tween"
+	KindTimeline         Kind = "timeline"
+	KindLayoutAnim       Kind = "layout-anim"
+	KindTabs             Kind = "tabs"
+	KindCollapsible      Kind = "collapsible"
+	KindPopover          Kind = "popover"
+	KindTooltip          Kind = "tooltip"
+	KindToast            Kind = "toast"
+	KindModal            Kind = "modal"
+	KindList             Kind = "list"
+	KindScroll           Kind = "scroll"
+	KindScrollbar        Kind = "scrollbar"
+	KindSplitPane        Kind = "split-pane"
+	KindPanelHost        Kind = "panel-host"
+	KindDockLayout       Kind = "dock-layout"
+	KindTitleBar         Kind = "title-bar"
+	KindStyle            Kind = "style"
+	KindPortal           Kind = "portal"
+)
+
+const (
+	KindColorPicker       Kind = "color-picker"
+	KindColorWheel        Kind = "color-wheel"
+	KindColorArea         Kind = "color-area"
+	KindColorField        Kind = "color-field"
+	KindColorSlider       Kind = "color-slider"
+	KindColorSwatchPicker Kind = "color-swatch-picker"
+	KindDateField         Kind = "date-field"
+	KindDateRangePicker   Kind = "date-range-picker"
+)
+
+type Keys struct {
+	frame map[string]Kind
+	path  []string
+	// auto counts anonymous claims per kind and scope, so a widget without an
+	// explicit key keeps one identity while the tree shape stays stable.
+	auto map[string]int
+	// allowReuse lets a same-frame re-layout (overlay policy pass) reclaim keys
+	// that were already claimed during the paint pass.
+	allowReuse bool
+}
+
+// Scope returns a copy of the current key path. It is used by deferred frame
+// work that must keep the identity scope from its registration site.
+func (k *Keys) Scope() []string {
+	return append([]string(nil), k.path...)
+}
+
+// UseScope temporarily replaces the current key path.
+func (k *Keys) UseScope(path []string) func() {
+	previous := k.path
+	k.path = append(k.path[:0:0], path...)
+	return func() {
+		k.path = previous
+	}
+}
+
+const (
+	encodedRootPrefix = "~r"
+	derivedKeyPrefix  = byte(0)
+)
+
+func (k *Keys) BeginFrame() {
+	if k.frame == nil {
+		k.frame = make(map[string]Kind)
+	} else {
+		clear(k.frame)
+	}
+	clear(k.auto)
+}
+
+func (k *Keys) Frame() map[string]Kind {
+	return k.frame
+}
+
+func (k *Keys) Push(key string) func() {
+	if key == "" {
+		panic("flowui: empty key")
+	}
+	k.path = append(k.path, key)
+	return func() {
+		k.path = k.path[:len(k.path)-1]
+	}
+}
+
+// Claim resolves key. An empty key claims an anonymous identity derived from the
+// enclosing scope and the claim order, so static widgets do not have to invent
+// names; interactive content that can be reordered sets .Key(id) instead.
+func (k *Keys) Claim(kind Kind, key string) string {
+	k.ensureFrame()
+	if key == "" {
+		return k.claim(kind, k.autoKey(kind))
+	}
+	return k.claim(kind, k.FullKey(key))
+}
+
+// ensureFrame allocates the per-frame map without clearing counters. claim used
+// to start the frame lazily, which reset the anonymous counters mid-frame.
+func (k *Keys) ensureFrame() {
+	if k.frame == nil {
+		k.frame = make(map[string]Kind)
+	}
+}
+
+// autoKey returns the next anonymous key for kind inside the current scope. It
+// lives in the derived namespace, so no user key can spell it, and counting per
+// scope keeps one subtree's growth from shifting another's keys.
+func (k *Keys) autoKey(kind Kind) string {
+	if k.auto == nil {
+		k.auto = make(map[string]int)
+	}
+	owner := "root"
+	if len(k.path) > 0 {
+		owner = strings.Join(k.path, "/")
+	}
+	scope := owner + "\x00" + string(kind)
+	index := k.auto[scope]
+	k.auto[scope] = index + 1
+	return k.Derived(owner, "auto:"+string(kind)+":"+strconv.Itoa(index))
+}
+
+func (k *Keys) ClaimDerived(kind Kind, owner, role string) string {
+	if owner == "" {
+		panic("flowui: empty derived owner key")
+	}
+	return k.ClaimDerivedResolved(kind, k.FullKey(owner), role)
+}
+
+func (k *Keys) ClaimDerivedResolved(kind Kind, owner, role string) string {
+	return k.claim(kind, k.Derived(owner, role))
+}
+
+// Derived returns an internal identity for a role owned by an already resolved
+// key. User keys escape derivedKeyPrefix and cannot enter this namespace.
+func (k *Keys) Derived(owner, role string) string {
+	if owner == "" {
+		panic("flowui: empty derived owner key")
+	}
+	if role == "" {
+		panic("flowui: empty derived role")
+	}
+
+	var key strings.Builder
+	key.Grow(1 + encodedKeyPartLen(owner) + 1 + encodedKeyPartLen(role))
+	key.WriteByte(derivedKeyPrefix)
+	writeKeyPart(&key, owner)
+	key.WriteByte('/')
+	writeKeyPart(&key, role)
+	return key.String()
+}
+
+// SetAllowReuse enables or disables same-frame key reclaim. Overlay policy
+// pass uses this so the visual top can re-enter Layout for input without
+// panicking on keys claimed during the paint pass.
+func (k *Keys) SetAllowReuse(allow bool) {
+	k.allowReuse = allow
+}
+
+func (k *Keys) claim(kind Kind, key string) string {
+	k.ensureFrame()
+	if existing, ok := k.frame[key]; ok {
+		if k.allowReuse {
+			if existing != kind {
+				panic(fmt.Sprintf("flowui: key %q has kind %q, want %q", key, existing, kind))
+			}
+			return key
+		}
+		panic(fmt.Sprintf("flowui: duplicate key %q", key))
+	}
+	k.frame[key] = kind
+	return key
+}
+
+func (k *Keys) FullKey(key string) string {
+	if len(k.path) == 0 {
+		// Scoped keys always contain '/', so ambiguous roots use a slash-free namespace.
+		if strings.Contains(key, "/") || strings.IndexByte(key, derivedKeyPrefix) >= 0 || strings.HasPrefix(key, encodedRootPrefix) {
+			var b strings.Builder
+			b.Grow(len(encodedRootPrefix) + encodedKeyPartLen(key))
+			b.WriteString(encodedRootPrefix)
+			writeKeyPart(&b, key)
+			return b.String()
+		}
+		return key
+	}
+	var b strings.Builder
+	capacity := encodedKeyPartLen(key)
+	for _, part := range k.path {
+		capacity += encodedKeyPartLen(part) + 1
+	}
+	b.Grow(capacity)
+	for _, part := range k.path {
+		writeKeyPart(&b, part)
+		b.WriteByte('/')
+	}
+	writeKeyPart(&b, key)
+	return b.String()
+}
+
+func encodedKeyPartLen(part string) int {
+	length := len(part)
+	for index := 0; index < len(part); index++ {
+		switch part[index] {
+		case derivedKeyPrefix, '%', '/':
+			length += 2
+		}
+	}
+	return length
+}
+
+func writeKeyPart(b *strings.Builder, part string) {
+	for _, char := range []byte(part) {
+		switch char {
+		case derivedKeyPrefix:
+			b.WriteString("%00")
+		case '%':
+			b.WriteString("%25")
+		case '/':
+			b.WriteString("%2F")
+		default:
+			b.WriteByte(char)
+		}
+	}
+}
+
+// Sweep removes keyed state that was not claimed with kind in the current frame.
+func Sweep[T any](states map[string]*T, frame map[string]Kind, kind Kind) {
+	for key := range states {
+		if frame[key] != kind {
+			delete(states, key)
+		}
+	}
+}

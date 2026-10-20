@@ -1,4 +1,7 @@
 *.exe
 *.test
+*.prof
+*.mem
 /site/
-/examples/systray_ui/*_windows_*.syso
+/.bench/
+/.codex/

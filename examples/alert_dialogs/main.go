@@ -3,8 +3,16 @@ package main
 import (
 	"fmt"
 
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/alertdialog"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -41,108 +49,107 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	if m.Last != "" {
 		status = m.Last
 	}
-	return ui.Stack(
-		ui.Stacked(
-			ui.Center(
-				ui.Box(
-					ui.Scroll("alert-dialogs",
-						ui.Column(
-							ui.Text("FlowUI AlertDialog").Size(24),
-							ui.Text(status).Size(14),
-							ui.Divider(),
-							section("Default",
-								buttonGrid(openButton("delete-project", "Delete project", ui.ButtonDanger, send)),
+	return layout.Stack(
+		layout.Stacked(
+			layout.Center(
+				layout.Box(
+					layout.Scroll(layout.Column(
+						text.New("FlowUI AlertDialog").Size(24),
+						text.New(status).Size(14),
+						layout.Divider(),
+						section("Default",
+							buttonGrid(openButton("delete-project", "Delete project", button.Danger, send)),
+						),
+						section("Statuses",
+							buttonGrid(
+								openButton("default", "Default", button.Secondary, send),
+								openButton("accent", "Accent", button.Secondary, send),
+								openButton("success", "Success", button.Secondary, send),
+								openButton("warning", "Warning", button.Secondary, send),
+								openButton("danger", "Danger", button.DangerSoft, send),
 							),
-							section("Statuses",
-								buttonGrid(
-									openButton("default", "Default", ui.ButtonSecondary, send),
-									openButton("accent", "Accent", ui.ButtonSecondary, send),
-									openButton("success", "Success", ui.ButtonSecondary, send),
-									openButton("warning", "Warning", ui.ButtonSecondary, send),
-									openButton("danger", "Danger", ui.ButtonDangerSoft, send),
-								),
+						),
+						section("Placements",
+							buttonGrid(
+								openButton("top", "Top", button.Secondary, send),
+								openButton("center", "Center", button.Secondary, send),
+								openButton("bottom", "Bottom", button.Secondary, send),
 							),
-							section("Placements",
-								buttonGrid(
-									openButton("top", "Top", ui.ButtonSecondary, send),
-									openButton("center", "Center", ui.ButtonSecondary, send),
-									openButton("bottom", "Bottom", ui.ButtonSecondary, send),
-								),
+						),
+						section("Sizes and backdrop",
+							buttonGrid(
+								openButton("xs", "XSmall", button.Secondary, send),
+								openButton("sm", "Small", button.Secondary, send),
+								openButton("lg", "Large", button.Secondary, send),
+								openButton("cover", "Cover", button.Secondary, send),
+								openButton("blur", "Blur", button.Secondary, send),
+								openButton("transparent", "Transparent", button.Secondary, send),
 							),
-							section("Sizes and backdrop",
-								buttonGrid(
-									openButton("xs", "XSmall", ui.ButtonSecondary, send),
-									openButton("sm", "Small", ui.ButtonSecondary, send),
-									openButton("lg", "Large", ui.ButtonSecondary, send),
-									openButton("cover", "Cover", ui.ButtonSecondary, send),
-									openButton("blur", "Blur", ui.ButtonSecondary, send),
-									openButton("transparent", "Transparent", ui.ButtonSecondary, send),
-								),
+						),
+						section("Behavior and customization",
+							buttonGrid(
+								openButton("dismissable", "Backdrop closes", button.Secondary, send),
+								openButton("escape", "Escape closes", button.Secondary, send),
+								openButton("custom-icon", "Custom icon", button.Secondary, send),
 							),
-							section("Behavior and customization",
-								buttonGrid(
-									openButton("dismissable", "Backdrop closes", ui.ButtonSecondary, send),
-									openButton("escape", "Escape closes", ui.ButtonSecondary, send),
-									openButton("custom-icon", "Custom icon", ui.ButtonSecondary, send),
-								),
-							),
-						).Gap(18),
+						),
+					).Gap(18),
 					).Vertical(),
-				).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+				).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 			),
 		),
-		ui.Overlay(alertDialogLayer(m, send)).Expanded(),
+		layout.Overlay(alertDialogLayer(m, send)).Expanded(),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(10)
+	return layout.Column(text.New(title).Size(18), child).Gap(10)
 }
 
 func buttonGrid(children ...ui.Widget) ui.Widget {
 	items := make([]ui.Widget, 0, len(children))
 	for _, child := range children {
-		items = append(items, ui.Box(child))
+		items = append(items, layout.Box(child))
 	}
-	return ui.Wrap(items...).Gap(8).AlignMiddle()
+	return layout.Wrap(items...).Gap(8).AlignMiddle()
 }
 
-func openButton(key, label string, variant ui.ButtonVariant, send ui.Send[Msg]) ui.Widget {
-	return ui.Button("open-"+key, ui.Text(label)).
+func openButton(key, label string, variant button.Variant, send ui.Send[Msg]) ui.Widget {
+	return button.New(label).Key("open-" + key).
 		Variant(variant).
 		OnClick(func() { send(Open{Key: key}) })
 }
 
 func alertDialogLayer(m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
+	return layout.Column(
 		dialog("delete-project", m, send,
 			"Delete project permanently?",
 			"This will permanently delete My Awesome Project and all of its data. This action cannot be undone.",
-			ui.AlertDialogDanger,
+			alertdialog.StatusDanger,
 		),
-		dialog("default", m, send, "Leave this page?", "Your current view will be closed.", ui.AlertDialogDefault),
-		dialog("accent", m, send, "Sign out of your account?", "You'll need to sign in again to access your account.", ui.AlertDialogAccent),
-		dialog("success", m, send, "Complete this task?", "This will mark the task as complete and notify team members.", ui.AlertDialogSuccess),
-		dialog("warning", m, send, "Discard unsaved changes?", "Your unsaved changes will be permanently lost.", ui.AlertDialogWarning),
-		dialog("danger", m, send, "Delete your account?", "This action is irreversible and removes all account data.", ui.AlertDialogDanger),
-		dialog("top", m, send, "Top placement", placementDescription("top"), ui.AlertDialogAccent).Placement(ui.AlertDialogTop),
-		dialog("center", m, send, "Center placement", placementDescription("center"), ui.AlertDialogAccent).Placement(ui.AlertDialogCenter),
-		dialog("bottom", m, send, "Bottom placement", placementDescription("bottom"), ui.AlertDialogAccent).Placement(ui.AlertDialogBottom),
-		dialog("xs", m, send, "XSmall dialog", sizeDescription("xs"), ui.AlertDialogAccent).Size(ui.AlertDialogXSmall),
-		dialog("sm", m, send, "Small dialog", sizeDescription("sm"), ui.AlertDialogAccent).Size(ui.AlertDialogSmall),
-		dialog("lg", m, send, "Large dialog", sizeDescription("lg"), ui.AlertDialogAccent).Size(ui.AlertDialogLarge),
-		dialog("cover", m, send, "Cover dialog", sizeDescription("cover"), ui.AlertDialogAccent).Size(ui.AlertDialogCover),
-		dialog("blur", m, send, "Blur backdrop", "The backdrop uses the blur-style treatment.", ui.AlertDialogAccent).Backdrop(ui.AlertDialogBackdropBlur),
-		dialog("transparent", m, send, "Transparent backdrop", "The page remains visible while input is still blocked.", ui.AlertDialogAccent).Backdrop(ui.AlertDialogBackdropTransparent),
-		dialog("dismissable", m, send, "Backdrop dismissal enabled", "Click outside this dialog to close it.", ui.AlertDialogAccent).Dismissable(true),
-		dialog("escape", m, send, "Keyboard dismissal enabled", "Press Escape to close this dialog.", ui.AlertDialogAccent).KeyboardDismissDisabled(false),
-		dialog("custom-icon", m, send, "Reset your password?", "We'll send a reset link to your email address.", ui.AlertDialogWarning).
-			Icon(ui.Icon(lucide.KeyRound).Size(20)),
+		dialog("default", m, send, "Leave this page?", "Your current view will be closed.", alertdialog.StatusDefault),
+		dialog("accent", m, send, "Sign out of your account?", "You'll need to sign in again to access your account.", alertdialog.StatusAccent),
+		dialog("success", m, send, "Complete this task?", "This will mark the task as complete and notify team members.", alertdialog.StatusSuccess),
+		dialog("warning", m, send, "Discard unsaved changes?", "Your unsaved changes will be permanently lost.", alertdialog.StatusWarning),
+		dialog("danger", m, send, "Delete your account?", "This action is irreversible and removes all account data.", alertdialog.StatusDanger),
+		dialog("top", m, send, "Top placement", placementDescription("top"), alertdialog.StatusAccent).Placement(alertdialog.PlacementTop),
+		dialog("center", m, send, "Center placement", placementDescription("center"), alertdialog.StatusAccent).Placement(alertdialog.PlacementCenter),
+		dialog("bottom", m, send, "Bottom placement", placementDescription("bottom"), alertdialog.StatusAccent).Placement(alertdialog.PlacementBottom),
+		dialog("xs", m, send, "XSmall dialog", sizeDescription("xs"), alertdialog.StatusAccent).Size(alertdialog.SizeXSmall),
+		dialog("sm", m, send, "Small dialog", sizeDescription("sm"), alertdialog.StatusAccent).Size(alertdialog.SizeSmall),
+		dialog("lg", m, send, "Large dialog", sizeDescription("lg"), alertdialog.StatusAccent).Size(alertdialog.SizeLarge),
+		dialog("cover", m, send, "Cover dialog", sizeDescription("cover"), alertdialog.StatusAccent).Size(alertdialog.SizeCover),
+		dialog("blur", m, send, "Blur backdrop", "The backdrop uses the blur-style treatment.", alertdialog.StatusAccent).Backdrop(alertdialog.BackdropBlur),
+		dialog("transparent", m, send, "Transparent backdrop", "The page remains visible while input is still blocked.", alertdialog.StatusAccent).Backdrop(alertdialog.BackdropTransparent),
+		dialog("dismissable", m, send, "Backdrop dismissal enabled", "Click outside this dialog to close it.", alertdialog.StatusAccent).Dismissable(true),
+		dialog("escape", m, send, "Keyboard dismissal enabled", "Press Escape to close this dialog.", alertdialog.StatusAccent).KeyboardDismissDisabled(false),
+		dialog("custom-icon", m, send, "Reset your password?", "We'll send a reset link to your email address.", alertdialog.StatusWarning).
+			Icon(icon.New(lucide.KeyRound).Size(20)),
 	)
 }
 
-func dialog(key string, m Model, send ui.Send[Msg], title, description string, status ui.AlertDialogStatus) ui.AlertDialogWidget {
-	return ui.AlertDialog(key, m.Active == key, title, description).
+func dialog(key string, m Model, send ui.Send[Msg], title, description string, status alertdialog.Status) alertdialog.Widget {
+	return alertdialog.New(title, description).Key(key).Open(m.Active == key).
 		Status(status).
 		Footer(dialogFooter(key, status, send)).
 		OnOpenChange(func(open bool) {
@@ -152,18 +159,18 @@ func dialog(key string, m Model, send ui.Send[Msg], title, description string, s
 		})
 }
 
-func dialogFooter(key string, status ui.AlertDialogStatus, send ui.Send[Msg]) ui.Widget {
-	confirmVariant := ui.ButtonPrimary
+func dialogFooter(key string, status alertdialog.Status, send ui.Send[Msg]) ui.Widget {
+	confirmVariant := button.Primary
 	confirmLabel := "Confirm"
-	if status == ui.AlertDialogDanger {
-		confirmVariant = ui.ButtonDanger
+	if status == alertdialog.StatusDanger {
+		confirmVariant = button.Danger
 		confirmLabel = "Delete"
 	}
-	return ui.Row(
-		ui.Button(key+"-cancel", ui.Text("Cancel")).
-			Variant(ui.ButtonTertiary).
+	return layout.Row(
+		button.New("Cancel").Key(key+"-cancel").
+			Variant(button.Tertiary).
 			OnClick(func() { send(Close{Action: "cancelled"}) }),
-		ui.Button(key+"-confirm", ui.Text(confirmLabel)).
+		button.New(confirmLabel).Key(key+"-confirm").
 			Variant(confirmVariant).
 			OnClick(func() { send(Close{Action: "confirmed"}) }),
 	).Gap(8).AlignMiddle()
@@ -179,7 +186,8 @@ func sizeDescription(size string) string {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI AlertDialog"),
-		ui.Size(900, 720),
+		Update, View), window.Title("FlowUI AlertDialog"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

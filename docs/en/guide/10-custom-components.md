@@ -9,10 +9,10 @@ Build a reusable function from existing widgets and return a value-like widget:
 
 ```go
 func StatusPill(label string, selected bool) ui.Widget {
-	style := ui.PaddingX(12).PaddingY(6).Radius(999).
-		When(ui.Hovered, ui.Background(ui.TokenSurfaceTertiary)).
-		When(ui.If(selected), ui.Background(ui.TokenAccent))
-	return ui.Box(ui.Text(label)).Style(style)
+	value := style.New().PaddingX(12).PaddingY(6).Radius(999).
+		On(style.Hovered, style.New().Background(style.Solid(activeTheme.Palette.SurfaceTertiary))).
+		On(style.Selected, style.New().Background(style.Solid(activeTheme.Palette.Accent)))
+	return layout.Box(text.New(label)).Style(value)
 }
 ```
 
@@ -28,16 +28,23 @@ whole interactive area and leave painting to a small child widget.
 The public sequence is:
 
 ```text
-UseState -> ResolveStyle / ResolveStylePart ->
-LayoutInteractiveResolvedStyle (or LayoutResolvedStyle)
+UseState -> resolve.Resolve / resolve.ResolvePart ->
+layout.InteractiveResolved (or layout.Resolved)
 ```
 
-`examples/custom_widgets` contains a complete implementation. Do not use
-internal component packages or old names such as `BeginInteract`, `Resolve`,
-or `LayoutInteractiveBox`; those are not part of the public API.
+The resolvers live in `github.com/qianniancn/flowui/style/resolve`, not in `style`
+itself — `style` is a pure declaration mechanism with no framework dependency,
+which is what lets `theme` name it without a cycle. `Resolve` and `ResolvePart`
+resolve and apply transitions in one call. A component that also resolves during
+measurement uses `ResolveStatic` / `ResolvePartStatic` plus `HasTransitions` and
+`ApplyTransitions` / `ApplyPartTransitions` instead, so transition state is
+applied exactly once per frame; both call shapes share the same widget key.
 
-The [`examples/custom_widgets`](https://github.com/qianniancn/flowui/tree/main/examples/custom_widgets) program shows a
-custom control and a canvas-backed widget. `ui.WidgetFunc` is useful when only a
+The snippets here illustrate the public extension APIs. Do not use
+internal component packages; they are implementation details rather than
+application APIs.
+
+Use an explicit widget type for a complete custom control. `ui.WidgetFunc` is useful when only a
 small layout callback is needed.
 
 ## Path C: custom drawing
@@ -50,15 +57,15 @@ For common drawing and measurement tasks, reuse the public helpers instead of
 duplicating theme resolution or Gio event boilerplate:
 
 ```go
-brush, ok := ui.ResolveBrush(ctx, ui.LinearGradient(
-	ui.ColorStop(0, ui.TokenAccent),
-	ui.ColorStop(1, ui.TokenDanger),
+brush, ok := resolve.Brush(style.LinearGradient(
+	style.ColorStop(0, style.Solid(activeTheme.Palette.Accent)),
+	style.ColorStop(1, style.Solid(activeTheme.Palette.Danger)),
 ))
 if ok {
-	ui.DrawBrush(gtx, image.Rect(0, 0, 160, 32), 6, brush)
+	draw.Fill(gtx, image.Rect(0, 0, 160, 32), 6, brush)
 }
 
-size := ui.MeasureText(ctx, gtx, ui.Text("Preview").Size(14).MaxLines(1))
+size := text.Measure(ctx, gtx, text.New("Preview").Size(14).MaxLines(1))
 _ = size
 ```
 
@@ -79,12 +86,12 @@ func (measuredBadge) Measure(_ *ui.Context, gtx layout.Context) layout.Dimension
 ```
 
 Low-level pointer widgets can use `AddPointerArea`, `NextPointerEvent`,
-`IsPrimaryPointerPress`, and `GrabPointer`. Use `LayoutVisualOverflow` for a
+`IsPrimaryPointerPress`, and `GrabPointer`. Use `layout.VisualOverflow` for a
 local ripple or focus decoration that must cross the child's own clip. It is
 not a replacement for `Popover`, `Portal`, or another overlay host. When that
 decoration also needs room inside an ancestor scroll or split viewport, report
-its top/right/bottom/left extent with `LayoutVisualOutset`; a component with a
-Style shell can use `VisualOutset` instead.
+its top/right/bottom/left extent with `layout.VisualOutset`; a component with a
+Style shell can use `style.VisualOutset` instead.
 
 ## Rules of thumb
 
@@ -95,3 +102,4 @@ Style shell can use `VisualOutset` instead.
 5. Test layout and pointer behavior with `uitest.Harness`.
 
 Continue with [Multiple windows](11-multiple-windows.md).
+

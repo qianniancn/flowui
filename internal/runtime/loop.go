@@ -15,7 +15,7 @@ import (
 
 type Update[M any, Msg any] func(*M, Msg) Cmd[Msg]
 
-type Frame[M any, Msg any] func(layout.Context, M, func(Msg))
+type Frame[M any, Msg any] func(layout.Context, M, Send[Msg])
 
 type queuedMessage[Msg any] struct {
 	value        Msg
@@ -30,22 +30,23 @@ const (
 	errorQueueLimit   = 64
 )
 
-type RuntimePhase string
+type Phase string
 
 const (
-	RuntimePhaseUpdate        RuntimePhase = "update"
-	RuntimePhaseSubscriptions RuntimePhase = "subscriptions"
-	RuntimePhaseView          RuntimePhase = "view"
+	PhaseUpdate        Phase = "update"
+	PhaseSubscriptions Phase = "subscriptions"
+	PhaseView          Phase = "view"
+	PhaseClose         Phase = "close"
 )
 
-// RuntimePanicError describes a panic from synchronous application code.
-type RuntimePanicError struct {
-	Phase RuntimePhase
+// PanicError describes a panic from synchronous application code.
+type PanicError struct {
+	Phase Phase
 	Panic any
 	Stack []byte
 }
 
-func (e *RuntimePanicError) Error() string {
+func (e *PanicError) Error() string {
 	return fmt.Sprintf("%s panicked: %v", e.Phase, e.Panic)
 }
 
@@ -113,7 +114,7 @@ func (c *loopCore[M, Msg]) updateMessages(
 			return
 		}
 		var cmd Cmd[Msg]
-		if panicErr := recoverRuntimePanic(RuntimePhaseUpdate, func() {
+		if panicErr := recoverRuntimePanic(PhaseUpdate, func() {
 			updated = true
 			cmd = c.update(&c.model, msg.value)
 		}); panicErr != nil {
@@ -137,16 +138,16 @@ func (c *loopCore[M, Msg]) frame(
 	if err != nil {
 		return updated, dropped, err
 	}
-	err = recoverRuntimePanic(RuntimePhaseView, func() {
+	err = recoverRuntimePanic(PhaseView, func() {
 		view(c.model)
 	})
 	return updated, dropped, err
 }
 
-func recoverRuntimePanic(phase RuntimePhase, fn func()) (err error) {
+func recoverRuntimePanic(phase Phase, fn func()) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = &RuntimePanicError{Phase: phase, Panic: recovered, Stack: debug.Stack()}
+			err = &PanicError{Phase: phase, Panic: recovered, Stack: debug.Stack()}
 		}
 	}()
 	fn()
@@ -158,10 +159,29 @@ type EventWindow interface {
 	Invalidate()
 }
 
+// ClosingEvent is a platform close request that the handler may veto while the
+// event is being delivered. *app.ClosingEvent implements it.
+type ClosingEvent interface {
+	event.Event
+	Abort()
+}
+
+// effectContextDecorator is implemented by windows that own per-loop services
+// which commands and subscriptions must reach through their context. The loop
+// decorates the root effect context once, so every command and subscription
+// inherits those services instead of each effect being wrapped individually.
+type effectContextDecorator interface {
+	DecorateEffectContext(context.Context) context.Context
+}
+
 // windowCloser is implemented by windows that can request a native close.
 // *app.Window implements this; test harnesses may inject DestroyEvent.
 type windowCloser interface {
 	Perform(system.Action)
+}
+
+type forceWindowCloser interface {
+	ForceClose()
 }
 
 const effectShutdownTimeout = 2 * time.Second
@@ -174,10 +194,11 @@ func Loop[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
 	onDestroy func(),
-	onConfig func(app.Config, func(Msg)),
+	onConfig func(app.Config, Send[Msg]),
+	onClosing func(ClosingEvent, Send[Msg]),
 	frame Frame[M, Msg],
 ) error {
-	return LoopWithExit(w, initial, initialCmd, update, subscriptions, onError, onDestroy, onConfig, frame, nil)
+	return LoopWithExit(w, initial, initialCmd, update, subscriptions, onError, onDestroy, onConfig, onClosing, frame, nil)
 }
 
 // LoopWithExit runs an event loop and reports the final model before
@@ -190,12 +211,16 @@ func LoopWithExit[M any, Msg any](
 	subscriptions Subscriptions[M, Msg],
 	onError func(error),
 	onDestroy func(),
-	onConfig func(app.Config, func(Msg)),
+	onConfig func(app.Config, Send[Msg]),
+	onClosing func(ClosingEvent, Send[Msg]),
 	frame Frame[M, Msg],
 	onExit func(M),
 ) error {
 	core := newLoopCore(initial, update)
 	root, cancel := context.WithCancel(context.Background())
+	if decorator, ok := w.(effectContextDecorator); ok {
+		root = decorator.DecorateEffectContext(root)
+	}
 	ctx := withLatestCommandManager(root, core.latest)
 	var activeSubscriptions subscriptionSet[Msg]
 	var effects effectGroup
@@ -303,7 +328,7 @@ func LoopWithExit[M any, Msg any](
 			return e.Err
 		case app.ConfigEvent:
 			if onConfig != nil {
-				if err := recoverRuntimePanic(RuntimePhaseUpdate, func() {
+				if err := recoverRuntimePanic(PhaseUpdate, func() {
 					onConfig(e.Config, send)
 				}); err != nil {
 					beginFatalShutdown(err)
@@ -314,6 +339,18 @@ func LoopWithExit[M any, Msg any](
 				}
 			}
 			w.Invalidate()
+		case ClosingEvent:
+			if onClosing != nil {
+				if err := recoverRuntimePanic(PhaseClose, func() {
+					onClosing(e, send)
+				}); err != nil {
+					beginFatalShutdown(err)
+					if !windowSupportsClose(w) {
+						return fatal
+					}
+					continue
+				}
+			}
 		case app.FrameEvent:
 			droppedErrors := effectErrors.Drain(onError)
 			if droppedErrors > 0 {
@@ -332,7 +369,7 @@ func LoopWithExit[M any, Msg any](
 			}
 			if subscriptions != nil && (!subscriptionsReady || updated) {
 				var desired []Subscription[Msg]
-				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
+				if err := recoverRuntimePanic(PhaseSubscriptions, func() {
 					desired = subscriptions(core.model)
 				}); err != nil {
 					beginFatalShutdown(err)
@@ -345,7 +382,7 @@ func LoopWithExit[M any, Msg any](
 				subscriptionsReady = true
 			}
 			if subscriptions != nil && subscriptionsReady {
-				if err := recoverRuntimePanic(RuntimePhaseSubscriptions, func() {
+				if err := recoverRuntimePanic(PhaseSubscriptions, func() {
 					activeSubscriptions.reconcile(ctx, desiredSubscriptions, &effects, sendSubscription, report, wake)
 				}); err != nil {
 					beginFatalShutdown(err)
@@ -355,7 +392,7 @@ func LoopWithExit[M any, Msg any](
 					continue
 				}
 			}
-			viewErr := recoverRuntimePanic(RuntimePhaseView, func() {
+			viewErr := recoverRuntimePanic(PhaseView, func() {
 				gtx := app.NewContext(&ops, e)
 				frame(gtx, core.model, send)
 				e.Frame(gtx.Ops)
@@ -376,6 +413,10 @@ func windowSupportsClose(w EventWindow) bool {
 }
 
 func requestWindowClose(w EventWindow) bool {
+	if closer, ok := w.(forceWindowCloser); ok {
+		closer.ForceClose()
+		return true
+	}
 	closer, ok := w.(windowCloser)
 	if !ok {
 		return false

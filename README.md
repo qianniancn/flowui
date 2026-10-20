@@ -9,15 +9,22 @@
 [English documentation](https://qianniancn.github.io/flowui/en/) · [中文文档](https://qianniancn.github.io/flowui/)
 
 FlowUI is a desktop UI framework for Go, built on [Gio](https://gioui.org/).
-It combines a typed MVU application model with a broad component set,
-declarative styling, window management, asynchronous effects, and deterministic
-UI testing behind a focused public API.
+It combines a typed MVU runtime with official widgets, layout primitives,
+declarative styles, window management, asynchronous effects, and deterministic
+UI testing through focused public packages.
 
 ```go
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/window"
+)
 ```
 
-![FlowUI component gallery](docs/assets/components-gallery.png)
+![FlowUI component showcase](docs/assets/showcase-light.png)
 
 ## Highlights
 
@@ -55,7 +62,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -81,15 +93,15 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Column(
-			ui.Text("FlowUI Counter").Size(24),
-			ui.Text(fmt.Sprintf("Count: %d", model.Count)),
-			ui.Row(
-				ui.Button("decrement", ui.Text("-1")).OnClick(func() {
+	return layout.Center(
+		layout.Column(
+			text.New("FlowUI Counter").Size(24),
+			text.New(fmt.Sprintf("Count: %d", model.Count)),
+			layout.Row(
+				button.New("-1").OnClick(func() {
 					send(Dec{})
 				}),
-				ui.Button("increment", ui.Text("+1")).OnClick(func() {
+				button.New("+1").OnClick(func() {
 					send(Inc{})
 				}),
 			).Gap(8),
@@ -99,8 +111,9 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{}, Update, View),
-		ui.Title("FlowUI Counter"),
-		ui.Size(640, 480),
+		window.Theme(base.Light()),
+		window.Title("FlowUI Counter"),
+		window.Size(640, 480),
 	)
 }
 ```
@@ -111,7 +124,6 @@ Run it with:
 go run .
 ```
 
-The same application is available at [`examples/counter`](examples/counter).
 For a guided walkthrough, read the [English Quick Start](https://qianniancn.github.io/flowui/en/guide/01-quick-start/).
 
 ## Core Model
@@ -143,72 +155,80 @@ cover the complete contracts.
 
 | Area | Included APIs |
 | --- | --- |
-| Content | `Text`, `Label`, `Description`, `Image`, `Avatar`, `Badge`, `Chip` |
-| Actions | `Button`, `ButtonGroup`, `ToggleButton`, `CloseButton`, `Action` |
-| Forms | `Input`, `TextArea`, `Checkbox`, `Switch`, `RadioGroup`, `Select`, `ComboBox`, date and color pickers |
-| Navigation | `Tabs`, `Sidebar`, `Tree`, `Menu`, `Menubar`, `Pagination`, `Toolbar` |
-| Overlays | `Dropdown`, `ContextMenu`, `Popover`, `Tooltip`, `Modal`, `AlertDialog`, `Toast` |
-| Data and feedback | `Table`, `ProgressBar`, `ProgressCircle`, `Meter`, `Spinner`, `Slider`, charts, `Heatmap`, `GanttChart` |
-| Layout | `Box`, `Surface`, `Card`, `Row`, `Column`, `Grid`, `Scroll`, `SplitPane`, `Stack`, `Overlay` |
+| Content | `text.New`, `label.New`, `description.New`, `image.New`, `avatar.New`, `badge.New`, `chip.New` |
+| Actions | `button.New`, `button.Group`, `togglebutton.New`, `closebutton.New` |
+| Forms | `input.New`, `input.NewTextArea`, `checkbox.New`, `switchcontrol.New`, `radiogroup.New`, `selectfield.New`, `combobox.New`, date and color pickers |
+| Navigation | `tabs.New`, `sidebar.New`, `tree.New`, `menu.New`, `menubar.New`, `pagination.New`, `toolbar.New` |
+| Overlays | `dropdown.New`, `menu.ContextMenu`, `popover.New`, `tooltip.New`, `modal.New`, `alertdialog.New`, `toast.NewItem` |
+| Data and feedback | `table.New`, `progress.Bar`, `progress.Circle`, `progress.Meter`, `spinner.New`, `slider.New`, charts, `heatmap.New`, `gantt.New` |
+| Layout | `layout.Box`, `surface.New`, `card.New`, `layout.Row`, `layout.Column`, `layout.Grid`, `layout.Scroll`, `layout.SplitPane`, `layout.Stack`, `layout.Overlay` |
 
 See the [component guide](https://qianniancn.github.io/flowui/en/guide/06-components/)
-or run the component gallery:
-
-```bash
-go run ./examples/components
-```
+for the complete widget catalog.
 
 ## Styling and Themes
 
-Styles are immutable declarations that can use theme tokens and respond to
-runtime state. The same declaration follows the active light or dark theme:
+Styles are immutable declarations that draw colors from the active theme and
+respond to runtime state. The same declaration follows the active light or
+dark theme:
 
 ```go
-primary := ui.Background(ui.TokenAccent).
-	TextColor(ui.TokenAccentForeground).
-	Radius(8).
-	Cursor(ui.CursorPointer).
-	When(ui.Hovered, ui.Background(ui.TokenAccentHover)).
-	When(ui.Pressed, ui.Background(ui.TokenAccentPressed).Scale(0.96, 0.96))
+activeTheme := base.Light()
 
-save := ui.Button("save", ui.Text("Save")).Style(primary)
+primary := style.New().
+	Background(style.Solid(activeTheme.Palette.Accent)).
+	TextColor(style.Solid(activeTheme.Palette.AccentForeground)).
+	Radius(8).
+	Cursor(style.CursorPointer).
+	On(style.Hovered, style.New().Background(style.Solid(activeTheme.Palette.AccentHover))).
+	On(style.Pressed, style.New().Background(style.Solid(activeTheme.Palette.AccentPressed)).Scale(0.96))
+
+save := button.New("Save").Style(primary)
 ```
 
-The runtime starts with `ui.DefaultTheme()`. Pass
-`ui.WithTheme(ui.DarkTheme())` to replace it, or use `ui.CustomizeTheme` for
-focused changes. Compound controls expose named parts such as `PartContent`,
-`PartTrack`, `PartIndicator`, and `PartPanel` for focused customization. FlowUI
-includes English and Chinese component strings; `ui.LanguageAuto` follows the
+The runtime requires an explicit complete Style Provider. Pass
+`window.Theme(base.Light())`, `window.Theme(base.Dark())`, or a theme from
+another provider package; use `window.CustomizeTheme` after selecting one for
+focused changes. Compound controls expose named
+parts such as `style.PartContent`, `style.PartTrack`, `style.PartIndicator`,
+and `style.PartPanel` for focused customization. FlowUI
+includes English and Chinese component strings; `window.LanguageAuto` follows the
 host language.
 
 The [style and theme guide](https://qianniancn.github.io/flowui/en/guide/05-styling-and-themes/)
 documents precedence, parts, colors, geometry, transitions, and bundled font setup.
 
 FlowUI uses system font fallback by default. For reproducible rendering, parse an
-embedded TTF, OTF, or TTC with `ui.ParseFontCollection`, assign the faces to
+embedded TTF, OTF, or TTC with `style.ParseFontCollection`, assign the faces to
 `theme.Fonts.Collection`, and set `theme.Fonts.SystemFonts = false`.
 
-## Examples
+The core maintains one default design system in `theme/base`, with light and dark
+modes. Applications can use `base.Light()` / `base.Dark()` directly or build an
+external Provider on top of the public theme APIs.
 
-Every directory below is a runnable program:
+## Public Packages
 
-| Example | Demonstrates |
+| Package | Responsibility |
 | --- | --- |
-| [`examples/counter`](examples/counter) | Minimal typed MVU application |
-| [`examples/form`](examples/form) | Form controls and validation |
-| [`examples/async`](examples/async) | Commands and asynchronous results |
-| [`examples/components`](examples/components) | Component gallery |
-| [`examples/timelines`](examples/timelines) | Time line layouts and marker variants |
-| [`examples/grid_layout`](examples/grid_layout) | Fixed and responsive grid layouts |
-| [`examples/fonts`](examples/fonts) | System and bundled font configuration |
-| [`examples/custom_widgets`](examples/custom_widgets) | Custom composites and canvas widgets |
-| [`examples/multi_windows`](examples/multi_windows) | Application-owned multiple windows |
-| [`examples/file_dialogs`](examples/file_dialogs) | Native open and save file dialogs |
-| [`examples/notifications`](examples/notifications) | Native desktop notifications |
-| [`examples/systray_ui`](examples/systray_ui) | FlowUI window with a native system tray |
+| `ui` | MVU program, context, widget contract, and application lifecycle |
+| `widget/<component>` | Official fully-rendered components |
+| `layout` | Layout containers and the common box host |
+| `style` | Immutable declarations, cascade, and tokens |
+| `theme/base` | The default light/dark theme and complete Provider |
+| `theme` | Theme values, visual contracts, and extension APIs |
+| `draw` | Low-level brushes, borders, shadows, paths, and transforms |
+| `animation` | Reusable tween, spring, and timeline primitives |
+| `window` | Native window options and locale configuration |
+| `uitest` | Deterministic widget and application test harnesses |
 
-Additional focused examples under [`examples/`](examples/) cover charts,
-animations, menus, overlays, layout, window chrome, and individual controls.
+Start with the [interactive component showcase](examples/showcase/README.md):
+`go run ./examples/showcase`. Its 65 pages cover every public widget package,
+with search, live demos, usage snippets, and light/dark modes.
+
+Focused default-theme examples also live in this module: `go run ./examples/counter`,
+`go run ./examples/buttons`, `go run ./examples/inputs`,
+`go run ./examples/style-gallery`, and `go run ./examples/close_guard` for a
+native close-request guard.
 
 ## Documentation
 
@@ -223,8 +243,9 @@ animations, menus, overlays, layout, window chrome, and individual controls.
 | [`systray/README.md`](systray/README.md) | Cross-platform system tray lifecycle and native menus |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and contribution rules |
 
-Applications use `github.com/qianniancn/flowui/ui` for the interface and MVU
-runtime. `explorer`, `notify`, and `systray` are optional platform services.
+Applications use `ui` for MVU and `widget/<component>`, `layout`, `style`, `draw`, and
+`window` according to responsibility. `explorer`, `notify`, and `systray` are
+optional platform services.
 Applications must not import packages under `internal`. The repository root
 intentionally contains no Go package.
 

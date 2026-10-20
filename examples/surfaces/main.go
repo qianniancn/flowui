@@ -1,6 +1,14 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct{}
 type Msg struct{}
@@ -8,66 +16,67 @@ type Msg struct{}
 func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Surface").Size(24),
-				ui.Text("Semantic background levels for non-overlay content."),
-				ui.Divider(),
-				ui.Wrap(
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Surface").Size(24),
+				text.New("Semantic background levels for non-overlay content."),
+				layout.Divider(),
+				layout.Wrap(
 					surfaceExample(
 						"Default",
 						"The standard content surface. It can use the restrained surface shadow when elevation is needed.",
-						ui.SurfaceDefault,
+						surface.Default,
 						true,
 					),
 					surfaceExample(
 						"Secondary",
 						"A medium-prominence layer for grouped controls, settings panels, and nested content.",
-						ui.SurfaceSecondary,
+						surface.Secondary,
 						false,
 					),
 					surfaceExample(
 						"Tertiary",
 						"A stronger layer for content that needs additional visual separation.",
-						ui.SurfaceTertiary,
+						surface.Tertiary,
 						false,
 					),
 					surfaceExample(
 						"Transparent",
 						"Keeps surface foreground semantics without painting a background.",
-						ui.SurfaceTransparent,
+						surface.Transparent,
 						false,
 					),
 				).Gap(24).LineGap(24),
 			).Gap(24),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
-func surfaceExample(title, description string, variant ui.SurfaceVariant, shadow bool) ui.Widget {
-	content := ui.Box(
-		ui.Column(
-			ui.Text(title).Size(18),
-			ui.Text(description).Size(14),
+func surfaceExample(title, description string, variant surface.Variant, shadow bool) ui.Widget {
+	content := layout.Box(
+		layout.Column(
+			text.New(title).Size(18),
+			text.New(description).Size(14),
 		).Gap(8),
-	).Style(ui.Width(320).MinHeight(132).Padding(20))
+	).Style(style.New().Width(320).MinHeight(132).Padding(20))
 
-	declaration := ui.Radius(24)
+	declaration := style.New().Radius(24)
 	if shadow {
-		declaration = declaration.Shadow(ui.ShadowSurface)
+		declaration = declaration.Shadow(style.ShadowSurface)
 	}
-	if variant == ui.SurfaceSecondary {
+	if variant == surface.Secondary {
 		declaration = declaration.
 			BorderWidth(2).
-			BorderColor(ui.RGB(0x9333ea))
+			BorderColor(style.RGB(0x9333ea))
 	}
-	return ui.Surface(content).Variant(variant).Style(declaration)
+	return (surface.New(content).Variant(variant)).Style(declaration)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Surface"),
-		ui.Size(900, 620),
+		Update, View), window.Title("FlowUI Surface"),
+		window.Size(900, 620),
+		window.Theme(base.Light()),
 	)
 }

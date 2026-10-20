@@ -6,6 +6,8 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/qianniancn/flowui/internal/core"
+	flowlayout "github.com/qianniancn/flowui/layout"
 )
 
 func TestVisualOverflowKeepsChildDimensions(t *testing.T) {
@@ -16,7 +18,7 @@ func TestVisualOverflowKeepsChildDimensions(t *testing.T) {
 		childCalls++
 		return want
 	})
-	draw := func(_ *Context, gtx layout.Context, bounds image.Rectangle) {
+	draw := func(_ *core.Context, gtx layout.Context, bounds image.Rectangle) {
 		drawCalls++
 		if bounds != (image.Rectangle{Max: want.Size}) {
 			t.Fatalf("overflow bounds = %v, want %v", bounds, image.Rectangle{Max: want.Size})
@@ -26,7 +28,7 @@ func TestVisualOverflowKeepsChildDimensions(t *testing.T) {
 		}
 	}
 
-	dims := LayoutVisualOverflow(nil, layout.Context{
+	dims := flowlayout.VisualOverflow(nil, layout.Context{
 		Constraints: layout.Constraints{Max: image.Pt(200, 100)},
 		Ops:         new(op.Ops),
 	}, child, draw)
@@ -40,11 +42,11 @@ func TestVisualOverflowKeepsChildDimensions(t *testing.T) {
 
 func TestVisualOverflowHandlesNilValues(t *testing.T) {
 	gtx := layout.Context{Ops: new(op.Ops)}
-	if dims := LayoutVisualOverflow(nil, gtx, nil, nil); dims != (layout.Dimensions{}) {
+	if dims := flowlayout.VisualOverflow(nil, gtx, nil, nil); dims != (layout.Dimensions{}) {
 		t.Fatalf("nil child dimensions = %v", dims)
 	}
 	want := layout.Dimensions{Size: image.Pt(12, 8)}
-	dims := LayoutVisualOverflow(nil, gtx, WidgetFunc(func(*Context, layout.Context) layout.Dimensions {
+	dims := flowlayout.VisualOverflow(nil, gtx, WidgetFunc(func(*Context, layout.Context) layout.Dimensions {
 		return want
 	}), nil)
 	if dims != want {

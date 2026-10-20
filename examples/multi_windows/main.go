@@ -4,8 +4,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/datepicker"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/togglebutton"
+	"github.com/qianniancn/flowui/window"
 )
 
 type CounterModel struct {
@@ -21,14 +30,14 @@ func counterUpdate(model *CounterModel, msg CounterMsg) ui.Cmd[CounterMsg] {
 
 func counterView(application *ui.Application) ui.View[CounterModel, CounterMsg] {
 	return func(_ *ui.Context, model CounterModel, send ui.Send[CounterMsg]) ui.Widget {
-		return ui.Center(
-			ui.Column(
-				ui.Text("Independent window").Size(22),
-				ui.Text(fmt.Sprintf("Count: %d", model.Value)).Size(18),
-				ui.Row(
-					ui.Button("decrease", ui.Icon(lucide.Minus).Size(16)).OnClick(func() { send(-1) }),
-					ui.Button("increase", ui.Icon(lucide.Plus).Size(16)).OnClick(func() { send(1) }),
-					ui.Button("close", ui.Text("Close")).Variant(ui.ButtonSecondary).OnClick(func() { application.Close("counter") }),
+		return layout.Center(
+			layout.Column(
+				text.New("Independent window").Size(22),
+				text.New(fmt.Sprintf("Count: %d", model.Value)).Size(18),
+				layout.Row(
+					button.New("").Content(icon.New(lucide.Minus).Size(16)).OnClick(func() { send(-1) }),
+					button.New("").Content(icon.New(lucide.Plus).Size(16)).OnClick(func() { send(1) }),
+					button.New("Close").Variant(button.Secondary).OnClick(func() { application.Close("counter") }),
 				).Gap(8).AlignMiddle(),
 			).Gap(16).AlignMiddle(),
 		)
@@ -60,16 +69,16 @@ func mainUpdate(application *ui.Application) ui.Update[MainModel, MainMsg] {
 		switch msg.kind {
 		case setDark:
 			model.Dark = msg.enabled
-			activeTheme := ui.DefaultTheme()
+			activeTheme := base.Light()
 			if model.Dark {
-				activeTheme = ui.DarkTheme()
+				activeTheme = base.Dark()
 			}
 			application.SetTheme("main", activeTheme)
 		case setChinese:
 			model.Chinese = msg.enabled
-			language := ui.LanguageEnglish
+			language := window.LanguageEnglish
 			if model.Chinese {
-				language = ui.LanguageChinese
+				language = window.LanguageChinese
 			}
 			application.SetLanguage("main", language)
 		case setDate:
@@ -89,68 +98,70 @@ func mainView(application *ui.Application, counter ui.WindowSpec) ui.View[MainMo
 			state.Mode.String(),
 			state.Focused,
 		)
-		return ui.Center(
-			ui.Box(
-				ui.Column(
-					ui.Text("FlowUI Multi-window").Size(24),
-					ui.Text(status).Size(13),
-					ui.Divider(),
-					ui.Wrap(
-						windowAction(application, "minimize", "Minimize", ui.WindowActionMinimize),
-						windowAction(application, "maximize", "Maximize", ui.WindowActionMaximize),
-						windowAction(application, "restore", "Restore", ui.WindowActionRestore),
-						windowAction(application, "fullscreen", "Fullscreen", ui.WindowActionFullscreen),
-						windowAction(application, "center", "Center", ui.WindowActionCenter),
-						windowAction(application, "raise", "Raise", ui.WindowActionRaise),
+		return layout.Center(
+			layout.Box(
+				layout.Column(
+					text.New("FlowUI Multi-window").Size(24),
+					text.New(status).Size(13),
+					layout.Divider(),
+					layout.Wrap(
+						windowAction(application, "minimize", "Minimize", window.ActionMinimize),
+						windowAction(application, "maximize", "Maximize", window.ActionMaximize),
+						windowAction(application, "restore", "Restore", window.ActionRestore),
+						windowAction(application, "fullscreen", "Fullscreen", window.ActionFullscreen),
+						windowAction(application, "center", "Center", window.ActionCenter),
+						windowAction(application, "raise", "Raise", window.ActionRaise),
 					).Gap(8).LineGap(8),
-					ui.Wrap(
-						ui.Button("set-title", ui.Text("Set title")).
-							Variant(ui.ButtonSecondary).
-							OnClick(func() { application.Configure("main", ui.Title("FlowUI Workspace")) }),
-						ui.Button("resize", ui.Text("Resize")).
-							Variant(ui.ButtonSecondary).
-							OnClick(func() { application.Configure("main", ui.Size(900, 620)) }),
-						ui.ToggleButton("top-most", state.TopMost, ui.Text("Top most")).
-							OnChange(func(enabled bool) { application.Configure("main", ui.TopMost(enabled)) }),
-						ui.ToggleButton("decorated", state.Decorated, ui.Text("Decorated")).
-							OnChange(func(enabled bool) { application.Configure("main", ui.Decorated(enabled)) }),
+					layout.Wrap(
+						button.New("Set title").
+							Variant(button.Secondary).
+							OnClick(func() { application.Configure("main", window.Title("FlowUI Workspace")) }),
+						button.New("Resize").
+							Variant(button.Secondary).
+							OnClick(func() { application.Configure("main", window.Size(900, 620)) }),
+						togglebutton.New("").Key("top-most").Selected(state.TopMost).Content(text.New("Top most")).
+							OnChange(func(enabled bool) { application.Configure("main", window.TopMost(enabled)) }),
+						togglebutton.New("").Key("decorated").Selected(state.Decorated).Content(text.New("Decorated")).
+							OnChange(func(enabled bool) { application.Configure("main", window.Decorated(enabled)) }),
 					).Gap(8).LineGap(8),
-					ui.Wrap(
-						ui.ToggleButton("dark-theme", model.Dark, ui.Text("Dark theme")).
+					layout.Wrap(
+						togglebutton.New("").Key("dark-theme").Selected(model.Dark).Content(text.New("Dark theme")).
 							OnChange(func(enabled bool) { send(MainMsg{kind: setDark, enabled: enabled}) }),
-						ui.ToggleButton("chinese-language", model.Chinese, ui.Text("Chinese locale")).
+						togglebutton.New("").Key("chinese-language").Selected(model.Chinese).Content(text.New("Chinese locale")).
 							OnChange(func(enabled bool) { send(MainMsg{kind: setChinese, enabled: enabled}) }),
-						ui.DatePicker("locale-preview", model.Date).
+						datepicker.New("locale-preview", model.Date).
 							OnChange(func(value time.Time) { send(MainMsg{kind: setDate, date: value}) }),
 					).Gap(8).LineGap(8),
-					ui.Divider(),
-					ui.Row(
-						ui.Button("open-counter", ui.Text("Open counter")).OnClick(func() { application.Open(counter) }),
-						ui.Button("close-all", ui.Text("Close all")).Variant(ui.ButtonSecondary).OnClick(application.CloseAll),
+					layout.Divider(),
+					layout.Row(
+						button.New("Open counter").OnClick(func() { application.Open(counter) }),
+						button.New("Close all").Variant(button.Secondary).OnClick(application.CloseAll),
 					).Gap(8).AlignMiddle(),
 				).Gap(16),
-			).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24)),
+			).Style(style.New().FillWidth().MaxWidth(720).Padding(24)),
 		)
 	}
 }
 
-func windowAction(application *ui.Application, key, label string, action ui.WindowAction) ui.Widget {
-	return ui.Button(key, ui.Text(label)).
-		Variant(ui.ButtonSecondary).
+func windowAction(application *ui.Application, key, label string, action window.Action) ui.Widget {
+	return button.New(label).Key(key).
+		Variant(button.Secondary).
 		OnClick(func() { application.Perform("main", action) })
 }
 
 func main() {
 	application := ui.NewApplication()
 	counter := ui.NewWindow(
-		"counter", ui.NewProgram(CounterModel{}, counterUpdate, counterView(application)), ui.Title("Counter"),
-		ui.Size(420, 260),
+		"counter", ui.NewProgram(CounterModel{}, counterUpdate, counterView(application)), window.Title("Counter"),
+		window.Size(420, 260),
+		window.Theme(base.Light()),
 	)
 	mainWindow := ui.NewWindow(
-		"main", ui.NewProgram(MainModel{}, mainUpdate(application), mainView(application, counter)), ui.Title("Multi-window"),
-		ui.Size(760, 520),
-		ui.MinSize(520, 360),
-		ui.MaxSize(1400, 1000),
+		"main", ui.NewProgram(MainModel{}, mainUpdate(application), mainView(application, counter)), window.Title("Multi-window"),
+		window.Size(760, 520),
+		window.MinSize(520, 360),
+		window.MaxSize(1400, 1000),
+		window.Theme(base.Light()),
 	)
 	application.Run(mainWindow)
 }

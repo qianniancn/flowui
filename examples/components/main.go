@@ -9,7 +9,30 @@ import (
 	"time"
 
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/alertdialog"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/chip"
+	"github.com/qianniancn/flowui/widget/colorpicker"
+	"github.com/qianniancn/flowui/widget/datepicker"
+	iconpkg "github.com/qianniancn/flowui/widget/icon"
+	menupkg "github.com/qianniancn/flowui/widget/menu"
+	"github.com/qianniancn/flowui/widget/menubar"
+	"github.com/qianniancn/flowui/widget/modal"
+	"github.com/qianniancn/flowui/widget/nodegraph"
+	"github.com/qianniancn/flowui/widget/popover"
+	sidebarpkg "github.com/qianniancn/flowui/widget/sidebar"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/table"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/titlebar"
+	"github.com/qianniancn/flowui/widget/toast"
+	"github.com/qianniancn/flowui/widget/tree"
+	"github.com/qianniancn/flowui/window"
 )
 
 const (
@@ -48,7 +71,7 @@ type Model struct {
 	DatePickerLimited   time.Time
 	DatePickerInvalid   time.Time
 	DateField           time.Time
-	DateRange           ui.DateRange
+	DateRange           datepicker.DateRange
 	ColorValue          color.NRGBA
 	SliderValue         float64
 	RangeLower          float64
@@ -64,7 +87,7 @@ type Model struct {
 	TreeDashed       bool
 	TreeDragValue    string
 	TreeDragExpanded []string
-	TreeDragItems    []ui.TreeItem
+	TreeDragItems    []tree.Item
 	TreeDropMessage  string
 	CollapsibleOpen  bool
 	ExpandedGroups   []string
@@ -79,20 +102,20 @@ type Model struct {
 	ModalOpen       bool
 	AboutOpen       bool
 	AlertDialogOpen bool
-	Toasts          []ui.ToastItem
+	Toasts          []toast.Item
 	ToastSequence   int
 
 	TableSelected []string
-	TableSort     ui.TableSortDescriptor
+	TableSort     table.SortDescriptor
 	LastAction    string
-	GraphViewport ui.NodeGraphViewport
-	GraphNodes    []ui.NodeGraphNode
-	GraphEdges    []ui.NodeGraphEdge
+	GraphViewport nodegraph.Viewport
+	GraphNodes    []nodegraph.Node
+	GraphEdges    []nodegraph.Edge
 }
 
 func initialModel() Model {
 	now := time.Now()
-	defaultTheme := ui.DefaultTheme()
+	defaultTheme := base.Light()
 	return Model{
 		Page:                defaultPage,
 		ThemeAccent:         defaultTheme.Palette.Accent,
@@ -114,7 +137,7 @@ func initialModel() Model {
 		DatePickerChinese:   now,
 		DatePickerLimited:   now.AddDate(0, 0, 3),
 		DateField:           now,
-		DateRange:           ui.DateRange{Start: now, End: now.AddDate(0, 0, 5)},
+		DateRange:           datepicker.DateRange{Start: now, End: now.AddDate(0, 0, 5)},
 		ColorValue:          color.NRGBA{R: 0x3d, G: 0x63, B: 0xdd, A: 0xff},
 		SliderValue:         42,
 		RangeLower:          24,
@@ -125,7 +148,7 @@ func initialModel() Model {
 		TreeValue:           "button",
 		TreeExpanded:        []string{"components"},
 		TreeConnectors:      true,
-		TreeDragItems:       append([]ui.TreeItem(nil), catalogDragTreeItems...),
+		TreeDragItems:       append([]tree.Item(nil), catalogDragTreeItems...),
 		TreeDragExpanded:    []string{"workspace", "workspace-src"},
 		TreeDropMessage:     "Drag a row to move it before, inside, or after another node.",
 		MotionForward:       true,
@@ -148,7 +171,7 @@ func catalogView(application *ui.Application) ui.View[Model, Msg] {
 		if pageTitle(page) == "" {
 			page = defaultPage
 		}
-		sidebar := ui.SidebarSections("component-catalog-navigation", page, catalogNavigationSections).
+		sidebar := sidebarpkg.NewSections("component-catalog-navigation", page, catalogNavigationSections).
 			DataVersion(1).
 			Header(navigationHeader(model.SidebarCollapsed)).
 			Footer(navigationFooter(model.SidebarCollapsed)).
@@ -161,17 +184,17 @@ func catalogView(application *ui.Application) ui.View[Model, Msg] {
 				send(func(model *Model) { model.Page = key })
 			})
 
-		content := ui.Scrollbar("component-page-"+page,
-			ui.Box(componentPage(ctx, page, model, send)).Style(ui.FillWidth().MaxWidth(1080).Padding(28)),
-		).Overlay()
+		content := layout.Scrollbar(
+			layout.Box(componentPage(ctx, page, model, send)).Style(style.New().FillWidth().MaxWidth(1080).Padding(28)),
+		).Key("component-page-" + page).Overlay()
 
-		body := ui.Stack(
-			ui.Stacked(ui.Row(sidebar, ui.Expanded(content))),
-			ui.Overlay(globalOverlays(model, send)).Expanded(),
+		body := layout.Stack(
+			layout.Stacked(layout.Row(sidebar, layout.Expanded(content))),
+			layout.Overlay(globalOverlays(model, send)).Expanded(),
 		)
-		return ui.Column(
+		return layout.Column(
 			catalogTitleBar(application, model, send),
-			ui.Expanded(body),
+			layout.Expanded(body),
 		)
 	}
 }
@@ -180,33 +203,32 @@ func catalogTitleBar(application *ui.Application, model Model, send ui.Send[Msg]
 	navigate := func(page string) {
 		send(func(model *Model) { model.Page = page })
 	}
-	titlebarMenuStyle := catalogTitlebarMenuStyle(model)
-	menu := ui.Menubar("catalog-window-menu", []ui.MenubarItem{
-		ui.MenubarMenuContent("catalog-window-file", "File", ui.Menu("catalog-window-file:menu", []ui.MenuItem{
-			{Key: "overview", Label: "Overview", Leading: ui.Icon(lucide.LayoutGrid).Size(16)},
-			ui.MenuSeparator(),
-			{Key: "close", Label: "Close", Shortcut: "Alt+F4", Leading: ui.Icon(lucide.X).Size(16)},
-		}).Style(titlebarMenuStyle).Width(190).OnActionEvent(func(event ui.MenuActionEvent) {
+	menu := menubar.New("catalog-window-menu", []menubar.Item{
+		menubar.NewMenuContent("catalog-window-file", "File", menupkg.New("catalog-window-file:menu", []menupkg.Item{
+			{Key: "overview", Label: "Overview", Leading: iconpkg.New(lucide.LayoutGrid).Size(16)},
+			menupkg.Separator(),
+			{Key: "close", Label: "Close", Shortcut: "Alt+F4", Leading: iconpkg.New(lucide.X).Size(16)},
+		}).Width(190).OnActionEvent(func(event menupkg.ActionEvent) {
 			if event.Key == "close" {
 				application.Close(catalogWindowKey)
 				return
 			}
 			navigate(defaultPage)
 		})),
-		ui.MenubarMenuContent("catalog-window-go", "Go", ui.Menu("catalog-window-go:menu", []ui.MenuItem{
-			{Key: "buttons", Label: "Buttons", Leading: ui.Icon(lucide.MousePointerClick).Size(16)},
-			{Key: "text-fields", Label: "Text fields", Leading: ui.Icon(lucide.TextCursorInput).Size(16)},
-			{Key: "motion-style", Label: "Motion & style", Leading: ui.Icon(lucide.RefreshCw).Size(16)},
-			{Key: "colors", Label: "Colors", Leading: ui.Icon(lucide.Palette).Size(16)},
-			{Key: "sidebar-tree", Label: "Sidebar & tree", Leading: ui.Icon(lucide.PanelLeft).Size(16)},
-			{Key: "overlays", Label: "Overlays", Leading: ui.Icon(lucide.MessageSquareMore).Size(16)},
-			{Key: "tables", Label: "Tables", Leading: ui.Icon(lucide.Table2).Size(16)},
-			{Key: "charts", Label: "Charts", Leading: ui.Icon(lucide.ChartNoAxesCombined).Size(16)},
-		}).Style(titlebarMenuStyle).Width(210).OnActionEvent(func(event ui.MenuActionEvent) { navigate(event.Key) })),
-		ui.MenubarMenuContent("catalog-window-help", "Help", ui.Menu("catalog-window-help:menu", []ui.MenuItem{
-			{Key: "app-shell", Label: "Application shell", Leading: ui.Icon(lucide.AppWindow).Size(16)},
-			{Key: "about", Label: "About FlowUI", Leading: ui.Icon(lucide.Info).Size(16)},
-		}).Style(titlebarMenuStyle).Width(210).OnActionEvent(func(event ui.MenuActionEvent) {
+		menubar.NewMenuContent("catalog-window-go", "Go", menupkg.New("catalog-window-go:menu", []menupkg.Item{
+			{Key: "buttons", Label: "Buttons", Leading: iconpkg.New(lucide.MousePointerClick).Size(16)},
+			{Key: "text-fields", Label: "Text fields", Leading: iconpkg.New(lucide.TextCursorInput).Size(16)},
+			{Key: "motion-style", Label: "Motion & style", Leading: iconpkg.New(lucide.RefreshCw).Size(16)},
+			{Key: "colors", Label: "Colors", Leading: iconpkg.New(lucide.Palette).Size(16)},
+			{Key: "sidebar-tree", Label: "Sidebar & tree", Leading: iconpkg.New(lucide.PanelLeft).Size(16)},
+			{Key: "overlays", Label: "Overlays", Leading: iconpkg.New(lucide.MessageSquareMore).Size(16)},
+			{Key: "tables", Label: "Tables", Leading: iconpkg.New(lucide.Table2).Size(16)},
+			{Key: "charts", Label: "Charts", Leading: iconpkg.New(lucide.ChartNoAxesCombined).Size(16)},
+		}).Width(210).OnActionEvent(func(event menupkg.ActionEvent) { navigate(event.Key) })),
+		menubar.NewMenuContent("catalog-window-help", "Help", menupkg.New("catalog-window-help:menu", []menupkg.Item{
+			{Key: "app-shell", Label: "Application shell", Leading: iconpkg.New(lucide.AppWindow).Size(16)},
+			{Key: "about", Label: "About FlowUI", Leading: iconpkg.New(lucide.Info).Size(16)},
+		}).Width(210).OnActionEvent(func(event menupkg.ActionEvent) {
 			if event.Key == "about" {
 				send(func(model *Model) { model.AboutOpen = true })
 				return
@@ -221,9 +243,9 @@ func catalogTitleBar(application *ui.Application, model Model, send ui.Send[Msg]
 		icon = lucide.Sun
 		label = "Use light theme"
 	}
-	themeToggle := ui.Button("catalog-theme-toggle", ui.Icon(icon).Size(16)).
-		Variant(ui.ButtonGhost).
-		Size(ui.ButtonSmall).
+	themeToggle := button.New("").Content(iconpkg.New(icon).Size(16)).
+		Variant(button.Ghost).
+		Size(button.Small).
 		IconOnly().
 		Label(label).
 		OnClick(func() {
@@ -237,30 +259,18 @@ func catalogTitleBar(application *ui.Application, model Model, send ui.Send[Msg]
 		navigationIcon = lucide.PanelRight
 		navigationLabel = "Expand navigation"
 	}
-	navigationToggle := ui.Button("catalog-navigation-toggle", ui.Icon(navigationIcon).Size(16)).
-		Variant(ui.ButtonGhost).
-		Size(ui.ButtonSmall).
+	navigationToggle := button.New("").Content(iconpkg.New(navigationIcon).Size(16)).
+		Variant(button.Ghost).
+		Size(button.Small).
 		IconOnly().
 		Label(navigationLabel).
 		OnClick(func() {
 			send(func(model *Model) { model.SidebarCollapsed = !model.SidebarCollapsed })
 		})
 
-	return ui.WindowTitleBar("component-catalog-title-bar", "FlowUI Components", menu).
+	return titlebar.New("component-catalog-title-bar", "FlowUI Components", menu).
 		Leading(navigationToggle).
-		Trailing(ui.Row(themeColor, themeToggle).Gap(4).AlignMiddle())
-}
-
-func catalogTitlebarMenuStyle(model Model) ui.Style {
-	activeTheme := catalogTheme(model)
-	background := activeTheme.Palette.Overlay
-	background.A = 0x99
-	hover := activeTheme.Palette.DefaultHover
-	hover.A = 0x99
-	return ui.Background(ui.Color(background)).Part(
-		ui.PartItem,
-		ui.When(ui.Hovered, ui.Background(ui.Color(hover))),
-	)
+		Trailing(layout.Row(themeColor, themeToggle).Gap(4).AlignMiddle())
 }
 
 func toggleCatalogTheme(application *ui.Application) Msg {
@@ -277,46 +287,41 @@ func catalogThemeColorPicker(application *ui.Application, model Model, send ui.S
 			application.SetTheme(catalogWindowKey, catalogTheme(*model))
 		})
 	}
-	trigger := ui.Button(
-		"catalog-theme-color-trigger",
-		ui.Icon(lucide.Palette).Size(16),
-	).
-		Variant(ui.ButtonGhost).
-		Size(ui.ButtonSmall).
+	trigger := button.New("").Content(iconpkg.New(lucide.Palette).Size(16)).
+		Variant(button.Ghost).
+		Size(button.Small).
 		IconOnly().
 		Label("Adjust theme color").
 		OnClick(func() {
 			send(func(model *Model) { model.ThemeColorOpen = !model.ThemeColorOpen })
 		})
-	wheel := ui.ColorWheel("catalog-theme-color-wheel", model.ThemeAccent).
+	wheel := colorpicker.ColorWheel("catalog-theme-color-wheel", model.ThemeAccent).
 		Size(168).
 		Label("Theme color").
 		OnChange(applyColor)
-	presets := ui.ColorSwatchPicker("catalog-theme-color-presets", model.ThemeAccent, catalogColors).
-		Size(ui.ColorSwatchExtraSmall).
+	presets := colorpicker.ColorSwatchPicker("catalog-theme-color-presets", model.ThemeAccent, catalogColors).
+		Size(colorpicker.ColorSwatchExtraSmall).
 		OnChange(applyColor)
-	return ui.Popover("catalog-theme-color", model.ThemeColorOpen, trigger,
-		ui.Column(wheel, presets).Gap(10).AlignMiddle(),
-	).
+	return popover.New(trigger, layout.Column(wheel, presets).Gap(10).AlignMiddle()).Key("catalog-theme-color").Open(model.ThemeColorOpen).
 		Open(model.ThemeColorOpen).
 		Heading("Theme color").
-		Placement(ui.PopoverBottomEnd).
+		Placement(popover.BottomEnd).
 		Arrow(true).
 		OnOpenChange(func(open bool) {
 			send(func(model *Model) { model.ThemeColorOpen = open })
 		})
 }
 
-func catalogTheme(model Model) ui.Theme {
-	activeTheme := ui.DefaultTheme()
+func catalogTheme(model Model) theme.Theme {
+	activeTheme := base.Light()
 	if model.Dark {
-		activeTheme = ui.DarkTheme()
+		activeTheme = base.Dark()
 	}
 	applyCatalogAccent(&activeTheme, model.ThemeAccent)
 	return activeTheme
 }
 
-func applyCatalogAccent(activeTheme *ui.Theme, accent color.NRGBA) {
+func applyCatalogAccent(activeTheme *theme.Theme, accent color.NRGBA) {
 	if activeTheme == nil {
 		return
 	}
@@ -342,7 +347,7 @@ func applyCatalogAccent(activeTheme *ui.Theme, accent color.NRGBA) {
 	activeTheme.Components.Menu.IndicatorColor = accent
 	activeTheme.Components.Menu.FocusColor = accent
 	activeTheme.Components.Dropdown.FocusColor = accent
-	ui.SyncMaterialTheme(activeTheme)
+	theme.SyncMaterialTheme(activeTheme)
 }
 
 func scaleCatalogColor(value color.NRGBA, numerator, denominator uint16) color.NRGBA {
@@ -369,113 +374,112 @@ func catalogAccentForeground(value color.NRGBA) color.NRGBA {
 }
 
 func navigationHeader(collapsed bool) ui.Widget {
-	brandIcon := ui.Surface(ui.Center(ui.Icon(lucide.LayoutGrid).Size(18))).
-		Style(ui.Radius(8).
-			Background(ui.Color(color.NRGBA{R: 0x3d, G: 0x63, B: 0xdd, A: 0xff})).
-			TextColor(ui.Color(color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff})))
+	brandIcon := (surface.New(layout.Center(iconpkg.New(lucide.LayoutGrid).Size(18)))).Style(style.New().Radius(8).
+		Background(style.Color(color.NRGBA{R: 0x3d, G: 0x63, B: 0xdd, A: 0xff})).
+		TextColor(style.Color(color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff})))
 	if collapsed {
-		return ui.Center(brandIcon)
+		return layout.Center(brandIcon)
 	}
-	return ui.Row(
+	return layout.Row(
 		brandIcon,
-		ui.Column(
-			ui.Text("FlowUI").Size(15).MaxLines(1),
-			ui.Text("Components").Size(12).MaxLines(1),
+		layout.Column(
+			text.New("FlowUI").Size(15).MaxLines(1),
+			text.New("Components").Size(12).MaxLines(1),
 		).Gap(1),
 	).AlignMiddle().Gap(10)
 }
 
 func navigationFooter(collapsed bool) ui.Widget {
 	if collapsed {
-		return ui.Center(ui.Icon(lucide.Package).Size(16))
+		return layout.Center(iconpkg.New(lucide.Package).Size(16))
 	}
-	return ui.Row(
-		ui.Icon(lucide.Package).Size(16),
-		ui.Expanded(ui.Text("Component catalog").Size(12)),
-		ui.Chip("105").Size(ui.ChipSmall).Variant(ui.ChipSoft),
+	return layout.Row(
+		iconpkg.New(lucide.Package).Size(16),
+		layout.Expanded(text.New("Component catalog").Size(12)),
+		chip.New("105").Size(chip.SizeSmall).Variant(chip.VariantSoft),
 	).AlignMiddle().Gap(8)
 }
 
-func navigationSections() []ui.SidebarSection {
-	return []ui.SidebarSection{
-		{Title: "Content", Items: []ui.SidebarItem{
-			{Key: "typography", Label: "Typography & media", Leading: ui.Icon(lucide.Type).Size(17)},
-			{Key: "surfaces", Label: "Surfaces & display", Leading: ui.Icon(lucide.Layers).Size(17)},
-			{Key: "motion-style", Label: "Motion & style", Leading: ui.Icon(lucide.RefreshCw).Size(17)},
+func navigationSections() []sidebarpkg.Section {
+	return []sidebarpkg.Section{
+		{Title: "Content", Items: []sidebarpkg.Item{
+			{Key: "typography", Label: "Typography & media", Leading: iconpkg.New(lucide.Type).Size(17)},
+			{Key: "surfaces", Label: "Surfaces & display", Leading: iconpkg.New(lucide.Layers).Size(17)},
+			{Key: "motion-style", Label: "Motion & style", Leading: iconpkg.New(lucide.RefreshCw).Size(17)},
 		}},
-		{Title: "Actions", Items: []ui.SidebarItem{
-			{Key: "buttons", Label: "Buttons", Leading: ui.Icon(lucide.MousePointerClick).Size(17)},
-			{Key: "toolbars", Label: "Toolbars", Leading: ui.Icon(lucide.Wrench).Size(17)},
+		{Title: "Actions", Items: []sidebarpkg.Item{
+			{Key: "buttons", Label: "Buttons", Leading: iconpkg.New(lucide.MousePointerClick).Size(17)},
+			{Key: "toolbars", Label: "Toolbars", Leading: iconpkg.New(lucide.Wrench).Size(17)},
 		}},
-		{Title: "Forms", Items: []ui.SidebarItem{
-			{Key: "text-fields", Label: "Text fields", Leading: ui.Icon(lucide.TextCursorInput).Size(17)},
-			{Key: "selection", Label: "Selection controls", Leading: ui.Icon(lucide.ListChecks).Size(17)},
-			{Key: "choice-fields", Label: "Choice fields", Leading: ui.Icon(lucide.ChevronsUpDown).Size(17)},
-			{Key: "dates", Label: "Date controls", Leading: ui.Icon(lucide.CalendarDays).Size(17)},
-			{Key: "colors", Label: "Color controls", Leading: ui.Icon(lucide.Palette).Size(17)},
-			{Key: "sliders", Label: "Sliders", Leading: ui.Icon(lucide.SlidersHorizontal).Size(17)},
+		{Title: "Forms", Items: []sidebarpkg.Item{
+			{Key: "text-fields", Label: "Text fields", Leading: iconpkg.New(lucide.TextCursorInput).Size(17)},
+			{Key: "selection", Label: "Selection controls", Leading: iconpkg.New(lucide.ListChecks).Size(17)},
+			{Key: "choice-fields", Label: "Choice fields", Leading: iconpkg.New(lucide.ChevronsUpDown).Size(17)},
+			{Key: "dates", Label: "Date controls", Leading: iconpkg.New(lucide.CalendarDays).Size(17)},
+			{Key: "colors", Label: "Color controls", Leading: iconpkg.New(lucide.Palette).Size(17)},
+			{Key: "sliders", Label: "Sliders", Leading: iconpkg.New(lucide.SlidersHorizontal).Size(17)},
 		}},
-		{Title: "Navigation", Items: []ui.SidebarItem{
-			{Key: "tabs-pagination", Label: "Tabs & pagination", Leading: ui.Icon(lucide.PanelsTopLeft).Size(17)},
-			{Key: "sidebar-tree", Label: "Sidebar & tree", Leading: ui.Icon(lucide.PanelLeft).Size(17)},
-			{Key: "menus", Label: "Menus", Leading: ui.Icon(lucide.Menu).Size(17)},
+		{Title: "Navigation", Items: []sidebarpkg.Item{
+			{Key: "tabs-pagination", Label: "Tabs & pagination", Leading: iconpkg.New(lucide.PanelsTopLeft).Size(17)},
+			{Key: "sidebar-tree", Label: "Sidebar & tree", Leading: iconpkg.New(lucide.PanelLeft).Size(17)},
+			{Key: "menus", Label: "Menus", Leading: iconpkg.New(lucide.Menu).Size(17)},
 		}},
-		{Title: "Feedback", Items: []ui.SidebarItem{
-			{Key: "status", Label: "Status & progress", Leading: ui.Icon(lucide.CircleAlert).Size(17)},
-			{Key: "disclosure", Label: "Disclosure", Leading: ui.Icon(lucide.ChevronsUpDown).Size(17)},
-			{Key: "overlays", Label: "Overlays", Leading: ui.Icon(lucide.MessageSquareMore).Size(17)},
+		{Title: "Feedback", Items: []sidebarpkg.Item{
+			{Key: "status", Label: "Status & progress", Leading: iconpkg.New(lucide.CircleAlert).Size(17)},
+			{Key: "disclosure", Label: "Disclosure", Leading: iconpkg.New(lucide.ChevronsUpDown).Size(17)},
+			{Key: "overlays", Label: "Overlays", Leading: iconpkg.New(lucide.MessageSquareMore).Size(17)},
 		}},
-		{Title: "Data", Items: []ui.SidebarItem{
-			{Key: "tables", Label: "Tables", Leading: ui.Icon(lucide.Table2).Size(17)},
-			{Key: "charts", Label: "Charts", Leading: ui.Icon(lucide.ChartNoAxesCombined).Size(17)},
+		{Title: "Data", Items: []sidebarpkg.Item{
+			{Key: "tables", Label: "Tables", Leading: iconpkg.New(lucide.Table2).Size(17)},
+			{Key: "charts", Label: "Charts", Leading: iconpkg.New(lucide.ChartNoAxesCombined).Size(17)},
 		}},
-		{Title: "Layout", Items: []ui.SidebarItem{
-			{Key: "layout", Label: "Layout primitives", Leading: ui.Icon(lucide.LayoutGrid).Size(17)},
-			{Key: "scrolling", Label: "Scrolling", Leading: ui.Icon(lucide.ScrollText).Size(17)},
-			{Key: "split-pane", Label: "Split pane", Leading: ui.Icon(lucide.Columns2).Size(17)},
+		{Title: "Layout", Items: []sidebarpkg.Item{
+			{Key: "layout", Label: "Layout primitives", Leading: iconpkg.New(lucide.LayoutGrid).Size(17)},
+			{Key: "scrolling", Label: "Scrolling", Leading: iconpkg.New(lucide.ScrollText).Size(17)},
+			{Key: "split-pane", Label: "Split pane", Leading: iconpkg.New(lucide.Columns2).Size(17)},
 		}},
-		{Title: "Application", Items: []ui.SidebarItem{
-			{Key: "app-shell", Label: "Application shell", Leading: ui.Icon(lucide.AppWindow).Size(17)},
+		{Title: "Application", Items: []sidebarpkg.Item{
+			{Key: "app-shell", Label: "Application shell", Leading: iconpkg.New(lucide.AppWindow).Size(17)},
 		}},
 	}
 }
 
 func globalOverlays(model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Modal("catalog-about", model.AboutOpen, "About FlowUI", ui.Column(
-			ui.Text("FlowUI").Size(22),
-			ui.Text("A Go UI framework and component library for cross-platform desktop applications, built on Gio."),
-			ui.Text("github.com/qianniancn/flowui").Size(12),
-		).Gap(10)).
-			Icon(ui.Icon(lucide.Layers).Size(28)).
-			Size(ui.ModalSmall).
-			Footer(ui.Button("catalog-about-close", ui.Text("Close")).OnClick(func() {
+	return layout.Column(
+		modal.New("About FlowUI", layout.Column(
+			text.New("FlowUI").Size(22),
+			text.New("A Go UI framework and component library for cross-platform desktop applications, built on Gio."),
+			text.New("github.com/qianniancn/flowui").Size(12),
+		).Gap(10)).Key("catalog-about").Open(model.AboutOpen).
+			Icon(iconpkg.New(lucide.Layers).Size(28)).
+			Size(modal.Small).
+			Footer(button.New("Close").OnClick(func() {
 				send(func(model *Model) { model.AboutOpen = false })
 			})).
 			OnOpenChange(func(open bool) { send(func(model *Model) { model.AboutOpen = open }) }),
-		ui.Modal("catalog-modal", model.ModalOpen, "Modal", ui.Text("Modal content rendered from the component catalog.")).
-			Footer(ui.Row(
-				ui.Button("catalog-modal-cancel", ui.Text("Cancel")).Variant(ui.ButtonSecondary).OnClick(func() {
+		modal.New("Modal", text.New("Modal content rendered from the component catalog.")).Key("catalog-modal").Open(model.ModalOpen).
+			Footer(layout.Row(
+				button.New("Cancel").Variant(button.Secondary).OnClick(func() {
 					send(func(model *Model) { model.ModalOpen = false })
 				}),
-				ui.Button("catalog-modal-confirm", ui.Text("Confirm")).OnClick(func() {
+				button.New("Confirm").OnClick(func() {
 					send(func(model *Model) { model.ModalOpen = false })
 				}),
 			).Gap(8)).
 			OnOpenChange(func(open bool) { send(func(model *Model) { model.ModalOpen = open }) }),
-		ui.AlertDialog("catalog-alert-dialog", model.AlertDialogOpen, "Delete component preset?", "This action cannot be undone.").
-			Status(ui.AlertDialogDanger).
-			Footer(ui.Row(
-				ui.Button("catalog-alert-cancel", ui.Text("Cancel")).Variant(ui.ButtonTertiary).OnClick(func() {
+		alertdialog.New("Delete component preset?", "This action cannot be undone.").Key("catalog-alert-dialog").Open(model.AlertDialogOpen).
+			Status(alertdialog.StatusDanger).
+			Footer(layout.Row(
+				button.New("Cancel").Variant(button.Tertiary).OnClick(func() {
 					send(func(model *Model) { model.AlertDialogOpen = false })
 				}),
-				ui.Button("catalog-alert-confirm", ui.Text("Delete")).Variant(ui.ButtonDanger).OnClick(func() {
+				button.New("Delete").Variant(button.Danger).OnClick(func() {
 					send(func(model *Model) { model.AlertDialogOpen = false })
 				}),
 			).Gap(8)).
 			OnOpenChange(func(open bool) { send(func(model *Model) { model.AlertDialogOpen = open }) }),
-		ui.ToastProvider("catalog-toasts", model.Toasts).
-			Placement(ui.ToastBottomEnd).
+		toast.New("catalog-toasts", model.Toasts).
+			Placement(toast.BottomEnd).
 			OnClose(func(key string) { send(removeToastMessage(key)) }).
 			OnAction(func(key string) { send(removeToastMessage(key)) }),
 	)
@@ -513,12 +517,12 @@ func main() {
 		Init:   func() (Model, ui.Cmd[Msg]) { return initialModel(), nil },
 		Update: Update,
 		View:   catalogView(application),
-	}, ui.Title("FlowUI Components"),
-		ui.Size(1120, 760),
-		ui.MinSize(880, 560),
-		ui.WithTheme(catalogTheme(initialModel())),
-		ui.Decorated(false),
-		ui.CenterOnStart(),
+	}, window.Title("FlowUI Components"),
+		window.Size(1120, 760),
+		window.MinSize(880, 560),
+		window.Theme(catalogTheme(initialModel())),
+		window.Decorated(false),
+		window.CenterOnStart(),
 	)
 	application.Run(window)
 }

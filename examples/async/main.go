@@ -4,7 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -63,21 +69,21 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = "Click Load to start a command."
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Async").Size(24),
-				ui.Box(
-					ui.Button("load", ui.Text("Load")).
-						Variant(ui.ButtonSecondary).
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Async").Size(24),
+				layout.Box(
+					button.New("Load").
+						Variant(button.Secondary).
 						Loading(m.Loading).
 						OnClick(func() {
 							send(Load{})
 						}),
-				).Style(ui.Width(160)),
-				ui.Text(status).Size(18),
+				).Style(style.New().Width(160)),
+				text.New(status).Size(18),
 			).Gap(12),
-		).Style(ui.Padding(24)),
+		).Style(style.New().Padding(24)),
 	)
 }
 
@@ -87,7 +93,8 @@ func main() {
 		Update: Update,
 		View:   View,
 	},
-		ui.Title("FlowUI Async"),
-		ui.Size(900, 600),
+		window.Title("FlowUI Async"),
+		window.Size(900, 600),
+		window.Theme(base.Light()),
 	)
 }

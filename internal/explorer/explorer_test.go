@@ -191,13 +191,12 @@ func TestServiceContextRoundTrip(t *testing.T) {
 	if got := FromContext(ctx); got != service {
 		t.Fatalf("context service = %p, want %p", got, service)
 	}
-	if FromContext(nil) != nil {
-		t.Fatal("nil context returned a service")
-	}
 }
 
+type explorerContextKey struct{}
+
 func TestWithServiceDoesNotWrapContextForNilService(t *testing.T) {
-	ctx := context.WithValue(context.Background(), struct{}{}, "value")
+	ctx := context.WithValue(context.Background(), explorerContextKey{}, "value")
 	if got := WithService(ctx, nil); got != ctx {
 		t.Fatal("nil service wrapped the context")
 	}

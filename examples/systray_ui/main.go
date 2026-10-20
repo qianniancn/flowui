@@ -9,8 +9,15 @@ import (
 	"image/png"
 	"sync"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
 	"github.com/qianniancn/flowui/systray"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Controller struct {
@@ -266,22 +273,22 @@ func (controller *Controller) showWindow(action TrayAction) {
 	if !controller.app.IsOpen("main") {
 		controller.app.Open(controller.window)
 	} else {
-		controller.app.Perform("main", ui.WindowActionRaise)
+		controller.app.Perform("main", window.ActionRaise)
 	}
 	if send != nil {
 		send(ControllerChanged{State: state})
 	}
 }
 
-func (controller *Controller) closeDecision() ui.WindowCloseDecision {
+func (controller *Controller) closeDecision() window.CloseDecision {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 	if controller.tray != nil {
 		controller.lastAction = "Window closed to tray"
-		return ui.WindowCloseKeepAlive
+		return window.CloseKeepAlive
 	}
 	controller.lastAction = "Window close requested"
-	return ui.WindowCloseProceed
+	return window.CloseProceed
 }
 
 func (controller *Controller) quit() {
@@ -350,36 +357,36 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		trayButton = "Disable tray"
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI System Tray").Size(26),
-				ui.Row(
-					ui.Text(fmt.Sprintf("Retained model count: %d", model.count)),
-					ui.Button("increment", ui.Text("Increment")).
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI System Tray").Size(26),
+				layout.Row(
+					text.New(fmt.Sprintf("Retained model count: %d", model.count)),
+					button.New("Increment").
 						OnClick(func() { send(Increment{}) }),
 				).Gap(12),
-				ui.Surface(
-					ui.Box(
-						ui.Column(
-							ui.Text("Tray status").Size(14),
-							ui.Text(trayState).Size(22),
-							ui.Text("Last action: "+model.state.LastAction),
+				surface.New(
+					layout.Box(
+						layout.Column(
+							text.New("Tray status").Size(14),
+							text.New(trayState).Size(22),
+							text.New("Last action: "+model.state.LastAction),
 						).Gap(10),
-					).Style(ui.Padding(20)),
-				).Variant(ui.SurfaceSecondary),
-				ui.Row(
-					ui.Button("show-window", ui.Text("Show window")).
+					).Style(style.New().Padding(20)),
+				).Variant(surface.Secondary),
+				layout.Row(
+					button.New("Show window").
 						OnClick(func() { send(TrayEvent{Action: WindowButton}) }),
-					ui.Button("close-window", ui.Text("Close window")).
-						Variant(ui.ButtonSecondary).
+					button.New("Close window").
+						Variant(button.Secondary).
 						OnClick(func() { send(TrayEvent{Action: WindowCloseButton}) }),
-					ui.Button("toggle-tray", ui.Text(trayButton)).
-						Variant(ui.ButtonSecondary).
+					button.New(trayButton).Key("toggle-tray").
+						Variant(button.Secondary).
 						OnClick(func() { send(TrayEvent{Action: TrayButton}) }),
 				).Gap(10),
 			).Gap(18),
-		).Style(ui.FillWidth().MaxWidth(620).Padding(28)),
+		).Style(style.New().FillWidth().MaxWidth(620).Padding(28)),
 	)
 }
 
@@ -413,10 +420,11 @@ func main() {
 		View:          View,
 	}
 	controller.window = ui.NewWindow("main", program,
-		ui.Title("FlowUI System Tray"),
-		ui.Size(760, 500),
-		ui.OnWindowCloseRequest(controller.closeDecision),
-		ui.RetainModelOnClose(),
+		window.Title("FlowUI System Tray"),
+		window.Size(760, 500),
+		window.OnWindowCloseRequest(controller.closeDecision),
+		window.RetainModelOnClose(),
+		window.Theme(base.Light()),
 	)
 	app.Run(controller.window)
 }

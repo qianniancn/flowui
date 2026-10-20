@@ -2,8 +2,21 @@ package main
 
 import (
 	"gioui.org/font"
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/command"
+	"github.com/qianniancn/flowui/widget/dropdown"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/menu"
+	"github.com/qianniancn/flowui/widget/menubar"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/toolbar"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -35,29 +48,29 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 type applicationCommands struct {
-	all         []ui.Command
-	newDocument ui.Command
-	save        ui.Command
-	bold        ui.Command
+	all         []command.Command
+	newDocument command.Command
+	save        command.Command
+	bold        command.Command
 }
 
 func commands(model Model, send ui.Send[Msg]) applicationCommands {
-	newDocument := ui.NewCommand("new", "New").
-		Icon(ui.Icon(lucide.FilePlus).Size(18)).
-		Shortcut(ui.KeyShortcut("N", ui.ShortcutPrimary)).
+	newDocument := command.New("new", "New").
+		Icon(icon.New(lucide.FilePlus).Size(18)).
+		Shortcut(command.KeyShortcut("N", command.ShortcutPrimary)).
 		OnExecute(func() { send(NewDocument{}) })
-	save := ui.NewCommand("save", "Save").
-		Icon(ui.Icon(lucide.Save).Size(18)).
-		Shortcut(ui.KeyShortcut("S", ui.ShortcutPrimary)).
+	save := command.New("save", "Save").
+		Icon(icon.New(lucide.Save).Size(18)).
+		Shortcut(command.KeyShortcut("S", command.ShortcutPrimary)).
 		OnExecute(func() { send(SaveDocument{}) })
-	bold := ui.NewCommand("bold", "Bold").
-		Icon(ui.Icon(lucide.Bold).Size(18)).
-		Shortcut(ui.KeyShortcut("B", ui.ShortcutPrimary)).
+	bold := command.New("bold", "Bold").
+		Icon(icon.New(lucide.Bold).Size(18)).
+		Shortcut(command.KeyShortcut("B", command.ShortcutPrimary)).
 		Toggle(model.Bold).
 		KeepOpen(true).
 		OnExecute(func() { send(ToggleBold{}) })
 	return applicationCommands{
-		all:         []ui.Command{newDocument, save, bold},
+		all:         []command.Command{newDocument, save, bold},
 		newDocument: newDocument,
 		save:        save,
 		bold:        bold,
@@ -70,63 +83,63 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	if status == "" {
 		status = "Ready"
 	}
-	preview := ui.Text("FlowUI command system").Size(18)
+	preview := text.New("FlowUI command system").Size(18)
 	if model.Bold {
 		preview = preview.Weight(font.Bold)
 	}
 
-	content := ui.Column(
-		ui.Surface(
-			ui.Box(applicationMenubar(commands)).Style(ui.Padding(4)),
-		).Variant(ui.SurfaceSecondary),
-		ui.Row(
-			ui.Toolbar(
-				ui.CommandButton("toolbar-new", commands.newDocument),
-				ui.CommandButton("toolbar-save", commands.save),
-				ui.ToolbarSeparator(),
-				ui.CommandButton("toolbar-bold", commands.bold),
+	content := layout.Column(
+		surface.New(
+			layout.Box(applicationMenubar(commands)).Style(style.New().Padding(4)),
+		).Variant(surface.Secondary),
+		layout.Row(
+			toolbar.New(
+				command.Button("toolbar-new", commands.newDocument),
+				command.Button("toolbar-save", commands.save),
+				toolbar.Separator(),
+				command.Button("toolbar-bold", commands.bold),
 			).Attached(true).Alt("Document tools"),
-			ui.Dropdown(
+			dropdown.New(
 				"more-actions",
-				ui.Button("more-actions-trigger", ui.Text("More")).Variant(ui.ButtonSecondary),
-				[]ui.DropdownItem{
-					ui.CommandMenuItem(commands.newDocument),
-					ui.CommandMenuItem(commands.save),
-					ui.MenuSeparator(),
-					ui.CommandMenuItem(commands.bold),
+				button.New("More").Variant(button.Secondary),
+				[]dropdown.Item{
+					command.MenuItem(commands.newDocument),
+					command.MenuItem(commands.save),
+					menu.Separator(),
+					command.MenuItem(commands.bold),
 				},
 			),
 		).AlignMiddle().Gap(12),
-		ui.Surface(
-			ui.Box(
-				ui.Column(
-					ui.Text("Untitled document").Size(14),
+		(surface.New(
+			layout.Box(
+				layout.Column(
+					text.New("Untitled document").Size(14),
 					preview,
 				).Gap(12),
-			).Style(ui.FillWidth()).Style(ui.Padding(24)),
-		).Variant(ui.SurfaceSecondary).Style(ui.Radius(8)),
-		ui.Text(status).Size(13),
+			).Style(style.New().FillWidth().Padding(24)),
+		).Variant(surface.Secondary)).Style(style.New().Radius(8)),
+		text.New(status).Size(13),
 	).Gap(16)
 
-	return ui.CommandScope(
+	return command.Scope(
 		commands.all,
-		ui.Center(ui.Box(content).Style(ui.FillWidth()).Style(ui.MaxWidth(720)).Style(ui.Padding(24))),
+		layout.Center(layout.Box(content).Style(style.New().FillWidth().MaxWidth(720).Padding(24))),
 	)
 }
 
-func applicationMenubar(commands applicationCommands) ui.MenubarWidget {
-	return ui.Menubar("application-menu", []ui.MenubarItem{
-		ui.MenubarMenu("file", "File", []ui.MenuItem{
-			ui.CommandMenuItem(commands.newDocument),
-			ui.CommandMenuItem(commands.save),
+func applicationMenubar(commands applicationCommands) menubar.Widget {
+	return menubar.New("application-menu", []menubar.Item{
+		menubar.NewMenu("file", "File", []menu.Item{
+			command.MenuItem(commands.newDocument),
+			command.MenuItem(commands.save),
 		}),
-		ui.MenubarMenu("format", "Format", []ui.MenuItem{
-			ui.CommandMenuItem(commands.bold),
+		menubar.NewMenu("format", "Format", []menu.Item{
+			command.MenuItem(commands.bold),
 		}),
 	}).Alt("Application menu")
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Commands"), ui.Size(820, 520))
+		Update, View), window.Title("FlowUI Commands"), window.Size(820, 520), window.Theme(base.Light()))
 }

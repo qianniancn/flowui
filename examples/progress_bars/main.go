@@ -5,7 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	buttonpkg "github.com/qianniancn/flowui/widget/button"
+	progresspkg "github.com/qianniancn/flowui/widget/progress"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -99,87 +106,86 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		startLabel = "Uploading"
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("progress-bars",
-				ui.Column(
-					ui.Text("FlowUI ProgressBar").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Task progress",
-						ui.Column(
-							ui.ProgressBar("upload", m.Progress).
-								Label("Upload").
-								ShowValue().
-								Color(taskColor(m.Progress, m.Running)),
-							buttonRow(
-								ui.Button("start", ui.Text(startLabel)).
-									Loading(m.Running).
-									OnClick(func() {
-										send(Start{})
-									}),
-								ui.Button("reset", ui.Text("Reset")).
-									Variant(ui.ButtonSecondary).
-									Disabled(m.Running && m.Progress < 100).
-									OnClick(func() {
-										send(Reset{})
-									}),
-							),
-						).Gap(12),
-					),
-					section("Indeterminate",
-						ui.ProgressBar("syncing", 0).
-							Label("Syncing").
-							Indeterminate().
-							Color(ui.ProgressBarWarning),
-					),
-					section("Sizes",
-						ui.Column(
-							ui.ProgressBar("small", 35).
-								Label("Small").
-								ShowValue().
-								Size(ui.ProgressBarSmall),
-							ui.ProgressBar("medium", 60).
-								Label("Medium").
-								ShowValue(),
-							ui.ProgressBar("large", 85).
-								Label("Large").
-								ShowValue().
-								Size(ui.ProgressBarLarge),
-						).Gap(14),
-					),
-					section("Colors",
-						ui.Column(
-							ui.ProgressBar("default", 45).
-								Label("Default").
-								ShowValue().
-								Color(ui.ProgressBarDefault),
-							ui.ProgressBar("accent", 55).
-								Label("Accent").
-								ShowValue(),
-							ui.ProgressBar("success", 70).
-								Label("Success").
-								ShowValue().
-								Color(ui.ProgressBarSuccess),
-							ui.ProgressBar("warning", 80).
-								Label("Warning").
-								ShowValue().
-								Color(ui.ProgressBarWarning),
-							ui.ProgressBar("danger", 25).
-								Label("Danger").
-								ShowValue().
-								Color(ui.ProgressBarDanger),
-						).Gap(14),
-					),
-				).Gap(18),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI ProgressBar").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				section("Task progress",
+					layout.Column(
+						progresspkg.Bar("upload", m.Progress).
+							Label("Upload").
+							ShowValue().
+							Color(taskColor(m.Progress, m.Running)),
+						buttonRow(
+							buttonpkg.New(startLabel).Key("start").
+								Loading(m.Running).
+								OnClick(func() {
+									send(Start{})
+								}),
+							buttonpkg.New("Reset").
+								Variant(buttonpkg.Secondary).
+								Disabled(m.Running && m.Progress < 100).
+								OnClick(func() {
+									send(Reset{})
+								}),
+						),
+					).Gap(12),
+				),
+				section("Indeterminate",
+					progresspkg.Bar("syncing", 0).
+						Label("Syncing").
+						Indeterminate().
+						Color(progresspkg.BarWarning),
+				),
+				section("Sizes",
+					layout.Column(
+						progresspkg.Bar("small", 35).
+							Label("Small").
+							ShowValue().
+							Size(progresspkg.BarSmall),
+						progresspkg.Bar("medium", 60).
+							Label("Medium").
+							ShowValue(),
+						progresspkg.Bar("large", 85).
+							Label("Large").
+							ShowValue().
+							Size(progresspkg.BarLarge),
+					).Gap(14),
+				),
+				section("Colors",
+					layout.Column(
+						progresspkg.Bar("default", 45).
+							Label("Default").
+							ShowValue().
+							Color(progresspkg.BarDefault),
+						progresspkg.Bar("accent", 55).
+							Label("Accent").
+							ShowValue(),
+						progresspkg.Bar("success", 70).
+							Label("Success").
+							ShowValue().
+							Color(progresspkg.BarSuccess),
+						progresspkg.Bar("warning", 80).
+							Label("Warning").
+							ShowValue().
+							Color(progresspkg.BarWarning),
+						progresspkg.Bar("danger", 25).
+							Label("Danger").
+							ShowValue().
+							Color(progresspkg.BarDanger),
+					).Gap(14),
+				),
+			).Gap(18),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
@@ -187,19 +193,19 @@ func section(title string, child ui.Widget) ui.Widget {
 func buttonRow(buttons ...ui.Widget) ui.Widget {
 	items := make([]ui.Widget, 0, len(buttons))
 	for _, button := range buttons {
-		items = append(items, ui.Box(button))
+		items = append(items, layout.Box(button))
 	}
-	return ui.Wrap(items...).Gap(8).AlignMiddle()
+	return layout.Wrap(items...).Gap(8).AlignMiddle()
 }
 
-func taskColor(progress float64, running bool) ui.ProgressBarColor {
+func taskColor(progress float64, running bool) progresspkg.BarColor {
 	if running {
-		return ui.ProgressBarAccent
+		return progresspkg.BarAccent
 	}
 	if progress >= 100 {
-		return ui.ProgressBarSuccess
+		return progresspkg.BarSuccess
 	}
-	return ui.ProgressBarDefault
+	return progresspkg.BarDefault
 }
 
 func main() {
@@ -208,7 +214,8 @@ func main() {
 		Update:        Update,
 		Subscriptions: Subscriptions,
 		View:          View,
-	}, ui.Title("FlowUI ProgressBar"),
-		ui.Size(900, 720),
+	}, window.Title("FlowUI ProgressBar"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

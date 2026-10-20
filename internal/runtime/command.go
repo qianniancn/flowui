@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -41,7 +40,16 @@ func (e *EffectError) Unwrap() error {
 	return e.Err
 }
 
-type Cmd[Msg any] func(context.Context, func(Msg)) error
+// Send delivers a message to the runtime, which queues it for the next frame.
+// It is safe for concurrent effects to call Send. The queue is bounded; a
+// burst beyond that bound drops the newest messages and reports
+// QueueOverflowError, so a sender must not assume unlimited buffering.
+type Send[Msg any] func(Msg)
+
+// Cmd is asynchronous work started by Update, Init, or a Subscription. It runs
+// after the callback that returned it and may send messages back later. Its
+// context is canceled when the window closes.
+type Cmd[Msg any] func(context.Context, Send[Msg]) error
 
 type latestCommandKey struct{}
 type latestDispatchKey struct{}
@@ -61,8 +69,6 @@ type latestCommandManager struct {
 	states map[string]latestCommandState
 }
 
-var latestCommandGeneration atomic.Uint64
-
 func newLatestCommandManager() *latestCommandManager {
 	return &latestCommandManager{states: make(map[string]latestCommandState)}
 }
@@ -71,15 +77,18 @@ func withLatestCommandManager(ctx context.Context, manager *latestCommandManager
 	return context.WithValue(ctx, latestCommandKey{}, manager)
 }
 
-func (m *latestCommandManager) start(ctx context.Context, key string, generation uint64) (context.Context, latestCommandToken, bool) {
+func (m *latestCommandManager) start(ctx context.Context, key string) (context.Context, latestCommandToken, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	current := m.states[key]
-	if current.generation >= generation {
-		return nil, latestCommandToken{}, false
-	}
 	if current.cancel != nil {
 		current.cancel()
+	}
+	generation := current.generation + 1
+	if generation == 0 {
+		// Reserve zero for the manager's untouched state if a process ever
+		// executes more than MaxUint64 latest commands for one key.
+		generation = 1
 	}
 	child, cancel := context.WithCancel(ctx)
 	m.states[key] = latestCommandState{generation: generation, cancel: cancel}
@@ -109,20 +118,18 @@ func (m *latestCommandManager) finish(token latestCommandToken) {
 	}
 }
 
-func (m *latestCommandManager) cancel(key string, generation uint64) {
+func (m *latestCommandManager) cancel(key string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	current := m.states[key]
-	if current.generation > generation {
-		return
-	}
 	if current.cancel != nil {
 		current.cancel()
 	}
 	// Keep a tombstone generation so in-flight sends from older tokens are
 	// rejected, but do not retain a cancel func.
-	if current.generation < generation {
-		current.generation = generation
+	current.generation++
+	if current.generation == 0 {
+		current.generation = 1
 	}
 	current.cancel = nil
 	m.states[key] = current
@@ -131,18 +138,8 @@ func (m *latestCommandManager) cancel(key string, generation uint64) {
 // LatestCmd cancels an older command with the same key and drops messages sent
 // by an older generation. Outside a FlowUI runtime it behaves like cmd.
 //
-// IMPORTANT: The generation is captured at construction time. Reusing the same
-// Cmd value across multiple Update calls will cause it to be silently rejected.
-// Always construct a new LatestCmd inside each Update call:
-//
-//	// Correct:
-//	case SomeEvent:
-//	    return m, LatestCmd("fetch", fetchCmd())
-//
-//	// Wrong (reused cmd will be rejected):
-//	var cmd = LatestCmd("fetch", fetchCmd())
-//	case SomeEvent:
-//	    return m, cmd
+// A generation is assigned when the returned command starts in a runtime, so
+// the same Cmd value may safely be reused across Update calls.
 func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
 	if key == "" {
 		panic("flowui: empty latest command key")
@@ -150,13 +147,12 @@ func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
 	if cmd == nil {
 		return nil
 	}
-	generation := latestCommandGeneration.Add(1)
-	return func(ctx context.Context, send func(Msg)) error {
+	return func(ctx context.Context, send Send[Msg]) error {
 		manager, _ := ctx.Value(latestCommandKey{}).(*latestCommandManager)
 		if manager == nil {
 			return cmd(ctx, send)
 		}
-		child, token, ok := manager.start(ctx, key, generation)
+		child, token, ok := manager.start(ctx, key)
 		if !ok {
 			return nil
 		}
@@ -182,18 +178,16 @@ func LatestCmd[Msg any](key string, cmd Cmd[Msg]) Cmd[Msg] {
 // CancelLatestCmd cancels the active command with key and invalidates its
 // queued messages.
 //
-// IMPORTANT: The generation is captured at construction time. Always construct
-// a new CancelLatestCmd inside each Update call, not as a package-level variable.
-// See LatestCmd for details.
+// The cancellation generation is assigned when the returned command runs, so
+// the same cancellation command may safely be reused.
 func CancelLatestCmd[Msg any](key string) Cmd[Msg] {
 	if key == "" {
 		panic("flowui: empty latest command key")
 	}
-	generation := latestCommandGeneration.Add(1)
-	return func(ctx context.Context, _ func(Msg)) error {
+	return func(ctx context.Context, _ Send[Msg]) error {
 		manager, _ := ctx.Value(latestCommandKey{}).(*latestCommandManager)
 		if manager != nil {
-			manager.cancel(key, generation)
+			manager.cancel(key)
 		}
 		return nil
 	}
@@ -217,7 +211,7 @@ func Batch[Msg any](cmds ...Cmd[Msg]) Cmd[Msg] {
 	case 1:
 		return active[0]
 	}
-	return func(ctx context.Context, send func(Msg)) error {
+	return func(ctx context.Context, send Send[Msg]) error {
 		var (
 			wg       sync.WaitGroup
 			mu       sync.Mutex
@@ -274,7 +268,7 @@ func startEffect[Msg any](
 	kind EffectKind,
 	key string,
 	run Cmd[Msg],
-	send func(Msg),
+	send Send[Msg],
 	report func(error),
 	onDone func(),
 ) <-chan struct{} {

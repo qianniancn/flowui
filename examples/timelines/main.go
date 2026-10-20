@@ -4,7 +4,15 @@ import (
 	"image/color"
 
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/timeline"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct{}
@@ -13,39 +21,39 @@ type Msg struct{}
 func Update(_ *Model, _ Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
-	return ui.Scroll("timeline-page", ui.Box(ui.Column(
-		ui.Text("FlowUI TimeLine").Size(24),
-		ui.Text("Ant Design-inspired event timelines").Size(14),
-		section("Basic", ui.TimeLine([]ui.TimeLineItem{
-			{Title: ui.Text("Created"), Content: ui.Text("The project was created"), Color: ui.TimeLineBlue},
-			{Title: ui.Text("Reviewed"), Content: ui.Text("The design review is complete"), Color: ui.TimeLineGreen},
-			{Title: ui.Text("Published"), Content: ui.Text("The release is now available"), Color: ui.TimeLineGray},
+	return layout.Scroll(layout.Box(layout.Column(
+		text.New("FlowUI TimeLine").Size(24),
+		text.New("Event timelines").Size(14),
+		section("Basic", timeline.New([]timeline.Item{
+			{Title: text.New("Created"), Content: text.New("The project was created"), Color: timeline.ColorBlue},
+			{Title: text.New("Reviewed"), Content: text.New("The design review is complete"), Color: timeline.ColorGreen},
+			{Title: text.New("Published"), Content: text.New("The release is now available"), Color: timeline.ColorGray},
 		}).Gap(14)),
-		section("Alternate and custom colors", ui.TimeLine([]ui.TimeLineItem{
-			{Title: ui.Text("Plan"), Content: ui.Description("Define the scope and milestones."), Color: ui.TimeLineBlue},
-			{Title: ui.Text("Build"), Content: ui.Description("Implement the selected work."), Color: ui.TimeLineGreen, Placement: ui.TimeLinePlacementEnd},
-			ui.CustomTimeLineItem(ui.Text("Review"), ui.Description("Collect feedback from the team."), color.NRGBA{R: 0x7c, G: 0x3a, B: 0xed, A: 0xff}),
-		}).Mode(ui.TimeLineAlternate).TitleSpan(9).Variant(ui.TimeLineFilled)),
-		section("Pending", ui.TimeLine([]ui.TimeLineItem{
-			{Title: ui.Text("Queued"), Content: ui.Text("Waiting for the next worker"), Color: ui.TimeLineBlue},
-			{Title: ui.Text("Running"), Content: ui.Text("The task is in progress"), Color: ui.TimeLineGreen},
-		}).Pending(ui.Text("Deploying release...")).PendingIcon(ui.Icon(lucide.LoaderCircle).Size(16))),
-		section("Icons and horizontal orientation", ui.TimeLine([]ui.TimeLineItem{
-			{Title: ui.Text("Plan"), Content: ui.Text("Scope approved"), Icon: ui.Icon(lucide.ListChecks).Size(16), Color: ui.TimeLineBlue},
-			{Title: ui.Text("Build"), Content: ui.Text("Artifacts ready"), Icon: ui.Icon(lucide.PackageCheck).Size(16), Color: ui.TimeLineGreen},
-			{Title: ui.Text("Ship"), Content: ui.Text("Release completed"), Icon: ui.Icon(lucide.Rocket).Size(16), Color: ui.TimeLineRed},
-		}).Orientation(ui.TimeLineHorizontal).Variant(ui.TimeLineFilled)),
-		section("Reverse order", ui.TimeLine([]ui.TimeLineItem{
-			{Title: ui.Text("Latest"), Content: ui.Text("Most recent event"), Color: ui.TimeLineBlue},
-			{Title: ui.Text("Earlier"), Content: ui.Text("Previous event"), Color: ui.TimeLineGray},
+		section("Alternate and custom colors", timeline.New([]timeline.Item{
+			{Title: text.New("Plan"), Content: description.New("Define the scope and milestones."), Color: timeline.ColorBlue},
+			{Title: text.New("Build"), Content: description.New("Implement the selected work."), Color: timeline.ColorGreen, Placement: timeline.PlacementEnd},
+			timeline.Item{Title: text.New("Review"), Content: description.New("Collect feedback from the team."), CustomColor: color.NRGBA{R: 0x7c, G: 0x3a, B: 0xed, A: 0xff}},
+		}).Mode(timeline.ModeAlternate).TitleSpan(9).Variant(timeline.VariantFilled)),
+		section("Pending", timeline.New([]timeline.Item{
+			{Title: text.New("Queued"), Content: text.New("Waiting for the next worker"), Color: timeline.ColorBlue},
+			{Title: text.New("Running"), Content: text.New("The task is in progress"), Color: timeline.ColorGreen},
+		}).Pending(text.New("Deploying release...")).PendingIcon(icon.New(lucide.LoaderCircle).Size(16))),
+		section("Icons and horizontal orientation", timeline.New([]timeline.Item{
+			{Title: text.New("Plan"), Content: text.New("Scope approved"), Icon: icon.New(lucide.ListChecks).Size(16), Color: timeline.ColorBlue},
+			{Title: text.New("Build"), Content: text.New("Artifacts ready"), Icon: icon.New(lucide.PackageCheck).Size(16), Color: timeline.ColorGreen},
+			{Title: text.New("Ship"), Content: text.New("Release completed"), Icon: icon.New(lucide.Rocket).Size(16), Color: timeline.ColorRed},
+		}).Orientation(timeline.OrientationHorizontal).Variant(timeline.VariantFilled)),
+		section("Reverse order", timeline.New([]timeline.Item{
+			{Title: text.New("Latest"), Content: text.New("Most recent event"), Color: timeline.ColorBlue},
+			{Title: text.New("Earlier"), Content: text.New("Previous event"), Color: timeline.ColorGray},
 		}).Reverse(true)),
-	).Gap(28)).Style(ui.FillWidth().MaxWidth(960).Padding(24)))
+	).Gap(28)).Style(style.New().FillWidth().MaxWidth(960).Padding(24)))
 }
 
 func section(title string, content ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), content).Gap(10)
+	return layout.Column(text.New(title).Size(18), content).Gap(10)
 }
 
 func main() {
-	ui.Run(ui.NewProgram(Model{}, Update, View), ui.Title("FlowUI TimeLine"), ui.Size(980, 860))
+	ui.Run(ui.NewProgram(Model{}, Update, View), window.Title("FlowUI TimeLine"), window.Size(980, 860), window.Theme(base.Light()))
 }

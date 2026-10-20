@@ -60,7 +60,7 @@ func TestQueueReplacesMatchingEntryWhenFull(t *testing.T) {
 func TestStartCmdSendsMessage(t *testing.T) {
 	done := make(chan int, 1)
 	var effects effectGroup
-	StartCmd(&effects, context.Background(), func(_ context.Context, send func(int)) error {
+	StartCmd(&effects, context.Background(), func(_ context.Context, send Send[int]) error {
 		send(7)
 		return nil
 	}, func(msg int) {

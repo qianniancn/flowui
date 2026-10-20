@@ -13,16 +13,16 @@ Both tracks require a stable key.
 ## Style transitions
 
 ```go
-ui.Background(ui.TokenSurface).
-	Transition(ui.PropBackgroundColor, 120*time.Millisecond).
-	When(ui.Hovered, ui.Background(ui.TokenSurfaceRaised))
+style.New().Background(style.Solid(activeTheme.Palette.Surface)).
+	Transition(style.PropBackgroundColor, 120*time.Millisecond).
+	On(style.Hovered, style.New().Background(style.Solid(activeTheme.Palette.SurfaceRaised)))
 ```
 
 Add an easing option when the default curve is not appropriate:
 
 ```go
-.Transition(ui.PropOpacity, 200*time.Millisecond,
-	ui.TransitionEase(ui.EaseCubicOut))
+.Transition(style.PropOpacity, 200*time.Millisecond,
+	style.TransitionEase(animation.EaseCubicOut))
 ```
 
 ## Tween
@@ -34,9 +34,9 @@ target := float32(0)
 if expanded {
 	target = 1
 }
-progress := ui.Tween("panel-open", target).
+progress := animation.Tween("panel-open", target).
 	Duration(200 * time.Millisecond).
-	Easing(ui.EaseCubicOut).
+	Easing(animation.EaseCubicOut).
 	Value(ctx, gtx)
 ```
 
@@ -44,8 +44,8 @@ progress := ui.Tween("panel-open", target).
 for physical-feeling layout changes:
 
 ```go
-progress := ui.Tween("panel-open", target).
-	Spring(ui.SpringSnappy()).
+progress := animation.Tween("panel-open", target).
+	Spring(animation.SpringSnappy()).
 	Value(ctx, gtx)
 ```
 
@@ -58,5 +58,6 @@ Respect `Theme.Motion` and avoid hard-coding large, uninterruptible effects.
 Applications can disable motion or change the duration scale in a customized
 theme. Use tokens and default transitions so this policy applies consistently.
 
-The [`examples/animations`](https://github.com/qianniancn/flowui/tree/main/examples/animations) program demonstrates
-transitions, tweens, springs, timelines, and layout movement.
+The button example (`go run ./examples/buttons`) demonstrates control feedback.
+Tests for tweens, springs and timelines live under `animation/`; combine the
+usage snippets above with your application for custom motion.

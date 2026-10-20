@@ -44,4 +44,4 @@ Linux 需要可用的会话 D-Bus 通知服务。macOS 使用系统通知中心�
   后端的具体错误仍会保留，可继续使用 `errors.Is` / `errors.As` 检查。
 - `ErrUnsupported`：平台不支持指定操作，例如 Windows 上取消已投递通知。
 
-完整示例位于 [`examples/notifications`](../examples/notifications)。
+完整示例维护在独立的 `examples` module 中。

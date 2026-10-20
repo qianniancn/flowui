@@ -10,7 +10,16 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/qianniancn/flowui/animation"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/portal"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -47,7 +56,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Message]) ui.Widget {
 		pressed: model.Open,
 		onClick: func() { send(Message{kind: setOpen, value: !model.Open}) },
 	}
-	portal := ui.Portal("custom-portal", model.Open, trigger, func(anchor image.Rectangle, interactive bool) ui.Widget {
+	popup := portal.New("custom-portal", model.Open, trigger, func(anchor image.Rectangle, interactive bool) ui.Widget {
 		return portalPanel(anchor, interactive, func() { send(Message{kind: setOpen}) })
 	})
 	transform := transformedButton{
@@ -62,11 +71,11 @@ func View(_ *ui.Context, model Model, send ui.Send[Message]) ui.Widget {
 	if model.Transformed {
 		transform.button.label = "Reset transform"
 	}
-	return ui.Center(
-		ui.Column(
-			ui.Text("Workspace").Size(20),
-			ui.Text("main.go  |  Go  |  UTF-8").Size(13),
-			portal,
+	return flowlayout.Center(
+		flowlayout.Column(
+			text.New("Workspace").Size(20),
+			text.New("main.go  |  Go  |  UTF-8").Size(13),
+			popup,
 			transform,
 		).Gap(14).AlignMiddle(),
 	)
@@ -76,15 +85,16 @@ type customTriggerState struct {
 	click widget.Clickable
 }
 
+// customTrigger 是手写组件：行为只持有状态，外观全部来自 style.Style。
 type customTrigger struct {
 	key     string
 	label   string
 	pressed bool
 	onClick func()
-	style   ui.Style
+	style   style.Style
 }
 
-func (button customTrigger) Style(value ui.Style) customTrigger {
+func (button customTrigger) Style(value style.Style) customTrigger {
 	button.style = value
 	return button
 }
@@ -102,37 +112,42 @@ func (button customTrigger) Layout(ctx *ui.Context, gtx layout.Context) layout.D
 	}
 
 	focused := gtx.Focused(&state.click)
-	styleState := ui.StyleState{
+	visual := style.State{
 		Hovered:      state.click.Hovered(),
 		Pressed:      state.click.Pressed(),
 		Focused:      focused,
 		FocusVisible: ctx.FocusVisible(&state.click, focused),
 		Selected:     button.pressed,
 	}
-	base := ui.Width(190).
+	active := ctx.Theme()
+	sem := active.Semantic()
+	base := style.New().
+		Width(190).
 		Height(36).
 		PaddingX(12).
 		Radius(6).
-		Background(ui.TokenSurfaceSecondary).
-		TextColor(ui.TokenSurfaceSecondaryForeground).
-		Cursor(ui.CursorPointer).
-		Outline(2, 1, ui.WithAlpha(ui.TokenFocus, 0)).
-		Part(ui.PartLabel, ui.FontSize(13).MaxLines(1)).
-		Transition(ui.PropBackgroundColor, 120*time.Millisecond).
-		Transition(ui.PropOutlineColor, 100*time.Millisecond).
-		When(ui.Hovered, ui.Background(ui.TokenSurfaceTertiary)).
-		When(ui.Pressed, ui.Background(ui.TokenSurfacePressed)).
-		When(ui.If(button.pressed), ui.Background(ui.TokenSurfaceTertiary)).
-		When(ui.FocusVisible, ui.Outline(2, 1, ui.TokenFocus))
+		Background(style.Solid(sem.SurfaceSecondary)).
+		TextColor(style.Solid(sem.SurfaceSecondaryForeground)).
+		Cursor(style.CursorPointer).
+		Outline(2, 1, style.WithAlpha(sem.Ring, 0)).
+		Part(style.PartLabel, style.New().FontSize(13).MaxLines(1)).
+		Transition(style.PropBackgroundColor, 120*time.Millisecond).
+		Transition(style.PropOutlineColor, 100*time.Millisecond).
+		On(style.Hovered, style.New().Background(style.Solid(sem.SurfaceTertiary))).
+		On(style.Pressed, style.New().Background(style.Solid(sem.SurfacePressed))).
+		On(style.Selected, style.New().Background(style.Solid(sem.SurfaceTertiary))).
+		On(style.FocusVisible, style.New().Outline(2, 1, style.Solid(sem.Ring)))
 
-	resolved := ui.ResolveStyle(ctx, gtx, button.key, styleState, base, button.style)
-	label := ui.ResolveStylePart(ctx, gtx, button.key, ui.PartLabel, styleState, base, button.style)
-	content := ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
-		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return ui.LayoutResolvedStyle(ctx, gtx, label, ui.Text(button.label))
-		})
+	resolved := style.Cascade(visual, base, button.style)
+	label := style.CascadePart(visual, style.PartLabel, base, button.style)
+	content := flowlayout.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+		return flowlayout.Center(
+			flowlayout.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+				return flowlayout.Resolved(ctx, gtx, label, text.New(button.label))
+			}),
+		).Layout(ctx, gtx)
 	})
-	return ui.LayoutInteractiveResolvedStyle(ctx, gtx, resolved, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
+	return flowlayout.InteractiveResolved(ctx, gtx, resolved, content, func(gtx layout.Context, visual layout.Widget) layout.Dimensions {
 		return state.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.Button.Add(gtx.Ops)
 			semantic.LabelOp(button.label).Add(gtx.Ops)
@@ -149,7 +164,7 @@ type transformedButton struct {
 func (button transformedButton) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
 	key := button.button.key
 	button.button.key = "button"
-	return ui.Key(key, ui.WidgetFunc(button.layout)).Layout(ctx, gtx)
+	return flowlayout.Key(key, flowlayout.WidgetFunc(button.layout)).Layout(ctx, gtx)
 }
 
 func (button transformedButton) layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
@@ -160,15 +175,15 @@ func (button transformedButton) layout(ctx *ui.Context, gtx layout.Context) layo
 	if button.transformed {
 		target = 1
 	}
-	progress := ui.Tween("motion", target).
+	progress := animation.Tween("motion", target).
 		Initial(0).
 		Duration(240*time.Millisecond).
-		Easing(ui.EaseCubicInOut).
+		Easing(animation.EaseCubicInOut).
 		Value(ctx, gtx)
 	center := f32.Pt(float32(buttonSize.X)/2, float32(buttonSize.Y)/2)
-	scale := ui.LerpFloat(1, 1.08, progress)
-	angle := ui.LerpFloat(0, float32(-4*math.Pi/180), progress)
-	offset := ui.LerpFloat(0, float32(gtx.Dp(18)), progress)
+	scale := animation.LerpFloat(1, 1.08, progress)
+	angle := animation.LerpFloat(0, float32(-4*math.Pi/180), progress)
+	offset := animation.LerpFloat(0, float32(gtx.Dp(18)), progress)
 	local := f32.AffineId().
 		Scale(center, f32.Pt(scale, scale)).
 		Rotate(center, angle).
@@ -186,26 +201,26 @@ func (button transformedButton) layout(ctx *ui.Context, gtx layout.Context) layo
 }
 
 func portalPanel(anchor image.Rectangle, interactive bool, close func()) ui.Widget {
-	return ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+	return flowlayout.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
 		if !interactive {
 			gtx = gtx.Disabled()
 		}
 		panelGtx := gtx
 		panelGtx.Constraints.Min = image.Point{}
 		panelGtx.Constraints.Max = image.Pt(min(gtx.Dp(300), gtx.Constraints.Max.X), min(gtx.Dp(180), gtx.Constraints.Max.Y))
-		panel := ui.Key("custom-panel", ui.Surface(
-			ui.Box(
-				ui.Column(
-					ui.Text("Workspace details").Size(15),
-					ui.Text("Project: FlowUI").Size(13),
-					ui.Text("Mode: Development").Size(13),
-					ui.Button("close", ui.Text("Close")).Size(ui.ButtonSmall).OnClick(close),
+		panel := flowlayout.Key("custom-panel", (surface.New(
+			flowlayout.Box(
+				flowlayout.Column(
+					text.New("Workspace details").Size(15),
+					text.New("Project: FlowUI").Size(13),
+					text.New("Mode: Development").Size(13),
+					button.New("Close").Size(button.Small).OnClick(close),
 				).Gap(10),
-			).Style(ui.Width(280)).Style(ui.Padding(14)),
-		).Style(ui.Radius(8).Shadow(ui.ShadowSurface)))
+			).Style(style.New().Width(280).Padding(14)),
+		)).Style(style.New().Radius(8).Shadow(style.ShadowSurface)))
 
 		macro := op.Record(gtx.Ops)
-		_, placement := ui.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		_, placement := flowlayout.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 			return panel.Layout(ctx, panelGtx)
 		})
 		call := macro.Stop()
@@ -230,5 +245,5 @@ func activePresses(history []widget.Press) int {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{Transformed: true},
-		Update, View), ui.Title("FlowUI Custom Widgets"), ui.Size(760, 480))
+		Update, View), window.Title("FlowUI Custom Widgets"), window.Size(760, 480), window.Theme(base.Light()))
 }

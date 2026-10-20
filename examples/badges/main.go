@@ -1,8 +1,16 @@
 package main
 
 import (
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	avatarpkg "github.com/qianniancn/flowui/widget/avatar"
+	"github.com/qianniancn/flowui/widget/badge"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct{}
@@ -11,71 +19,71 @@ type Msg any
 func Update(*Model, Msg) ui.Cmd[Msg] { return nil }
 
 func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("Badge").Size(24),
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("Badge").Size(24),
 				section("Basic",
-					ui.Row(
-						ui.Badge(avatar("JD"), "5").Color(ui.BadgeDanger).Size(ui.BadgeSmall),
-						ui.Badge(avatar("AB"), "New").Color(ui.BadgeAccent).Size(ui.BadgeSmall),
-						ui.Badge(avatar("CD"), "").Color(ui.BadgeSuccess).Size(ui.BadgeSmall).Placement(ui.BadgeBottomRight).Alt("Online"),
-						ui.Badge(avatar("EF"), "").Content(ui.Icon(lucide.Bell).Size(10)).Color(ui.BadgeAccent).Size(ui.BadgeSmall).Alt("Notifications"),
+					layout.Row(
+						badge.New(avatar("JD"), "5").Color(badge.ColorDanger).Size(badge.SizeSmall),
+						badge.New(avatar("AB"), "New").Color(badge.ColorAccent).Size(badge.SizeSmall),
+						badge.New(avatar("CD"), "").Color(badge.ColorSuccess).Size(badge.SizeSmall).Placement(badge.PlacementBottomRight).Alt("Online"),
+						badge.New(avatar("EF"), "").Content(icon.New(lucide.Bell).Size(10)).Color(badge.ColorAccent).Size(badge.SizeSmall).Alt("Notifications"),
 					).Gap(28).AlignMiddle(),
 				),
 				section("Sizes",
-					ui.Row(
-						ui.Badge(ui.Avatar("SM").Size(ui.AvatarSmall), "5").Color(ui.BadgeDanger).Size(ui.BadgeSmall),
-						ui.Badge(ui.Avatar("MD").Size(ui.AvatarMedium), "5").Color(ui.BadgeDanger).Size(ui.BadgeMedium),
-						ui.Badge(ui.Avatar("LG").Size(ui.AvatarLarge), "5").Color(ui.BadgeDanger).Size(ui.BadgeLarge),
+					layout.Row(
+						badge.New(avatarpkg.New("SM").Size(avatarpkg.SizeSmall), "5").Color(badge.ColorDanger).Size(badge.SizeSmall),
+						badge.New(avatarpkg.New("MD").Size(avatarpkg.SizeMedium), "5").Color(badge.ColorDanger).Size(badge.SizeMedium),
+						badge.New(avatarpkg.New("LG").Size(avatarpkg.SizeLarge), "5").Color(badge.ColorDanger).Size(badge.SizeLarge),
 					).Gap(32).AlignMiddle(),
 				),
 				section("Colors",
-					ui.Row(
-						coloredDot(ui.BadgeDefault),
-						coloredDot(ui.BadgeAccent),
-						coloredDot(ui.BadgeSuccess),
-						coloredDot(ui.BadgeWarning),
-						coloredDot(ui.BadgeDanger),
+					layout.Row(
+						coloredDot(badge.ColorDefault),
+						coloredDot(badge.ColorAccent),
+						coloredDot(badge.ColorSuccess),
+						coloredDot(badge.ColorWarning),
+						coloredDot(badge.ColorDanger),
 					).Gap(28).AlignMiddle(),
 				),
 				section("Variants",
-					ui.Row(
-						ui.Badge(avatar("P"), "5").Color(ui.BadgeAccent).Size(ui.BadgeSmall).Variant(ui.BadgePrimary),
-						ui.Badge(avatar("S"), "5").Color(ui.BadgeAccent).Size(ui.BadgeSmall).Variant(ui.BadgeSecondary),
-						ui.Badge(avatar("SF"), "5").Color(ui.BadgeAccent).Size(ui.BadgeSmall).Variant(ui.BadgeSoft),
+					layout.Row(
+						badge.New(avatar("P"), "5").Color(badge.ColorAccent).Size(badge.SizeSmall).Variant(badge.VariantPrimary),
+						badge.New(avatar("S"), "5").Color(badge.ColorAccent).Size(badge.SizeSmall).Variant(badge.VariantSecondary),
+						badge.New(avatar("SF"), "5").Color(badge.ColorAccent).Size(badge.SizeSmall).Variant(badge.VariantSoft),
 					).Gap(28).AlignMiddle(),
 				),
 				section("Placements",
-					ui.Row(
-						placedDot(ui.BadgeTopLeft),
-						placedDot(ui.BadgeTopRight),
-						placedDot(ui.BadgeBottomLeft),
-						placedDot(ui.BadgeBottomRight),
+					layout.Row(
+						placedDot(badge.PlacementTopLeft),
+						placedDot(badge.PlacementTopRight),
+						placedDot(badge.PlacementBottomLeft),
+						placedDot(badge.PlacementBottomRight),
 					).Gap(28).AlignMiddle(),
 				),
 			).Gap(20),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(620)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(620).Padding(24)),
 	)
 }
 
 func avatar(label string) ui.Widget {
-	return ui.Avatar(label).Color(ui.AvatarAccent).Variant(ui.AvatarSoft)
+	return avatarpkg.New(label).Color(avatarpkg.ColorAccent).Variant(avatarpkg.VariantSoft)
 }
 
-func coloredDot(color ui.BadgeColor) ui.Widget {
-	return ui.Badge(avatar("UI"), "").Color(color).Size(ui.BadgeSmall).Alt("Status")
+func coloredDot(color badge.Color) ui.Widget {
+	return badge.New(avatar("UI"), "").Color(color).Size(badge.SizeSmall).Alt("Status")
 }
 
-func placedDot(placement ui.BadgePlacement) ui.Widget {
-	return ui.Badge(avatar("UI"), "").Color(ui.BadgeSuccess).Size(ui.BadgeSmall).Placement(placement).Alt("Online")
+func placedDot(placement badge.Placement) ui.Widget {
+	return badge.New(avatar("UI"), "").Color(badge.ColorSuccess).Size(badge.SizeSmall).Placement(placement).Alt("Online")
 }
 
 func section(title string, content ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(16), content).Gap(10)
+	return layout.Column(text.New(title).Size(16), content).Gap(10)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Badge"), ui.Size(760, 680))
+		Update, View), window.Title("FlowUI Badge"), window.Size(760, 680), window.Theme(base.Light()))
 }

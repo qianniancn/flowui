@@ -3,7 +3,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct{}
@@ -23,61 +28,61 @@ func View(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	tags := make([]ui.Widget, 0, 8)
 	for i := 1; i <= 8; i++ {
 		tags = append(tags,
-			ui.Box(ui.Text(fmt.Sprintf("Tag %d", i))).
-				Style(ui.PaddingTop(6).PaddingRight(10).PaddingBottom(6).PaddingLeft(10).Margin(2)),
+			layout.Box(text.New(fmt.Sprintf("Tag %d", i))).
+				Style(style.New().PaddingTop(6).PaddingRight(10).PaddingBottom(6).PaddingLeft(10).Margin(2)),
 		)
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("page",
-				ui.Column(
-					ui.Text("FlowUI Layout").Size(24),
-					ui.Divider(),
-					ui.Row(
-						ui.Text("Overview").Size(18),
-						ui.Box(ui.Separator()).Style(ui.Height(24)),
-						ui.Text("Responsive cards").Size(18),
-					).Gap(12).AlignMiddle(),
-					ui.AutoGrid(160, cards...).Gap(12),
-					ui.Box(
-						ui.AspectRatio(16.0/9.0,
-							ui.Stack(
-								ui.Stacked(
-									ui.Box(ui.Text("Aspect preview")).
-										Style(ui.FillWidth().
-											FillHeight()).
-										Align(ui.AlignCenter),
-								),
-								ui.Overlay(
-									ui.Box(ui.Text("Overlay")).
-										Style(ui.PaddingTop(6).
-											PaddingRight(10).
-											PaddingBottom(6).
-											PaddingLeft(10)),
-								).Align(ui.AlignTopEnd),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Layout").Size(24),
+				layout.Divider(),
+				layout.Row(
+					text.New("Overview").Size(18),
+					layout.Box(layout.Divider()).Style(style.New().Height(24)),
+					text.New("Responsive cards").Size(18),
+				).Gap(12).AlignMiddle(),
+				layout.AutoGrid(160, cards...).Gap(12),
+				layout.Box(
+					layout.AspectRatio(16.0/9.0,
+						layout.Stack(
+							layout.Stacked(
+								layout.Box(text.New("Aspect preview")).
+									Style(style.New().FillWidth().
+										FillHeight()).
+									Align(layout.AlignCenter),
 							),
+							layout.Overlay(
+								layout.Box(text.New("Overlay")).
+									Style(style.New().PaddingTop(6).
+										PaddingRight(10).
+										PaddingBottom(6).
+										PaddingLeft(10)),
+							).Align(layout.AlignTopEnd),
 						),
 					),
-					ui.Wrap(tags...).Gap(8).AlignMiddle(),
-				).Gap(16),
+				),
+				layout.Wrap(tags...).Gap(8).AlignMiddle(),
+			).Gap(16),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(760).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func statCard(label, value string) ui.Widget {
-	return ui.Box(
-		ui.Column(
-			ui.Text(label).Size(14),
-			ui.Text(value).Size(28),
+	return layout.Box(
+		layout.Column(
+			text.New(label).Size(14),
+			text.New(value).Size(28),
 		).Gap(6),
-	).Style(ui.FillWidth().Padding(16))
+	).Style(style.New().FillWidth().Padding(16))
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Layout"),
-		ui.Size(900, 600),
+		Update, View), window.Title("FlowUI Layout"),
+		window.Size(900, 600),
+		window.Theme(base.Light()),
 	)
 }

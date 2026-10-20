@@ -5,7 +5,16 @@ import (
 	"image/color"
 	"math"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/card"
+	"github.com/qianniancn/flowui/widget/colorpicker"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/slider"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -34,20 +43,20 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	shadow := shadowColor(model)
-	preview := ui.Box(ui.Center(shadowPreview(shadow))).Style(
-		ui.Width(416).Height(340),
+	preview := layout.Box(layout.Center(shadowPreview(shadow))).Style(
+		style.New().Width(416).Height(340),
 	)
-	controls := ui.Box(
-		ui.Column(
-			ui.ColorWheel("shadow-color", model.WheelColor).
+	controls := layout.Box(
+		layout.Column(
+			colorpicker.ColorWheel("shadow-color", model.WheelColor).
 				Size(190).
 				Label("阴影颜色").
 				OnChange(func(value color.NRGBA) {
 					send(colorChanged(value))
 				}),
-			ui.Box(
-				ui.Column(
-					ui.Slider("brightness", model.Brightness).
+			layout.Box(
+				layout.Column(
+					slider.New("brightness", model.Brightness).
 						Range(0, 1).
 						Step(.01).
 						Label("明暗").
@@ -56,7 +65,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 						OnChange(func(value float64) {
 							send(brightnessChanged(value))
 						}),
-					ui.Slider("alpha", model.Alpha).
+					slider.New("alpha", model.Alpha).
 						Range(0, 1).
 						Step(.01).
 						Label("透明度").
@@ -66,41 +75,35 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 							send(alphaChanged(value))
 						}),
 				).Gap(12),
-			).Style(ui.Width(280).PaddingX(20)),
+			).Style(style.New().Width(280).PaddingX(20)),
 		).Gap(24).AlignMiddle(),
-	).Style(ui.Width(280))
+	).Style(style.New().Width(280))
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("shadows",
-				ui.Column(
-					ui.Text("FlowUI Shadows").Size(24),
-					ui.Wrap(preview, controls).
-						Gap(40).
-						LineGap(24).
-						AlignMiddle(),
-				).Gap(16).AlignMiddle(),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Shadows").Size(24),
+				layout.Wrap(preview, controls).
+					Gap(40).
+					LineGap(24).
+					AlignMiddle(),
+			).Gap(16).AlignMiddle(),
 			).Vertical(),
-		).Style(ui.MaxWidth(860).Padding(32)),
+		).Style(style.New().MaxWidth(860).Padding(32)),
 	)
 }
 
 func shadowPreview(shadow color.NRGBA) ui.Widget {
 	ambient := shadow
 	ambient.A = uint8(math.Round(float64(shadow.A) * .65))
-	return ui.Card(
-		ui.Text("Card shadow").Size(20),
-		ui.Description(fmt.Sprintf("#%02X%02X%02X%02X", shadow.R, shadow.G, shadow.B, shadow.A)),
-	).
-		Padding(28).
-		Gap(6).
-		Style(
-			ui.Width(320).
-				MinHeight(144).
-				Radius(18).
-				BoxShadow(0, 1, 8, 1, ui.Color(shadow)).
-				BoxShadow(0, 7, 24, -2, ui.Color(ambient)),
-		)
+	return (card.New(
+		text.New("Card shadow").Size(20),
+		description.New(fmt.Sprintf("#%02X%02X%02X%02X", shadow.R, shadow.G, shadow.B, shadow.A)),
+	)).StyleWithMetrics(style.New().Width(320).
+		MinHeight(144).
+		Radius(18).
+		BoxShadow(0, 1, 8, 1, style.Color(shadow)).
+		BoxShadow(0, 7, 24, -2, style.Color(ambient)), 28, 6)
 }
 
 func shadowColor(model Model) color.NRGBA {
@@ -126,7 +129,8 @@ func main() {
 		Brightness: .62,
 		Alpha:      .7,
 	},
-		Update, View), ui.Title("FlowUI Shadows"),
-		ui.Size(920, 560),
+		Update, View), window.Title("FlowUI Shadows"),
+		window.Size(920, 560),
+		window.Theme(base.Light()),
 	)
 }

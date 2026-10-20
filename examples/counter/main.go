@@ -3,7 +3,13 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -26,31 +32,32 @@ func Update(m *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Counter").Size(24),
-				ui.Text(fmt.Sprintf("count: %d", m.Count)).Size(18),
-				ui.Row(
-					ui.Box(
-						ui.Button("inc", ui.Text("Click +1")).OnClick(func() {
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Counter").Size(24),
+				text.New(fmt.Sprintf("count: %d", m.Count)).Size(18),
+				layout.Row(
+					layout.Box(
+						button.New("Click +1").OnClick(func() {
 							send(Inc{})
 						}),
 					),
-					ui.Box(
-						ui.Button("dec", ui.Text("Click -1")).OnClick(func() {
+					layout.Box(
+						button.New("Click -1").OnClick(func() {
 							send(Dec{})
-						}).Variant(ui.ButtonSecondary),
+						}).Variant(button.Secondary),
 					),
 				).Gap(12),
 			).Gap(12),
-		).Style(ui.Padding(24)),
+		).Style(style.New().Padding(24)),
 	)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Counter"),
-		ui.Size(900, 600),
+		Update, View), window.Title("FlowUI Counter"),
+		window.Size(900, 600),
+		window.Theme(base.Light()),
 	)
 }

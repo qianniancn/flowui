@@ -4,8 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/input"
+	"github.com/qianniancn/flowui/widget/modal"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -58,79 +67,78 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Stack(
-		ui.Stacked(
-			ui.Center(
-				ui.Box(
-					ui.Scroll("modals",
-						ui.Column(
-							ui.Text("FlowUI Modal").Size(24),
-							ui.Text(status).Size(16),
-							ui.Divider(),
-							section("Default",
-								buttonGrid(
-									openButton("default", "Open modal", send),
-									openButton("form", "Contact form", send),
-								),
+	return layout.Stack(
+		layout.Stacked(
+			layout.Center(
+				layout.Box(
+					layout.Scroll(layout.Column(
+						text.New("FlowUI Modal").Size(24),
+						text.New(status).Size(16),
+						layout.Divider(),
+						section("Default",
+							buttonGrid(
+								openButton("default", "Open modal", send),
+								openButton("form", "Contact form", send),
 							),
-							section("Placements",
-								buttonGrid(
-									openButton("top", "Top", send),
-									openButton("center", "Center", send),
-									openButton("bottom", "Bottom", send),
-								),
+						),
+						section("Placements",
+							buttonGrid(
+								openButton("top", "Top", send),
+								openButton("center", "Center", send),
+								openButton("bottom", "Bottom", send),
 							),
-							section("Backdrop",
-								buttonGrid(
-									openButton("opaque", "Opaque", send),
-									openButton("blur", "Blur", send),
-									openButton("transparent", "Transparent", send),
-								),
+						),
+						section("Backdrop",
+							buttonGrid(
+								openButton("opaque", "Opaque", send),
+								openButton("blur", "Blur", send),
+								openButton("transparent", "Transparent", send),
 							),
-							section("Sizes",
-								buttonGrid(
-									openButton("xs", "XSmall", send),
-									openButton("sm", "Small", send),
-									openButton("md", "Medium", send),
-									openButton("lg", "Large", send),
-									openButton("cover", "Cover", send),
-									openButton("full", "Full", send),
-								),
+						),
+						section("Sizes",
+							buttonGrid(
+								openButton("xs", "XSmall", send),
+								openButton("sm", "Small", send),
+								openButton("md", "Medium", send),
+								openButton("lg", "Large", send),
+								openButton("cover", "Cover", send),
+								openButton("full", "Full", send),
 							),
-							section("Scroll behavior",
-								buttonGrid(
-									openButton("scroll-inside", "Inside scroll", send),
-									openButton("scroll-outside", "Outside scroll", send),
-								),
+						),
+						section("Scroll behavior",
+							buttonGrid(
+								openButton("scroll-inside", "Inside scroll", send),
+								openButton("scroll-outside", "Outside scroll", send),
 							),
-							section("Animations",
-								buttonGrid(
-									openButton("anim-fade", "Fade", send),
-									openButton("anim-slide-down", "Slide down", send),
-									openButton("anim-slide-up", "Slide up", send),
-									openButton("anim-bounce", "Bounce scale", send),
-									openButton("anim-zoom-out", "Zoom out", send),
-									openButton("anim-pop", "Pop", send),
-								),
+						),
+						section("Animations",
+							buttonGrid(
+								openButton("anim-fade", "Fade", send),
+								openButton("anim-slide-down", "Slide down", send),
+								openButton("anim-slide-up", "Slide up", send),
+								openButton("anim-bounce", "Bounce scale", send),
+								openButton("anim-zoom-out", "Zoom out", send),
+								openButton("anim-pop", "Pop", send),
 							),
-							section("Dismiss behavior",
-								buttonGrid(
-									openButton("locked-backdrop", "No backdrop close", send),
-									openButton("locked-keyboard", "No Escape close", send),
-								),
+						),
+						section("Dismiss behavior",
+							buttonGrid(
+								openButton("locked-backdrop", "No backdrop close", send),
+								openButton("locked-keyboard", "No Escape close", send),
 							),
-						).Gap(18),
+						),
+					).Gap(18),
 					).Vertical(),
-				).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+				).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 			),
 		),
-		ui.Overlay(modalLayer(m, send)).Expanded(),
+		layout.Overlay(modalLayer(m, send)).Expanded(),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
@@ -138,59 +146,59 @@ func section(title string, child ui.Widget) ui.Widget {
 func buttonGrid(children ...ui.Widget) ui.Widget {
 	items := make([]ui.Widget, 0, len(children))
 	for _, child := range children {
-		items = append(items, ui.Box(child))
+		items = append(items, layout.Box(child))
 	}
-	return ui.Wrap(items...).Gap(8).AlignMiddle()
+	return layout.Wrap(items...).Gap(8).AlignMiddle()
 }
 
 func openButton(key, label string, send ui.Send[Msg]) ui.Widget {
-	return ui.Button("open-"+key, ui.Text(label)).
-		Variant(ui.ButtonSecondary).
+	return button.New(label).Key("open-" + key).
+		Variant(button.Secondary).
 		OnClick(func() {
 			send(Open{Key: key})
 		})
 }
 
 func modalLayer(m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
+	return layout.Column(
 		baseModal("default", m, send,
 			"Welcome to FlowUI",
 			"Modal is controlled by your Model and closes by calling OnOpenChange(false).",
-		).Icon(ui.Icon(lucide.Info).Size(20)),
+		).Icon(icon.New(lucide.Info).Size(20)),
 		baseModal("form", m, send,
 			"Contact us",
 			"Compose inputs and buttons inside the modal body just like any other FlowUI view.",
 		).Body(contactForm(m, send)),
-		baseModal("top", m, send, "Top placement", placementBody("top")).Placement(ui.ModalTop),
-		baseModal("center", m, send, "Center placement", placementBody("center")).Placement(ui.ModalCenter),
-		baseModal("bottom", m, send, "Bottom placement", placementBody("bottom")).Placement(ui.ModalBottom),
-		baseModal("opaque", m, send, "Opaque backdrop", backdropBody("opaque")).Backdrop(ui.ModalBackdropOpaque),
-		baseModal("blur", m, send, "Blur-style backdrop", backdropBody("blur")).Backdrop(ui.ModalBackdropBlur),
-		baseModal("transparent", m, send, "Transparent backdrop", backdropBody("transparent")).Backdrop(ui.ModalBackdropTransparent),
-		baseModal("xs", m, send, "XSmall modal", sizeBody("xs")).Size(ui.ModalXSmall),
-		baseModal("sm", m, send, "Small modal", sizeBody("sm")).Size(ui.ModalSmall),
+		baseModal("top", m, send, "Top placement", placementBody("top")).Placement(modal.Top),
+		baseModal("center", m, send, "Center placement", placementBody("center")).Placement(modal.Center),
+		baseModal("bottom", m, send, "Bottom placement", placementBody("bottom")).Placement(modal.Bottom),
+		baseModal("opaque", m, send, "Opaque backdrop", backdropBody("opaque")).Backdrop(modal.BackdropOpaque),
+		baseModal("blur", m, send, "Blur-style backdrop", backdropBody("blur")).Backdrop(modal.BackdropBlur),
+		baseModal("transparent", m, send, "Transparent backdrop", backdropBody("transparent")).Backdrop(modal.BackdropTransparent),
+		baseModal("xs", m, send, "XSmall modal", sizeBody("xs")).Size(modal.XSmall),
+		baseModal("sm", m, send, "Small modal", sizeBody("sm")).Size(modal.Small),
 		baseModal("md", m, send, "Medium modal", sizeBody("md")),
-		baseModal("lg", m, send, "Large modal", sizeBody("lg")).Size(ui.ModalLarge),
-		baseModal("cover", m, send, "Cover modal", sizeBody("cover")).Size(ui.ModalCover),
-		baseModal("full", m, send, "Full modal", sizeBody("full")).Size(ui.ModalFull),
+		baseModal("lg", m, send, "Large modal", sizeBody("lg")).Size(modal.Large),
+		baseModal("cover", m, send, "Cover modal", sizeBody("cover")).Size(modal.Cover),
+		baseModal("full", m, send, "Full modal", sizeBody("full")).Size(modal.Full),
 		baseModal("scroll-inside", m, send, "Inside scroll", "").
 			Body(longBody("Inside scroll keeps the header and footer fixed while the body moves.")).
-			Scroll(ui.ModalScrollInside),
+			Scroll(modal.ScrollInside),
 		baseModal("scroll-outside", m, send, "Outside scroll", "").
 			Body(longBody("Outside scroll moves the dialog content as a single surface.")).
-			Scroll(ui.ModalScrollOutside),
+			Scroll(modal.ScrollOutside),
 		baseModal("anim-fade", m, send, "Fade animation", animationBody("fade")).
-			Animation(ui.ModalAnimationFade),
+			Animation(modal.AnimationFade),
 		baseModal("anim-slide-down", m, send, "Slide down animation", animationBody("slide down")).
-			Animation(ui.ModalAnimationSlideDown),
+			Animation(modal.AnimationSlideDown),
 		baseModal("anim-slide-up", m, send, "Slide up animation", animationBody("slide up")).
-			Animation(ui.ModalAnimationSlideUp),
+			Animation(modal.AnimationSlideUp),
 		baseModal("anim-bounce", m, send, "Bounce scale animation", animationBody("bounce scale")).
-			Animation(ui.ModalAnimationBounceScale),
+			Animation(modal.AnimationBounceScale),
 		baseModal("anim-zoom-out", m, send, "Zoom out animation", animationBody("zoom out")).
-			Animation(ui.ModalAnimationZoomOut),
+			Animation(modal.AnimationZoomOut),
 		baseModal("anim-pop", m, send, "Pop animation", animationBody("pop")).
-			Animation(ui.ModalAnimationPop),
+			Animation(modal.AnimationPop),
 		baseModal("locked-backdrop", m, send, "Explicit close required", "Clicking the backdrop will not close this modal.").
 			Dismissable(false),
 		baseModal("locked-keyboard", m, send, "Escape disabled", "Pressing Escape will not close this modal.").
@@ -198,8 +206,8 @@ func modalLayer(m Model, send ui.Send[Msg]) ui.Widget {
 	)
 }
 
-func baseModal(key string, m Model, send ui.Send[Msg], title, body string) ui.ModalWidget {
-	return ui.Modal(key, m.Active == key, title, ui.Text(body)).
+func baseModal(key string, m Model, send ui.Send[Msg], title, body string) modal.Widget {
+	return modal.New(title, text.New(body)).Key(key).Open(m.Active == key).
 		Footer(modalFooter(key, send)).
 		OnOpenChange(func(open bool) {
 			if !open {
@@ -209,13 +217,13 @@ func baseModal(key string, m Model, send ui.Send[Msg], title, body string) ui.Mo
 }
 
 func modalFooter(key string, send ui.Send[Msg]) ui.Widget {
-	return ui.Row(
-		ui.Button(key+"-cancel", ui.Text("Cancel")).
-			Variant(ui.ButtonSecondary).
+	return layout.Row(
+		button.New("Cancel").Key(key+"-cancel").
+			Variant(button.Secondary).
 			OnClick(func() {
 				send(Close{})
 			}),
-		ui.Button(key+"-confirm", ui.Text("Confirm")).
+		button.New("Confirm").Key(key+"-confirm").
 			OnClick(func() {
 				send(Close{})
 			}),
@@ -223,20 +231,20 @@ func modalFooter(key string, send ui.Send[Msg]) ui.Widget {
 }
 
 func contactForm(m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Column(
-		ui.Input("contact-name", m.Name).
+	return layout.Column(
+		input.New(m.Name).Key("contact-name").
 			Hint("Name").
 			FullWidth().
 			OnChange(func(value string) {
 				send(ChangeField{Field: "name", Value: value})
 			}),
-		ui.Input("contact-email", m.Email).
+		input.New(m.Email).Key("contact-email").
 			Hint("Email").
 			FullWidth().
 			OnChange(func(value string) {
 				send(ChangeField{Field: "email", Value: value})
 			}),
-		ui.Input("contact-message", m.Message).
+		input.New(m.Message).Key("contact-message").
 			Hint("Message").
 			FullWidth().
 			OnChange(func(value string) {
@@ -248,9 +256,9 @@ func contactForm(m Model, send ui.Send[Msg]) ui.Widget {
 func longBody(prefix string) ui.Widget {
 	rows := make([]ui.Widget, 0, 14)
 	for i := range 14 {
-		rows = append(rows, ui.Text(fmt.Sprintf("%s Paragraph %02d shows how longer modal content behaves when it exceeds the viewport height.", prefix, i+1)))
+		rows = append(rows, text.New(fmt.Sprintf("%s Paragraph %02d shows how longer modal content behaves when it exceeds the viewport height.", prefix, i+1)))
 	}
-	return ui.Column(rows...).Gap(8)
+	return layout.Column(rows...).Gap(8)
 }
 
 func placementBody(placement string) string {
@@ -271,7 +279,8 @@ func animationBody(animation string) string {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Modal"),
-		ui.Size(900, 720),
+		Update, View), window.Title("FlowUI Modal"),
+		window.Size(900, 720),
+		window.Theme(base.Light()),
 	)
 }

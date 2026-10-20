@@ -1,6 +1,15 @@
 package main
 
-import "github.com/qianniancn/flowui/ui"
+import (
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
+	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/card"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
+)
 
 type Model struct {
 	LastAction string
@@ -21,60 +30,60 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		status = "Last action: " + model.LastAction
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("cards",
-				ui.Column(
-					ui.Text("FlowUI Cards").Size(24),
-					ui.Text(status),
-					ui.Divider(),
-					ui.Text("Variants").Size(18),
-					ui.Wrap(
-						variantCard("Transparent", "Minimal prominence for nested content.", ui.CardTransparent),
-						variantCard("Default", "The standard surface for most content.", ui.CardDefault),
-						variantCard("Secondary", "A medium-prominence grouped surface.", ui.CardSecondary),
-						variantCard("Tertiary", "A stronger surface for featured content.", ui.CardTertiary),
-					).Gap(16).LineGap(16),
-					ui.Text("Composition").Size(18),
-					ui.Box(featureCard(send)).Style(ui.FillWidth()),
-				).Gap(16),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Cards").Size(24),
+				text.New(status),
+				layout.Divider(),
+				text.New("Variants").Size(18),
+				layout.Wrap(
+					variantCard("Transparent", "Minimal prominence for nested content.", card.Transparent),
+					variantCard("Default", "The standard surface for most content.", card.Default),
+					variantCard("Secondary", "A medium-prominence grouped surface.", card.Secondary),
+					variantCard("Tertiary", "A stronger surface for featured content.", card.Tertiary),
+				).Gap(16).LineGap(16),
+				text.New("Composition").Size(18),
+				layout.Box(featureCard(send)).Style(style.New().FillWidth()),
+			).Gap(16),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
-func variantCard(title, description string, variant ui.CardVariant) ui.Widget {
-	return ui.Box(
-		ui.Card(
+func variantCard(title, description string, variant card.Variant) ui.Widget {
+	return layout.Box(
+		card.New(
 			cardHeader(title, description),
-			ui.Text("Cards inherit semantic foreground colors from their surface."),
+			text.New("Cards inherit semantic foreground colors from their surface."),
 		).Variant(variant),
-	).Style(ui.Width(320))
+	).Style(style.New().Width(320))
 }
 
 func featureCard(send ui.Send[Msg]) ui.Widget {
-	return ui.Card(
+	return card.New(
 		cardHeader("Create a focused workspace", "Group related content and actions without introducing application state into the component."),
-		ui.Text("Card keeps its content composable, so controls continue to use the normal FlowUI MVU message path."),
-		ui.Row(
-			ui.Button("card-later", ui.Text("Later")).
-				Size(ui.ButtonSmall).
-				Variant(ui.ButtonGhost).
+		text.New("Card keeps its content composable, so controls continue to use the normal FlowUI MVU message path."),
+		layout.Row(
+			button.New("Later").
+				Size(button.Small).
+				Variant(button.Ghost).
 				OnClick(func() { send(Msg{Action: "Later"}) }),
-			ui.Button("card-create", ui.Text("Create workspace")).
-				Size(ui.ButtonSmall).
+			button.New("Create workspace").
+				Size(button.Small).
 				OnClick(func() { send(Msg{Action: "Create workspace"}) }),
 		).Gap(8),
-	).Variant(ui.CardDefault)
+	).Variant(card.Default)
 }
 
 func cardHeader(title, description string) ui.Widget {
-	return ui.Column(ui.Text(title).Size(16), ui.Text(description).Size(14)).Gap(4)
+	return layout.Column(text.New(title).Size(16), text.New(description).Size(14)).Gap(4)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Cards"),
-		ui.Size(900, 680),
+		Update, View), window.Title("FlowUI Cards"),
+		window.Size(900, 680),
+		window.Theme(base.Light()),
 	)
 }

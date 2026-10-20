@@ -9,7 +9,15 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/qianniancn/flowui/animation"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -55,62 +63,61 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	if !model.forward {
 		action = "Forward"
 	}
-	return ui.Scroll("animation-curves",
-		ui.Box(
-			ui.Column(
-				ui.Row(
-					ui.Expanded(ui.Text("Motion").Size(24)),
-					ui.Button("toggle-direction", ui.Text(action)).OnClick(func() { send(ToggleDirection{}) }),
-				).AlignMiddle(),
-				ui.Divider(),
-				ui.Text("Animation primitives").Size(18),
-				ui.AutoGrid(300, motionDemoCards(model, send)...).ColumnGap(16).RowGap(16),
-				ui.Divider(),
-				ui.Text("Easing curves").Size(18),
-				ui.AutoGrid(200, easingCurveCards(model.forward)...).ColumnGap(16).RowGap(12),
-			).Gap(16),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(1040)).Style(ui.Padding(24)),
+	return flowlayout.Scroll(flowlayout.Box(
+		flowlayout.Column(
+			flowlayout.Row(
+				flowlayout.Expanded(text.New("Motion").Size(24)),
+				button.New(action).Key("toggle-direction").OnClick(func() { send(ToggleDirection{}) }),
+			).AlignMiddle(),
+			flowlayout.Divider(),
+			text.New("Animation primitives").Size(18),
+			flowlayout.AutoGrid(300, motionDemoCards(model, send)...).ColumnGap(16).RowGap(16),
+			flowlayout.Divider(),
+			text.New("Easing curves").Size(18),
+			flowlayout.AutoGrid(200, easingCurveCards(model.forward)...).ColumnGap(16).RowGap(12),
+		).Gap(16),
+	).Style(style.New().FillWidth().MaxWidth(1040).Padding(24)),
 	).Vertical()
 }
 
 type easingCurveSpec struct {
 	label  string
 	key    string
-	easing ui.Easing
+	easing animation.Easing
 }
 
 var easingCurveSpecs = [...]easingCurveSpec{
-	{"Linear", "linear", ui.EaseLinear},
-	{"Quadratic in", "quadratic-in", ui.EaseQuadraticIn},
-	{"Quadratic out", "quadratic-out", ui.EaseQuadraticOut},
-	{"Quadratic in-out", "quadratic-in-out", ui.EaseQuadraticInOut},
-	{"Cubic in", "cubic-in", ui.EaseCubicIn},
-	{"Cubic out", "cubic-out", ui.EaseCubicOut},
-	{"Cubic in-out", "cubic-in-out", ui.EaseCubicInOut},
-	{"Quartic in", "quartic-in", ui.EaseQuarticIn},
-	{"Quartic out", "quartic-out", ui.EaseQuarticOut},
-	{"Quartic in-out", "quartic-in-out", ui.EaseQuarticInOut},
-	{"Quintic in", "quintic-in", ui.EaseQuinticIn},
-	{"Quintic out", "quintic-out", ui.EaseQuinticOut},
-	{"Quintic in-out", "quintic-in-out", ui.EaseQuinticInOut},
-	{"Sinusoidal in", "sinusoidal-in", ui.EaseSinusoidalIn},
-	{"Sinusoidal out", "sinusoidal-out", ui.EaseSinusoidalOut},
-	{"Sinusoidal in-out", "sinusoidal-in-out", ui.EaseSinusoidalInOut},
-	{"Exponential in", "exponential-in", ui.EaseExponentialIn},
-	{"Exponential out", "exponential-out", ui.EaseExponentialOut},
-	{"Exponential in-out", "exponential-in-out", ui.EaseExponentialInOut},
-	{"Circular in", "circular-in", ui.EaseCircularIn},
-	{"Circular out", "circular-out", ui.EaseCircularOut},
-	{"Circular in-out", "circular-in-out", ui.EaseCircularInOut},
-	{"Elastic in", "elastic-in", ui.EaseElasticIn},
-	{"Elastic out", "elastic-out", ui.EaseElasticOut},
-	{"Elastic in-out", "elastic-in-out", ui.EaseElasticInOut},
-	{"Back in", "back-in", ui.EaseBackIn},
-	{"Back out", "back-out", ui.EaseBackOut},
-	{"Back in-out", "back-in-out", ui.EaseBackInOut},
-	{"Bounce in", "bounce-in", ui.EaseBounceIn},
-	{"Bounce out", "bounce-out", ui.EaseBounceOut},
-	{"Bounce in-out", "bounce-in-out", ui.EaseBounceInOut},
+	{"Linear", "linear", animation.EaseLinear},
+	{"Quadratic in", "quadratic-in", animation.EaseQuadraticIn},
+	{"Quadratic out", "quadratic-out", animation.EaseQuadraticOut},
+	{"Quadratic in-out", "quadratic-in-out", animation.EaseQuadraticInOut},
+	{"Cubic in", "cubic-in", animation.EaseCubicIn},
+	{"Cubic out", "cubic-out", animation.EaseCubicOut},
+	{"Cubic in-out", "cubic-in-out", animation.EaseCubicInOut},
+	{"Quartic in", "quartic-in", animation.EaseQuarticIn},
+	{"Quartic out", "quartic-out", animation.EaseQuarticOut},
+	{"Quartic in-out", "quartic-in-out", animation.EaseQuarticInOut},
+	{"Quintic in", "quintic-in", animation.EaseQuinticIn},
+	{"Quintic out", "quintic-out", animation.EaseQuinticOut},
+	{"Quintic in-out", "quintic-in-out", animation.EaseQuinticInOut},
+	{"Sinusoidal in", "sinusoidal-in", animation.EaseSinusoidalIn},
+	{"Sinusoidal out", "sinusoidal-out", animation.EaseSinusoidalOut},
+	{"Sinusoidal in-out", "sinusoidal-in-out", animation.EaseSinusoidalInOut},
+	{"Exponential in", "exponential-in", animation.EaseExponentialIn},
+	{"Exponential out", "exponential-out", animation.EaseExponentialOut},
+	{"Exponential in-out", "exponential-in-out", animation.EaseExponentialInOut},
+	{"Circular in", "circular-in", animation.EaseCircularIn},
+	{"Circular out", "circular-out", animation.EaseCircularOut},
+	{"Circular in-out", "circular-in-out", animation.EaseCircularInOut},
+	{"Elastic in", "elastic-in", animation.EaseElasticIn},
+	{"Elastic out", "elastic-out", animation.EaseElasticOut},
+	{"Elastic in-out", "elastic-in-out", animation.EaseElasticInOut},
+	{"Back in", "back-in", animation.EaseBackIn},
+	{"Back out", "back-out", animation.EaseBackOut},
+	{"Back in-out", "back-in-out", animation.EaseBackInOut},
+	{"Bounce in", "bounce-in", animation.EaseBounceIn},
+	{"Bounce out", "bounce-out", animation.EaseBounceOut},
+	{"Bounce in-out", "bounce-in-out", animation.EaseBounceInOut},
 }
 
 func easingCurveCards(forward bool) []ui.Widget {
@@ -126,24 +133,24 @@ func easingCurveCards(forward bool) []ui.Widget {
 }
 
 func curveCard(label string, curve ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(label).Size(13),
-		ui.Surface(curve).Style(ui.Radius(6)),
+	return flowlayout.Column(
+		text.New(label).Size(13),
+		(surface.New(curve)).Style(style.New().Radius(6)),
 	).Gap(6)
 }
 
 type easingCurve struct {
 	key     string
 	forward bool
-	easing  ui.Easing
+	easing  animation.Easing
 }
 
 func (curve easingCurve) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(112)))
-	timeline := ui.Tween("curve-"+curve.key, boolFloat(curve.forward)).
+	timeline := animation.Tween("curve-"+curve.key, boolFloat(curve.forward)).
 		Initial(0).
 		Duration(850*time.Millisecond).
-		Easing(ui.EaseLinear).
+		Easing(animation.EaseLinear).
 		Value(ctx, gtx)
 
 	paddingX := float32(gtx.Dp(16))
@@ -155,8 +162,8 @@ func (curve easingCurve) Layout(ctx *ui.Context, gtx layout.Context) layout.Dime
 
 	mapPoint := func(progress, value float32) f32.Point {
 		return f32.Pt(
-			ui.LerpFloat(plotLeft, plotRight, progress),
-			ui.LerpFloat(plotBottom, plotTop, (value-curveMin)/(curveMax-curveMin)),
+			animation.LerpFloat(plotLeft, plotRight, progress),
+			animation.LerpFloat(plotBottom, plotTop, (value-curveMin)/(curveMax-curveMin)),
 		)
 	}
 
@@ -185,7 +192,7 @@ func (curve easingCurve) Layout(ctx *ui.Context, gtx layout.Context) layout.Dime
 	guideColor := curveColor
 	guideColor.A = 0x40
 	drawCurveLine(gtx, f32.Pt(position.X, plotTop), f32.Pt(position.X, plotBottom), 1, guideColor)
-	markerColor := ui.LerpColor(
+	markerColor := animation.LerpColor(
 		curveColor,
 		palette.Warning,
 		timeline,
@@ -227,7 +234,8 @@ func boolFloat(value bool) float32 {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{forward: true, timelinePlaying: true},
-		Update, View), ui.Title("FlowUI Motion"),
-		ui.Size(1100, 760),
+		Update, View), window.Title("FlowUI Motion"),
+		window.Size(1100, 760),
+		window.Theme(base.Light()),
 	)
 }

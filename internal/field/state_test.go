@@ -7,13 +7,15 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"github.com/qianniancn/flowui/internal/frame"
+	"github.com/qianniancn/flowui/internal/core"
 	"github.com/qianniancn/flowui/internal/locale"
+	"github.com/qianniancn/flowui/theme"
 )
 
 func TestDisabledStateClearsHover(t *testing.T) {
 	state := &State{Hovered: true}
-	state.Update(frame.New(nil, nil, locale.LanguageAuto), fieldTestContext(), true, new(int))
+	active := theme.NeutralTheme()
+	state.Update(core.New(nil, &active, locale.LanguageAuto), fieldTestContext(), true, new(int))
 	if state.Hovered {
 		t.Fatal("disabled field kept hover state")
 	}

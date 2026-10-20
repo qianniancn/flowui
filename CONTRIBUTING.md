@@ -1,8 +1,8 @@
 # Contributing to FlowUI
 
 FlowUI is a Go desktop UI framework built on Gio. Keep changes focused on the
-public `ui` API, optional platform services, component behavior, rendering,
-tests, and examples.
+public APIs, optional platform services, component behavior, theme recipes,
+rendering, tests, and examples.
 
 Before changing code, read:
 
@@ -10,25 +10,26 @@ Before changing code, read:
 - [Project Wiki](https://github.com/qianniancn/flowui/wiki) — user-facing tutorial (final API).
 - [`docs/architecture.md`](docs/architecture.md) — dependency direction, state
   ownership, and overlay behavior for the current tree.
-- `examples/` and `go doc github.com/qianniancn/flowui/ui` for current usage.
+- `go doc github.com/qianniancn/flowui/ui` and the focused public package docs
+  for current usage.
 
 ## Development Environment
 
 - Go 1.26.2 or newer
 - A desktop platform supported by Gio
 
-The repository root intentionally contains no Go package. Run commands from the
-repository root, or run an individual example with:
-
-```bash
-go run ./examples/counter
-```
+The repository root intentionally contains no Go package. Run checks from the
+repository root. Runnable examples live under `examples/` in the same Go module.
 
 ## Code Changes
 
-- Applications import `github.com/qianniancn/flowui/ui` for UI and MVU APIs;
-  `explorer`, `notify`, and `systray` are optional platform services. Shared
-  implementation code belongs below `internal/`.
+- Applications import `ui` for MVU, `widget/<component>` for official components
+  (one package per component, e.g. `widget/button`), `layout`
+  for composition, `style` for declarations, `theme/base` for the default theme,
+  `theme` for visual contracts, `draw` for custom rendering, and `window` for
+  native options. `explorer`, `notify`, and
+  `systray` are optional platform services. Shared implementation code belongs
+  below `internal/`.
 - Keep business state in the application's model. Component state is for
   interaction and derived rendering state.
 - Use explicit keys for retained component state. Reuse existing state,
@@ -40,10 +41,41 @@ go run ./examples/counter
 
 When adding or changing a component:
 
-1. Put the implementation and focused tests in `internal/components/<domain>`.
-2. Expose the public API through a focused file under `ui/`.
-3. Add or update a runnable example under `examples/`.
-4. Preserve the dependency direction described in the architecture document.
+1. Put behavior, layout, public constructors, and focused tests in
+   `widget/<component>`. Applications import that package directly; `ui/` owns
+   the MVU/runtime API.
+2. Keep visual requests, results, Provider contracts, and validators together
+   in `theme/<component>_visual.go`. Implement shared visual recipes in
+   `theme/<component>style`, and wire them once through `theme/base.Provider`.
+   External themes inherit the shared recipe and override it only when needed.
+3. Update the matching fixture in `internal/testtheme/<component>.go` when the
+   behavior tests need a new visual capability. Keep these fixtures independent
+   of production recipes. Use `theme/themetest` to check production Providers.
+4. Update `examples/` when a public usage change needs a runnable demonstration.
+   Keep new example-only assets beside the example; use `examples/internal/`
+   when several examples share them.
+5. Preserve the dependency direction described in the architecture document
+   and keep existing public import paths stable during file organization work.
+
+### Directory Ownership
+
+- `widget/<component>` owns a usable component. The public `widget/disclosure`,
+  `widget/navigation`, and `widget/optionrow` packages provide reusable behavior
+  and rendering primitives rather than complete controls. `widget/chart`
+  includes shared public chart data and interaction contracts.
+- `theme/<component>style` owns appearance recipes. Helpers used only by the
+  theme tree belong in `theme/internal/`; shared behavior used across framework
+  layers belongs in root `internal/`.
+- `internal/testtheme` supplies neutral fixtures for repository tests only.
+  Keep the entry points in `testtheme.go`, component fixtures in focused files,
+  and shared field declaration helpers in `field.go`.
+- `theme/base` owns the only default design system. Other styles and their
+  dedicated examples belong in external modules, not in new core theme packages.
+- `theme/themetest` is a public acceptance-test helper for default and external
+  themes. It checks real Providers and has a different role from `testtheme`.
+- `docs/assets` contains documentation images. New runnable-example assets
+  belong under `examples/`, rather than extending the existing `assets/images`
+  package.
 
 ### Internal API Design Principles
 
@@ -106,12 +138,12 @@ git diff --check
 ```
 
 Use Go 1.26.2 (or a newer compatible toolchain) for all changes. FlowUI is a
-clean-break refactor: use the current immutable `ui.Style`/`StyleScope`/`When` APIs
+clean-break refactor: use the current immutable `style.Style`/`style.Scope` APIs
 and do not reintroduce removed component-level theme or compatibility shims.
 
-For visual or interaction changes, test the affected example and include the
-platform used for verification. For behavior changes, add a focused regression
-test when practical.
+For visual or interaction changes, test the affected component with `uitest` and
+include the platform used for verification. For behavior changes, add a focused
+regression test when practical.
 
 ## Commit Messages
 

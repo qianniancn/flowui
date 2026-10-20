@@ -15,7 +15,7 @@ Inside your Go module:
 go get github.com/qianniancn/flowui/ui
 ```
 
-Applications should import the public facade only:
+Applications use public packages according to their responsibilities, for example:
 
 ```go
 import "github.com/qianniancn/flowui/ui"
@@ -33,7 +33,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -48,26 +53,26 @@ type Dec struct{}
 func (Inc) msg() {}
 func (Dec) msg() {}
 
-func Update(m *Model, msg Msg) ui.Cmd[Msg] {
+func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg.(type) {
 	case Inc:
-		m.Count++
+		model.Count++
 	case Dec:
-		m.Count--
+		model.Count--
 	}
 	return nil
 }
 
-func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Column(
-			ui.Text("FlowUI Counter").Size(24),
-			ui.Text(fmt.Sprintf("Count: %d", m.Count)),
-			ui.Row(
-				ui.Button("decrement", ui.Text("-1")).OnClick(func() {
+func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
+	return layout.Center(
+		layout.Column(
+			text.New("FlowUI Counter").Size(24),
+			text.New(fmt.Sprintf("Count: %d", model.Count)),
+			layout.Row(
+				button.New("-1").OnClick(func() {
 					send(Dec{})
 				}),
-				ui.Button("increment", ui.Text("+1")).OnClick(func() {
+				button.New("+1").OnClick(func() {
 					send(Inc{})
 				}),
 			).Gap(8),
@@ -77,8 +82,9 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{}, Update, View),
-		ui.Title("FlowUI Counter"),
-		ui.Size(640, 480),
+		window.Theme(base.Light()),
+		window.Title("FlowUI Counter"),
+		window.Size(640, 480),
 	)
 }
 ```
@@ -89,7 +95,9 @@ Run it with:
 go run .
 ```
 
-The same program is available in [`examples/counter`](https://github.com/qianniancn/flowui/tree/main/examples/counter).
+This code is also maintained as `examples/counter/main.go`. From the repository
+root, run `go run ./examples/counter`. The other programs under `examples/`
+demonstrate buttons, inputs, and the default theme in light and dark modes.
 
 ## What happened?
 

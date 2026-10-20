@@ -3,7 +3,15 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	chartpkg "github.com/qianniancn/flowui/widget/chart"
+	"github.com/qianniancn/flowui/widget/piechart"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -19,7 +27,7 @@ type LegendChanged struct {
 	Hidden bool
 }
 
-type DataClicked ui.ChartSelection
+type DataClicked chartpkg.Selection
 
 func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	switch msg := msg.(type) {
@@ -29,22 +37,22 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 		}
 		model.hidden[msg.Chart+"/"+msg.Key] = msg.Hidden
 	case DataClicked:
-		selection := ui.ChartSelection(msg)
+		selection := chartpkg.Selection(msg)
 		model.selected = fmt.Sprintf("Selected: %s (%.2f%%)", selection.Label, selection.Items[0].Percent)
 	}
 	return nil
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	standard := ui.PieChart("traffic-sources", trafficData(model, "pie")).
+	standard := piechart.New("traffic-sources", trafficData(model, "pie")).
 		Label("Traffic sources").
 		OnLegendChange(func(key string, hidden bool) {
 			send(LegendChanged{Chart: "pie", Key: key, Hidden: hidden})
 		}).
-		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
+		OnDataClick(func(selection chartpkg.Selection) { send(DataClicked(selection)) }).
 		Height(360)
 
-	donut := ui.PieChart("traffic-donut", trafficData(model, "donut")).
+	donut := piechart.New("traffic-donut", trafficData(model, "donut")).
 		InnerRadius(.4).
 		OuterRadius(.7).
 		PadAngle(2).
@@ -53,69 +61,69 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		OnLegendChange(func(key string, hidden bool) {
 			send(LegendChanged{Chart: "donut", Key: key, Hidden: hidden})
 		}).
-		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
-		TooltipContent(func(selection ui.ChartSelection) ui.Widget {
+		OnDataClick(func(selection chartpkg.Selection) { send(DataClicked(selection)) }).
+		TooltipContent(func(selection chartpkg.Selection) ui.Widget {
 			item := selection.Items[0]
-			return ui.Column(
-				ui.Text(selection.Label).Size(13),
-				ui.Text(fmt.Sprintf("%.0f visits  %.2f%%", item.Y, item.Percent)).Size(12),
+			return layout.Column(
+				text.New(selection.Label).Size(13),
+				text.New(fmt.Sprintf("%.0f visits  %.2f%%", item.Y, item.Percent)).Size(12),
 			).Gap(4)
 		}).
 		Height(340)
 
-	rose := ui.PieChart("nightingale-rose", roseData()).
-		RoseType(ui.PieRoseArea).
+	rose := piechart.New("nightingale-rose", roseData()).
+		RoseType(piechart.RoseArea).
 		InnerRadius(.15).
 		OuterRadius(.78).
 		PadAngle(1).
 		Legend(false).
 		Label("Nightingale rose").
-		OnDataClick(func(selection ui.ChartSelection) { send(DataClicked(selection)) }).
+		OnDataClick(func(selection chartpkg.Selection) { send(DataClicked(selection)) }).
 		Height(380)
 
 	selected := model.selected
 	if selected == "" {
 		selected = "No data selected"
 	}
-	return ui.Scroll("pie-chart-page",
-		ui.Box(
-			ui.Column(
-				ui.Text("Traffic overview").Size(24),
-				ui.Text(selected).Size(14),
-				ui.Surface(ui.Box(standard).Style(ui.Padding(16))).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(donut).Style(ui.Padding(16))).Style(ui.Radius(8)),
-				ui.Surface(ui.Box(rose).Style(ui.Padding(16))).Style(ui.Radius(8)),
-			).Gap(16),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(920)).Style(ui.Padding(24)),
+	return layout.Scroll(layout.Box(
+		layout.Column(
+			text.New("Traffic overview").Size(24),
+			text.New(selected).Size(14),
+			(surface.New(layout.Box(standard).Style(style.New().Padding(16)))).Style(style.New().Radius(8)),
+			(surface.New(layout.Box(donut).Style(style.New().Padding(16)))).Style(style.New().Radius(8)),
+			(surface.New(layout.Box(rose).Style(style.New().Padding(16)))).Style(style.New().Radius(8)),
+		).Gap(16),
+	).Style(style.New().FillWidth().MaxWidth(920).Padding(24)),
 	)
 }
 
-func roseData() []ui.PieChartData {
-	return []ui.PieChartData{
-		ui.PieData("rose", "Rose", 40),
-		ui.PieData("lily", "Lily", 38),
-		ui.PieData("tulip", "Tulip", 32),
-		ui.PieData("iris", "Iris", 30),
-		ui.PieData("orchid", "Orchid", 28),
-		ui.PieData("lotus", "Lotus", 26),
-		ui.PieData("daisy", "Daisy", 22),
-		ui.PieData("violet", "Violet", 18),
+func roseData() []piechart.Data {
+	return []piechart.Data{
+		piechart.Slice("rose", "Rose", 40),
+		piechart.Slice("lily", "Lily", 38),
+		piechart.Slice("tulip", "Tulip", 32),
+		piechart.Slice("iris", "Iris", 30),
+		piechart.Slice("orchid", "Orchid", 28),
+		piechart.Slice("lotus", "Lotus", 26),
+		piechart.Slice("daisy", "Daisy", 22),
+		piechart.Slice("violet", "Violet", 18),
 	}
 }
 
-func trafficData(model Model, chart string) []ui.PieChartData {
-	return []ui.PieChartData{
-		ui.PieData("search", "Search Engine", 1048).Hidden(model.hidden[chart+"/search"]),
-		ui.PieData("direct", "Direct", 735).Hidden(model.hidden[chart+"/direct"]),
-		ui.PieData("email", "Email", 580).Hidden(model.hidden[chart+"/email"]),
-		ui.PieData("union", "Union Ads", 484).Hidden(model.hidden[chart+"/union"]),
-		ui.PieData("video", "Video Ads", 300).Hidden(model.hidden[chart+"/video"]),
+func trafficData(model Model, chart string) []piechart.Data {
+	return []piechart.Data{
+		piechart.Slice("search", "Search Engine", 1048).Hidden(model.hidden[chart+"/search"]),
+		piechart.Slice("direct", "Direct", 735).Hidden(model.hidden[chart+"/direct"]),
+		piechart.Slice("email", "Email", 580).Hidden(model.hidden[chart+"/email"]),
+		piechart.Slice("union", "Union Ads", 484).Hidden(model.hidden[chart+"/union"]),
+		piechart.Slice("video", "Video Ads", 300).Hidden(model.hidden[chart+"/video"]),
 	}
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{hidden: make(map[string]bool)},
-		Update, View), ui.Title("FlowUI Pie Charts"),
-		ui.Size(980, 820),
+		Update, View), window.Title("FlowUI Pie Charts"),
+		window.Size(980, 820),
+		window.Theme(base.Light()),
 	)
 }

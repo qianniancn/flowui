@@ -44,14 +44,14 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	// ✓ 回调里 send(...)
 	// ✗ m.Count++ 或 *m = ...
 	// ✗ 在 View 里 go 启动改状态的 goroutine
-	return ui.Text(m.Name)
+	return text.New(m.Name)
 }
 ```
 
 回调里只表达意图：
 
 ```go
-ui.Button("save", ui.Text("保存")).OnClick(func() {
+button.New("保存").OnClick(func() {
 	send(Submitted{})
 })
 ```
@@ -60,8 +60,8 @@ ui.Button("save", ui.Text("保存")).OnClick(func() {
 
 ```go
 ui.Run(ui.NewProgram(Model{}, Update, View),
-	ui.Title("App"),
-	ui.Size(800, 600),
+	window.Title("App"),
+	window.Size(800, 600),
 )
 ```
 
@@ -84,9 +84,11 @@ ui.Run(ui.Program[Model, Msg]{
 	View: View,
 	// 可选：把窗口尺寸/焦点映射成消息
 	// WindowStateMessage: func(ui.WindowState) Msg { ... },
+	// 可选：把原生关窗请求映射成消息（需配合 ui.NewApplication 使用）
+	// CloseRequestMessage: func() Msg { return CloseRequested{} },
 },
-	ui.Title("App"),
-	ui.Size(800, 600),
+	window.Title("App"),
+	window.Size(800, 600),
 )
 ```
 
@@ -97,6 +99,7 @@ ui.Run(ui.Program[Model, Msg]{
 | `Subscriptions` | 按当前 Model 声明订阅集合 |
 | `View` | 渲染 |
 | `WindowStateMessage` | 原生窗口状态 → Msg |
+| `CloseRequestMessage` | 原生关窗请求 → Msg；窗口保持打开，确认后调 `Application.Close` |
 
 异步细节见 [08-命令与订阅](08-命令与订阅.md)。
 
@@ -122,12 +125,12 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 View 侧把子 `send` 映射上去：
 
 ```go
-ui.Key("counter", counter.View(model.Counter, func(msg counter.Msg) {
+layout.Key("counter", counter.View(model.Counter, func(msg counter.Msg) {
 	send(CounterMsg{Value: msg})
 }))
 ```
 
-完整示例：`examples/modules`。
+基础消息循环的可运行示例见仓库 `examples/counter`，在仓库根目录运行 `go run ./examples/counter`。
 
 ## Action 与 Cmd
 
@@ -142,14 +145,14 @@ ui.Key("counter", counter.View(model.Counter, func(msg counter.Msg) {
 
 ```go
 ui.Run(ui.NewProgram(Model{}, Update, View),
-	ui.Title("标题"),
-	ui.Size(960, 640),
-	ui.MinSize(400, 300),
-	ui.CustomizeTheme(func(t *ui.Theme) {
+	window.Title("标题"),
+	window.Size(960, 640),
+	window.MinSize(400, 300),
+	window.CustomizeTheme(func(t *theme.Theme) {
 		// 改主题
 	}),
-	ui.Locale(ui.LanguageChinese),
-	ui.OnError(func(err error) {
+	window.Locale(window.LanguageChinese),
+	window.OnError(func(err error) {
 		// 记录 EffectError / RuntimePanicError 等
 		log.Println(err)
 	}),

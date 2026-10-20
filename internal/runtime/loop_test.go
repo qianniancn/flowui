@@ -52,7 +52,7 @@ func TestLoopCoreStopsUpdateBatchAfterPanic(t *testing.T) {
 			panic("update broken")
 		}
 		m.values = append(m.values, msg)
-		return func(context.Context, func(int)) error {
+		return func(context.Context, Send[int]) error {
 			cmdMu.Lock()
 			startedCmds = append(startedCmds, msg)
 			cmdMu.Unlock()
@@ -68,8 +68,8 @@ func TestLoopCoreStopsUpdateBatchAfterPanic(t *testing.T) {
 	if !updated {
 		t.Fatal("expected earlier messages to apply before the panic")
 	}
-	var panicErr *RuntimePanicError
-	if err == nil || !errors.As(err, &panicErr) || panicErr.Phase != RuntimePhaseUpdate {
+	var panicErr *PanicError
+	if err == nil || !errors.As(err, &panicErr) || panicErr.Phase != PhaseUpdate {
 		t.Fatalf("update panic = %#v", err)
 	}
 	if want := []int{1}; !slices.Equal(core.model.values, want) {
@@ -93,7 +93,7 @@ func TestLoopCoreFeedsCommandMessagesIntoNextFrame(t *testing.T) {
 		if msg != 1 {
 			return nil
 		}
-		return func(_ context.Context, send func(int)) error {
+		return func(_ context.Context, send Send[int]) error {
 			send(2)
 			close(commandSent)
 			return nil
@@ -145,7 +145,7 @@ func TestLoopCoreCollectsMessagesFromConcurrentCommands(t *testing.T) {
 			model.received = append(model.received, msg.id)
 			return nil
 		}
-		return func(_ context.Context, send func(message)) error {
+		return func(_ context.Context, send Send[message]) error {
 			ready.Done()
 			<-gate
 			send(message{id: msg.id})

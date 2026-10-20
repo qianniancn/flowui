@@ -1,7 +1,6 @@
 package uitest
 
 import (
-	"context"
 	"image"
 	"sync"
 	"time"
@@ -63,10 +62,8 @@ func NewAppWithConfig[M any, Msg any](config AppConfig[M, Msg]) *AppHarness[M, M
 		err := runtime.Loop(
 			&harness.window,
 			config.Initial,
-			appRuntimeCmd(config.Init),
-			func(model *M, msg Msg) runtime.Cmd[Msg] {
-				return appRuntimeCmd(config.Update(model, msg))
-			},
+			config.Init,
+			config.Update,
 			nil,
 			func(err error) {
 				harness.mu.Lock()
@@ -75,10 +72,11 @@ func NewAppWithConfig[M any, Msg any](config AppConfig[M, Msg]) *AppHarness[M, M
 			},
 			nil,
 			nil,
-			func(_ layout.Context, model M, send func(Msg)) {
+			nil,
+			func(_ layout.Context, model M, send ui.Send[Msg]) {
 				harness.mu.Lock()
 				harness.model = model
-				harness.send = ui.Send[Msg](send)
+				harness.send = send
 				harness.mu.Unlock()
 			},
 		)
@@ -193,15 +191,6 @@ func (h *AppHarness[M, Msg]) drainInvalidations() {
 		default:
 			return
 		}
-	}
-}
-
-func appRuntimeCmd[Msg any](cmd ui.Cmd[Msg]) runtime.Cmd[Msg] {
-	if cmd == nil {
-		return nil
-	}
-	return func(ctx context.Context, send func(Msg)) error {
-		return cmd(ctx, ui.Send[Msg](send))
 	}
 }
 

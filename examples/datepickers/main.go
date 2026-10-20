@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/datepicker"
+	"github.com/qianniancn/flowui/widget/input"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
 	FieldDate   time.Time
-	Trip        ui.DateRange
+	Trip        datepicker.DateRange
 	Start       time.Time
 	Review      time.Time
 	PickerOnly  time.Time
@@ -33,7 +40,7 @@ const (
 type Msg struct {
 	Field Field
 	Date  time.Time
-	Range ui.DateRange
+	Range datepicker.DateRange
 }
 
 func Update(m *Model, msg Msg) ui.Cmd[Msg] {
@@ -68,95 +75,94 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 	}
 	today := dateOnly(time.Now())
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("datepickers",
-				ui.Box(ui.Column(
-					ui.Text("FlowUI date components").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("DateField",
-						ui.Column(
-							ui.Box(ui.DateField("date-field", m.FieldDate).
-								Label("Appointment date").
-								Description("Use the arrow keys or type each segment").
-								OnChange(func(value time.Time) {
-									send(Msg{Field: fieldDate, Date: value})
-								})).Style(ui.Width(256)),
-							ui.Box(ui.DateField("date-field-secondary", m.FieldDate).
-								Label("Secondary date").
-								Variant(ui.InputSecondary).
-								OnChange(func(value time.Time) {
-									send(Msg{Field: fieldDate, Date: value})
-								})).Style(ui.Width(256)),
-						).Gap(12),
-					),
-					section("DateRangePicker",
-						ui.Box(ui.DateRangePicker("trip", m.Trip).
-							Label("Trip dates").
-							Description("Select your check-in and check-out dates").
-							FullWidth().
-							OnChange(func(value ui.DateRange) {
-								send(Msg{Field: fieldTrip, Range: value})
-							})).Style(ui.Width(320)),
-					),
-					section("DatePicker variants",
-						ui.Column(
-							ui.Box(datePicker("start", fieldStart, m.Start, send).
-								Label("Date").
-								Description("Choose a date from the calendar or edit each segment").
-								FullWidth()).
-								Style(ui.Width(280)),
-							ui.Box(datePicker("review", fieldReview, m.Review, send).
-								Label("Secondary date").
-								Variant(ui.InputSecondary).
-								FullWidth()).
-								Style(ui.Width(280)),
-							ui.Box(datePicker("picker-only", fieldPickerOnly, m.PickerOnly, send).
-								Label("Picker-only date").
-								Editable(false).
-								FullWidth()).
-								Style(ui.Width(280)),
-						).Gap(12),
-					),
-					section("States",
-						ui.Column(
-							ui.Box(datePicker("appointment", fieldAppointment, m.Appointment, send).
-								Label("Appointment date").
-								ErrorMessage("Select today or a future date").
-								MinDate(today).
-								Invalid(m.Appointment.IsZero()).
-								FullWidth()).
-								Style(ui.Width(256)),
-							ui.Box(ui.DatePicker("disabled", today).
-								Label("Disabled date").
-								Disabled(true).
-								FullWidth()).
-								Style(ui.Width(256)),
-						).Gap(12),
-					),
-					section("Full width",
-						datePicker("full-width", fieldFull, m.Full, send).
-							Label("Full-width date").
-							Description("The date input fills the available width").
-							Variant(ui.InputSecondary).
-							FullWidth(),
-					),
-				).Gap(18)).Style(ui.Padding(3)),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Box(layout.Column(
+				text.New("FlowUI date components").Size(24),
+				text.New(status).Size(16),
+				layout.Divider(),
+				section("DateField",
+					layout.Column(
+						layout.Box(datepicker.DateField("date-field", m.FieldDate).
+							Label("Appointment date").
+							Description("Use the arrow keys or type each segment").
+							OnChange(func(value time.Time) {
+								send(Msg{Field: fieldDate, Date: value})
+							})).Style(style.New().Width(256)),
+						layout.Box(datepicker.DateField("date-field-secondary", m.FieldDate).
+							Label("Secondary date").
+							Variant(input.Secondary).
+							OnChange(func(value time.Time) {
+								send(Msg{Field: fieldDate, Date: value})
+							})).Style(style.New().Width(256)),
+					).Gap(12),
+				),
+				section("DateRangePicker",
+					layout.Box(datepicker.DateRangePicker("trip", m.Trip).
+						Label("Trip dates").
+						Description("Select your check-in and check-out dates").
+						FullWidth().
+						OnChange(func(value datepicker.DateRange) {
+							send(Msg{Field: fieldTrip, Range: value})
+						})).Style(style.New().Width(320)),
+				),
+				section("DatePicker variants",
+					layout.Column(
+						layout.Box(datePicker("start", fieldStart, m.Start, send).
+							Label("Date").
+							Description("Choose a date from the calendar or edit each segment").
+							FullWidth()).
+							Style(style.New().Width(280)),
+						layout.Box(datePicker("review", fieldReview, m.Review, send).
+							Label("Secondary date").
+							Variant(input.Secondary).
+							FullWidth()).
+							Style(style.New().Width(280)),
+						layout.Box(datePicker("picker-only", fieldPickerOnly, m.PickerOnly, send).
+							Label("Picker-only date").
+							Editable(false).
+							FullWidth()).
+							Style(style.New().Width(280)),
+					).Gap(12),
+				),
+				section("States",
+					layout.Column(
+						layout.Box(datePicker("appointment", fieldAppointment, m.Appointment, send).
+							Label("Appointment date").
+							ErrorMessage("Select today or a future date").
+							MinDate(today).
+							Invalid(m.Appointment.IsZero()).
+							FullWidth()).
+							Style(style.New().Width(256)),
+						layout.Box(datepicker.New("disabled", today).
+							Label("Disabled date").
+							Disabled(true).
+							FullWidth()).
+							Style(style.New().Width(256)),
+					).Gap(12),
+				),
+				section("Full width",
+					datePicker("full-width", fieldFull, m.Full, send).
+						Label("Full-width date").
+						Description("The date input fills the available width").
+						Variant(input.Secondary).
+						FullWidth(),
+				),
+			).Gap(18)).Style(style.New().Padding(3)),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func datePicker(key string, field Field, value time.Time, send ui.Send[Msg]) ui.DatePickerWidget {
-	return ui.DatePicker(key, value).
+func datePicker(key string, field Field, value time.Time, send ui.Send[Msg]) datepicker.Widget {
+	return datepicker.New(key, value).
 		OnChange(func(date time.Time) {
 			send(Msg{
 				Field: field,
@@ -181,12 +187,13 @@ func main() {
 	today := dateOnly(time.Now())
 	ui.Run(ui.NewProgram(Model{
 		FieldDate: today,
-		Trip: ui.DateRange{
+		Trip: datepicker.DateRange{
 			Start: today,
 			End:   today.AddDate(0, 0, 4),
 		},
 	},
-		Update, View), ui.Title("FlowUI date components"),
-		ui.Size(900, 760),
+		Update, View), window.Title("FlowUI date components"),
+		window.Size(900, 760),
+		window.Theme(base.Light()),
 	)
 }

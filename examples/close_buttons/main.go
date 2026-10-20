@@ -8,7 +8,13 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/closebutton"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -23,37 +29,37 @@ func Update(model *Model, msg Increment) ui.Cmd[Increment] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Increment]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Close Buttons").Size(24),
-				ui.Divider(),
+	return flowlayout.Center(
+		flowlayout.Box(
+			flowlayout.Column(
+				text.New("FlowUI Close Buttons").Size(24),
+				flowlayout.Divider(),
 				section("Default",
-					ui.Row(
-						labeled("Default", ui.CloseButton("default")),
-						labeled("Disabled", ui.CloseButton("disabled").Disabled(true)),
-						labeled("Custom icon", ui.CloseButton("custom").Icon(circleCloseIcon{})),
+					flowlayout.Row(
+						labeled("Default", closebutton.New("default")),
+						labeled("Disabled", closebutton.New("disabled").Disabled(true)),
+						labeled("Custom icon", closebutton.New("custom").Icon(circleCloseIcon{})),
 					).Gap(32).AlignMiddle(),
 				),
 				section("Interactive",
-					ui.Row(
-						ui.CloseButton("interactive").
+					flowlayout.Row(
+						closebutton.New("interactive").
 							Label("Increment close count").
 							OnClick(func() { send(Increment{}) }),
-						ui.Text("Clicked: "+strconv.Itoa(model.clicks)),
+						text.New("Clicked: "+strconv.Itoa(model.clicks)),
 					).Gap(12).AlignMiddle(),
 				),
 			).Gap(20),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(640)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(640).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(12)
+	return flowlayout.Column(text.New(title).Size(18), child).Gap(12)
 }
 
 func labeled(label string, button ui.Widget) ui.Widget {
-	return ui.Column(ui.Center(button), ui.Text(label).Size(12)).Gap(8).AlignMiddle()
+	return flowlayout.Column(flowlayout.Center(button), text.New(label).Size(12)).Gap(8).AlignMiddle()
 }
 
 type circleCloseIcon struct{}
@@ -83,7 +89,8 @@ func (circleCloseIcon) Layout(ctx *ui.Context, gtx layout.Context) layout.Dimens
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Close Buttons"),
-		ui.Size(720, 460),
+		Update, View), window.Title("FlowUI Close Buttons"),
+		window.Size(720, 460),
+		window.Theme(base.Light()),
 	)
 }

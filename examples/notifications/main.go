@@ -4,8 +4,17 @@ import (
 	"context"
 	"errors"
 
+	"github.com/qianniancn/flowui/layout"
 	"github.com/qianniancn/flowui/notify"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/input"
+	"github.com/qianniancn/flowui/widget/label"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -120,33 +129,33 @@ func cancelNotification(handle *notify.Notification) ui.Cmd[Msg] {
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	canCancel := model.Notification != nil && model.Notification.Cancelable()
 	busy := model.Operation != ""
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("Native Notifications").Size(24),
-				ui.Description(model.Status),
-				ui.Label("Title").For("title"),
-				ui.Input("title", model.Title).
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("Native Notifications").Size(24),
+				description.New(model.Status),
+				label.New("Title").For("title"),
+				input.New(model.Title).Key("title").
 					FullWidth().
 					OnChange(func(value string) { send(EditTitle(value)) }),
-				ui.Label("Body").For("body"),
-				ui.TextArea("body", model.Body).
+				label.New("Body").For("body"),
+				input.NewTextArea(model.Body).Key("body").
 					Rows(5).
 					FullWidth().
 					OnChange(func(value string) { send(EditBody(value)) }),
-				ui.Row(
-					ui.Button("send", ui.Text("Send notification")).
+				layout.Row(
+					button.New("Send notification").
 						Disabled(busy).
 						Loading(model.Operation == "send").
 						OnClick(func() { send(SendNotification{}) }),
-					ui.Button("cancel", ui.Text("Cancel notification")).
-						Variant(ui.ButtonSecondary).
+					button.New("Cancel notification").
+						Variant(button.Secondary).
 						Disabled(busy || !canCancel).
 						Loading(model.Operation == "cancel").
 						OnClick(func() { send(CancelNotification{}) }),
 				).Gap(10),
 			).Gap(12),
-		).Style(ui.Width(560).Padding(24)),
+		).Style(style.New().Width(560).Padding(24)),
 	)
 }
 
@@ -158,7 +167,8 @@ func main() {
 	},
 
 		Update,
-		View), ui.Title("FlowUI Notifications"),
-		ui.Size(700, 560),
+		View), window.Title("FlowUI Notifications"),
+		window.Size(700, 560),
+		window.Theme(base.Light()),
 	)
 }

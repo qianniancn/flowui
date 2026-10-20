@@ -1,8 +1,18 @@
 package main
 
 import (
-	"github.com/qianniancn/flowui-icons-lucide"
+	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/chip"
+	"github.com/qianniancn/flowui/widget/collapsible"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -33,109 +43,106 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("collapsibles-scroll",
-				ui.Column(
-					ui.Text("FlowUI Collapsible").Size(24),
-					section("Standalone",
-						ui.Collapsible("standalone", model.Standalone, "What is FlowUI?",
-							ui.Description("FlowUI is a desktop UI framework built on Gio with controlled MVU components."),
-						).
-							Leading(ui.Icon(lucide.Info).Size(16)).
-							OnExpandedChange(func(expanded bool) {
-								send(Msg{Target: "standalone", Expanded: expanded})
-							}),
-					),
-					section("Single expansion",
-						ui.CollapsibleGroup("single", model.Single, accountItems()).
-							OnExpandedChange(func(keys []string) {
-								send(Msg{Target: "single", Keys: keys})
-							}),
-					),
-					section("Multiple expansion",
-						ui.CollapsibleGroup("multiple", model.Multiple, notificationItems()).
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Collapsible").Size(24),
+				section("Standalone",
+					collapsible.New("What is FlowUI?", description.New("FlowUI is a desktop UI framework built on Gio with controlled MVU components.")).Key("standalone").Expanded(model.Standalone).
+						Leading(icon.New(lucide.Info).Size(16)).
+						OnExpandedChange(func(expanded bool) {
+							send(Msg{Target: "standalone", Expanded: expanded})
+						}),
+				),
+				section("Single expansion",
+					collapsible.Group("single", model.Single, accountItems()).
+						OnExpandedChange(func(keys []string) {
+							send(Msg{Target: "single", Keys: keys})
+						}),
+				),
+				section("Multiple expansion",
+					collapsible.Group("multiple", model.Multiple, notificationItems()).
+						AllowMultipleExpanded(true).
+						OnExpandedChange(func(keys []string) {
+							send(Msg{Target: "multiple", Keys: keys})
+						}),
+				),
+				section("Desktop panels",
+					(surface.New(
+						collapsible.Group("panels", model.Panels, desktopPanelItems()).
 							AllowMultipleExpanded(true).
 							OnExpandedChange(func(keys []string) {
-								send(Msg{Target: "multiple", Keys: keys})
+								send(Msg{Target: "panels", Keys: keys})
 							}),
-					),
-					section("Desktop panels",
-						ui.Surface(
-							ui.CollapsibleGroup("panels", model.Panels, desktopPanelItems()).
-								AllowMultipleExpanded(true).
-								OnExpandedChange(func(keys []string) {
-									send(Msg{Target: "panels", Keys: keys})
-								}),
-						).Variant(ui.SurfaceSecondary).Style(ui.Radius(12)),
-					),
-				).Gap(22),
+					).Variant(surface.Secondary)).Style(style.New().Radius(12)),
+				),
+			).Gap(22),
 			).Vertical(),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(640)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(640).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(8)
+	return layout.Column(text.New(title).Size(18), child).Gap(8)
 }
 
-func accountItems() []ui.CollapsibleItem {
-	return []ui.CollapsibleItem{
+func accountItems() []collapsible.Item {
+	return []collapsible.Item{
 		{
-			Key: "profile", Label: "Profile", Leading: ui.Icon(lucide.User).Size(16),
-			Content: ui.Description("Update your display name, avatar, and public profile information."),
+			Key: "profile", Label: "Profile", Leading: icon.New(lucide.User).Size(16),
+			Content: description.New("Update your display name, avatar, and public profile information."),
 		},
 		{
-			Key: "security", Label: "Security", Leading: ui.Icon(lucide.ShieldCheck).Size(16),
-			Content: ui.Description("Manage your password, passkeys, and active sessions."),
+			Key: "security", Label: "Security", Leading: icon.New(lucide.ShieldCheck).Size(16),
+			Content: description.New("Manage your password, passkeys, and active sessions."),
 		},
 		{
-			Key: "billing", Label: "Billing", Leading: ui.Icon(lucide.CreditCard).Size(16),
-			Content: ui.Description("View invoices and manage the subscription for this workspace."),
+			Key: "billing", Label: "Billing", Leading: icon.New(lucide.CreditCard).Size(16),
+			Content: description.New("View invoices and manage the subscription for this workspace."),
 		},
 	}
 }
 
-func notificationItems() []ui.CollapsibleItem {
-	return []ui.CollapsibleItem{
+func notificationItems() []collapsible.Item {
+	return []collapsible.Item{
 		{
-			Key: "email", Label: "Email notifications", Leading: ui.Icon(lucide.Mail).Size(16),
-			Trailing: ui.Chip("On").Color(ui.ChipSuccess).Size(ui.ChipSmall),
-			Content:  ui.Description("Receive product updates and weekly reports by email."),
+			Key: "email", Label: "Email notifications", Leading: icon.New(lucide.Mail).Size(16),
+			Trailing: chip.New("On").Color(chip.ColorSuccess).Size(chip.SizeSmall),
+			Content:  description.New("Receive product updates and weekly reports by email."),
 		},
 		{
-			Key: "push", Label: "Desktop notifications", Leading: ui.Icon(lucide.Bell).Size(16),
-			Content: ui.Description("Show notifications for mentions and assigned work."),
+			Key: "push", Label: "Desktop notifications", Leading: icon.New(lucide.Bell).Size(16),
+			Content: description.New("Show notifications for mentions and assigned work."),
 		},
 		{
-			Key: "digest", Label: "Daily digest", Leading: ui.Icon(lucide.Newspaper).Size(16), Disabled: true,
-			Content: ui.Description("Daily digests are unavailable for this workspace."),
+			Key: "digest", Label: "Daily digest", Leading: icon.New(lucide.Newspaper).Size(16), Disabled: true,
+			Content: description.New("Daily digests are unavailable for this workspace."),
 		},
 	}
 }
 
-func desktopPanelItems() []ui.CollapsibleItem {
-	return []ui.CollapsibleItem{
+func desktopPanelItems() []collapsible.Item {
+	return []collapsible.Item{
 		{
-			Key: "explorer", Label: "Explorer", Leading: ui.Icon(lucide.FolderTree).Size(16),
-			Content: ui.Column(
-				ui.Text("FLOWUI").Size(12),
-				ui.Text("  internal").Size(13),
-				ui.Text("  ui").Size(13),
-				ui.Text("  examples").Size(13),
+			Key: "explorer", Label: "Explorer", Leading: icon.New(lucide.FolderTree).Size(16),
+			Content: layout.Column(
+				text.New("FLOWUI").Size(12),
+				text.New("  internal").Size(13),
+				text.New("  ui").Size(13),
+				text.New("  examples").Size(13),
 			).Gap(4),
 		},
 		{
-			Key: "outline", Label: "Outline", Leading: ui.Icon(lucide.ListTree).Size(16),
-			Content: ui.Column(
-				ui.Text("Model").Size(13),
-				ui.Text("Update").Size(13),
-				ui.Text("View").Size(13),
+			Key: "outline", Label: "Outline", Leading: icon.New(lucide.ListTree).Size(16),
+			Content: layout.Column(
+				text.New("Model").Size(13),
+				text.New("Update").Size(13),
+				text.New("View").Size(13),
 			).Gap(4),
 		},
 		{
-			Key: "timeline", Label: "Timeline", Leading: ui.Icon(lucide.History).Size(16),
-			Content: ui.Description("No timeline information is available for the active file."),
+			Key: "timeline", Label: "Timeline", Leading: icon.New(lucide.RotateCcwClock).Size(16),
+			Content: description.New("No timeline information is available for the active file."),
 		},
 	}
 }
@@ -147,7 +154,8 @@ func main() {
 		Multiple:   []string{"email", "push"},
 		Panels:     []string{"explorer"},
 	},
-		Update, View), ui.Title("FlowUI Collapsible"),
-		ui.Size(860, 820),
+		Update, View), window.Title("FlowUI Collapsible"),
+		window.Size(860, 820),
+		window.Theme(base.Light()),
 	)
 }

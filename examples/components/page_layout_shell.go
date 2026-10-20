@@ -7,34 +7,51 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/button"
+	"github.com/qianniancn/flowui/widget/chip"
+	commandpkg "github.com/qianniancn/flowui/widget/command"
+	"github.com/qianniancn/flowui/widget/description"
+	"github.com/qianniancn/flowui/widget/dock"
+	iconpkg "github.com/qianniancn/flowui/widget/icon"
+	menupkg "github.com/qianniancn/flowui/widget/menu"
+	"github.com/qianniancn/flowui/widget/menubar"
+	panelpkg "github.com/qianniancn/flowui/widget/panel"
+	portalpkg "github.com/qianniancn/flowui/widget/portal"
+	"github.com/qianniancn/flowui/widget/statusbar"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/widget/titlebar"
+	"github.com/qianniancn/flowui/widget/toolbar"
 )
 
 func layoutPage(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 	return demoPage("Layout primitives",
 		demoSection{Title: "AspectRatio, Box & Center", Content: demoPanel(
-			ui.Box(ui.AspectRatio(16.0/9.0,
-				ui.Surface(ui.Center(ui.Text("16:9 preview"))).Variant(ui.SurfaceTertiary).Style(ui.Radius(8)),
-			)).Style(ui.MaxWidth(520).Overflow(ui.StyleOverflowHidden)),
+			flowlayout.Box(flowlayout.AspectRatio(16.0/9.0,
+				(surface.New(flowlayout.Center(text.New("16:9 preview"))).Variant(surface.Tertiary)).Style(style.New().Radius(8)),
+			)).Style(style.New().MaxWidth(520).Overflow(style.OverflowHidden)),
 		)},
-		demoSection{Title: "Column, Row, Expanded & Flexible", Content: demoPanel(ui.Column(
-			ui.Row(ui.Box(layoutTile("Fixed")).Style(ui.Width(150)), ui.Expanded(layoutTile("Expanded"))).Gap(10),
-			ui.Row(ui.Flexible(1, layoutTile("1")), ui.Flexible(2, layoutTile("2"))).Gap(10),
+		demoSection{Title: "Column, Row, Expanded & Flexible", Content: demoPanel(flowlayout.Column(
+			flowlayout.Row(flowlayout.Box(layoutTile("Fixed")).Style(style.New().Width(150)), flowlayout.Expanded(layoutTile("Expanded"))).Gap(10),
+			flowlayout.Row(flowlayout.Flexible(1, layoutTile("1")), flowlayout.Flexible(2, layoutTile("2"))).Gap(10),
 		).Gap(10))},
-		demoSection{Title: "Grid & AutoGrid", Content: demoPanel(ui.Column(
-			ui.Grid(3, layoutTile("One"), layoutTile("Two"), layoutTile("Three")).Gap(10),
-			ui.AutoGrid(150, layoutTile("Auto A"), layoutTile("Auto B"), layoutTile("Auto C"), layoutTile("Auto D")).Gap(10),
+		demoSection{Title: "Grid & AutoGrid", Content: demoPanel(flowlayout.Column(
+			flowlayout.Grid(3, layoutTile("One"), layoutTile("Two"), layoutTile("Three")).Gap(10),
+			flowlayout.AutoGrid(150, layoutTile("Auto A"), layoutTile("Auto B"), layoutTile("Auto C"), layoutTile("Auto D")).Gap(10),
 		).Gap(10))},
-		demoSection{Title: "Wrap", Content: demoPanel(ui.Wrap(
-			ui.Chip("Design"), ui.Chip("Engineering"), ui.Chip("Product"), ui.Chip("Research"), ui.Chip("Operations"),
+		demoSection{Title: "Wrap", Content: demoPanel(flowlayout.Wrap(
+			chip.New("Design"), chip.New("Engineering"), chip.New("Product"), chip.New("Research"), chip.New("Operations"),
 		).Gap(8).LineGap(8))},
-		demoSection{Title: "Stack, Divider, Separator & Spacer", Content: demoPanel(ui.Column(
-			ui.Key("catalog-layout-stack", ui.Box(ui.Stack(
-				ui.Stacked(ui.Surface(ui.Box(ui.Text("Stacked layer")).Style(ui.FillWidth().Height(110).Padding(16))).Variant(ui.SurfaceTertiary).Style(ui.Radius(8))),
-				ui.Overlay(ui.Chip("Overlay").Color(ui.ChipAccent)).Align(ui.AlignTopEnd),
-			)).Style(ui.MaxWidth(520))),
-			ui.Divider(),
-			ui.Row(ui.Text("Left"), ui.Box(ui.Separator()).Style(ui.Height(22)), ui.Spacer(14, 1), ui.Text("Right")).AlignMiddle().Gap(10),
+		demoSection{Title: "Stack, Divider, Separator & Spacer", Content: demoPanel(flowlayout.Column(
+			flowlayout.Key("catalog-layout-stack", flowlayout.Box(flowlayout.Stack(
+				flowlayout.Stacked((surface.New(flowlayout.Box(text.New("Stacked layer")).Style(style.New().FillWidth().Height(110).Padding(16))).Variant(surface.Tertiary)).Style(style.New().Radius(8))),
+				flowlayout.Overlay(chip.New("Overlay").Color(chip.ColorAccent)).Align(flowlayout.AlignTopEnd),
+			)).Style(style.New().MaxWidth(520))),
+			flowlayout.Divider(),
+			flowlayout.Row(text.New("Left"), flowlayout.Box(flowlayout.Divider()).Style(style.New().Height(22)), flowlayout.Spacer(14, 1), text.New("Right")).AlignMiddle().Gap(10),
 		).Gap(12))},
 	)
 }
@@ -45,100 +62,89 @@ func scrollingPage(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
 		for index := range items {
 			items[index] = catalogListRow(prefix, index)
 		}
-		return ui.Column(items...).Gap(8)
+		return flowlayout.Column(items...).Gap(8)
 	}
 	horizontal := make([]ui.Widget, 10)
 	for index := range horizontal {
-		horizontal[index] = ui.Box(layoutTile(fmt.Sprintf("Item %02d", index+1))).Style(ui.Width(132))
+		horizontal[index] = flowlayout.Box(layoutTile(fmt.Sprintf("Item %02d", index+1))).Style(style.New().Width(132))
 	}
 	return demoPage("Scrolling",
 		demoSection{Title: "Scroll", Content: demoPanel(
-			ui.Box(ui.Scroll("catalog-scroll", rows("Scroll", 24)).Vertical()).Style(ui.FillWidth().Height(220)),
+			flowlayout.Box(flowlayout.Scroll(rows("Scroll", 24)).Vertical()).Style(style.New().FillWidth().Height(220)),
 		)},
 		demoSection{Title: "Scrollbar", Content: demoPanel(
-			ui.Box(ui.Scrollbar("catalog-scrollbar", rows("Scrollbar", 24)).Overlay()).Style(ui.FillWidth().Height(220)),
+			flowlayout.Box(flowlayout.Scrollbar(rows("Scrollbar", 24)).Overlay()).Style(style.New().FillWidth().Height(220)),
 		)},
 		demoSection{Title: "Horizontal Scrollbar", Content: demoPanel(
-			ui.Box(ui.Scrollbar("catalog-horizontal-scrollbar", ui.Row(horizontal...).Gap(10)).Horizontal().Overlay()).Style(ui.FillWidth().Height(82)),
+			flowlayout.Box(flowlayout.Scrollbar(flowlayout.Row(horizontal...).Gap(10)).Horizontal().Overlay()).Style(style.New().FillWidth().Height(82)),
 		)},
 		demoSection{Title: "List", Content: demoPanel(
-			ui.Box(ui.List("catalog-list", 1000, func(index int) ui.Widget {
+			flowlayout.Box(flowlayout.List(1000, func(index int) ui.Widget {
 				return catalogListRow("Virtual item", index)
-			}).Gap(8)).Style(ui.FillWidth().Height(240)),
+			}).Gap(8)).Style(style.New().FillWidth().Height(240)),
 		)},
 	)
 }
 
 func splitPanePage(_ *ui.Context, _ Model, _ ui.Send[Msg]) ui.Widget {
-	workspace := ui.SplitPane(
-		"catalog-split-horizontal",
-		catalogPane("Explorer", ui.Icon(lucide.Files).Size(18)),
-		ui.SplitPane(
-			"catalog-split-vertical",
-			catalogPane("Editor", ui.Icon(lucide.FileCode).Size(18)),
-			catalogPane("Output", ui.Icon(lucide.Terminal).Size(18)),
+	workspace := flowlayout.SplitPane(catalogPane("Explorer", iconpkg.New(lucide.Files).Size(18)),
+		flowlayout.SplitPane(catalogPane("Editor", iconpkg.New(lucide.FileCode).Size(18)),
+			catalogPane("Output", iconpkg.New(lucide.Terminal).Size(18)),
 		).Vertical().DefaultRatio(.68).MinFirst(180).MinSecond(100).Label("Resize editor and output"),
 	).DefaultRatio(.26).MinFirst(180).MinSecond(360).Label("Resize explorer and editor")
-	dockWorkspace := ui.DockLayout("catalog-dock-workspace", ui.DockSplit("catalog-dock-root", ui.DockHorizontal,
-		ui.DockPanel("catalog-dock-explorer", catalogPane("Explorer", ui.Icon(lucide.Files).Size(18))),
-		ui.DockSplit("catalog-dock-editor-bottom", ui.DockVertical,
-			ui.DockPanel("catalog-dock-editor", catalogPane("Editor", ui.Icon(lucide.FileCode).Size(18))),
-			ui.DockPanel("catalog-dock-output", catalogPane("Output", ui.Icon(lucide.Terminal).Size(18))),
+	dockWorkspace := dock.New("catalog-dock-workspace", dock.Split("catalog-dock-root", dock.Horizontal,
+		dock.Panel("catalog-dock-explorer", catalogPane("Explorer", iconpkg.New(lucide.Files).Size(18))),
+		dock.Split("catalog-dock-editor-bottom", dock.Vertical,
+			dock.Panel("catalog-dock-editor", catalogPane("Editor", iconpkg.New(lucide.FileCode).Size(18))),
+			dock.Panel("catalog-dock-output", catalogPane("Output", iconpkg.New(lucide.Terminal).Size(18))),
 		).Ratio(.72),
 	).Ratio(.24))
-	panelHost := ui.PanelHost("catalog-panel-host", "editor", []ui.PanelItem{
-		{Key: "editor", Content: ui.Center(ui.Text("Editor view"))},
-		{Key: "output", Content: ui.Center(ui.Text("Output view"))},
-	}).KeepAlive(true).ForceRender(true)
-	viewStack := ui.ViewStack("catalog-view-stack", "overview", []ui.PanelItem{
-		{Key: "overview", Content: ui.Center(ui.Text("Overview view"))},
-		{Key: "settings", Content: ui.Center(ui.Text("Settings view"))},
-	}).KeepAlive(true)
+	panelHost := panelpkg.New("catalog-panel-host", "editor", []panelpkg.Item{
+		{Key: "editor", Content: flowlayout.Center(text.New("Editor view"))},
+		{Key: "output", Content: flowlayout.Center(text.New("Output view"))},
+	})
+	viewStack := panelpkg.New("catalog-view-stack", "overview", []panelpkg.Item{
+		{Key: "overview", Content: flowlayout.Center(text.New("Overview view"))},
+		{Key: "settings", Content: flowlayout.Center(text.New("Settings view"))},
+	})
 	return demoPage("Split pane",
 		demoSection{Title: "Horizontal & vertical SplitPane", Content: demoPanel(
-			ui.Box(workspace).Style(ui.FillWidth().Height(430)),
+			flowlayout.Box(workspace).Style(style.New().FillWidth().Height(430)),
 		)},
-		demoSection{Title: "DockLayout, PanelHost & ViewStack", Content: demoPanel(ui.Column(
-			ui.Box(dockWorkspace).Style(ui.FillWidth().Height(300)),
-			ui.Row(
-				ui.Box(panelHost).Style(ui.FillWidth().Height(100)),
-				ui.Box(viewStack).Style(ui.FillWidth().Height(100)),
+		demoSection{Title: "DockLayout, PanelHost & ViewStack", Content: demoPanel(flowlayout.Column(
+			flowlayout.Box(dockWorkspace).Style(style.New().FillWidth().Height(300)),
+			flowlayout.Row(
+				flowlayout.Box(panelHost).Style(style.New().FillWidth().Height(100)),
+				flowlayout.Box(viewStack).Style(style.New().FillWidth().Height(100)),
 			).Gap(12),
 		).Gap(12))},
 	)
 }
 
 func appShellPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	action := func(key, label string, icon []byte) ui.Action {
-		return ui.NewAction(key, label).
-			Icon(ui.Icon(icon).Size(16)).
+	command := func(key, label string, icon []byte) commandpkg.Command {
+		return commandpkg.New(key, label).
+			Icon(iconpkg.New(icon).Size(16)).
 			OnExecute(func() { send(func(model *Model) { model.LastAction = label }) })
 	}
-	newAction := action("catalog-action-new", "New", lucide.FilePlus)
-	saveAction := action("catalog-action-save", "Save", lucide.Save).Shortcut(ui.KeyShortcut("S", ui.ShortcutPrimary))
-	deleteAction := action("catalog-action-delete", "Delete", lucide.Trash2).Danger(true)
-	actions := []ui.Action{newAction, saveAction, deleteAction}
-
-	command := func(key, label string, icon []byte) ui.Command {
-		return ui.NewCommand(key, label).
-			Icon(ui.Icon(icon).Size(16)).
-			OnExecute(func() { send(func(model *Model) { model.LastAction = label }) })
-	}
-	runCommand := command("catalog-command-run", "Run", lucide.Play).Shortcut(ui.KeyShortcut("R", ui.ShortcutPrimary))
+	newCommand := command("catalog-command-new", "New", lucide.FilePlus)
+	saveCommand := command("catalog-command-save", "Save", lucide.Save).Shortcut(commandpkg.KeyShortcut("S", commandpkg.ShortcutPrimary))
+	deleteCommand := command("catalog-command-delete", "Delete", lucide.Trash).Danger(true)
+	runCommand := command("catalog-command-run", "Run", lucide.Play).Shortcut(commandpkg.KeyShortcut("R", commandpkg.ShortcutPrimary))
 	refreshCommand := command("catalog-command-refresh", "Refresh", lucide.RefreshCw)
-	commands := []ui.Command{runCommand, refreshCommand}
+	commands := []commandpkg.Command{newCommand, saveCommand, deleteCommand, runCommand, refreshCommand}
 
-	menu := ui.Menubar("catalog-shell-menu", []ui.MenubarItem{
-		ui.MenubarMenu("catalog-shell-file", "File", []ui.MenuItem{
-			ui.ActionMenuItem(newAction),
-			ui.ActionMenuItem(saveAction),
-			ui.MenuSeparator(),
-			ui.ActionMenuItem(deleteAction),
+	menu := menubar.New("catalog-shell-menu", []menubar.Item{
+		menubar.NewMenu("catalog-shell-file", "File", []menupkg.Item{
+			commandpkg.MenuItem(newCommand),
+			commandpkg.MenuItem(saveCommand),
+			menupkg.Separator(),
+			commandpkg.MenuItem(deleteCommand),
 		}),
 	}).Compact(true).Alt("Application menu")
-	portal := ui.Portal("catalog-portal", model.PortalOpen,
-		ui.Button("catalog-portal-trigger", ui.Icon(lucide.PanelTopOpen).Size(16)).
-			Variant(ui.ButtonSecondary).IconOnly().Label("Open portal").
+	portal := portalpkg.New("catalog-portal", model.PortalOpen,
+		button.New("").Content(iconpkg.New(lucide.PanelTopOpen).Size(16)).
+			Variant(button.Secondary).IconOnly().Label("Open portal").
 			OnClick(func() { send(func(model *Model) { model.PortalOpen = !model.PortalOpen }) }),
 		func(anchor image.Rectangle, interactive bool) ui.Widget {
 			return catalogPortalPanel(anchor, interactive, func() {
@@ -150,89 +156,89 @@ func appShellPage(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	if status == "" {
 		status = "Ready"
 	}
-	shell := ui.Surface(ui.Column(
-		ui.WindowTitleBar("catalog-title-bar", "FlowUI Components", menu),
-		ui.Expanded(ui.Row(
-			ui.Surface(ui.Box(ui.Column(
-				ui.Text("EXPLORER").Size(11),
-				ui.Divider(),
-				ui.Text("components").Size(13),
-				ui.Text("  button.go").Size(13),
-				ui.Text("  surface.go").Size(13),
-			).Gap(9)).Style(ui.Width(190).FillHeight().Padding(12))).Variant(ui.SurfaceSecondary),
-			ui.Expanded(ui.Box(ui.Column(
-				ui.Toolbar(
-					ui.ActionButton("catalog-action-new-button", newAction),
-					ui.ActionButton("catalog-action-save-button", saveAction),
-					ui.ToolbarSeparator(),
+	shell := (surface.New(flowlayout.Column(
+		titlebar.New("catalog-title-bar", "FlowUI Components", menu),
+		flowlayout.Expanded(flowlayout.Row(
+			surface.New(flowlayout.Box(flowlayout.Column(
+				text.New("EXPLORER").Size(11),
+				flowlayout.Divider(),
+				text.New("components").Size(13),
+				text.New("  button.go").Size(13),
+				text.New("  surface.go").Size(13),
+			).Gap(9)).Style(style.New().Width(190).FillHeight().Padding(12))).Variant(surface.Secondary),
+			flowlayout.Expanded(flowlayout.Box(flowlayout.Column(
+				toolbar.New(
+					commandpkg.Button("catalog-command-new-button", newCommand),
+					commandpkg.Button("catalog-command-save-button", saveCommand),
+					toolbar.Separator(),
 					portal,
 				).Attached(true).Alt("Application commands"),
-				ui.Divider(),
-				ui.Text("Component workspace").Size(18),
-				ui.Description("Commands, title bar, status bar, and portal share one application shell."),
-			).Gap(12)).Style(ui.FillWidth().FillHeight().Padding(16))),
+				flowlayout.Divider(),
+				text.New("Component workspace").Size(18),
+				description.New("Commands, title bar, status bar, and portal share one application shell."),
+			).Gap(12)).Style(style.New().FillWidth().FillHeight().Padding(16))),
 		)),
-		ui.StatusBar(
-			ui.Row(ui.Icon(lucide.GitBranch).Size(13), ui.Text("main").Size(12)).AlignMiddle().Gap(5),
-			ui.Text(status).Size(12),
+		statusbar.New(
+			flowlayout.Row(iconpkg.New(lucide.GitBranch).Size(13), text.New("main").Size(12)).AlignMiddle().Gap(5),
+			text.New(status).Size(12),
 		),
-	)).Style(ui.BorderWidth(1))
-	commandDemo := ui.CommandScope(commands,
-		ui.Column(
-			ui.Toolbar(
-				ui.CommandButton("catalog-command-run-button", runCommand),
-				ui.CommandButton("catalog-command-refresh-button", refreshCommand),
+	))).Style(style.New().BorderWidth(1))
+	commandDemo := commandpkg.Scope(commands,
+		flowlayout.Column(
+			toolbar.New(
+				commandpkg.Button("catalog-command-run-button", runCommand),
+				commandpkg.Button("catalog-command-refresh-button", refreshCommand),
 			).Attached(true).Alt("Command buttons"),
-			ui.Box(ui.Menu("catalog-command-menu", []ui.MenuItem{
-				ui.CommandMenuItem(runCommand),
-				ui.CommandMenuItem(refreshCommand),
-			})).Style(ui.Width(260)),
+			flowlayout.Box(menupkg.New("catalog-command-menu", []menupkg.Item{
+				commandpkg.MenuItem(runCommand),
+				commandpkg.MenuItem(refreshCommand),
+			})).Style(style.New().Width(260)),
 		).Gap(12),
 	)
 	return demoPage("Application shell",
-		demoSection{Title: "WindowTitleBar, StatusBar, Actions & Portal", Content: ui.ActionScope(actions, ui.Box(shell).Style(ui.FillWidth().Height(440).Overflow(ui.StyleOverflowHidden)))},
+		demoSection{Title: "WindowTitleBar, StatusBar, Commands & Portal", Content: flowlayout.Box(shell).Style(style.New().FillWidth().Height(440).Overflow(style.OverflowHidden))},
 		demoSection{Title: "CommandScope, CommandButton & CommandMenuItem", Content: demoPanel(commandDemo)},
 	)
 }
 
 func layoutTile(label string) ui.Widget {
-	return ui.Surface(ui.Box(ui.Center(ui.Text(label).Size(13))).Style(ui.FillWidth().Height(54))).Variant(ui.SurfaceTertiary).Style(ui.Radius(7))
+	return (surface.New(flowlayout.Box(flowlayout.Center(text.New(label).Size(13))).Style(style.New().FillWidth().Height(54))).Variant(surface.Tertiary)).Style(style.New().Radius(7))
 }
 
 func catalogListRow(prefix string, index int) ui.Widget {
-	return ui.Surface(ui.Box(ui.Row(
-		ui.Text(fmt.Sprintf("%s %03d", prefix, index+1)).Size(13),
-		ui.Expanded(ui.Spacer(0, 0)),
-		ui.Text("Ready").Size(12),
-	).AlignMiddle()).Style(ui.FillWidth().Padding(10))).Variant(ui.SurfaceTertiary).Style(ui.Radius(6))
+	return (surface.New(flowlayout.Box(flowlayout.Row(
+		text.New(fmt.Sprintf("%s %03d", prefix, index+1)).Size(13),
+		flowlayout.Expanded(flowlayout.Spacer(0, 0)),
+		text.New("Ready").Size(12),
+	).AlignMiddle()).Style(style.New().FillWidth().Padding(10))).Variant(surface.Tertiary)).Style(style.New().Radius(6))
 }
 
 func catalogPane(title string, icon ui.Widget) ui.Widget {
-	return ui.Surface(ui.Box(ui.Column(
-		ui.Row(icon, ui.Text(title).Size(13)).AlignMiddle().Gap(8),
-		ui.Divider(),
-		ui.Expanded(ui.Center(ui.Text(title+" content").Size(13))),
-	).Gap(10)).Style(ui.FillWidth().FillHeight().Padding(12))).Variant(ui.SurfaceSecondary)
+	return surface.New(flowlayout.Box(flowlayout.Column(
+		flowlayout.Row(icon, text.New(title).Size(13)).AlignMiddle().Gap(8),
+		flowlayout.Divider(),
+		flowlayout.Expanded(flowlayout.Center(text.New(title+" content").Size(13))),
+	).Gap(10)).Style(style.New().FillWidth().FillHeight().Padding(12))).Variant(surface.Secondary)
 }
 
 func catalogPortalPanel(anchor image.Rectangle, interactive bool, close func()) ui.Widget {
-	return ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
+	return flowlayout.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
 		if !interactive {
 			gtx = gtx.Disabled()
 		}
 		panelGtx := gtx
 		panelGtx.Constraints.Min = image.Point{}
 		panelGtx.Constraints.Max = image.Pt(min(gtx.Dp(300), gtx.Constraints.Max.X), min(gtx.Dp(180), gtx.Constraints.Max.Y))
-		panel := ui.Key("catalog-portal-panel", ui.Surface(
-			ui.Box(ui.Column(
-				ui.Text("Portal content").Size(15),
-				ui.Description("Rendered at the root overlay host."),
-				ui.Button("catalog-portal-close", ui.Text("Close")).Size(ui.ButtonSmall).OnClick(close),
-			).Gap(10)).Style(ui.Width(280).Padding(14)),
-		).Style(ui.Radius(8).Shadow(ui.ShadowSurface)))
+		panel := flowlayout.Key("catalog-portal-panel", (surface.New(
+			flowlayout.Box(flowlayout.Column(
+				text.New("Portal content").Size(15),
+				description.New("Rendered at the root overlay host."),
+				button.New("Close").Size(button.Small).OnClick(close),
+			).Gap(10)).Style(style.New().Width(280).Padding(14)),
+		)).Style(style.New().Radius(8).Shadow(style.ShadowSurface)))
 
 		macro := op.Record(gtx.Ops)
-		_, placement := ui.TrackOverlayPlacement(ctx, func() layout.Dimensions {
+		_, placement := flowlayout.TrackOverlayPlacement(ctx, func() layout.Dimensions {
 			return panel.Layout(ctx, panelGtx)
 		})
 		call := macro.Stop()

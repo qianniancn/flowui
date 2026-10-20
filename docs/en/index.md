@@ -30,22 +30,34 @@ styles, window management, asynchronous effects, and deterministic UI tests.
 | 13 | [Testing](guide/13-testing.md) | Harness and application tests |
 | 14 | [FAQ](guide/14-faq.md) | Common questions and troubleshooting |
 | 15 | [Gantt chart](guide/15-gantt.md) | Tasks, dependencies, and editing |
-| 16 | [Component screenshots](guide/16-component-screenshots.md) | Visual reference for the examples |
+| 16 | [Component screenshots](guide/16-component-screenshots.md) | Visual reference for the components |
 | 17 | [Node graph](guide/17-node-graph.md) | Nodes, ports, edges, and a controlled viewport |
 
 ## Repository map
 
 | Purpose | Location |
 | --- | --- |
-| Public package | `github.com/qianniancn/flowui/ui` |
-| Runnable examples | `examples/` |
+| MVU and runtime | `github.com/qianniancn/flowui/ui` |
+| Official components | `github.com/qianniancn/flowui/widget/<component>` |
+| Layout | `github.com/qianniancn/flowui/layout` |
+| Style declarations | `github.com/qianniancn/flowui/style` |
+| Default theme | `github.com/qianniancn/flowui/theme/base`: `base.Light()` / `base.Dark()` |
+| Theme contracts and extensions | `github.com/qianniancn/flowui/theme`; see [external themes and migration](guide/18-design-styles.md) |
+| Low-level drawing | `github.com/qianniancn/flowui/draw` |
+| Animation primitives | `github.com/qianniancn/flowui/animation` |
+| Window configuration | `github.com/qianniancn/flowui/window` |
+| Deterministic tests | `github.com/qianniancn/flowui/uitest` |
 | Go API reference | [pkg.go.dev](https://pkg.go.dev/github.com/qianniancn/flowui/ui) |
 
-The guide targets application developers and uses only the public `ui` package.
-The `internal/` tree is implementation detail.
+The guide targets application developers and uses the public `ui`, `widget/<component>`,
+`layout`, `style`, `draw`, and `window` packages. The `internal/` tree is
+implementation detail. Runnable examples live under `examples/` and share the
+root `go.mod` with the framework. Run them from the repository root, for example
+with `go run ./examples/buttons`.
 
 ## Current versions
 
-This documentation matches Go 1.26.2 and Gio v0.10.1. The single-window entry
+The root `go.mod` specifies the minimum Go version and current Gio dependency.
+The single-window entry
 point is `ui.Run(Program)`; use `ui.Application` when the process owns multiple
 windows or a longer lifecycle.

@@ -8,7 +8,19 @@ import (
 	"time"
 
 	lucide "github.com/qianniancn/flowui-icons-lucide"
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/avatar"
+	"github.com/qianniancn/flowui/widget/chip"
+	"github.com/qianniancn/flowui/widget/icon"
+	"github.com/qianniancn/flowui/widget/input"
+	paginationpkg "github.com/qianniancn/flowui/widget/pagination"
+	"github.com/qianniancn/flowui/widget/selectfield"
+	"github.com/qianniancn/flowui/widget/table"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type member struct {
@@ -21,7 +33,7 @@ type member struct {
 
 type Model struct {
 	Selected     []string
-	Sort         ui.TableSortDescriptor
+	Sort         table.SortDescriptor
 	Last         string
 	Page         int
 	Loaded       int
@@ -32,7 +44,7 @@ type Model struct {
 
 type Msg struct {
 	Selected  []string
-	Sort      *ui.TableSortDescriptor
+	Sort      *table.SortDescriptor
 	Action    string
 	Page      int
 	LoadMore  bool
@@ -88,54 +100,53 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 		status = "Activated: " + model.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("tables",
-				ui.Column(
-					ui.Text("FlowUI Table").Size(24),
-					ui.Text(status).Size(14),
-					ui.Divider(),
-					section("Primary", basicTable("primary", ui.TablePrimary)),
-					section("Secondary", basicTable("secondary", ui.TableSecondary)),
-					section("Excel-style grid and border", basicTable("grid", ui.TableSecondary).GridLines(true).Border(true)),
-					section("Interactive Input and Select cells", editableTable(model, send)),
-					section("Selection, sorting, resizing, and custom cells", membersTable(model, send)),
-					section("Pagination", paginatedTable(model, send)),
-					section("Async loading", asyncTable(model, send)),
-					section("Virtualized 10,000 rows", virtualTable()),
-					section("Scrollable", scrollableTable()),
-					section("Empty",
-						ui.Table("empty-members", memberColumns(), nil).
-							MinWidth(680).
-							EmptyContent(
-								ui.Column(
-									ui.Icon(lucide.Inbox).Size(24),
-									ui.Text("No results found").Size(14),
-								).Gap(8).AlignMiddle(),
-							),
-					),
-				).Gap(20),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				text.New("FlowUI Table").Size(24),
+				text.New(status).Size(14),
+				layout.Divider(),
+				section("Primary", basicTable("primary", table.VariantPrimary)),
+				section("Secondary", basicTable("secondary", table.VariantSecondary)),
+				section("Excel-style grid and border", basicTable("grid", table.VariantSecondary).GridLines(true).Border(true)),
+				section("Interactive Input and Select cells", editableTable(model, send)),
+				section("Selection, sorting, resizing, and custom cells", membersTable(model, send)),
+				section("Pagination", paginatedTable(model, send)),
+				section("Async loading", asyncTable(model, send)),
+				section("Virtualized 10,000 rows", virtualTable()),
+				section("Scrollable", scrollableTable()),
+				section("Empty",
+					table.New("empty-members", memberColumns(), nil).
+						MinWidth(680).
+						EmptyContent(
+							layout.Column(
+								icon.New(lucide.Inbox).Size(24),
+								text.New("No results found").Size(14),
+							).Gap(8).AlignMiddle(),
+						),
+				),
+			).Gap(20),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(980).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(980).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(ui.Text(title).Size(18), child).Gap(10)
+	return layout.Column(text.New(title).Size(18), child).Gap(10)
 }
 
-func basicTable(key string, variant ui.TableVariant) ui.TableWidget {
-	columns := []ui.TableColumn{
+func basicTable(key string, variant table.Variant) table.Widget {
+	columns := []table.Column{
 		{Key: "name", Label: "Name", RowHeader: true, Weight: 1.4},
 		{Key: "role", Label: "Role"},
 		{Key: "status", Label: "Status", Width: 120},
 		{Key: "email", Label: "Email", Weight: 1.6},
 	}
-	rows := make([]ui.TableRow, 0, 4)
+	rows := make([]table.Row, 0, 4)
 	for _, value := range members[:4] {
-		rows = append(rows, ui.TableRow{
+		rows = append(rows, table.Row{
 			Key: value.key, Label: value.name,
-			Cells: []ui.TableCell{
+			Cells: []table.Cell{
 				{Text: value.name},
 				{Text: value.role},
 				{Text: value.status},
@@ -143,41 +154,41 @@ func basicTable(key string, variant ui.TableVariant) ui.TableWidget {
 			},
 		})
 	}
-	return ui.Table(key, columns, rows).Variant(variant).MinWidth(680)
+	return table.New(key, columns, rows).Variant(variant).MinWidth(680)
 }
 
-func membersTable(model Model, send ui.Send[Msg]) ui.TableWidget {
+func membersTable(model Model, send ui.Send[Msg]) table.Widget {
 	sorted := append([]member(nil), members...)
 	sort.SliceStable(sorted, func(left, right int) bool {
 		first := memberValue(sorted[left], model.Sort.Column)
 		second := memberValue(sorted[right], model.Sort.Column)
 		less := strings.Compare(first, second) < 0
-		if model.Sort.Direction == ui.TableSortDescending {
+		if model.Sort.Direction == table.SortDescending {
 			return !less && first != second
 		}
 		return less
 	})
-	rows := make([]ui.TableRow, 0, len(sorted))
+	rows := make([]table.Row, 0, len(sorted))
 	for _, value := range sorted {
 		rows = append(rows, customMemberRow(value))
 	}
-	return ui.Table("members", memberColumns(), rows).
+	return table.New("members", memberColumns(), rows).
 		MinWidth(760).
 		MaxHeight(300).
-		SelectionMode(ui.TableSelectionMultiple).
+		SelectionMode(table.SelectionMultiple).
 		SelectedKeys(model.Selected).
 		ShowSelectionIndicator().
 		DisabledKeys([]string{"michael"}).
 		SortDescriptor(model.Sort).
 		OnSelectionChange(func(keys []string) { send(Msg{Selected: keys}) }).
-		OnSortChange(func(descriptor ui.TableSortDescriptor) { send(Msg{Sort: &descriptor}) }).
+		OnSortChange(func(descriptor table.SortDescriptor) { send(Msg{Sort: &descriptor}) }).
 		OnAction(func(key string) { send(Msg{Action: key}) }).
 		OnColumnResize(func(key string, width int) { send(Msg{Action: fmt.Sprintf("Resized %s to %d dp", key, width)}) }).
-		Footer(ui.Text(fmt.Sprintf("%d members, %d selected", len(rows), len(model.Selected))).Size(12))
+		Footer(text.New(fmt.Sprintf("%d members, %d selected", len(rows), len(model.Selected))).Size(12))
 }
 
-func memberColumns() []ui.TableColumn {
-	return []ui.TableColumn{
+func memberColumns() []table.Column {
+	return []table.Column{
 		{Key: "name", Label: "Member", Sortable: true, Resizable: true, RowHeader: true, MinWidth: 180, MaxWidth: 320, Weight: 1.8},
 		{Key: "role", Label: "Role", Sortable: true, Resizable: true, MinWidth: 150, MaxWidth: 320, Weight: 1.2},
 		{Key: "status", Label: "Status", Sortable: true, Resizable: true, Width: 124, MinWidth: 100, MaxWidth: 180},
@@ -185,23 +196,23 @@ func memberColumns() []ui.TableColumn {
 	}
 }
 
-func editableTable(model Model, send ui.Send[Msg]) ui.TableWidget {
-	roles := []ui.SelectItem{
+func editableTable(model Model, send ui.Send[Msg]) table.Widget {
+	roles := []selectfield.SelectItem{
 		{Key: "designer", Label: "Designer"},
 		{Key: "engineer", Label: "Engineer"},
 		{Key: "manager", Label: "Manager"},
 	}
-	rows := []ui.TableRow{{
+	rows := []table.Row{{
 		Key: "editable-member", Label: model.EditableName,
-		Cells: []ui.TableCell{
+		Cells: []table.Cell{
 			{
-				Content: ui.Input("editable-member-name", model.EditableName).
+				Content: input.New(model.EditableName).Key("editable-member-name").
 					OnChange(func(value string) { send(Msg{EditCell: "name", EditValue: value}) }).
 					FullWidth(),
 				Interactive: true,
 			},
 			{
-				Content: ui.Select("editable-member-role", model.EditableRole, roles).
+				Content: selectfield.New(roles).Key("editable-member-role").SelectedKey(model.EditableRole).
 					OnChange(func(value string) { send(Msg{EditCell: "role", EditValue: value}) }).
 					FullWidth(),
 				Interactive: true,
@@ -209,34 +220,34 @@ func editableTable(model Model, send ui.Send[Msg]) ui.TableWidget {
 			{Content: statusChip("Active")},
 		},
 	}}
-	columns := []ui.TableColumn{
+	columns := []table.Column{
 		{Key: "name", Label: "Name", MinWidth: 220, Weight: 1.4},
 		{Key: "role", Label: "Role", MinWidth: 180, Weight: 1},
 		{Key: "status", Label: "Status", Width: 120},
 	}
-	return ui.Table("editable-members", columns, rows).
-		Variant(ui.TableSecondary).
+	return table.New("editable-members", columns, rows).
+		Variant(table.VariantSecondary).
 		GridLines(true).
 		Border(true).
 		MinWidth(620).
 		RowHeight(64)
 }
 
-func paginatedTable(model Model, send ui.Send[Msg]) ui.TableWidget {
+func paginatedTable(model Model, send ui.Send[Msg]) table.Widget {
 	const rowsPerPage = 3
 	totalPages := (len(members) + rowsPerPage - 1) / rowsPerPage
 	page := min(max(model.Page, 1), totalPages)
 	start := (page - 1) * rowsPerPage
 	end := min(start+rowsPerPage, len(members))
-	rows := make([]ui.TableRow, 0, end-start)
+	rows := make([]table.Row, 0, end-start)
 	for _, value := range members[start:end] {
 		rows = append(rows, customMemberRow(value))
 	}
-	pagination := ui.Pagination("members-pages", page, totalPages).
-		Size(ui.PaginationSmall).
-		Summary(ui.Text(fmt.Sprintf("%d to %d of %d results", start+1, end, len(members))).Size(12)).
+	pagination := paginationpkg.New("members-pages", page, totalPages).
+		Size(paginationpkg.SizeSmall).
+		Summary(text.New(fmt.Sprintf("%d to %d of %d results", start+1, end, len(members))).Size(12)).
 		OnChange(func(page int) { send(Msg{Page: page}) })
-	return ui.Table("paginated-members", memberColumns(), rows).
+	return table.New("paginated-members", memberColumns(), rows).
 		MinWidth(760).
 		Footer(pagination)
 }
@@ -246,27 +257,27 @@ const (
 	asyncBatchSize = 6
 )
 
-func asyncTable(model Model, send ui.Send[Msg]) ui.TableWidget {
-	rows := make([]ui.TableRow, model.Loaded)
+func asyncTable(model Model, send ui.Send[Msg]) table.Widget {
+	rows := make([]table.Row, model.Loaded)
 	for index := range rows {
 		rows[index] = generatedRow(index)
 	}
-	return ui.Table("async-members", memberColumns(), rows).
-		Variant(ui.TableSecondary).
+	return table.New("async-members", memberColumns(), rows).
+		Variant(table.VariantSecondary).
 		MinWidth(760).
 		MaxHeight(260).
 		LoadMore(model.Loaded < asyncRowCount, model.Loading, func() { send(Msg{LoadMore: true}) })
 }
 
-func virtualTable() ui.TableWidget {
-	return ui.VirtualTable("virtual-members", memberColumns(), 10_000, generatedRow).
-		Variant(ui.TableSecondary).
+func virtualTable() table.Widget {
+	return table.NewVirtual("virtual-members", memberColumns(), 10_000, generatedRow).
+		Variant(table.VariantSecondary).
 		MinWidth(760).
 		MaxHeight(300).
 		RowHeight(44)
 }
 
-func generatedRow(index int) ui.TableRow {
+func generatedRow(index int) table.Row {
 	firstNames := [...]string{"Emma", "Liam", "Olivia", "Noah", "Ava", "James", "Sophia", "Oliver"}
 	lastNames := [...]string{"Smith", "Johnson", "Brown", "Davis", "Wilson", "Taylor", "Thomas", "Martin"}
 	roles := [...]string{"Software Engineer", "Product Manager", "Designer", "Data Analyst"}
@@ -274,9 +285,9 @@ func generatedRow(index int) ui.TableRow {
 	first := firstNames[index%len(firstNames)]
 	last := lastNames[index/len(firstNames)%len(lastNames)]
 	status := statuses[index%len(statuses)]
-	return ui.TableRow{
+	return table.Row{
 		Key: fmt.Sprintf("generated-%d", index), Label: first + " " + last,
-		Cells: []ui.TableCell{
+		Cells: []table.Cell{
 			{Text: first + " " + last},
 			{Text: roles[index%len(roles)]},
 			{Content: statusChip(status)},
@@ -285,10 +296,10 @@ func generatedRow(index int) ui.TableRow {
 	}
 }
 
-func customMemberRow(value member) ui.TableRow {
-	return ui.TableRow{
+func customMemberRow(value member) table.Row {
+	return table.Row{
 		Key: value.key, Label: value.name,
-		Cells: []ui.TableCell{
+		Cells: []table.Cell{
 			{Content: memberIdentity(value)},
 			{Text: value.role},
 			{Content: statusChip(value.status)},
@@ -302,32 +313,32 @@ func memberIdentity(value member) ui.Widget {
 	for part := range strings.FieldsSeq(value.name) {
 		initials.WriteString(part[:1])
 	}
-	return ui.Row(
-		ui.Avatar(initials.String()).Size(ui.AvatarSmall).Variant(ui.AvatarSoft),
-		ui.Column(
-			ui.Text(value.name).Size(13),
-			ui.Text("ID "+strings.ToUpper(value.key)).Size(11),
+	return layout.Row(
+		avatar.New(initials.String()).Size(avatar.SizeSmall).Variant(avatar.VariantSoft),
+		layout.Column(
+			text.New(value.name).Size(13),
+			text.New("ID "+strings.ToUpper(value.key)).Size(11),
 		).Gap(1),
 	).Gap(10).AlignMiddle()
 }
 
 func statusChip(status string) ui.Widget {
-	color := ui.ChipSuccess
+	color := chip.ColorSuccess
 	switch status {
 	case "Inactive":
-		color = ui.ChipDanger
+		color = chip.ColorDanger
 	case "On Leave":
-		color = ui.ChipWarning
+		color = chip.ColorWarning
 	}
-	return ui.Chip(status).Color(color).Variant(ui.ChipSoft).Size(ui.ChipSmall)
+	return chip.New(status).Color(color).Variant(chip.VariantSoft).Size(chip.SizeSmall)
 }
 
-func scrollableTable() ui.TableWidget {
-	rows := make([]ui.TableRow, 16)
+func scrollableTable() table.Widget {
+	rows := make([]table.Row, 16)
 	for index := range rows {
-		rows[index] = ui.TableRow{
+		rows[index] = table.Row{
 			Key: fmt.Sprintf("job-%02d", index+1), Label: fmt.Sprintf("Job %02d", index+1),
-			Cells: []ui.TableCell{
+			Cells: []table.Cell{
 				{Text: fmt.Sprintf("Job %02d", index+1)},
 				{Text: []string{"Designer", "Engineer", "Manager"}[index%3]},
 				{Content: statusChip([]string{"Active", "On Leave", "Inactive"}[index%3])},
@@ -335,8 +346,8 @@ func scrollableTable() ui.TableWidget {
 			},
 		}
 	}
-	return ui.Table("scrollable-members", memberColumns(), rows).
-		Variant(ui.TableSecondary).
+	return table.New("scrollable-members", memberColumns(), rows).
+		Variant(table.VariantSecondary).
 		MinWidth(720).
 		MaxHeight(260)
 }
@@ -366,13 +377,14 @@ var members = []member{
 func main() {
 	ui.Run(ui.NewProgram(Model{
 		Selected:     []string{"kate", "sara"},
-		Sort:         ui.TableSortDescriptor{Column: "name", Direction: ui.TableSortAscending},
+		Sort:         table.SortDescriptor{Column: "name", Direction: table.SortAscending},
 		Page:         1,
 		Loaded:       asyncBatchSize,
 		EditableName: "Ada Lovelace",
 		EditableRole: "engineer",
 	},
-		Update, View), ui.Title("FlowUI Table"),
-		ui.Size(1100, 820),
+		Update, View), window.Title("FlowUI Table"),
+		window.Size(1100, 820),
+		window.Theme(base.Light()),
 	)
 }

@@ -11,13 +11,19 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"gioui.org/widget"
+	giowidget "gioui.org/widget"
+	"github.com/qianniancn/flowui/animation"
+	flowlayout "github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/theme"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
 	"github.com/qianniancn/flowui/uitest"
+	"github.com/qianniancn/flowui/widget/portal"
+	"github.com/qianniancn/flowui/window"
 )
 
 func TestHarnessRoutesPointerAndKeyboardClicks(t *testing.T) {
-	harness := uitest.New(image.Pt(240, 120))
+	harness := uitest.New(image.Pt(240, 120), base.Light())
 	button := new(testButton)
 
 	harness.Frame(button)
@@ -42,16 +48,16 @@ func TestHarnessRoutesPointerAndKeyboardClicks(t *testing.T) {
 }
 
 func TestHarnessAdvancesTweenAndLaysOutPortal(t *testing.T) {
-	harness := uitest.New(image.Pt(240, 120))
+	harness := uitest.New(image.Pt(240, 120), base.Light())
 	var progress float32
 	portalLayouts := 0
 	root := ui.WidgetFunc(func(ctx *ui.Context, gtx layout.Context) layout.Dimensions {
-		progress = ui.Tween("progress", 1).
+		progress = animation.Tween("progress", 1).
 			Initial(0).
 			Duration(time.Second).
-			Easing(ui.EaseLinear).
+			Easing(animation.EaseLinear).
 			Value(ctx, gtx)
-		return ui.Portal("probe", true, ui.Spacer(20, 10), func(image.Rectangle, bool) ui.Widget {
+		return portal.New("probe", true, flowlayout.Spacer(20, 10), func(image.Rectangle, bool) ui.Widget {
 			return ui.WidgetFunc(func(*ui.Context, layout.Context) layout.Dimensions {
 				portalLayouts++
 				return layout.Dimensions{}
@@ -73,22 +79,23 @@ func TestHarnessAdvancesTweenAndLaysOutPortal(t *testing.T) {
 }
 
 func TestHarnessConfigurationAndResize(t *testing.T) {
-	if language := uitest.NewWithConfig(uitest.Config{Size: image.Pt(100, 100)}).Context().Language(); language != ui.LanguageEnglish {
+	light := base.Light()
+	if language := uitest.NewWithConfig(uitest.Config{Size: image.Pt(100, 100), Theme: &light}).Context().Language(); language != window.LanguageEnglish {
 		t.Fatalf("default language = %q, want English", language)
 	}
 
-	theme := ui.DarkTheme()
-	theme.Palette.Accent = color.NRGBA{R: 1, G: 2, B: 3, A: 255}
+	activeTheme := base.Dark()
+	activeTheme.Palette.Accent = color.NRGBA{R: 1, G: 2, B: 3, A: 255}
 	harness := uitest.NewWithConfig(uitest.Config{
 		Size:     image.Pt(200, 100),
-		Theme:    &theme,
-		Language: ui.LanguageChinese,
+		Theme:    &activeTheme,
+		Language: window.LanguageChinese,
 		Now:      time.Unix(10, 0),
 	})
-	if harness.Context().Language() != ui.LanguageChinese {
+	if harness.Context().Language() != window.LanguageChinese {
 		t.Fatalf("language = %q, want Chinese", harness.Context().Language())
 	}
-	if harness.Context().Theme().Palette.Background != theme.Palette.Background {
+	if harness.Context().Theme().Palette.Background != activeTheme.Palette.Background {
 		t.Fatal("harness did not use the configured theme")
 	}
 	var now time.Time
@@ -109,14 +116,17 @@ func TestHarnessConfigurationAndResize(t *testing.T) {
 }
 
 func TestHarnessRejectsInvalidTimeAndSize(t *testing.T) {
-	mustPanic(t, func() { uitest.New(image.Point{}) })
-	harness := uitest.New(image.Pt(100, 100))
+	activeTheme := base.Light()
+	mustPanic(t, func() { uitest.New(image.Point{}, activeTheme) })
+	mustPanic(t, func() { uitest.NewWithConfig(uitest.Config{Size: image.Pt(100, 100)}) })
+	mustPanic(t, func() { uitest.New(image.Pt(100, 100), theme.Theme{}) })
+	harness := uitest.New(image.Pt(100, 100), activeTheme)
 	mustPanic(t, func() { harness.Resize(image.Pt(-1, 100)) })
 	mustPanic(t, func() { harness.Advance(-time.Second) })
 }
 
 type testButton struct {
-	state  widget.Clickable
+	state  giowidget.Clickable
 	clicks int
 }
 

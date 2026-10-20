@@ -18,7 +18,7 @@ func TestBatchRunsCommandsConcurrentlyAndCollectsMessages(t *testing.T) {
 	gate := make(chan struct{})
 	cmds := make([]Cmd[int], commandCount)
 	for id := range commandCount {
-		cmds[id] = func(context.Context, func(int)) error {
+		cmds[id] = func(context.Context, Send[int]) error {
 			ready.Done()
 			<-gate
 			finished.Done()
@@ -64,16 +64,16 @@ func TestBatchRunsCommandsConcurrentlyAndCollectsMessages(t *testing.T) {
 func TestBatchReturnsErrorAndPropagatesPanic(t *testing.T) {
 	want := errors.New("command failed")
 	batch := Batch(
-		func(context.Context, func(int)) error { return want },
-		func(context.Context, func(int)) error { return nil },
+		func(context.Context, Send[int]) error { return want },
+		func(context.Context, Send[int]) error { return nil },
 	)
 	if err := batch(context.Background(), func(int) {}); !errors.Is(err, want) {
 		t.Fatalf("batch error = %v, want %v", err, want)
 	}
 
 	panicking := Batch(
-		func(context.Context, func(int)) error { return nil },
-		func(context.Context, func(int)) error { panic("batch child") },
+		func(context.Context, Send[int]) error { return nil },
+		func(context.Context, Send[int]) error { panic("batch child") },
 	)
 	defer func() {
 		if recover() == nil {
@@ -88,7 +88,7 @@ func TestBatchIgnoresNilCommands(t *testing.T) {
 		t.Fatal("empty batch should be nil")
 	}
 	var ran bool
-	single := Batch[int](nil, func(context.Context, func(int)) error {
+	single := Batch[int](nil, func(context.Context, Send[int]) error {
 		ran = true
 		return nil
 	}, nil)
@@ -104,7 +104,7 @@ func TestStartCmdReportsReturnedError(t *testing.T) {
 	want := errors.New("load failed")
 	reported := make(chan error, 1)
 	var effects effectGroup
-	StartCmd(&effects, context.Background(), func(context.Context, func(int)) error {
+	StartCmd(&effects, context.Background(), func(context.Context, Send[int]) error {
 		return want
 	}, func(int) {}, func(err error) {
 		reported <- err
@@ -123,7 +123,7 @@ func TestStartCmdReportsReturnedError(t *testing.T) {
 func TestStartCmdReportsContextCanceledWhileEffectIsActive(t *testing.T) {
 	reported := make(chan error, 1)
 	var effects effectGroup
-	StartCmd(&effects, context.Background(), func(context.Context, func(int)) error {
+	StartCmd(&effects, context.Background(), func(context.Context, Send[int]) error {
 		return context.Canceled
 	}, func(int) {}, func(err error) {
 		reported <- err
@@ -139,7 +139,7 @@ func TestStartCmdReportsContextCanceledWhileEffectIsActive(t *testing.T) {
 func TestStartCmdRecoversPanic(t *testing.T) {
 	reported := make(chan error, 1)
 	var effects effectGroup
-	StartCmd(&effects, context.Background(), func(context.Context, func(int)) error {
+	StartCmd(&effects, context.Background(), func(context.Context, Send[int]) error {
 		panic("broken command")
 	}, func(int) {}, func(err error) {
 		reported <- err
@@ -165,7 +165,7 @@ func TestStartCmdCancelsAndDropsLateMessages(t *testing.T) {
 	sent := make(chan int, 2)
 	reported := make(chan error, 1)
 	var effects effectGroup
-	StartCmd(&effects, ctx, func(ctx context.Context, send func(int)) error {
+	StartCmd(&effects, ctx, func(ctx context.Context, send Send[int]) error {
 		close(started)
 		<-ctx.Done()
 		send(1)
@@ -201,14 +201,14 @@ func TestLatestCmdCancelsOlderGenerationAndDropsItsMessages(t *testing.T) {
 	canceled := make(chan struct{})
 	sent := make(chan int, 2)
 	var effects effectGroup
-	old := LatestCmd("search", func(ctx context.Context, send func(int)) error {
+	old := LatestCmd("search", func(ctx context.Context, send Send[int]) error {
 		close(started)
 		<-ctx.Done()
 		send(1)
 		close(canceled)
 		return ctx.Err()
 	})
-	newer := LatestCmd("search", func(_ context.Context, send func(int)) error {
+	newer := LatestCmd("search", func(_ context.Context, send Send[int]) error {
 		send(2)
 		return nil
 	})
@@ -229,37 +229,33 @@ func TestLatestCmdCancelsOlderGenerationAndDropsItsMessages(t *testing.T) {
 	}
 }
 
-func TestLatestCmdSkipsGenerationStartedAfterNewerOne(t *testing.T) {
+func TestLatestCmdCanBeReusedAcrossExecutions(t *testing.T) {
 	ctx := withLatestCommandManager(context.Background(), newLatestCommandManager())
 	sent := make(chan int, 2)
-	old := LatestCmd("preview", func(_ context.Context, send func(int)) error {
-		send(1)
+	runs := 0
+	reused := LatestCmd("preview", func(_ context.Context, send Send[int]) error {
+		runs++
+		send(runs)
 		return nil
 	})
-	newer := LatestCmd("preview", func(_ context.Context, send func(int)) error {
-		send(2)
-		return nil
-	})
-	if err := newer(ctx, func(msg int) { sent <- msg }); err != nil {
-		t.Fatalf("newer command error: %v", err)
+	if err := reused(ctx, func(msg int) { sent <- msg }); err != nil {
+		t.Fatalf("first command error: %v", err)
 	}
-	if err := old(ctx, func(msg int) { sent <- msg }); err != nil {
-		t.Fatalf("old command error: %v", err)
+	if err := reused(ctx, func(msg int) { sent <- msg }); err != nil {
+		t.Fatalf("reused command error: %v", err)
+	}
+	if got := receiveRuntimeTestValue(t, sent); got != 1 {
+		t.Fatalf("first latest command message = %d, want 1", got)
 	}
 	if got := receiveRuntimeTestValue(t, sent); got != 2 {
-		t.Fatalf("latest command message = %d, want 2", got)
-	}
-	select {
-	case got := <-sent:
-		t.Fatalf("stale command ran with message %d", got)
-	default:
+		t.Fatalf("reused latest command message = %d, want 2", got)
 	}
 }
 
 func TestLatestCmdFinishCancelsChildContext(t *testing.T) {
 	parent := &afterFuncTestContext{Context: context.Background(), done: make(chan struct{})}
 	manager := newLatestCommandManager()
-	child, token, ok := manager.start(parent, "preview", 1)
+	child, token, ok := manager.start(parent, "preview")
 	if !ok {
 		t.Fatal("LatestCmd did not start")
 	}
@@ -287,36 +283,30 @@ func (c *afterFuncTestContext) AfterFunc(func()) func() bool {
 	}
 }
 
-func TestLatestCmdKeepsGenerationAfterHighKeyChurn(t *testing.T) {
+func TestLatestCmdGenerationIsKeyLocalAfterHighChurn(t *testing.T) {
 	ctx := withLatestCommandManager(context.Background(), newLatestCommandManager())
 	sent := make(chan int, 2)
-	old := LatestCmd("preview", func(_ context.Context, send func(int)) error {
-		send(1)
+	reused := LatestCmd("preview", func(_ context.Context, send Send[int]) error {
+		send(7)
 		return nil
 	})
-	newer := LatestCmd("preview", func(_ context.Context, send func(int)) error {
-		send(2)
-		return nil
-	})
-	if err := newer(ctx, func(msg int) { sent <- msg }); err != nil {
-		t.Fatalf("newer command error: %v", err)
+	if err := reused(ctx, func(msg int) { sent <- msg }); err != nil {
+		t.Fatalf("first preview command error: %v", err)
 	}
 	for index := range 300 {
-		cmd := LatestCmd(fmt.Sprintf("churn-%d", index), func(context.Context, func(int)) error { return nil })
+		cmd := LatestCmd(fmt.Sprintf("churn-%d", index), func(context.Context, Send[int]) error { return nil })
 		if err := cmd(ctx, func(int) {}); err != nil {
 			t.Fatalf("churn command %d error: %v", index, err)
 		}
 	}
-	if err := old(ctx, func(msg int) { sent <- msg }); err != nil {
-		t.Fatalf("old command error: %v", err)
+	if err := reused(ctx, func(msg int) { sent <- msg }); err != nil {
+		t.Fatalf("reused preview command error: %v", err)
 	}
-	if got := receiveRuntimeTestValue(t, sent); got != 2 {
-		t.Fatalf("latest command message = %d, want 2", got)
+	if got := receiveRuntimeTestValue(t, sent); got != 7 {
+		t.Fatalf("first preview message = %d, want 7", got)
 	}
-	select {
-	case got := <-sent:
-		t.Fatalf("stale command revived with message %d", got)
-	default:
+	if got := receiveRuntimeTestValue(t, sent); got != 7 {
+		t.Fatalf("reused preview message = %d, want 7", got)
 	}
 }
 
@@ -325,7 +315,7 @@ func TestCancelLatestCmdStopsActiveGeneration(t *testing.T) {
 	started := make(chan struct{})
 	canceled := make(chan struct{})
 	var effects effectGroup
-	active := LatestCmd("load", func(ctx context.Context, _ func(int)) error {
+	active := LatestCmd("load", func(ctx context.Context, _ Send[int]) error {
 		close(started)
 		<-ctx.Done()
 		close(canceled)
@@ -344,7 +334,7 @@ func TestCancelLatestCmdStopsActiveGeneration(t *testing.T) {
 func TestEffectGroupWaitIsBounded(t *testing.T) {
 	release := make(chan struct{})
 	var effects effectGroup
-	StartCmd(&effects, context.Background(), func(context.Context, func(int)) error {
+	StartCmd(&effects, context.Background(), func(context.Context, Send[int]) error {
 		<-release
 		return nil
 	}, func(int) {}, nil)

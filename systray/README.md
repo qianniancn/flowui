@@ -2,6 +2,10 @@
 
 `systray` 提供 Windows、macOS 和 Linux 的系统托盘图标与原生菜单封装。
 
+> **为什么自持而不是用现成的库（如 `fyne-io/systray`）？** 取舍基于三条要点：
+> `gioui.org/x` **没有**托盘包（不是「有现成的不用」）；该库在 `init()` 里 `runtime.LockOSThread()`、
+> 使用进程级全局单例、且**没有任何错误通道**——而托盘是可选能力，必须能失败并回滚。
+
 ## 当前支持
 
 | 平台 | 实现 | 运行前提 |
@@ -71,10 +75,10 @@ func main() {
 }
 ```
 
-仓库中的完整 FlowUI 示例位于 [`examples/systray_ui`](../examples/systray_ui)。Windows 发布版本建议用 `gogio` 打包；它会自动嵌入 DPI manifest，使用高于 100% 的显示缩放时，原生托盘菜单仍能保持清晰。
+完整 FlowUI 示例维护在独立的 `examples` module 中。Windows 发布版本建议用 `gogio` 打包；它会自动嵌入 DPI manifest，使用高于 100% 的显示缩放时，原生托盘菜单仍能保持清晰。
 
 ```powershell
-go run gioui.org/cmd/gogio@v0.10.0 -target windows -arch amd64 -o flowui-systray.exe ./examples/systray_ui
+go run gioui.org/cmd/gogio@v0.10.0 -target windows -arch amd64 -o flowui-systray.exe .
 ```
 
 FlowUI 默认在最后一个窗口关闭后退出。始终使用托盘的应用应在 `Run` 前启用保活，并只从托盘退出命令结束应用：
@@ -110,41 +114,42 @@ application.SetKeepAlive(false)
 
 `SystemTray` 是一次性对象；`Destroy` 后重新启用托盘时必须再次调用 `systray.New()`。完整的可启用/停用控制器见上述示例。
 
-窗口关闭后可用 `application.Open(windowSpec)` 重新创建窗口。需要保留 MVU Model 时，在创建窗口时添加 `ui.RetainModelOnClose()`：
+窗口关闭后可用 `application.Open(windowSpec)` 重新创建窗口。需要保留 MVU Model 时，在创建窗口时添加 `window.RetainModelOnClose()`：
 
 ```go
 window := ui.NewWindow("main", program,
-	ui.RetainModelOnClose(),
+	window.RetainModelOnClose(),
 )
 ```
 
 该选项通过赋值保留 Model，不会进行深拷贝。窗口重开时不会再次执行 `Init` 和初始命令，但会根据保留的 Model 重新建立订阅。组件内部的临时交互状态仍随原生窗口销毁；应保存的业务状态需要放在 Model 中。完整的控制器写法见上述示例。
 
-需要让 FlowUI 发起的关闭请求支持“取消”或“关闭到托盘”时，可以为窗口配置关闭决策：
+需要让原生窗口或 FlowUI 发起的关闭请求支持“取消”或“关闭到托盘”时，可以为窗口配置关闭决策：
 
 ```go
 window := ui.NewWindow("main", program,
-	ui.OnWindowCloseRequest(func() ui.WindowCloseDecision {
+	window.OnWindowCloseRequest(func() window.CloseDecision {
 		if hasUnsavedChanges {
-			return ui.WindowCloseCancel
+			return window.CloseCancel
 		}
 		if trayEnabled {
-			return ui.WindowCloseKeepAlive
+			return window.CloseKeepAlive
 		}
-		return ui.WindowCloseProceed
+		return window.CloseProceed
 	}),
-	ui.RetainModelOnClose(),
+	window.RetainModelOnClose(),
 )
 
 // 应用内的关闭命令。
 application.RequestClose("main")
 ```
 
-`WindowCloseKeepAlive` 会销毁当前原生窗口并自动开启应用保活；它不是隐藏并保留同一个原生窗口句柄。之后用 `application.Open(window)` 重建窗口，用 `application.Quit()` 从托盘彻底退出。`WindowTitleBar` 的默认关闭按钮会调用这个生命周期入口；组件显式设置 `OnClose` 后则由该回调自行处理。
+`CloseKeepAlive` 会销毁当前原生窗口并自动开启应用保活；它不是隐藏并保留同一个原生窗口句柄。之后用 `application.Open(window)` 重建窗口，用 `application.Quit()` 从托盘彻底退出。`WindowTitleBar` 的默认关闭按钮会调用这个生命周期入口；组件显式设置 `OnClose` 后则由该回调自行处理。
 
 `application.Close`、`CloseAll` 和 `Quit` 是强制关闭路径，不会调用关闭决策，因此托盘的“退出”不会被取消。
 
-Gio `v0.10.1` 没有公开可取消的原生关闭请求事件。系统标题栏关闭按钮、`Alt+F4` 和窗口管理器关闭命令可能直接销毁窗口，`OnWindowCloseRequest` 无法拦截它们。使用原生标题栏的托盘应用应在托盘启用期间调用 `SetKeepAlive(true)`；这样原生窗口关闭后进程仍会保留，但不能取消该次关闭。
+当前 Gio 版本通过 `app.ClosingEvent` 暴露可取消的原生关闭请求。系统标题栏关闭按钮、`Alt+F4` 和窗口管理器关闭命令会与 `OnWindowCloseRequest` 共享同一套关闭决策；返回 `CloseCancel` 可以阻止本次关闭。`Close`、`CloseAll` 和 `Quit` 是强制关闭路径，不会调用关闭决策。
+关闭决策在窗口事件循环中同步执行，应快速返回；需要异步确认时，应先显示确认 UI，确认完成后再调用 `RequestClose`。
 
 ## 菜单
 
@@ -234,7 +239,7 @@ menu.Update()
 ## 运行示例
 
 ```bash
-go run ./examples/systray_ui
+go run .
 ```
 
 Linux 需要当前桌面会话提供 StatusNotifierWatcher；没有托盘宿主时，`Errors` 会报告注册失败并关闭 `Done`。macOS 独立示例需要由 Cocoa 事件循环托管。

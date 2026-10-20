@@ -4,11 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	chartpkg "github.com/qianniancn/flowui/widget/chart"
+	"github.com/qianniancn/flowui/widget/heatmap"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct{ selected string }
-type Msg struct{ Selection ui.ChartSelection }
+type Msg struct{ Selection chartpkg.Selection }
 
 func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 	model.selected = msg.Selection.Label
@@ -30,22 +38,22 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 	rollingYearEnd := dateOnly(time.Now())
 	rollingYearStart := rollingYearEnd.AddDate(0, 0, -364)
 
-	click := func(selection ui.ChartSelection) { send(Msg{Selection: selection}) }
-	year := ui.Heatmap("activity-year", yearStart, yearEnd, calendarValues(yearStart, yearEnd, 17)).Height(180).OnDataClick(click)
-	quarter := ui.Heatmap("activity-quarter", quarterStart, quarterEnd, calendarValues(quarterStart, quarterEnd, 29)).Height(180).OnDataClick(click)
-	month := ui.Heatmap("activity-month", monthStart, monthEnd, calendarValues(monthStart, monthEnd, 43)).Height(180).OnDataClick(click)
-	recent := ui.Heatmap("activity-recent", recentStart, recentEnd, calendarValues(recentStart, recentEnd, 61)).Height(180).OnDataClick(click)
-	rollingYear := ui.Heatmap("activity-rolling-year", rollingYearStart, rollingYearEnd, calendarValues(rollingYearStart, rollingYearEnd, 73)).Height(180).OnDataClick(click)
+	click := func(selection chartpkg.Selection) { send(Msg{Selection: selection}) }
+	year := heatmap.New("activity-year", yearStart, yearEnd, calendarValues(yearStart, yearEnd, 17)).Height(180).OnDataClick(click)
+	quarter := heatmap.New("activity-quarter", quarterStart, quarterEnd, calendarValues(quarterStart, quarterEnd, 29)).Height(180).OnDataClick(click)
+	month := heatmap.New("activity-month", monthStart, monthEnd, calendarValues(monthStart, monthEnd, 43)).Height(180).OnDataClick(click)
+	recent := heatmap.New("activity-recent", recentStart, recentEnd, calendarValues(recentStart, recentEnd, 61)).Height(180).OnDataClick(click)
+	rollingYear := heatmap.New("activity-rolling-year", rollingYearStart, rollingYearEnd, calendarValues(rollingYearStart, rollingYearEnd, 73)).Height(180).OnDataClick(click)
 
-	return ui.Scroll("heatmap-page", ui.Box(ui.Column(
-		ui.Text("Activity calendars").Size(24),
-		ui.Text(selected).Size(14),
+	return layout.Scroll(layout.Box(layout.Column(
+		text.New("Activity calendars").Size(24),
+		text.New(selected).Size(14),
 		calendarSection("Full year · 2025", year),
 		calendarSection("Quarter · Q2 2025", quarter),
 		calendarSection("Month · March 2025", month),
 		calendarSection("Recent 30 days", recent),
 		calendarSection("Recent 365 days", rollingYear),
-	).Gap(16)).Style(ui.FillWidth().MaxWidth(900).Padding(24)))
+	).Gap(16)).Style(style.New().FillWidth().MaxWidth(900).Padding(24)))
 }
 
 func dateOnly(value time.Time) time.Time {
@@ -53,23 +61,23 @@ func dateOnly(value time.Time) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, value.Location())
 }
 
-func calendarValues(start, end time.Time, seed int) []ui.HeatmapValue {
+func calendarValues(start, end time.Time, seed int) []heatmap.CalendarValue {
 	start = dateOnly(start)
 	end = dateOnly(end)
-	values := make([]ui.HeatmapValue, 0)
+	values := make([]heatmap.CalendarValue, 0)
 	for day, date := 0, start; !date.After(end); day, date = day+1, date.AddDate(0, 0, 1) {
-		values = append(values, ui.HeatmapValue{Date: date, Value: float64((day*seed + day/7*5) % 100)})
+		values = append(values, heatmap.CalendarValue{Date: date, Value: float64((day*seed + day/7*5) % 100)})
 	}
 	return values
 }
 
-func calendarSection(title string, chart ui.HeatmapWidget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(16),
-		ui.Surface(ui.Box(chart).Style(ui.Padding(16))).Style(ui.Radius(8)),
+func calendarSection(title string, chart heatmap.Widget) ui.Widget {
+	return layout.Column(
+		text.New(title).Size(16),
+		(surface.New(layout.Box(chart).Style(style.New().Padding(16)))).Style(style.New().Radius(8)),
 	).Gap(8)
 }
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Heatmaps"), ui.Size(980, 700))
+		Update, View), window.Title("FlowUI Heatmaps"), window.Size(980, 700), window.Theme(base.Light()))
 }

@@ -71,8 +71,10 @@ nav:
       - 多窗口: guide/11-多窗口.md
       - 动画: guide/12-动画.md
       - 测试: guide/13-测试.md
+      - 设计风格: guide/18-设计风格.md
   - 常见问题: guide/14-常见问题.md
-  - 架构说明: architecture.md
+  - 架构与规范:
+      - 架构说明: architecture.md
 
 exclude_docs: |
   /en/**

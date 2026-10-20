@@ -3,7 +3,14 @@ package main
 import (
 	"strings"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/selectfield"
+	"github.com/qianniancn/flowui/widget/surface"
+	"github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -47,23 +54,23 @@ func Update(model *Model, msg Msg) ui.Cmd[Msg] {
 }
 
 func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Select").Size(24),
-				ui.Text("HeroUI-aligned field, selection, overlay, and keyboard behavior."),
-				ui.Divider(),
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				text.New("FlowUI Select").Size(24),
+				text.New("Field, selection, overlay, and keyboard behavior."),
+				layout.Divider(),
 				section("Basic",
-					ui.Wrap(
+					layout.Wrap(
 						selectWidth(
-							ui.Select("state", model.State, stateItems()).
+							selectfield.New(stateItems()).Key("state").SelectedKey(model.State).
 								Label("State").
 								Placeholder("Select one").
 								Description("Choose a shipping destination.").
 								OnChange(func(key string) { send(SetState(key)) }),
 						),
 						selectWidth(
-							ui.SelectMultiple("countries", model.Countries, countryItems()).
+							selectfield.New(countryItems()).Key("countries").SelectedKeys(model.Countries).
 								Label("Countries to visit").
 								Placeholder("Select countries").
 								OnSelectionChange(func(keys []string) { send(SetCountries(keys)) }),
@@ -72,18 +79,18 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 				),
 				section("Sections and disabled options",
 					selectWidth(
-						ui.SelectSections("framework", model.Framework, frameworkSections()).
+						selectfield.NewSections(frameworkSections()).Key("framework").SelectedKey(model.Framework).
 							Label("Framework").
 							Placeholder("Choose a framework").
-							Indicator(ui.Text("v").Size(12)).
+							Indicator(text.New("v").Size(12)).
 							DisabledKeys([]string{"angular"}).
 							OnChange(func(key string) { send(SetFramework(key)) }),
 					),
 				),
 				section("Required and controlled",
-					ui.Wrap(
+					layout.Wrap(
 						selectWidth(
-							ui.Select("required", model.RequiredChoice, stateItems()).
+							selectfield.New(stateItems()).Key("required").SelectedKey(model.RequiredChoice).
 								Label("Required state").
 								Placeholder("Select one").
 								Required(true).
@@ -92,7 +99,7 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 								OnChange(func(key string) { send(SetRequiredChoice(key)) }),
 						),
 						selectWidth(
-							ui.Select("controlled", model.Controlled, stateItems()).
+							selectfield.New(stateItems()).Key("controlled").SelectedKey(model.Controlled).
 								Label("Controlled open state").
 								Placeholder("Select one").
 								Open(model.ControlledOpen).
@@ -102,32 +109,32 @@ func View(_ *ui.Context, model Model, send ui.Send[Msg]) ui.Widget {
 					).Gap(16).LineGap(16),
 				),
 				section("On Surface",
-					ui.Surface(
-						ui.Box(
-							ui.Select("surface-choice", model.SurfaceChoice, stateItems()).
+					(surface.New(
+						layout.Box(
+							selectfield.New(stateItems()).Key("surface-choice").SelectedKey(model.SurfaceChoice).
 								Label("Secondary variant").
 								Placeholder("Select one").
-								Variant(ui.SelectSecondary).
+								Variant(selectfield.SelectSecondary).
 								ValueText(customValue(model.SurfaceChoice)).
 								OnChange(func(key string) { send(SetSurfaceChoice(key)) }).
 								FullWidth(),
-						).Style(ui.Width(300)).Style(ui.Padding(20)),
-					).Variant(ui.SurfaceDefault).Style(ui.Radius(24).Shadow(ui.ShadowSurface)),
+						).Style(style.New().Width(300).Padding(20)),
+					).Variant(surface.Default)).Style(style.New().Radius(24).Shadow(style.ShadowSurface)),
 				),
 			).Gap(18),
-		).Style(ui.FillWidth()).Style(ui.MaxWidth(760)).Style(ui.Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(760).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		text.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func selectWidth(selectWidget ui.SelectWidget) ui.Widget {
-	return ui.Box(selectWidget.FullWidth()).Style(ui.Width(300))
+func selectWidth(selectWidget selectfield.Widget) ui.Widget {
+	return layout.Box(selectWidget.FullWidth()).Style(style.New().Width(300))
 }
 
 func customValue(key string) string {
@@ -137,8 +144,8 @@ func customValue(key string) string {
 	return "Selected: " + strings.ToUpper(key)
 }
 
-func stateItems() []ui.SelectItem {
-	return []ui.SelectItem{
+func stateItems() []selectfield.SelectItem {
+	return []selectfield.SelectItem{
 		{Key: "california", Label: "California"},
 		{Key: "florida", Label: "Florida"},
 		{Key: "new-york", Label: "New York"},
@@ -147,23 +154,23 @@ func stateItems() []ui.SelectItem {
 	}
 }
 
-func countryItems() []ui.SelectItem {
+func countryItems() []selectfield.SelectItem {
 	names := []string{"Argentina", "France", "Iceland", "Italy", "Japan", "New Zealand", "Spain", "Thailand"}
-	items := make([]ui.SelectItem, 0, len(names))
+	items := make([]selectfield.SelectItem, 0, len(names))
 	for _, name := range names {
-		items = append(items, ui.SelectItem{Key: strings.ToLower(strings.ReplaceAll(name, " ", "-")), Label: name})
+		items = append(items, selectfield.SelectItem{Key: strings.ToLower(strings.ReplaceAll(name, " ", "-")), Label: name})
 	}
 	return items
 }
 
-func frameworkSections() []ui.SelectSection {
-	return []ui.SelectSection{
-		{Title: "Frontend", Items: []ui.SelectItem{
+func frameworkSections() []selectfield.SelectSection {
+	return []selectfield.SelectSection{
+		{Title: "Frontend", Items: []selectfield.SelectItem{
 			{Key: "react", Label: "React", Description: "Component-based UI"},
 			{Key: "vue", Label: "Vue", Description: "Progressive framework"},
 			{Key: "angular", Label: "Angular", Description: "Disabled option"},
 		}},
-		{Title: "Backend", Items: []ui.SelectItem{
+		{Title: "Backend", Items: []selectfield.SelectItem{
 			{Key: "go", Label: "Go", Description: "Simple and concurrent"},
 			{Key: "rust", Label: "Rust", Description: "Fast and memory safe"},
 		}},
@@ -172,7 +179,8 @@ func frameworkSections() []ui.SelectSection {
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Select"),
-		ui.Size(920, 760),
+		Update, View), window.Title("FlowUI Select"),
+		window.Size(920, 760),
+		window.Theme(base.Light()),
 	)
 }

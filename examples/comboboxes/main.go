@@ -3,7 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/combobox"
+	"github.com/qianniancn/flowui/widget/input"
+	textpkg "github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -56,57 +63,56 @@ func View(_ *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		status = m.Last
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Scroll("comboboxes",
-				ui.Column(
-					ui.Text("FlowUI ComboBox").Size(24),
-					ui.Text(status).Size(16),
-					ui.Divider(),
-					section("Variants",
-						ui.Column(
-							ui.Box(combo("language", fieldLanguage, m.Language, "Search language", languages, send)).
-								Style(ui.Width(320)),
-							ui.Box(combo("editor", fieldEditor, m.Editor, "Search editor", editors, send).
-								Variant(ui.InputSecondary)).
-								Style(ui.Width(320)),
-						).Gap(12),
-					),
-					section("States",
-						ui.Column(
-							ui.Box(combo("runtime", fieldRuntime, m.Runtime, "Required runtime", runtimes, send).
-								Invalid(m.Runtime == "")).
-								Style(ui.Width(320)),
-							ui.Box(ui.ComboBox("disabled", "", languages).
-								Hint("Disabled").
-								Disabled(true)).
-								Style(ui.Width(320)),
-						).Gap(12),
-					),
-					section("Default selection",
-						ui.Box(combo("animal", fieldAnimal, m.Animal, "Search animal", animals, send)).
-							Style(ui.Width(320)),
-					),
-					section("Full width",
-						combo("full-width", fieldLanguage, m.Language, "Full width", languages, send).
-							Variant(ui.InputSecondary).
-							FullWidth(),
-					),
-				).Gap(18),
+	return layout.Center(
+		layout.Box(
+			layout.Scroll(layout.Column(
+				textpkg.New("FlowUI ComboBox").Size(24),
+				textpkg.New(status).Size(16),
+				layout.Divider(),
+				section("Variants",
+					layout.Column(
+						layout.Box(combo("language", fieldLanguage, m.Language, "Search language", languages, send)).
+							Style(style.New().Width(320)),
+						layout.Box(combo("editor", fieldEditor, m.Editor, "Search editor", editors, send).
+							Variant(input.Secondary)).
+							Style(style.New().Width(320)),
+					).Gap(12),
+				),
+				section("States",
+					layout.Column(
+						layout.Box(combo("runtime", fieldRuntime, m.Runtime, "Required runtime", runtimes, send).
+							Invalid(m.Runtime == "")).
+							Style(style.New().Width(320)),
+						layout.Box(combobox.New(languages).Key("disabled").
+							Hint("Disabled").
+							Disabled(true)).
+							Style(style.New().Width(320)),
+					).Gap(12),
+				),
+				section("Default selection",
+					layout.Box(combo("animal", fieldAnimal, m.Animal, "Search animal", animals, send)).
+						Style(style.New().Width(320)),
+				),
+				section("Full width",
+					combo("full-width", fieldLanguage, m.Language, "Full width", languages, send).
+						Variant(input.Secondary).
+						FullWidth(),
+				),
+			).Gap(18),
 			).Vertical(),
-		).Style(ui.FillWidth().MaxWidth(720).Padding(24)),
+		).Style(style.New().FillWidth().MaxWidth(720).Padding(24)),
 	)
 }
 
 func section(title string, child ui.Widget) ui.Widget {
-	return ui.Column(
-		ui.Text(title).Size(18),
+	return layout.Column(
+		textpkg.New(title).Size(18),
 		child,
 	).Gap(10)
 }
 
-func combo(key string, field Field, selected string, hint string, items []ui.ComboBoxItem, send ui.Send[Msg]) ui.ComboBoxWidget {
-	return ui.ComboBox(key, selected, items).
+func combo(key string, field Field, selected string, hint string, items []combobox.Item, send ui.Send[Msg]) combobox.Widget {
+	return combobox.New(items).Key(key).SelectedKey(selected).
 		Hint(hint).
 		OnChange(func(selected string) {
 			send(Msg{
@@ -122,7 +128,7 @@ func combo(key string, field Field, selected string, hint string, items []ui.Com
 		})
 }
 
-var languages = []ui.ComboBoxItem{
+var languages = []combobox.Item{
 	{Key: "go", Label: "Go", Description: "Fast builds and simple deployment"},
 	{Key: "rust", Label: "Rust", Description: "Memory safety without a runtime"},
 	{Key: "zig", Label: "Zig", Description: "Small toolchain and explicit control"},
@@ -130,7 +136,7 @@ var languages = []ui.ComboBoxItem{
 	{Key: "kotlin", Label: "Kotlin", Description: "Concise JVM and Android code"},
 }
 
-var editors = []ui.ComboBoxItem{
+var editors = []combobox.Item{
 	{Key: "zed", Label: "Zed"},
 	{Key: "vscode", Label: "VS Code"},
 	{Key: "goland", Label: "GoLand"},
@@ -138,14 +144,14 @@ var editors = []ui.ComboBoxItem{
 	{Key: "helix", Label: "Helix"},
 }
 
-var runtimes = []ui.ComboBoxItem{
+var runtimes = []combobox.Item{
 	{Key: "native", Label: "Native"},
 	{Key: "wasm", Label: "WebAssembly"},
 	{Key: "server", Label: "Server"},
 	{Key: "mobile", Label: "Mobile", Disabled: true},
 }
 
-var animals = []ui.ComboBoxItem{
+var animals = []combobox.Item{
 	{Key: "cat", Label: "Cat"},
 	{Key: "dog", Label: "Dog"},
 	{Key: "fox", Label: "Fox"},
@@ -155,7 +161,8 @@ var animals = []ui.ComboBoxItem{
 
 func main() {
 	ui.Run(ui.NewProgram(Model{Animal: "dog"},
-		Update, View), ui.Title("FlowUI ComboBox"),
-		ui.Size(900, 680),
+		Update, View), window.Title("FlowUI ComboBox"),
+		window.Size(900, 680),
+		window.Theme(base.Light()),
 	)
 }

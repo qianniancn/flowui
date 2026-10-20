@@ -45,4 +45,4 @@ func openFile() ui.Cmd[Msg] {
 原生对话框 API 不支持通过 context 强制关闭已经显示的系统窗口。窗口退出会取消
 FlowUI Command，并在对话框最终返回时关闭迟到的文件句柄。
 
-完整示例位于 [`examples/file_dialogs`](../examples/file_dialogs)。
+完整示例维护在独立的 `examples` module 中。

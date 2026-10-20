@@ -3,7 +3,13 @@ package main
 import (
 	"fmt"
 
+	"github.com/qianniancn/flowui/layout"
+	"github.com/qianniancn/flowui/style"
+	"github.com/qianniancn/flowui/theme/base"
 	"github.com/qianniancn/flowui/ui"
+	"github.com/qianniancn/flowui/widget/input"
+	textpkg "github.com/qianniancn/flowui/widget/text"
+	"github.com/qianniancn/flowui/window"
 )
 
 type Model struct {
@@ -30,26 +36,27 @@ func View(ctx *ui.Context, m Model, send ui.Send[Msg]) ui.Widget {
 		greeting = fmt.Sprintf("Hello, %s", m.Name)
 	}
 
-	return ui.Center(
-		ui.Box(
-			ui.Column(
-				ui.Text("FlowUI Form").Size(24),
-				ui.Box(
-					ui.Input("name", m.Name).
+	return layout.Center(
+		layout.Box(
+			layout.Column(
+				textpkg.New("FlowUI Form").Size(24),
+				layout.Box(
+					input.New(m.Name).Key("name").
 						Hint("Name").
 						OnChange(func(text string) {
 							send(NameChanged{Name: text})
 						}),
-				).Style(ui.Width(320)),
-				ui.Text(greeting).Size(18),
+				).Style(style.New().Width(320)),
+				textpkg.New(greeting).Size(18),
 			).Gap(12),
-		).Style(ui.Padding(24)),
+		).Style(style.New().Padding(24)),
 	)
 }
 
 func main() {
 	ui.Run(ui.NewProgram(Model{},
-		Update, View), ui.Title("FlowUI Form"),
-		ui.Size(900, 600),
+		Update, View), window.Title("FlowUI Form"),
+		window.Size(900, 600),
+		window.Theme(base.Light()),
 	)
 }
